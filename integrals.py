@@ -14,6 +14,8 @@ danilo.oceano@gmail.com
 """
 
 from derivatives import calc_delvar_delp
+import numpy as np
+import math
 
 def calc_zonal_ave(var,min_lon,max_lon,min_lat,max_lat):
     """
@@ -33,18 +35,34 @@ def calc_zonal_ave(var,min_lon,max_lon,min_lat,max_lat):
     Returns
     -------
     zonal_ave: xarray.Dataset
-        Dataset of zonal avreages for all latitudes in the passed varieble
-        Note that this function returns the CZ value in all grid points
+        Arrays of zonal avreages for all latitudes in the passed varieble
     """
         
     # trimm data for desired lons
-    x = var.sel(lon=slice(min_lon,max_lon),lat=slice(max_lat,min_lat))
+    var = var.sel(lon=slice(min_lon,max_lon),lat=slice(max_lat,min_lat))
     
-    # makes zonal average
-    zonal_ave = x*0
-    for lon in x.lon.values:
-        zonal_ave.loc[dict(lon=lon)] =  x.mean('lon')
+    # # integrate using trapezoidal rule
+    # lons, trapz =var.lon.values, 0
+    # dx = (lons[-1]-lons[0])/(len(lons))
+    # for lon in lons:
+    #     if lon == lons[0] or lon == lons[-1]:
+    #         trapz += var.sel(lon=lon)
+    #     else:
+    #         trapz += 2*var.sel(lon=lon)
+    # trapz = trapz*(dx/2)
+    # # take the zonal average
+    # zonal_ave = trapz/(lons[0]-lons[1])
     
+    # integrate using numpy trapezoidal function
+    lons = var.lon.values
+    trapz = np.trapz(var,lons)
+    zonal_ave = trapz/(lons[0]-lons[1])
+    
+    # # makes zonal average 
+    # zonal_ave = var*0
+    # for lon in var.lon.values:
+    #     zonal_ave.loc[dict(lon=lon)] =  var.mean('lon')
+        
     return zonal_ave
 
 def calc_area_ave(var,min_lon,max_lon,min_lat,max_lat):
@@ -66,15 +84,34 @@ def calc_area_ave(var,min_lon,max_lon,min_lat,max_lat):
         Note that this function returns the CZ value in all grid points    
     """
     
+    # # integrate using trapezoidal rule
+    # trapz = 0
+    # lons = var.lon
+    # dx = (lons[-1]-lons[0])/(len(lons))
+    # for lon in lons:
+    #     if lon == lons[0] or lon == lons[-1]:
+    #         trapz += (var.sel(lon=lon)*np.sin(var.sel(lon=lon)))
+    #     else:
+    #         trapz += 2*(var.sel(lon=lon)*np.sin(var.sel(lon=lon)))
+    # trapz = trapz*(dx/2)
+    
     # trimm data for desired lats and lons
-    x = var.sel(lon=slice(min_lon,max_lon),lat=slice(max_lat,min_lat))
+    var = var.sel(lon=slice(min_lon,max_lon),lat=slice(max_lat,min_lat))
     # calc zonal average
     za = calc_zonal_ave(var,min_lon,max_lon,min_lat,max_lat)
-    # makes area average
-    area_ave = x*0
-    for lat in x.lat.values:
-        area_ave.loc[dict(lat=lat)] = \
-                za.mean('lat')
+    lats = var.lat.values
+    trapz = np.trapz(za*np.cos(za))
+    area_ave = trapz/(lats[0]-lats[1])
+    
+    # # trimm data for desired lats and lons
+    # x = var.sel(lon=slice(min_lon,max_lon),lat=slice(max_lat,min_lat))
+    # # calc zonal average
+    # za = calc_zonal_ave(var,min_lon,max_lon,min_lat,max_lat)
+    # # makes area average
+    # area_ave = x*0
+    # for lat in x.lat.values:
+    #     area_ave.loc[dict(lat=lat)] = \
+    #             za.mean('lat')
     
     return area_ave
 
