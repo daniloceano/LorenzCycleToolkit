@@ -13,100 +13,51 @@ danilo.oceano@gmail.com
 """
 
 import numpy as np
+from metpy.units import units
 
 
-def calc_delvar_delp(var):
+def Differentiate(Data,Axis,AxisName):
     """
-    Computates the partial derivative of some variable by each pressure level as:
-        del var / del p
-    using a second-order finite difference scheme for intermediate levels
-    and a first-order forward/backward scheme for bottom/top levels
+    Computates the partial derivative of some data.
+    
+    It used a second-order finite difference scheme for intermediate levels
+    and first-order forward/backward schemes for bottom/top levels
     
     Parameters
     ----------
-    var: xarray.Dataset
-        the variable to be integrated    
+    Data: xarray.Dataset
+        Data containing the variable to be integrated   
+    AxisName: string
+        the indexer used for the xarray coordante which the differentiation will
+        be performed. For example, if AxisName='latitude', the function will 
+        differentiate along the latitude coordinate, performing a spatial
+        differentiation.
     """
-    # get pressure levels
-    levs = var.level.values
-    # make array for derivatives
-    del_var = var*0
-    for lev in range(len(levs)):
-        if lev == 0:
-            dp = (levs[lev+1] - levs[lev])
-            del_var.loc[dict(level=levs[lev])] = \
-            (var.sel(level=levs[lev+1]) - var.sel(level=levs[lev]))/dp
-        elif lev == (len(levs)-1):
-            dp = (levs[lev] - levs[lev-1])
-            del_var.loc[dict(level=levs[lev])] = \
-            (var.sel(level=levs[lev]) - var.sel(level=levs[lev-1]))/dp
-        else:
-            dp = (levs[lev+1] - levs[lev-1])
-            del_var.loc[dict(level=levs[lev])] = \
-            (var.sel(level=levs[lev+1]) - var.sel(level=levs[lev-1]))/dp
-
-    return del_var
-
-def calc_delvar_delphi(var):
-    """
-    Computates the partial derivative of some variable by each latitude as:
-        del var / del phi
-    using a second-order finite difference scheme for intermediate levels
-    and a first-order forward/backward scheme for left/right boundaries
+    try:
+        DataUnits = Data.metpy.units
+        AxisUnits = Axis.metpy.units
+        Data = Data.metpy.dequantify()
+    except:
+        pass
     
-    Parameters
-    ----------
-    var: xarray.Dataset
-        the variable to be integrated    
-    """
-    # get latitudes
-    lats = var.lat.values
-    # make array for derivatives
-    del_var = var*0
-    for lat in range(len(lats)):
-        if lat == 0:
-            dy = (lats[lat+1] - lats[lat])
-            del_var.loc[dict(lat=lats[lat])] = \
-            (var.sel(lat=lats[lat+1]) - var.sel(lat=lats[lat]))/dy
-        elif lat == (len(lats)-1):
-            dy = (lats[lat] - lats[lat-1])
-            del_var.loc[dict(lat=lats[lat])] = \
-            (var.sel(lat=lats[lat]) - var.sel(lat=lats[lat-1]))/dy
+    steps = Data[AxisName]
+    # StepsUnits = Data[AxisName].metpy.units
+    DifArray = Data*np.nan
+    # DifArray = Data
+    for step in range(len(steps)):
+        # Forward difference for first step
+        if step == 0:
+            diff = Data.sel(**{AxisName:steps[step+1]})-Data.sel(**{AxisName:steps[step]})
+            h = steps[step+1].metpy.convert_units(str(AxisUnits))-steps[step].metpy.convert_units(str(AxisUnits))
+            DifArray.loc[dict({AxisName:DifArray[AxisName][step]})] = diff/h
+        # Backward difference for last step
+        elif step == len(steps)-1:
+            diff = Data.sel(**{AxisName:steps[step-1]})-Data.sel(**{AxisName:steps[step]})
+            h = steps[step-1].metpy.convert_units(str(AxisUnits))-steps[step].metpy.convert_units(str(AxisUnits))
+            DifArray.loc[dict({AxisName:DifArray[AxisName][step]})] = diff/h
+        # Centred difference for all othe steps
         else:
-            dy = (lats[lat+1] - lats[lat-1])
-            del_var.loc[dict(lat=lats[lat])] = \
-            (var.sel(lat=lats[lat+1]) - var.sel(lat=lats[lat-1]))/dy
-
-    return del_var
-
-def calc_delvar_delt(var):
-    """
-    Computates the partial derivative of some variable by each time as:
-        del var / del t
-    using a second-order finite difference scheme for intermediate times
-    and a first-order forward/backward scheme for initial/final time steps
-    
-    Parameters
-    ----------
-    var: xarray.Dataset
-        the variable to be integrated    
-    """
-    # get latitudes
-    times = var.time.values
-    # make array for derivatives
-    del_var = var*0
-    for t in range(len(times)):
-        if t == 0:
-            dt = (times[t+1] - times[t])/np.timedelta64(1, 's')
-            del_var.loc[dict(time=times[t])] = \
-            (var.sel(time=times[t+1]) - var.sel(time=times[t]))/dt
-        elif t == (len(times)-1):
-            dt = (times[t] - times[t-1])/np.timedelta64(1, 's')
-            del_var.loc[dict(time=times[t])] = \
-            (var.sel(time=times[t]) - var.sel(time=times[t-1]))/dt
-        else:
-            dt = (times[t+1] - times[t-1])/np.timedelta64(1, 's')
-            del_var.loc[dict(time=times[t])] = \
-            (var.sel(time=times[t+1]) - var.sel(time=times[t-1]))/dt
-
-    return del_var
+            diff = Data.sel(**{AxisName:steps[step+1]})-Data.sel(**{AxisName:steps[step-1]})
+            h = steps[step+1].metpy.convert_units(str(AxisUnits))-steps[step-1].metpy.convert_units(str(AxisUnits))
+            DifArray.loc[dict({AxisName:DifArray[AxisName][step]})] = diff/(2*h)
+    return (DataUnits/AxisUnits)*DifArray
