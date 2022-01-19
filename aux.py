@@ -18,37 +18,53 @@ import matplotlib.pyplot as plt
 from shapely.geometry.polygon import Polygon
 import numpy as np
 import matplotlib.dates as mdates
-
+import pandas as pd
 
 # ---------------------------
-
-def get_data(filename):
+def get_data(file,varlist,min_lon, max_lon, min_lat, max_lat):
     """
     Get data and variables from a NCEP Reanalysis 2 netCDF file
-    """    
+    """        
+    # Get data indexers
+    dfVars = pd.read_csv(varlist,sep= ';',index_col=0,header=0)
+    LonIndexer = dfVars.loc['Longitude']['Variable']
+    LatIndexer = dfVars.loc['Latitude']['Variable']
+    TimeIndexer = dfVars.loc['Time']['Variable']
+    LevelIndexer = dfVars.loc['Vertical Level']['Variable']
     
-    file = convert_lon(xr.open_dataset('ncepR2.nc'))
+    # Open actual data
+    full_data = convert_lon(xr.open_dataset(file),LonIndexer)
+    full_data = full_data.sortby(LonIndexer).sortby(LevelIndexer,ascending=False).sortby(LatIndexer,ascending=False)
     
-    uwnd = file.uwnd
-    vwnd = file.vwnd 
-    omg = file.omega
-    temp = file.air
-    rhum = file.rhum
-    hgt = file.hgt
+    # Slice data for desired domain
+    # lc, la = data.coords[LonIndexer], data.coords[LatIndexer]
+    # data = data.loc[dict(lon=lc[(lc > min_lon) & (lc < max_lon)], 
+    #                      lat=la[(la > min_lat) & (la < max_lat)])]
+    data = full_data.load().sel(**{LatIndexer: slice(max_lat, min_lat),
+                        LonIndexer: slice(min_lon, max_lon)})
     
-    return uwnd, vwnd, omg, temp, rhum, hgt
+    # Export Variables
+    tair = data[dfVars.loc['Air Temperature']['Variable']]
+    hgt = data[dfVars.loc['Geopotential Height']['Variable']]
+    rhum = data[dfVars.loc['Relative Humidity']['Variable']]
+    omega = data[dfVars.loc['Omega Velocity']['Variable']]
+    u = data[dfVars.loc['Eastward Wind Component']['Variable']]
+    v = data[dfVars.loc['Northward Wind Component']['Variable']]
+    slp = data[dfVars.loc['Sea Level Pressure']['Variable']]
+    
+    return LonIndexer, LatIndexer, TimeIndexer, LevelIndexer, tair, hgt, rhum, omega, u, v, slp
 
 # ---------------------------
 # auxilliary functions for plot maps
 
-def convert_lon(df):
+def convert_lon(df,LonIndexer):
     
     """
     Convert longitudes from 0:360 range to -180:180
     """
     
-    df.coords['lon'] = (df.coords['lon'] + 180) % 360 - 180
-    df = df.sortby(df.lon)
+    df.coords[LonIndexer] = (df.coords[LonIndexer] + 180) % 360 - 180
+    df = df.sortby(df[LonIndexer])
     
     return df
 
