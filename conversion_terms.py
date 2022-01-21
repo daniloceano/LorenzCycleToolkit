@@ -12,9 +12,13 @@ danilo.oceano@gmail.com
 
 """
 import numpy as np
-from integrals import (calc_area_ave, calc_zonal_ave,
-                       calc_static_stability, interga_P)
+from integrals import (TrazpezoidalIntegration, CalcZonalAverage,
+                       CalcAreaAverage)
+import metpy.calc as mpcalc
 from derivatives import (calc_delvar_delp, calc_delvar_delphi)
+
+# from integrals import (calc_area_ave, calc_zonal_ave,
+#                        calc_static_stability, interga_P)
 
 
 # constants
