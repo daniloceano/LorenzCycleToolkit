@@ -29,37 +29,6 @@ dry_air_spec_heat_ratio = units.Quantity(1.4, 'dimensionless')
 Cp_d = dry_air_spec_heat_press = (
     dry_air_spec_heat_ratio * Rd / (dry_air_spec_heat_ratio - 1))
 
-def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer):
-    """
-    Computates the static stability parameter sigma for all vertical levels
-    and for the desired domain
-    
-    from:
-        https://www.scielo.br/j/rbmet/a/X7gYvzZjfcjbdQcnrxxKQwq/?format=pdf&lang=en
-    
-    Parameters
-    ----------
-    temp: xarray.Dataset
-        temperature data in Kelvin
-    min_lon, max_lon, minlat, min_lon: float
-        minimum and maximum longitude/latitude to be calculated the zonal average
-
-    Returns
-    -------
-    sigma: xarray.Dataset
-        Dataset containing sigma values for all pressure levels and for the
-        box specyfied by min_lon, max_lon, min_lat and max_lat    
-    
-    """
-    
-    FirstTerm = TemperatureData/Cp_d
-    SecondTerm = PressureData/Rd
-    DelT = Differentiate(TemperatureData,PressureData,VerticalCoordIndexer)
-    
-    sigma = FirstTerm-(SecondTerm*DelT)
-    
-    return sigma
-
 
 def Calc_Az(TemperatureData,PressureData,LonIndexer,LatIndexer,VerticalCoordIndexer):
     '''
@@ -90,8 +59,8 @@ def Calc_Az(TemperatureData,PressureData,LonIndexer,LatIndexer,VerticalCoordInde
     ## Temperature area eddy
     tair_AE = tair_ZA-tair_AA # Area Eddy
     
-    sigma = StaticStability(TemperatureData,PressureData,VerticalCoordIndexer)
-    sigmma_AA = CalcAreaAverage(sigma,LonIndexer,LatIndexer)
+    sigmma_AA = StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
+                            LatIndexer,LonIndexer)
     
     area_ave = CalcAreaAverage(tair_AE**2,LatIndexer)
     function = area_ave/(2*g*sigmma_AA)
@@ -134,11 +103,11 @@ def Calc_Ae(TemperatureData,PressureData,LonIndexer,LatIndexer,VerticalCoordInde
     ## Temperature zonal eddy 
     tair_ZE = TemperatureData-tair_ZA # Zonal Eddy
     
-    sigma = StaticStability(TemperatureData,PressureData,VerticalCoordIndexer)
-    sigmma_AA = CalcAreaAverage(sigma,LonIndexer,LatIndexer)
+    sigma_AA = StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
+                            LatIndexer,LonIndexer)
     
     area_ave = CalcAreaAverage(tair_ZE**2,LatIndexer,LonIndexer)
-    function = area_ave/(2*g*sigmma_AA)
+    function = area_ave/(2*g*sigma_AA)
     Az = VerticalTrazpezoidalIntegration(function,PressureData,VerticalCoordIndexer)
     
     try: 
