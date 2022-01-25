@@ -1,312 +1,251 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Script for conversion terms used for computate the Lorenz Energy Cycle
+Script for computating the conversion terms as part of the Lorenz Energy Cycle
 
-Created by Danilo Couto de Souza
-Universidade de São Paulo (USP)
-Instituto de Astornomia, Ciências Atmosféricas e Geociências
-São Paulo - Brazil
+Created by:
+    Danilo Couto de Souza
+    Universidade de São Paulo (USP)
+    Instituto de Astornomia, Ciências Atmosféricas e Geociências
+    São Paulo - Brazil
 
-danilo.oceano@gmail.com
+Contact:
+    danilo.oceano@gmail.com
 
+
+Source for formulas used here:
+        Brennan, F. E., & Vincent, D. G. (1980).
+        Zonal and Eddy Components of the Synoptic-Scale Energy Budget
+        during Intensification of Hurricane Carmen (1974),
+        Monthly Weather Review, 108(7), 954-965. Retrieved Jan 25, 2022, from:
+        https://journals.ametsoc.org/view/journals/mwre/108/7/1520-0493_1980_108_0954_zaecot_2_0_co_2.xml
 """
 import numpy as np
-from integrals import (TrazpezoidalIntegration, CalcZonalAverage,
-                       CalcAreaAverage)
-import metpy.calc as mpcalc
-from derivatives import (calc_delvar_delp, calc_delvar_delphi)
-
-# from integrals import (calc_area_ave, calc_zonal_ave,
-#                        calc_static_stability, interga_P)
-
-
-# constants
-R = 287         # ideal gas cte.
-g = 9.81        # gravity acceleration 
-ra = 6378000    # Earth's radius
-cp = 1004.0     # specific heat of air at cte. pressure
+from metpy.constants import g
+from metpy.constants import Rd
+from metpy.constants import Re
+from calc import (CalcZonalAverage, CalcAreaAverage,
+                 VerticalTrazpezoidalIntegration, Differentiate,
+                 StaticStability)
 
 
-
-def calc_cz(omg,temp,min_lon,max_lon,min_lat,max_lat):
-    """
-    Computate conversion term of potencial to kinetic energy (zonal, both)
-    
+def Calc_Ce(PressureData,OmegaData,TemperatureData,LonIndexer,LatIndexer,VerticalCoordIndexer):
+    '''
     Parameters
     ----------
-    omg, temp: xarray.Dataset
-        array containing omega e temperature data
-    min_lon, max_lon, minlat, min_lon: float
-        lons and lats for the box bounding the computation domain  
+    PressureData: xarray.Dataset
+        unit aware array for the pressure levels
+    OmegaData: xarray.Dataset
+        unit aware array for the omega velocity data
+    TemperatureData: xarray.Dataset
+        unit aware array for the temperature  
+    LonIndexer: string
+        the indexer used for the longitude variable in the xarray
+    LatIndexer: string 
+        the indexer used for the latitude variable in the xarray  
     
     Returns
     -------
-    cz: xarray.Dataset
-        Values corresponding of the conversion term
-        Note that this function returns the CZ value in all grid points
-    """
-    
-    print('')    
-    print('------------------------------------------')
-    print('Computating CZ....')
-    
-    # 1) calculate zonal devation from the area average
-    # dev_area = zonal_ave - area_ave
-    za_omg = calc_zonal_ave(omg,min_lon,max_lon,min_lat,max_lat)
-    aa_omg = calc_area_ave(omg,min_lon,max_lon,min_lat,max_lat)
-    da_omg = za_omg - aa_omg
-    
-    # 2) calculate devation from the area average - for temperature
-    za_temp = calc_zonal_ave(temp,min_lon,max_lon,min_lat,max_lat)
-    aa_temp = calc_area_ave(temp,min_lon,max_lon,min_lat,max_lat)
-    da_temp = za_temp - aa_temp
+    Ce: xarray.DataArray
+        Unit-aware values corresponding to the conversion between eddy energy terms
+    '''        
+    FirstTerm = Rd/PressureData
+    # Zonal average terms
+    omega_ZA = CalcZonalAverage(OmegaData,LonIndexer)
+    tair_ZA = CalcZonalAverage(TemperatureData,LonIndexer)
+    # Zonal eddy terms
+    omega_ZE = OmegaData-omega_ZA
+    tair_ZE = TemperatureData-tair_ZA
+    TemperatureVerticalTransport = omega_ZE*tair_ZE
+    # Area averages
+    SecondTerm = CalcAreaAverage(TemperatureVerticalTransport,LonIndexer,LatIndexer)
+    # Integrate in pressure
+    function = FirstTerm*SecondTerm
+    Ce = VerticalTrazpezoidalIntegration(function,PressureData,VerticalCoordIndexer)/(-g)
+    # Check if units are in accordance with expected and convert
+    try: 
+        Ce = Ce.metpy.convert_units('W/ m **2')
+    except ValueError:
+        print('Unit error in Ce')
+        raise
+    return Ce
 
-    # 3) calcuate the area average of 1) * 2)    
-    tmp = calc_area_ave(da_omg*da_temp,min_lon,max_lon,min_lat,max_lat)
-
-    # 4) divide by pressure
-    p = (tmp*0)+tmp.level
-    tmp = tmp * R/p
-       
-    # 5) Integrate through all pressure levels
-    cz = interga_P(tmp)
-        
-    # divide by -g
-    cz = cz/-g
-    
-    print('Done!')
-    
-    return cz.mean('lon').mean('lat')
-
-def calc_ca(vwnd,temp,omg,min_lon,max_lon,min_lat,max_lat):
-    """
-    Computate conversion term of potencial zonal to eddy kinetic energy
-    
+def Calc_Cz(PressureData,OmegaData,TemperatureData,LonIndexer,LatIndexer,VerticalCoordIndexer):
+    '''
     Parameters
     ----------
-    omg, temp: xarray.Dataset
-        array containing omega e temperature data
-    min_lon, max_lon, minlat, min_lon: float
-        lons and lats for the box bounding the computation domain  
+    PressureData: xarray.Dataset
+        unit aware array for the pressure levels
+    OmegaData: xarray.Dataset
+        unit aware array for the omega velocity data
+    TemperatureData: xarray.Dataset
+        unit aware array for the temperature  
+    LonIndexer: string
+        the indexer used for the longitude variable in the xarray
+    LatIndexer: string 
+        the indexer used for the latitude variable in the xarray  
     
     Returns
     -------
-    ce: xarray.Dataset
-        Values corresponding of the conversion term
-        Note that this function returns the CE value in all grid points
-    """
+    Cz: xarray.DataArray
+        Unit-aware values corresponding to the conversion between zonal energy terms
+    '''   
+    FirstTerm = Rd/PressureData
+    # Zonal average terms
+    omega_ZA = CalcZonalAverage(OmegaData,LonIndexer)
+    tair_ZA = CalcZonalAverage(TemperatureData,LonIndexer)
+    # Area average terms
+    omega_AA = CalcAreaAverage(omega_ZA,LatIndexer)
+    tair_AA = CalcAreaAverage(tair_ZA,LatIndexer)
+    # Area eddy terms
+    omega_AE = omega_ZA-omega_AA
+    tair_AE = tair_ZA-tair_AA
+    TemperatureVerticalTransport = omega_AE*tair_AE
+    # Area averages
+    SecondTerm = CalcAreaAverage(TemperatureVerticalTransport,LatIndexer)
+    # Integrate in pressure
+    function = FirstTerm*SecondTerm
+    Cz = VerticalTrazpezoidalIntegration(function,PressureData,VerticalCoordIndexer)/(-g)
+    # Check if units are in accordance with expected and convert
+    try: 
+        Cz = Cz.metpy.convert_units('W/ m **2')
+    except ValueError:
+        print('Unit error in Cz')
+        raise
+    return Cz
     
-    print('')    
-    print('------------------------------------------')
-    print('Computating CA....')
-   
-    #-----------------------------------
-    # 1) First term divided in two steps   
+def Calc_Ca(VWindComponentData,PressureData,OmegaData,TemperatureData,
+            LonIndexer,LatIndexer,VerticalCoordIndexer):
+    '''
     
-    # 1.1) (v)*(T)/2*sigma*ra
-    # breakdown of the first step:
-    
-    # 1.1.1) (v) = v - [v]
-    dz_vwnd = vwnd - calc_zonal_ave(vwnd,
-                                           min_lon,max_lon,min_lat,max_lat)
-    # 1.1.2) (T) = T - [T]
-    dz_temp = temp - calc_zonal_ave(temp,
-                                           min_lon,max_lon,min_lat,max_lat)
-    # 1.1.3)  sigma
-    sigma = calc_static_stability(temp,min_lon,max_lon,min_lat,max_lat)
-    
-    
-    # 1.2) del T*/del phi
-    
-    # 1.2.1) dev_area_T = zonal_T - area_T
-    za_temp = calc_zonal_ave(temp,min_lon,max_lon,min_lat,max_lat)
-    aa_temp = calc_area_ave(temp,min_lon,max_lon,min_lat,max_lat)
-    da_temp  = za_temp - aa_temp
-    # 1.2.2) derivate
-    delphi_temp = calc_delvar_delphi(da_temp) 
-    
-    # 1.3) area average of those terms  multiplied
-    tmp = calc_area_ave(dz_vwnd*dz_temp*delphi_temp,min_lon,max_lon,min_lat,max_lat)
-    
-    # get first term of the integral    
-    first_int = tmp/(ra*sigma)
-    
-    #-----------------------------------
-    # 2) Second term 
-    
-    # 2.1) (omega)*(T)
-    # (omega) = omega - [omega] ((T) was previously calculated)
-    dz_omg = omg - calc_zonal_ave(omg,
-                                           min_lon,max_lon,min_lat,max_lat)
-    # 2.2) del dev_areaT/ del_p
-    delp_datemp = calc_delvar_delp(da_temp)
-    
-    # 2.3) area_ave of 2.1) * 2.2)
-    tmp = calc_area_ave(dz_omg*dz_temp*dz_temp*delp_datemp,min_lon,max_lon,min_lat,max_lat)    
-    
-    # 2.3) get second term of the integral    
-    
-    second_int = tmp/sigma
-    
-    #-----------------------------------
-    # 3) Sum and integrate for all levs
-    
-    ca = -interga_P(first_int+second_int)
-    
-    print('Done!')
-    
-    return ca.mean('lon').mean('lat')
-
-def calc_ce(omg,temp,min_lon,max_lon,min_lat,max_lat):
-    """
-    Computate conversion term of potencial to kinetic energy (eddy, both)
+    This expression is a slightly modificated from the source material:
+        In the first term of the integral Brennan & Vincent write the denominator
+        as (sigma * Re), however, other sources use (2 * sigma * Re), such the
+        Muench's work (1965) and the  Michaelides' (1986). Therefore, here it
+        is adopted the latter expression.
     
     Parameters
     ----------
-    omg, temp: xarray.Dataset
-        array containing omega e temperature data
-    min_lon, max_lon, minlat, min_lon: float
-        lons and lats for the box bounding the computation domain  
+    VWindComponentData: xarray.Dataset
+        unit aware array for the meridional component of the wind 
+    PressureData: xarray.Dataset
+        unit aware array for the pressure levels
+    OmegaData: xarray.Dataset
+        unit aware array for the omega velocity data
+    TemperatureData: xarray.Dataset
+        unit aware array for the temperature  
+    LonIndexer: string
+        the indexer used for the longitude variable in the xarray
+    LatIndexer: string 
+        the indexer used for the latitude variable in the xarray 
+    VerticalCoordIndexer: string
+        the indexer used for the xarray coordante which the integration will
+        be performed
     
     Returns
     -------
-    ce: xarray.Dataset
-        Values corresponding of the conversion term
-        Note that this function returns the CE value in all grid points
-    """
-    
-    print('')    
-    print('------------------------------------------')
-    print('Computating CE....')
-    
-    # 1) calculate devation from the area average
-    # dev_area = zonalave - area_ave
-    za_omg = calc_zonal_ave(omg,min_lon,max_lon,min_lat,max_lat)
-    dz_omg = omg - za_omg 
-    
-    # 2) calculate devation from the area average - for temperature
-    za_temp = calc_zonal_ave(temp,min_lon,max_lon,min_lat,max_lat)
-    dz_temp = temp - za_temp
-    
-    # 3) calculate area_ave of 1) * 2)
-    tmp = calc_area_ave(dz_omg*dz_temp,min_lon,max_lon,min_lat,max_lat)
+    Ca: xarray.DataArray
+        Unit-aware values corresponding to the conversion between 
+        available potential energy terms
+    ''' 
+    rlats = np.deg2rad(VWindComponentData[LatIndexer])
+    # Zonal averages
+    v_ZA = CalcZonalAverage(VWindComponentData,LonIndexer)
+    tair_ZA = CalcZonalAverage(TemperatureData,LonIndexer)
+    omega_ZA = CalcZonalAverage(OmegaData,LonIndexer)
+    # Zonal eddies
+    v_ZE = VWindComponentData - v_ZA
+    tair_ZE = TemperatureData - tair_ZA
+    omega_ZE = OmegaData - omega_ZA
+    # Temperature area average
+    tair_AA = CalcAreaAverage(tair_ZA,LatIndexer)
+    # Temperature area eddy
+    tair_AE = tair_ZA-tair_AA
+    # Sigma
+    sigma_AA = StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
+                            LatIndexer,LonIndexer)
+    # First term of the integral
+    tmp1 = v_ZE*tair_ZE/(Re*2*sigma_AA)
+    tmp2 = Differentiate(tair_AE,rlats,LatIndexer)
+    FirstTerm = CalcAreaAverage(tmp1*tmp2,LatIndexer,LonIndexer)
+    # Second term of the integral
+    tmp1 =  omega_ZE*tair_ZE/(sigma_AA)
+    tmp2 = Differentiate(tair_AE,PressureData,VerticalCoordIndexer)
+    SecondTerm = CalcAreaAverage(tmp1*tmp2,LatIndexer,LonIndexer)
+    # Integrate in pressure
+    function = FirstTerm+SecondTerm
+    Ca = -VerticalTrazpezoidalIntegration(function,PressureData,
+                                          VerticalCoordIndexer)
+    # Check if units are in accordance with expected and convert
+    try: 
+        Ca = Ca.metpy.convert_units('W/ m **2')
+    except ValueError:
+        print('Unit error in Ck')
+        raise
+    return Ca
 
-    # 4) divide by pressure
-    p = (tmp*0)+tmp.level
-    tmp = tmp * R/p
-        
-    # 5) Integrate through all pressure levels
-    ce = interga_P(tmp)
-        
-    # divide by -g
-    ce = ce/-g
-    
-    print('Done!')
-    
-    return ce.mean('lon').mean('lat')
-
-def calc_ck(uwnd,vwnd,omg,min_lon,max_lon,min_lat,max_lat):
-    """
-    Computate conversion term of eddy to zonal kinetic energy
-    
-    Parameters
+def Calc_Ck(UWindComponentData,VWindComponentData,PressureData,OmegaData,
+            LonIndexer,LatIndexer,VerticalCoordIndexer):
+    '''
+     Parameters
     ----------
-    omg, temp: xarray.Dataset
-        array containing omega e temperature data
-    min_lon, max_lon, minlat, min_lon: float
-        lons and lats for the box bounding the computation domain  
+    VWindComponentData: xarray.Dataset
+        unit aware array for the meridional component of the wind 
+    PressureData: xarray.Dataset
+        unit aware array for the pressure levels
+    OmegaData: xarray.Dataset
+        unit aware array for the omega velocity data
+    TemperatureData: xarray.Dataset
+        unit aware array for the temperature  
+    LonIndexer: string
+        the indexer used for the longitude variable in the xarray
+    LatIndexer: string 
+        the indexer used for the latitude variable in the xarray 
+    VerticalCoordIndexer: string
+        the indexer used for the xarray coordante which the integration will
+        be performed
     
     Returns
     -------
-    ce: xarray.Dataset
-        Values corresponding of the conversion term
-        Note that this function returns the CK value in all grid points
-    """
-    
-    print('')    
-    print('------------------------------------------')
-    print('Computating CK....')
-    
-    # Computate averages that will be used
-    za_uwnd = calc_zonal_ave(uwnd,min_lon,max_lon,min_lat,max_lat)
-    za_vwnd = calc_zonal_ave(vwnd,min_lon,max_lon,min_lat,max_lat)
-    za_omg = calc_zonal_ave(omg,min_lon,max_lon,min_lat,max_lat)
-    # deviations from zonal averages
-    dz_uwnd = uwnd - za_uwnd
-    dz_vwnd = vwnd - za_vwnd
-    dz_omg = omg - za_omg
-   
-   
-    #-----------------------------------
-    # 1) First intergal divided in two steps   
-    
-    # 1.1) (v)*(u)* cos(phi)/ra
-    tmp1 = dz_uwnd*dz_vwnd*np.cos(dz_uwnd.lat)/ra
-    
-    # 1.2) del[u]/cos(phi)/del phi
-    tmp2 = calc_delvar_delphi(za_uwnd/np.cos(za_uwnd.lat))
-    
-    # area avearge
-    var = calc_area_ave(tmp1*tmp2,min_lon,max_lon,min_lat,max_lat)
-    
-    first_int = interga_P(var)
-    
-    #-----------------------------------
-    # 2) Second intergal divided in two steps
-    
-    # 2.1) (v)**2/ra
-    tmp1 = (dz_uwnd**2)/ra
-    
-    # 2.2) del [v]/ delphi
-    tmp2 = calc_delvar_delphi(za_vwnd)
-
-    # area avearge
-    var = calc_area_ave(tmp1*tmp2,min_lon,max_lon,min_lat,max_lat)
-
-    second_int = interga_P(var)
-    
-    #-----------------------------------
-    # 3) Third intergal 
-
-    # 1.1) [v]*(u)**2 * tan(phi)/ra
-    tmp1 = za_uwnd * (dz_uwnd**2) * np.tan(dz_uwnd.lat)/ra
-
-    # area avearge    
-    var = calc_area_ave(tmp1,min_lon,max_lon,min_lat,max_lat)
-    
-    third_int = interga_P(var)
-   
-    #-----------------------------------
-    # 4) Fourth intergal
-
-    # 2.1) (omega)*(u)
-    tmp1 = dz_omg*dz_uwnd
-    
-    # 2.2) del [u]/ delp
-    tmp2 = calc_delvar_delp(za_uwnd)
-
-    # area avearge
-    var = calc_area_ave(tmp1*tmp2,min_lon,max_lon,min_lat,max_lat)
-
-    fourth_int = interga_P(var)     
-    
-    #-----------------------------------
-    # 5) Fifth intergal
-
-    # 2.1) (omega)*(v)
-    tmp1 = dz_omg*dz_uwnd
-    
-    # 2.2) del [u]/ delp
-    tmp2 = calc_delvar_delp(za_vwnd)
-
-    # zonal avearge
-    var = calc_area_ave(tmp1*tmp2,min_lon,max_lon,min_lat,max_lat)
-
-    fifth_int = interga_P(var)  
-    
-    # sum all integrals
-
-    ck = (first_int + second_int + third_int + fourth_int + fifth_int)/g
-       
-    return ck.mean('lon').mean('lat')
+    Cz: xarray.DataArray
+        Unit-aware values corresponding to the conversion between kinetic energy terms
+    '''  
+    # Convert latitude do radians
+    rlats = np.deg2rad(UWindComponentData[LatIndexer])
+    # Zonal averages 
+    v_ZA = CalcZonalAverage(VWindComponentData,LonIndexer)
+    u_ZA = CalcZonalAverage(UWindComponentData,LonIndexer)
+    omega_ZA = CalcZonalAverage(OmegaData,LonIndexer)
+    # Zonal eddies
+    v_ZE = VWindComponentData - v_ZA
+    u_ZE = UWindComponentData - u_ZA
+    omega_ZE = OmegaData - omega_ZA
+    # First term
+    tmp1 = np.cos(rlats)*u_ZE*v_ZE/Re
+    tmp2 = Differentiate(u_ZA/np.cos(rlats),rlats,LatIndexer)
+    FirstTerm = CalcAreaAverage(tmp1*tmp2,LatIndexer,LonIndexer)
+    # Second term
+    tmp1 = (v_ZE**2)/Re
+    tmp2 = Differentiate(v_ZA,rlats,LatIndexer)
+    SecondTerm = CalcAreaAverage(tmp1*tmp2,LatIndexer,LonIndexer)
+    # Third term
+    tmp1 = (np.tan(rlats)*(u_ZE**2)*v_ZA)/Re
+    ThirdTerm = CalcAreaAverage(tmp1,LatIndexer,LonIndexer)
+    # Fourth term
+    tmp1 = omega_ZE*u_ZE
+    tmp2 = Differentiate(u_ZA,PressureData,VerticalCoordIndexer)
+    FourthTerm = CalcAreaAverage(tmp1*tmp2,LatIndexer,LonIndexer)
+    # Fifith term
+    tmp1 = omega_ZE*v_ZE
+    tmp2 = Differentiate(v_ZA,PressureData,VerticalCoordIndexer)
+    FifithTerm =  CalcAreaAverage(tmp1*tmp2,LatIndexer,LonIndexer)
+    # Integrate in pressure
+    function = (FirstTerm+SecondTerm+ThirdTerm+FourthTerm+FifithTerm)
+    Ck = VerticalTrazpezoidalIntegration(function,PressureData,VerticalCoordIndexer)/g
+    # Check if units are in accordance with expected and convert
+    try: 
+        Ck = Ck.metpy.convert_units('W/ m **2')
+    except ValueError:
+        print('Unit error in Ck')
+        raise
+    return Ck
