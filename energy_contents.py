@@ -115,9 +115,9 @@ def Calc_Kz(UWindComponentData,VWindComponentData,PressureData,LonIndexer,LatInd
     Parameters
     ----------
     UWindComponentData: xarray.Dataset
-        unit aware array for the meridional component of the wind  
+        unit aware array for the zonal component of the wind  
     VWindComponentData: xarray.Dataset
-        unit aware array for the zonal component of the wind 
+        unit aware array for the meridional component of the wind 
     PressureData: xarray.Dataset
         unit aware array for the pressure levels
     LonIndexer: string
