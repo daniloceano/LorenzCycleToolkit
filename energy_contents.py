@@ -16,18 +16,10 @@ São Paulo - Brazil
 danilo.oceano@gmail.com
 """
 
-from integrals import (VerticalTrazpezoidalIntegration,
-                       CalcZonalAverage, CalcAreaAverage)
-from derivatives import Differentiate
-from metpy.units import units
-
-g = units.Quantity(9.80665, 'm / s^2')
-R = units.Quantity(8.314462618, 'J / mol / K')
-Md = units.Quantity(28.96546e-3, 'kg / mol')
-Rd = dry_air_gas_constant = R / Md
-dry_air_spec_heat_ratio = units.Quantity(1.4, 'dimensionless')
-Cp_d = dry_air_spec_heat_press = (
-    dry_air_spec_heat_ratio * Rd / (dry_air_spec_heat_ratio - 1))
+from calc import (VerticalTrazpezoidalIntegration,
+                       CalcZonalAverage, CalcAreaAverage,
+                       StaticStability)
+from metpy.constants import g
 
 
 def Calc_Az(TemperatureData,PressureData,LonIndexer,LatIndexer,VerticalCoordIndexer):
@@ -59,11 +51,11 @@ def Calc_Az(TemperatureData,PressureData,LonIndexer,LatIndexer,VerticalCoordInde
     ## Temperature area eddy
     tair_AE = tair_ZA-tair_AA # Area Eddy
     
-    sigmma_AA = StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
+    sigma_AA = StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
                             LatIndexer,LonIndexer)
     
     area_ave = CalcAreaAverage(tair_AE**2,LatIndexer)
-    function = area_ave/(2*g*sigmma_AA)
+    function = area_ave/(2*sigma_AA)
     Az = VerticalTrazpezoidalIntegration(function,PressureData,VerticalCoordIndexer)
     
     try: 
@@ -107,7 +99,7 @@ def Calc_Ae(TemperatureData,PressureData,LonIndexer,LatIndexer,VerticalCoordInde
                             LatIndexer,LonIndexer)
     
     area_ave = CalcAreaAverage(tair_ZE**2,LatIndexer,LonIndexer)
-    function = area_ave/(2*g*sigma_AA)
+    function = area_ave/(2*sigma_AA)
     Az = VerticalTrazpezoidalIntegration(function,PressureData,VerticalCoordIndexer)
     
     try: 
