@@ -16,15 +16,9 @@ danilo.oceano@gmail.com
 
 import numpy as np
 from metpy.units import units
-
-g = units.Quantity(9.80665, 'm / s^2')
-R = units.Quantity(8.314462618, 'J / mol / K')
-Md = units.Quantity(28.96546e-3, 'kg / mol')
-Rd = dry_air_gas_constant = R / Md
-dry_air_spec_heat_ratio = units.Quantity(1.4, 'dimensionless')
-Cp_d = dry_air_spec_heat_press = (
-    dry_air_spec_heat_ratio * Rd / (dry_air_spec_heat_ratio - 1))
-
+from metpy.constants import Rd
+from metpy.constants import Cp_d
+from metpy.constants import g
 
 def HorizontalTrazpezoidalIntegration(VariableData,dimension):
     """
@@ -219,8 +213,11 @@ def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
     Computates the static stability parameter sigma for all vertical levels
     and for the desired domain
     
-    from:
-        https://www.scielo.br/j/rbmet/a/X7gYvzZjfcjbdQcnrxxKQwq/?format=pdf&lang=en
+    Source:
+        Michaelides, S. C. (1987). 
+        Limited Area Energetics of Genoa Cyclogenesis,
+        Monthly Weather Review, 115(1), 13-26. Retrieved Jan 24, 2022, from:
+        https://journals.ametsoc.org/view/journals/mwre/115/1/1520-0493_1987_115_0013_laeogc_2_0_co_2.xml
     
     Parameters
     ----------
@@ -236,13 +233,7 @@ def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
         box specyfied by min_lon, max_lon, min_lat and max_lat    
     
     """
-    
-    tair_AA = CalcAreaAverage(TemperatureData,LatIndexer,LonIndexer)
-    
-    FirstTerm = tair_AA/Cp_d
-    SecondTerm = PressureData/Rd
-    DelT = Differentiate(tair_AA,PressureData,VerticalCoordIndexer)
-    
-    sigma = FirstTerm-(SecondTerm*DelT)
-    
+    FirstTerm = g*TemperatureData/Cp_d
+    SecondTerm = (PressureData*g/Rd)*Differentiate(TemperatureData,PressureData,VerticalCoordIndexer)
+    sigma = CalcAreaAverage(FirstTerm-SecondTerm,LatIndexer,LonIndexer)
     return sigma
