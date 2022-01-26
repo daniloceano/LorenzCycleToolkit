@@ -175,7 +175,7 @@ def Calc_Ca(VWindComponentData,PressureData,OmegaData,TemperatureData,
     # Integrate in pressure
     function = FirstTerm+SecondTerm
     Ca = -VerticalTrazpezoidalIntegration(function,PressureData,
-                                          VerticalCoordIndexer)
+                                          VerticalCoordIndexer)*9.8
     # Check if units are in accordance with expected and convert
     try: 
         Ca = Ca.metpy.convert_units('W/ m **2')
