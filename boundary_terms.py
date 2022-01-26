@@ -29,13 +29,92 @@ danilo.oceano@gmail.com
 """
 
 import numpy as np
-from integrals import (calc_area_ave, calc_zonal_ave,
-                       calc_static_stability, interga_P, interga_phi)
+from metpy.constants import Re
+from metpy.constants import g
+from calc import (CalcZonalAverage, CalcAreaAverage,
+                 VerticalTrazpezoidalIntegration,
+                 HorizontalTrazpezoidalIntegration,
+                 Differentiate, StaticStability)
 
-# constants
-ra = 6378000    # Earth's radius
-g = 9.81        # gravity acceleration 
 
+def Calc_Baz(TemperatureData,UWindComponentData,VWindComponentData,OmegaData,
+             PressureData,LonIndexer,LatIndexer,VerticalCoordIndexer):
+    """
+    This expression is a slightly modificated from the source material:
+        The first and second terms result in an array that varies oly in 
+        respect to time, while the third therm still possesses the latitude,
+        therefore the final product would still have data varying with
+        respect to the latitude. So I made an meridional average to make
+        it more consistent.
+         
+    """
+    # Coordinates
+    lons = TemperatureData[LonIndexer]
+    lats = TemperatureData[LatIndexer]
+    rlats = np.deg2rad(lats)
+    delta_lons = lons[-1]-lons[0]
+    delta_rlats = np.sin(rlats[0])-np.sin(rlats[-1])
+    levels = TemperatureData[VerticalCoordIndexer]
+    # Zonal averages 
+    tair_ZA = CalcZonalAverage(TemperatureData,LonIndexer)
+    v_ZA = CalcZonalAverage(VWindComponentData,LonIndexer)
+    omega_ZA = CalcZonalAverage(OmegaData,LonIndexer)
+    # Zonal eddies
+    tair_ZE = TemperatureData - tair_ZA
+    v_ZE = VWindComponentData - v_ZA
+    omega_ZE = OmegaData - omega_ZA
+    # Temperature area average
+    tair_AA = CalcAreaAverage(tair_ZA,LatIndexer)
+    # Temperature area eddy
+    tair_AE = tair_ZA-tair_AA 
+    # Sigma
+    sigma_AA = StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
+                            LatIndexer,LonIndexer)
+    
+    ## First Integral
+    tmp1 = 2*tair_AE*tair_ZE*UWindComponentData
+    tmp2 = (tair_AE**2)*UWindComponentData
+    function = (tmp1+tmp2)/(2*sigma_AA)
+    # easternmost values - westernmost values
+    delta_function = function.sel(
+        **{LonIndexer:lons[-1]}) - function.sel(**{LonIndexer:lons[0]})
+    delta_function_h_integ = HorizontalTrazpezoidalIntegration(delta_function,LatIndexer)
+    delta_function_hv_integ = VerticalTrazpezoidalIntegration(delta_function_h_integ,
+                                                              PressureData,
+                                                              VerticalCoordIndexer)
+    # divide by Re, lons and sin(lats)
+    FirstTerm = delta_function_hv_integ/(Re*delta_lons*delta_rlats)
+    
+    ## Second Integral
+    tmp1 = 2*CalcZonalAverage(v_ZE*tair_ZE,LonIndexer)*tair_AE
+    tmp2 = (tair_AE**2)*v_ZA
+    function = (tmp1+tmp2)*np.cos(rlats)/(2*sigma_AA)
+    # northernmost values - southernmost values
+    delta_function = function.sel(
+        **{LatIndexer:lats[0]}) - function.sel(**{LatIndexer:lats[-1]})
+    delta_function_v_integ = VerticalTrazpezoidalIntegration(delta_function,
+                                                              PressureData,
+                                                              VerticalCoordIndexer)
+    # divide by Re and sin(lats)
+    SecondTerm = delta_function_v_integ/(Re*delta_rlats)
+    
+    ## Third Term
+    tmp1 = 2*CalcZonalAverage(omega_ZE*tair_ZE,LonIndexer)*tair_AE
+    tmp2 = (tair_AE**2)*omega_ZA
+    function = (tmp1+tmp2)/(2*sigma_AA) 
+    delta_function = function.sel(
+        **{VerticalCoordIndexer:levels[0]}) - function.sel(**{VerticalCoordIndexer:levels[-1]})
+    ThirdTerm = CalcAreaAverage(delta_function,LatIndexer)
+    
+    Baz = -FirstTerm-SecondTerm-ThirdTerm
+    
+    try: 
+        Baz = Baz.metpy.convert_units('W/ m **2')
+    except ValueError:
+        print('Unit error in Baz')
+        raise
+    
+    return Baz
 
 def calc_BAz(temp,uwnd,vwnd,omg,min_lon,max_lon,min_lat,max_lat):
 
