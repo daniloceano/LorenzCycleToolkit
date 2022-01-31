@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Jan 31 20:15:59 2022
+
+Create an object that will store all meteorological data required by the Lorenz
+Energy Cycle computations. The self functions computate the zonal and area 
+averages and eddy terms for each variable, as well the static stability index.
+
+@author: danilocoutodsouza
+"""
+
+import xarray
+import calc
+
+class MetData:
+    '''
+    Object containing all meteorological data required for the LEC computation
+    '''
+    def __init__(self,  LonIndexer: str, LatIndexer: str, TimeName: str,
+                 VerticalCoordIndexer: str, TemperatureData: xarray.Dataset,
+                 PressureData: xarray.Dataset):
+        self.tair_ZA = None
+        self.tair_AA = None
+        self.tair_AE = None
+        self.tair_ZE = None
+        self.sigma_AA = None
+        self.tair = TemperatureData
+        self.PressureData = PressureData
+        self.LonIndexer = LonIndexer
+        self.LatIndexer = LatIndexer
+        self.TimeName = TimeName
+        self.VerticalCoordIndexer = VerticalCoordIndexer
+        
+    def _calc_sigma_aa(self):
+        '''
+        Computates the Static Stability parameter for data
+        '''
+        self.sigma_AA = calc.StaticStability(self.tair, self.PressureData, self.VerticalCoordIndexer,
+                        self.LatIndexer, self.LonIndexer)
+        return self.sigma_AA
+
+    def _calc_tair_averaes_eddy(self):
+        '''
+        For Temperature Data:
+            Computates zonal average (ZA), area average (AA) and the respectives
+            eddy components: zonal eddy (ZE) and area eddy (AE).
+        '''
+        self.tair_ZA = calc.CalcZonalAverage(self.tair, self.LonIndexer)
+        self.tair_AA = calc.CalcAreaAverage(self.tair, self.LonIndexer, self.LatIndexer)
+        self.tair_ZE = self.tair - self.tair_ZA
+        self.tair_AE = self.tair_ZA - self.tair_AA
+        return self.tair_ZA, self.tair_ZE, self.tair_AA, self.tair_AE
