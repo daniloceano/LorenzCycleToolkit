@@ -20,17 +20,17 @@ class MetData:
     def __init__(self,  LonIndexer: str, LatIndexer: str, TimeName: str,
                  VerticalCoordIndexer: str, TemperatureData: xarray.Dataset,
                  PressureData: xarray.Dataset):
-        self.tair_ZA = None
-        self.tair_AA = None
-        self.tair_AE = None
-        self.tair_ZE = None
-        self.sigma_AA = None
-        self.tair = TemperatureData
         self.PressureData = PressureData
         self.LonIndexer = LonIndexer
         self.LatIndexer = LatIndexer
         self.TimeName = TimeName
         self.VerticalCoordIndexer = VerticalCoordIndexer
+        self.tair = TemperatureData
+        self.tair_ZA = None
+        self.tair_AA = None
+        self.tair_AE = None
+        self.tair_ZE = None
+        self.sigma_AA = None
         
     def _calc_sigma_aa(self):
         '''
@@ -40,14 +40,31 @@ class MetData:
                         self.LatIndexer, self.LonIndexer)
         return self.sigma_AA
 
-    def _calc_tair_averaes_eddy(self):
+    def _calc_tair_za(self):
         '''
-        For Temperature Data:
-            Computates zonal average (ZA), area average (AA) and the respectives
-            eddy components: zonal eddy (ZE) and area eddy (AE).
+        Computates zonal average for temperature data
         '''
         self.tair_ZA = calc.CalcZonalAverage(self.tair, self.LonIndexer)
-        self.tair_AA = calc.CalcAreaAverage(self.tair, self.LonIndexer, self.LatIndexer)
+        return self.tair_ZA
+        
+    def _calc_tair_ze(self):
+        '''
+        Computates departure from zonal average (zonal eddy) for temperature data
+        '''
         self.tair_ZE = self.tair - self.tair_ZA
+        return self.tair_ZE
+
+    def _calc_tair_aa(self):
+        '''
+        Computates area average for temperature data
+        '''
+        self.tair_AA = calc.CalcAreaAverage(self.tair,
+                                            self.LonIndexer,self.LatIndexer)
+        return self.tair_AA
+    
+    def _calc_tair_ae(self):
+        '''
+        Computates departure from area average (area eddy) for temperature data
+        '''
         self.tair_AE = self.tair_ZA - self.tair_AA
-        return self.tair_ZA, self.tair_ZE, self.tair_AA, self.tair_AE
+        return self.tair_AE
