@@ -20,9 +20,10 @@ from calc import (VerticalTrazpezoidalIntegration,
                        CalcZonalAverage, CalcAreaAverage,
                        StaticStability)
 from metpy.constants import g
+import MetData
 
 
-def Calc_Az(TemperatureData,PressureData,LonIndexer,LatIndexer,VerticalCoordIndexer):
+def Calc_Az(md_obj: MetData):
     '''
     Parameters
     ----------
@@ -43,20 +44,11 @@ def Calc_Az(TemperatureData,PressureData,LonIndexer,LatIndexer,VerticalCoordInde
     Az: xarray.DataArray
         Unit-aware values corresponding of the Zonal Available Potential Energy
     '''        
-
-    ## Temperature averages
-    tair_ZA = CalcZonalAverage(TemperatureData,LonIndexer) # Zonal Average
-    tair_AA = CalcAreaAverage(TemperatureData,LonIndexer,LatIndexer) # Area Average
     
-    ## Temperature area eddy
-    tair_AE = tair_ZA-tair_AA # Area Eddy
-    
-    sigma_AA = StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
-                            LatIndexer,LonIndexer)
-    
-    area_ave = CalcAreaAverage(tair_AE**2,LatIndexer)
-    function = area_ave/(2*sigma_AA)
-    Az = VerticalTrazpezoidalIntegration(function,PressureData,VerticalCoordIndexer)
+    numerator = CalcAreaAverage(md_obj.tair_AE**2,md_obj.LatIndexer)
+    function = numerator/(2*md_obj.sigma_AA)
+    Az = VerticalTrazpezoidalIntegration(function,md_obj.PressureData,
+                                         md_obj.VerticalCoordIndexer)
     
     try: 
         Az = Az.metpy.convert_units('J/ m **2')
