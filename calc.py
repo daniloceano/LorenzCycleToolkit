@@ -94,6 +94,13 @@ def CalcZonalAverage(VariableData,LonIndexer):
     """
     Computates zonal averages of a variable for all z levels and times 
     
+    Source:
+        Brennan, F. E., & Vincent, D. G. (1980).
+        Zonal and Eddy Components of the Synoptic-Scale Energy Budget
+        during Intensification of Hurricane Carmen (1974),
+        Monthly Weather Review, 108(7), 954-965. Retrieved Jan 25, 2022, from:
+        https://journals.ametsoc.org/view/journals/mwre/108/7/1520-0493_1980_108_0954_zaecot_2_0_co_2.xml
+    
     Parameters
     ----------
     VariableData: xarray.Dataset
@@ -122,6 +129,13 @@ def CalcAreaAverage(VariableData,LatIndexer,LonIndexer=None):
     The default is to computate the zonal average and then a meridional average.
     If the input data is already some sort of zonal quantity (average or not),
     simply set LonIndexer to None
+    
+    Source:
+        Brennan, F. E., & Vincent, D. G. (1980).
+        Zonal and Eddy Components of the Synoptic-Scale Energy Budget
+        during Intensification of Hurricane Carmen (1974),
+        Monthly Weather Review, 108(7), 954-965. Retrieved Jan 25, 2022, from:
+        https://journals.ametsoc.org/view/journals/mwre/108/7/1520-0493_1980_108_0954_zaecot_2_0_co_2.xml
     
     Parameters
     ----------
