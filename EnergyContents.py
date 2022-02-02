@@ -72,10 +72,9 @@ class EnergyContents:
         return Ae
     
     def calc_kz(self):
-        Wind_ZA = (self.u_ZA**2)+(self.v_ZA**2)
-        Wind_AA = CalcAreaAverage(Wind_ZA,self.LatIndexer)
-            
-        Kz = VerticalTrazpezoidalIntegration(Wind_AA,self.PressureData,
+        _ = (self.u_ZA**2)+(self.v_ZA**2)
+        function = CalcAreaAverage(_,self.LatIndexer)
+        Kz = VerticalTrazpezoidalIntegration(function,self.PressureData,
                                              self.VerticalCoordIndexer)/(2*g)
         try: 
             Kz = Kz.metpy.convert_units('J/ m **2')
@@ -86,8 +85,8 @@ class EnergyContents:
         return Kz
     
     def calc_ke(self):
-        Wind_ZE = (self.u_ZE**2)+(self.v_ZE**2)
-        Wind_AA = CalcAreaAverage(Wind_ZE,self.LatIndexer,self.LonIndexer)
-        Ke = VerticalTrazpezoidalIntegration(Wind_AA,self.PressureData,
+        _ = (self.u_ZE**2)+(self.v_ZE**2)
+        function = CalcAreaAverage(_,self.LatIndexer,self.LonIndexer)
+        Ke = VerticalTrazpezoidalIntegration(function,self.PressureData,
                                              self.VerticalCoordIndexer)/(2*g)
         return Ke
