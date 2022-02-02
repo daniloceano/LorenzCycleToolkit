@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 This script defines the EnergyContent object. It uses the MetData object as an
-input. The built-in functions use the input data to compute 
-the following partioned energy contents:
+input. The built-in functions use the input data to compute the following 
+partioned energy contents of the Lorenz Energy Cycle:
     AZ = zonal available potential energy
     AE = eddy available potential energy
     KZ = zonal kinetic energy
@@ -32,6 +32,7 @@ from metpy.constants import g
 import MetData
 
 class EnergyContents:
+    
     def __init__(self, md_obj: MetData):
         self.PressureData = md_obj.PressureData
         self.LonIndexer = md_obj.LonIndexer
