@@ -41,7 +41,7 @@ def Calc_Baz(TemperatureData,UWindComponentData,VWindComponentData,OmegaData,
              PressureData,LonIndexer,LatIndexer,VerticalCoordIndexer):
     """
     This expression is a slightly modificated from the source material:
-        The first and second terms result in an array that varies oly in 
+        The first and second terms result in an array that varies only in 
         respect to time, while the third therm still possesses the latitude,
         therefore the final product would still have data varying with
         respect to the latitude. So I made an meridional average to make
@@ -104,7 +104,10 @@ def Calc_Baz(TemperatureData,UWindComponentData,VWindComponentData,OmegaData,
     function = (tmp1+tmp2)/(2*sigma_AA) 
     delta_function = function.sel(
         **{VerticalCoordIndexer:levels[0]}) - function.sel(**{VerticalCoordIndexer:levels[-1]})
+    ##
+    # TO DO: instead of average, try North - South # 
     ThirdTerm = CalcAreaAverage(delta_function,LatIndexer)
+    ##
     
     Baz = -FirstTerm-SecondTerm-ThirdTerm
     
