@@ -86,7 +86,7 @@ class ConversionTerms:
     
     def calc_ca(self):
         # First term of the integral
-        _ = (self.v_ZE*self.tair_ZE/(2*self.sigma_AA)) \
+        _ = (self.v_ZE*self.tair_ZE/(2*Re*self.sigma_AA)) \
             * Differentiate(self.tair_AE,self.rlats,self.LatIndexer)
         function = CalcAreaAverage(_,self.LatIndexer,self.LonIndexer)
         # Second term of the integral
