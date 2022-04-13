@@ -36,12 +36,13 @@ def get_data(file,varlist,min_lon, max_lon, min_lat, max_lat):
     full_data = convert_lon(xr.open_dataset(file),LonIndexer)
     full_data = full_data.sortby(LonIndexer).sortby(LevelIndexer,ascending=False).sortby(LatIndexer,ascending=False)
     
+    # Fill missing values with 0
+    full_data = full_data.fillna(0)
+    
     # Slice data for desired domain
-    # lc, la = data.coords[LonIndexer], data.coords[LatIndexer]
-    # data = data.loc[dict(lon=lc[(lc > min_lon) & (lc < max_lon)], 
-    #                      lat=la[(la > min_lat) & (la < max_lat)])]
-    data = full_data.load().sel(**{LatIndexer: slice(max_lat, min_lat),
-                        LonIndexer: slice(min_lon, max_lon)})
+    # data = full_data.load().sel(**{LatIndexer: slice(max_lat, min_lat),
+    #                     LonIndexer: slice(min_lon, max_lon)})
+    data = full_data.load()
     
     # Export Variables
     tair = data[dfVars.loc['Air Temperature']['Variable']]
