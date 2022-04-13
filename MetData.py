@@ -19,7 +19,10 @@ class MetData:
     '''
     def __init__(self,  LonIndexer: str, LatIndexer: str, TimeName: str,
                  VerticalCoordIndexer: str, TemperatureData: xarray.Dataset,
-                 PressureData: xarray.Dataset):
+                 PressureData: xarray.Dataset,
+                 UWindComponentData: xarray.Dataset,
+                 VWindComponentData: xarray.Dataset,
+                 OmegaData: xarray.Dataset):
         self.PressureData = PressureData
         self.LonIndexer = LonIndexer
         self.LatIndexer = LatIndexer
@@ -33,41 +36,28 @@ class MetData:
         self.tair_ZE = self.tair - self.tair_ZA
         self.tair_AE = self.tair_ZA - self.tair_AA
         
+        # Zonal wind component data values, averages and eddy terms
+        self.u = UWindComponentData
+        self.u_ZA = calc.CalcZonalAverage(self.u, self.LonIndexer)
+        self.u_AA = calc.CalcAreaAverage(self.u, self.LonIndexer,self.LatIndexer)
+        self.u_ZE = self.u - self.u_ZA
+        self.u_AE = self.u_ZA - self.u_AA
+        
+        # Meridional wind component data values, averages and eddy terms
+        self.v = VWindComponentData
+        self.v_ZA = calc.CalcZonalAverage(self.v, self.LonIndexer)
+        self.v_AA = calc.CalcAreaAverage(self.v, self.LonIndexer,self.LatIndexer)
+        self.v_ZE = self.v - self.v_ZA
+        self.v_AE = self.v_ZA - self.v_AA
+        
+        # Omega velocity (vertical velocity in pressure levels) data values,
+        # averages and eddy terms
+        self.omega = OmegaData
+        self.omega_ZA = calc.CalcZonalAverage(self.omega, self.LonIndexer)
+        self.omega_AA = calc.CalcAreaAverage(self.omega, self.LonIndexer,self.LatIndexer)
+        self.omega_ZE = self.omega - self.omega_ZA
+        self.omega_AE = self.omega_ZA - self.omega_AA
+        
         # Static stability parameter
         self.sigma_AA = calc.StaticStability(self.tair, self.PressureData, self.VerticalCoordIndexer,
                         self.LatIndexer, self.LonIndexer)
-        
-        
-        
-    # def _calc_sigma_aa(self):
-    #     '''
-    #     Computates the Static Stability parameter for data
-    #     '''
-    #     self.sigma_AA = calc.StaticStability(self.tair, self.PressureData, self.VerticalCoordIndexer,
-    #                     self.LatIndexer, self.LonIndexer)
-    #     return self.sigma_AA    
-    # def _calc_tair_za(self):
-    #     '''
-    #     Computates zonal average for temperature data
-    #     '''
-    #     self.tair_ZA = calc.CalcZonalAverage(self.tair, self.LonIndexer)
-    #     return self.tair_ZA 
-    # def _calc_tair_aa(self):
-    #     '''
-    #     Computates area average for temperature data
-    #     '''
-    #     self.tair_AA = calc.CalcAreaAverage(self.tair,
-    #                                         self.LonIndexer,self.LatIndexer)
-    #     return self.tair_AA
-    # def _calc_tair_ze(self):
-    #     '''
-    #     Computates departure from zonal average (zonal eddy) for temperature data
-    #     '''
-    #     self.tair_ZE = self.tair - self.tair_ZA
-    #     return self.tair_ZE
-    # def _calc_tair_ae(self):
-    #     '''
-    #     Computates departure from area average (area eddy) for temperature data
-    #     '''
-    #     self.tair_AE = self.tair_ZA - self.tair_AA
-    #     return self.tair_AE
