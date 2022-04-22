@@ -28,7 +28,8 @@ import pandas as pd
 import xarray as xr
 import dataclasses
 import sys
-from typing import List, Any
+from typing import List
+
 
 # This will be printed as an error message
 USAGE = f"Usage: python {sys.argv[0]} [--help] | file fvar min_lon, max_lon, min_lat, max_lat]"
@@ -131,6 +132,7 @@ def get_data(file,varlist,min_lon, max_lon, min_lat, max_lat):
     print(dfVars)
     return LonIndexer, LatIndexer, TimeIndexer, LevelIndexer, tair, hgt, rhum, omega, u, v, slp
 
+
 # The main function. It will open the data, read the variables and calls the
 # functions for making the calculations 
 def main():
@@ -210,13 +212,10 @@ def main():
             j = i.replace('-','')+'S'
             lims += j
     
-    fname = 'LEC_'+sys.argv[1]+'_'+lims+'.csv'
+    fname = 'LEC_'+sys.argv[1].split('/')[-1]+'_'+lims+'.csv'
     df.to_csv(fname)
     print(fname+' created')
 
 if __name__ == "__main__":
-    try:
-        main()
-    except:
-        raise SystemExit('Program could not be started')
+    main()
     print('All done!')
