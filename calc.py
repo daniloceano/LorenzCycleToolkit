@@ -92,7 +92,8 @@ def VerticalTrazpezoidalIntegration(VariableData,VerticalAxis,VerticalCoordIndex
 
 def CalcZonalAverage(VariableData,LonIndexer):
     """
-    Computates zonal averages of a variable for all z levels and times 
+    Computates variable zonal average of some variable, for all z
+    levels and time steps.
     
     Source:
         Brennan, F. E., & Vincent, D. G. (1980).
@@ -106,8 +107,7 @@ def CalcZonalAverage(VariableData,LonIndexer):
     VariableData: xarray.Dataset
         arrays containing data to be integrated
     LonIndexer: string
-        the indexer used for the longitude variable in the xarray       
-   
+        the indexer used for the longitude variable in the xarray  
     Returns
     -------
     zonal_ave: xarray.Dataset
@@ -122,7 +122,8 @@ def CalcZonalAverage(VariableData,LonIndexer):
     zonal_ave = trapz/(rlons[-1]-rlons[0])
     return zonal_ave
 
-def CalcAreaAverage(VariableData,LatIndexer,LonIndexer=None):
+def CalcAreaAverage(VariableData,LatIndexer, BoxSouth=None, BoxNorth=None,
+                    LonIndexer=None):
     """
     Computates the Area Average of a function.
     
@@ -152,16 +153,17 @@ def CalcAreaAverage(VariableData,LatIndexer,LonIndexer=None):
         Arrays of area avreages for all latitudes and longitudes from
         the passed Dataset
     """
-
+    # Slice variable data for southern and northern limits
+    sVariableData = VariableData.sel(**{LatIndexer: slice(BoxNorth, BoxSouth)})
     # Get latitude and logitude data
-    lats = VariableData[LatIndexer]
+    lats = sVariableData[LatIndexer]
     rlats = np.deg2rad(lats)
     rlats = units('radians')*rlats
     if LonIndexer:
         # If LonIndexer is provided, get zonal ave
-        zonal_ave = CalcZonalAverage(VariableData,LonIndexer)
+        zonal_ave = CalcZonalAverage(sVariableData,LonIndexer)
     else:
-        zonal_ave = VariableData
+        zonal_ave = sVariableData
     # Take the area avearge
     cosines = np.cos(rlats)
     trapz = HorizontalTrazpezoidalIntegration(zonal_ave*cosines,LatIndexer)
@@ -222,7 +224,7 @@ def Differentiate(Data,Axis,AxisName):
     return DifArray
 
 def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
-                    LatIndexer,LonIndexer):
+                    LatIndexer,LonIndexer,BoxNorth,BoxSouth,BoxWest, BoxEast):
     """
     Computates the static stability parameter sigma for all vertical levels
     and for the desired domain
@@ -249,5 +251,7 @@ def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
     """
     FirstTerm = g*TemperatureData/Cp_d
     SecondTerm = (PressureData*g/Rd)*Differentiate(TemperatureData,PressureData,VerticalCoordIndexer)
-    sigma = CalcAreaAverage(FirstTerm-SecondTerm,LatIndexer,LonIndexer)
+    function = (FirstTerm-SecondTerm).sel(**{LatIndexer: 
+            slice(BoxNorth,BoxSouth),LonIndexer: slice(BoxWest, BoxEast)})
+    sigma = CalcAreaAverage(function,LatIndexer,BoxSouth, BoxNorth,LonIndexer)
     return sigma

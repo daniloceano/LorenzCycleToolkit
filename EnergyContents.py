@@ -29,25 +29,26 @@ Source for formulas used here:
 
 from calc import (VerticalTrazpezoidalIntegration, CalcAreaAverage)
 from metpy.constants import g
-import MetData
+from BoxData import BoxData
 
 class EnergyContents:
     
-    def __init__(self, md_obj: MetData):
-        self.PressureData = md_obj.PressureData
-        self.LonIndexer = md_obj.LonIndexer
-        self.LatIndexer = md_obj.LatIndexer
-        self.TimeName = md_obj.TimeName
-        self.VerticalCoordIndexer = md_obj.VerticalCoordIndexer
-        self.tair_AE = md_obj.tair_AE
-        self.tair_ZE = md_obj.tair_ZE
-        self.u_ZA = md_obj.u_ZA
-        self.u_ZE = md_obj.u_ZE
-        self.v_ZA = md_obj.v_ZA
-        self.v_ZE = md_obj.v_ZE
-        self.sigma_AA = md_obj.sigma_AA
+    def __init__(self, box_obj: BoxData):
+        self.PressureData = box_obj.PressureData
+        self.LonIndexer = box_obj.LonIndexer
+        self.LatIndexer = box_obj.LatIndexer
+        self.TimeName = box_obj.TimeName
+        self.VerticalCoordIndexer = box_obj.VerticalCoordIndexer
+        self.tair_AE = box_obj.tair_AE
+        self.tair_ZE = box_obj.tair_ZE
+        self.u_ZA = box_obj.u_ZA
+        self.u_ZE = box_obj.u_ZE
+        self.v_ZA = box_obj.v_ZA
+        self.v_ZE = box_obj.v_ZE
+        self.sigma_AA = box_obj.sigma_AA
         
     def calc_az(self):
+        print('\nComputing Zonal Available Potential Energy (Az)...')
         numerator = CalcAreaAverage(self.tair_AE**2,self.LatIndexer)
         function = numerator/(2*self.sigma_AA)
         Az = VerticalTrazpezoidalIntegration(function,self.PressureData,
@@ -57,21 +58,25 @@ class EnergyContents:
         except ValueError:
             print('Unit error in Az')
             raise
+        print(Az.values*Az.metpy.units)
         return Az
     
     def calc_ae(self):  
-        numerator = CalcAreaAverage(self.tair_ZE**2,self.LatIndexer,self.LonIndexer)
+        print('\nComputing Eddy Available Potential Energy (Ae)...')
+        numerator = CalcAreaAverage(self.tair_ZE**2,self.LatIndexer,LonIndexer=self.LonIndexer)
         function = numerator/(2*self.sigma_AA)
-        Az = VerticalTrazpezoidalIntegration(function,self.PressureData,
+        Ae = VerticalTrazpezoidalIntegration(function,self.PressureData,
                                              self.VerticalCoordIndexer)
         try: 
-            Ae = Az.metpy.convert_units('J/ m **2')
+            Ae = Ae.metpy.convert_units('J/ m **2')
         except ValueError:
-            print('Unit error in Az')
+            print('Unit error in Ae')
             raise
+        print(Ae.values*Ae.metpy.units)
         return Ae
     
     def calc_kz(self):
+        print('\nComputing Zonal Kinetic Energy (Kz)...')
         _ = (self.u_ZA**2)+(self.v_ZA**2)
         function = CalcAreaAverage(_,self.LatIndexer)
         Kz = VerticalTrazpezoidalIntegration(function,self.PressureData,
@@ -81,12 +86,19 @@ class EnergyContents:
         except ValueError:
             print('Unit error in Kz')
             raise
-        
+        print(Kz.values*Kz.metpy.units)
         return Kz
     
     def calc_ke(self):
+        print('\nComputing Eddy Kinetic Energy (Ke)...')
         _ = (self.u_ZE**2)+(self.v_ZE**2)
-        function = CalcAreaAverage(_,self.LatIndexer,self.LonIndexer)
+        function = CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
         Ke = VerticalTrazpezoidalIntegration(function,self.PressureData,
                                              self.VerticalCoordIndexer)/(2*g)
+        try: 
+            Ke = Ke.metpy.convert_units('J/ m **2')
+        except ValueError:
+            print('Unit error in Ke')
+            raise
+        print(Ke.values*Ke.metpy.units)
         return Ke
