@@ -30,6 +30,7 @@ Source for formulas used here:
 from calc import (VerticalTrazpezoidalIntegration, CalcAreaAverage)
 from metpy.constants import g
 from BoxData import BoxData
+import xarray as xr
 
 class EnergyContents:
     
@@ -39,6 +40,7 @@ class EnergyContents:
         self.LatIndexer = box_obj.LatIndexer
         self.TimeName = box_obj.TimeName
         self.VerticalCoordIndexer = box_obj.VerticalCoordIndexer
+        self.output_dir = box_obj.output_dir
         self.tair_AE = box_obj.tair_AE
         self.tair_ZE = box_obj.tair_ZE
         self.u_ZA = box_obj.u_ZA
@@ -59,6 +61,13 @@ class EnergyContents:
             print('Unit error in Az')
             raise
         print(Az.values*Az.metpy.units)
+        # Save Az before vertical integration
+        print('Saving Az for each vertical level...')
+        try:
+            function.to_pandas().to_csv(self.output_dir+'/Az_'+self.VerticalCoordIndexer+'.csv')
+        except:
+            raise('Could not save file with Az for each level')
+        print('Done!')
         return Az
     
     def calc_ae(self):  
@@ -73,6 +82,13 @@ class EnergyContents:
             print('Unit error in Ae')
             raise
         print(Ae.values*Ae.metpy.units)
+        # Save Ae before vertical integration
+        print('Saving Ae for each vertical level...')
+        try:
+            function.to_pandas().to_csv(self.output_dir+'/Ae_'+self.VerticalCoordIndexer+'.csv')
+        except:
+            raise('Could not save file with Ae for each level')
+        print('Done!')
         return Ae
     
     def calc_kz(self):
@@ -87,6 +103,13 @@ class EnergyContents:
             print('Unit error in Kz')
             raise
         print(Kz.values*Kz.metpy.units)
+        # Save Kz before vertical integration
+        print('Saving Kz for each vertical level...')
+        try:
+            function.to_pandas().to_csv(self.output_dir+'/Kz_'+self.VerticalCoordIndexer+'.csv')
+        except:
+            raise('Could not save file with Kz for each level')
+        print('Done!')
         return Kz
     
     def calc_ke(self):
@@ -101,4 +124,12 @@ class EnergyContents:
             print('Unit error in Ke')
             raise
         print(Ke.values*Ke.metpy.units)
+        # Save Ke before vertical integration
+        print('Saving Ke for each vertical level...')
+        try:
+            function.to_pandas().to_csv(self.output_dir+'/Ke_'+self.VerticalCoordIndexer+'.csv')
+        except:
+            raise('Could not save file with Ke for each level')
+        print('Done!')
         return Ke
+        

@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Jan 31 20:15:59 2022
-Create an object that will store all meteorological data required by the Lorenz
-Energy Cycle computations. The self functions computate the zonal and area 
-averages and eddy terms for each variable, as well the static stability index.
+Create an object that will store, whithin a bounding box specified by the user,
+all meteorological data required by the Lorenz Energy Cycle computations.
+The recursive functions computate the zonal and area averages and eddy terms 
+for each variable, as well the static stability index.
 @author: danilocoutodsouza
 
 
@@ -26,12 +27,14 @@ class BoxData:
                  VWindComponentData: xarray.Dataset,
                  OmegaData: xarray.Dataset,
                  western_limit: float, eastern_limit: float,
-                 southern_limit: float, northern_limit: float):
+                 southern_limit: float, northern_limit: float,
+                 output_dir: str):
         self.PressureData = PressureData
         self.LonIndexer = LonIndexer
         self.LatIndexer = LatIndexer
         self.TimeName = TimeName
         self.VerticalCoordIndexer = VerticalCoordIndexer
+        self.output_dir = output_dir
         
         # Find data gridpoints that match the box limits
         self.BoxWest = float((TemperatureData[LonIndexer][(np.abs(TemperatureData[LonIndexer] - western_limit)).argmin()]).values)
@@ -40,10 +43,10 @@ class BoxData:
         self.BoxNorth = float((TemperatureData[LatIndexer][(np.abs(TemperatureData[LatIndexer] - northern_limit)).argmin()]).values)
         
         # Suffixes used:
-            # ZA = Zonal average (whithin the dfined box)
-            # AA = Area average (whithin the dfined box)
-            # ZE = zonal eddy (departure from zonal average)
-            # AE = area eddy (zonal departures from area averages)
+        #     ZA = Zonal average (whithin the dfined box)
+        #     AA = Area average (whithin the dfined box)
+        #     ZE = zonal eddy (departure from zonal average)
+        #     AE = area eddy (zonal departures from area averages)
         
         # Temperature data values, averages and eddy terms
         self.tair = TemperatureData.sel(**{LatIndexer: 
