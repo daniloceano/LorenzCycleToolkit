@@ -12,17 +12,19 @@ import numpy as np
 import os
 import sys
 
+# Specs for plotting
+linecolors = ['#A53860','#C9B857','#384A0F','#473BF0']
+markerfacecolors = ['#A53860','w','#384A0F','w']
+conversion_labels = ['Cz','Ca','Ck','Ce']
+markers = ['s','s','o','o']         
+linestyles = ['-','-','-','-']
+energy_labels = ['Az','Ae','Kz','Ke']
+linewidth = 4
+
 def plot_timeseries(df,DataDirectory):
     # Guarantee no plots are open
     plt.close('all')
-    # Specs for plotting
-    linecolors = ['#A53860','#C9B857','#384A0F','#473BF0']
-    markerfacecolors = ['#A53860','w','#384A0F','w']
-    conversion_labels = ['Cz','Ca','Ck','Ce']
-    markers = ['s','s','o','o']         
-    linestyles = ['-','-','-','-']
-    energy_labels = ['Az','Ae','Kz','Ke']
-    linewidth = 4
+    # Tines for x axs
     date = df['Date']
     times = pd.date_range(date[0],date.iloc[-1],periods=len(date))
     # Loop through the distinct group of terms
@@ -65,14 +67,14 @@ def plot_timeseries(df,DataDirectory):
             print(fname+ 'created')
 
 def main():
-    # Open data as input from user from command line
+    # Open data from energy and conversion terms as input from user from command line
     data = sys.argv[1]
     print('Reading data from: '+data)
     df = pd.read_csv(data)
     print('Ok!')
-    # Diectory for saving teh figures
-    FigsDirectory = 'LEC_Figures'
-    DataDirectory = FigsDirectory+'/'+data.split('.csv')[0].split('.csv')[0]
+    # Diectory for saving figures
+    FigsDirectory = 'LEC_Results'
+    DataDirectory = FigsDirectory+'/'+data.split('/')[-1].split('.csv')[0]
     # Check if the LEC_Figures directory exists. If not, creates it
     if not os.path.exists(FigsDirectory):
                 os.makedirs(FigsDirectory)

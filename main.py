@@ -29,6 +29,7 @@ import xarray as xr
 import dataclasses
 import sys
 from typing import List
+import os
 
 
 # This will be printed as an error message
@@ -136,9 +137,11 @@ def get_data(file,varlist,min_lon, max_lon, min_lat, max_lat):
 # The main function. It will open the data, read the variables and calls the
 # functions for making the calculations 
 def main():
+    ##################
     # 1) Checks if the inputs are correct.
     tests_args()
     print('')
+    ################## 
     # 2) Open the data
     data = get_data(*sys.argv[1:])   
     # Data indexers
@@ -155,7 +158,42 @@ def main():
     #
     print('\n Parameters spcified for the bounding box:')
     print('min_lon, max_lon, min_lat, max_lat: '+str(sys.argv[3:]))
-    # 3) 
+    ##################
+    # 3) Create folder to save results
+    # Convert box limits to strings for apprending to file name
+    lims = ''
+    for i in sys.argv[3:5]:
+        if i[0] == '-':
+            j = i.replace('-','')+'W'
+        else:
+            j = i+'E'
+        lims += j
+    for i in sys.argv[5:]:
+        if i[0] == '-':
+            j = i.replace('-','')+'S'
+        else:
+            j = i+'N'
+        lims += j
+    # Directory where results will be stored
+    ResultsDirectory = 'LEC_Results'
+    infile_name = sys.argv[1]
+    # Append data limits to outfile name
+    outfile_name = infile_name.split('.nc')[0]+'_'+lims
+    # Each dataset of results have its own directory, allowing to store results
+    # from more than one experiment at each time
+    DataDirectory = ResultsDirectory+'/'+outfile_name
+    # Check if the LEC_Figures directory exists. If not, creates it
+    if not os.path.exists(ResultsDirectory):
+                os.makedirs(ResultsDirectory)
+                print(ResultsDirectory+' created')
+    else:
+        print(ResultsDirectory+' directory exists')
+    # Check if a directory for current data exists. If not, creates it
+    if not os.path.exists(DataDirectory):
+                os.makedirs(DataDirectory)
+                print(DataDirectory+' created')
+    ##################        
+    # 4) 
     print('Computing zonal and area averages and eddy terms for each variable')
     print('and the static stability parameter...')
     try:
@@ -165,11 +203,13 @@ def main():
                      LonIndexer=LonIndexer, LatIndexer=LatIndexer, TimeName=TimeName,
                      VerticalCoordIndexer=VerticalCoordIndexer,
                      western_limit=float(sys.argv[3]), eastern_limit=float(sys.argv[4]),
-                     southern_limit=float(sys.argv[5]), northern_limit=float(sys.argv[6]))
+                     southern_limit=float(sys.argv[5]), northern_limit=float(sys.argv[6]),
+                     output_dir=DataDirectory)
     except:
         raise SystemExit('ERROR!!!!!')
     print('Ok!')
-    # 4) 
+    ##################
+    # 5) 
     print('\n------------------------------------------------------------------------')
     print('Computing zonal and eddy kinectic and available potential energy terms')
     try:
@@ -179,7 +219,8 @@ def main():
     except:
         raise SystemExit('ERROR!!!!!')
     print('Ok!')
-    # 5)
+    ##################
+    # 6)
     print('\n------------------------------------------------------------------------')
     print('Computing the conversion terms between energy contents') 
     try:
@@ -188,8 +229,8 @@ def main():
     except:
         raise SystemExit('ERROR!!!!!')
     print('Ok!')
-    
-    # 6)
+    ##################
+    # 7)
     # First, extract dates to construct the dataframe
     print('\nCreating a csv to store results...')
     dates = tair.initial_time0_hours.values
@@ -201,21 +242,10 @@ def main():
     for i,j,k in zip(range(4),['Az','Ae','Kz','Ke'],['Cz','Ca','Ck','Ce']):
         df[j] = EnergyList[i]
         df[k] = ConversionList[i]
-    # Convert box limits to strings
-    lims = ''
-    for i in sys.argv[3:5]:
-        if i[0] == '-':
-            j = i.replace('-','')+'W'
-            lims += j
-    for i in sys.argv[5:]:
-        if i[0] == '-':
-            j = i.replace('-','')+'S'
-            lims += j
-            
-    infile_name = sys.argv[1].split('/')[-1].split('.nc')[0]
-    outfile_name = 'LEC_'+infile_name+'_'+lims+'.csv'
-    df.to_csv(outfile_name)
-    print(outfile_name+' created')
+    # Lastly, save file
+    outfile = DataDirectory+'/'+outfile_name+'.csv'
+    df.to_csv(outfile)
+    print(outfile+' created')
     print('All done!')
 
 if __name__ == "__main__":
