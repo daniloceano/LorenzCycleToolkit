@@ -33,6 +33,7 @@ from metpy.constants import Re
 from metpy.constants import kappa
 from calc import (CalcAreaAverage,VerticalTrazpezoidalIntegration,Differentiate)
 from BoxData import BoxData
+from EnergyContents import function_to_df
 
 class ConversionTerms:
     
@@ -75,7 +76,8 @@ class ConversionTerms:
         # Save Ce before vertical integration
         print('Saving Ce for each vertical level...')
         try:
-            function.to_pandas().to_csv(self.output_dir+'/Ce_'+self.VerticalCoordIndexer+'.csv')
+            df = function_to_df(self,self.VerticalCoordIndexer,function)
+            df.to_csv(self.output_dir+'/Ce_'+self.VerticalCoordIndexer+'.csv')
         except:
             raise('Could not save file with Ce for each level')
         print('Done!')
@@ -98,7 +100,8 @@ class ConversionTerms:
         # Save Cz before vertical integration
         print('Saving Cz for each vertical level...')
         try:
-            function.to_pandas().to_csv(self.output_dir+'/Cz_'+self.VerticalCoordIndexer+'.csv')
+            df = function_to_df(self,self.VerticalCoordIndexer,function)
+            df.to_csv(self.output_dir+'/Cz_'+self.VerticalCoordIndexer+'.csv')
         except:
             raise('Could not save file with Cz for each level')
         print('Done!')
@@ -126,7 +129,8 @@ class ConversionTerms:
         # Save Ca before vertical integration
         print('Saving Ca for each vertical level...')
         try:
-            function.to_pandas().to_csv(self.output_dir+'/Ca_'+self.VerticalCoordIndexer+'.csv')
+            df = function_to_df(self,self.VerticalCoordIndexer,function)
+            df.to_csv(self.output_dir+'/Ca_'+self.VerticalCoordIndexer+'.csv')
         except:
             raise('Could not save file with Ca for each level')
         print('Done!')
@@ -166,7 +170,8 @@ class ConversionTerms:
         # Save Ck before vertical integration
         print('Saving Ck for each vertical level...')
         try:
-            function.to_pandas().to_csv(self.output_dir+'/Ck_'+self.VerticalCoordIndexer+'.csv')
+            df = function_to_df(self,self.VerticalCoordIndexer,function)
+            df.to_csv(self.output_dir+'/Ck_'+self.VerticalCoordIndexer+'.csv')
         except:
             raise('Could not save file with Ck for each level')
         print('Done!')

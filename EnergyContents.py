@@ -64,7 +64,8 @@ class EnergyContents:
         # Save Az before vertical integration
         print('Saving Az for each vertical level...')
         try:
-            function.to_pandas().to_csv(self.output_dir+'/Az_'+self.VerticalCoordIndexer+'.csv')
+            df = function_to_df(self,self.VerticalCoordIndexer,function)
+            df.to_csv(self.output_dir+'/Az_'+self.VerticalCoordIndexer+'.csv')
         except:
             raise('Could not save file with Az for each level')
         print('Done!')
@@ -85,7 +86,8 @@ class EnergyContents:
         # Save Ae before vertical integration
         print('Saving Ae for each vertical level...')
         try:
-            function.to_pandas().to_csv(self.output_dir+'/Ae_'+self.VerticalCoordIndexer+'.csv')
+            df = function_to_df(self,self.VerticalCoordIndexer,function)
+            df.to_csv(self.output_dir+'/Ae_'+self.VerticalCoordIndexer+'.csv')
         except:
             raise('Could not save file with Ae for each level')
         print('Done!')
@@ -106,7 +108,8 @@ class EnergyContents:
         # Save Kz before vertical integration
         print('Saving Kz for each vertical level...')
         try:
-            function.to_pandas().to_csv(self.output_dir+'/Kz_'+self.VerticalCoordIndexer+'.csv')
+            df = function_to_df(self,self.VerticalCoordIndexer,function)
+            df.to_csv(self.output_dir+'/Kz_'+self.VerticalCoordIndexer+'.csv')
         except:
             raise('Could not save file with Kz for each level')
         print('Done!')
@@ -127,9 +130,17 @@ class EnergyContents:
         # Save Ke before vertical integration
         print('Saving Ke for each vertical level...')
         try:
-            function.to_pandas().to_csv(self.output_dir+'/Ke_'+self.VerticalCoordIndexer+'.csv')
+            df = function_to_df(self,self.VerticalCoordIndexer,function)
+            df.to_csv(self.output_dir+'/Ke_'+self.VerticalCoordIndexer+'.csv')
         except:
             raise('Could not save file with Ke for each level')
         print('Done!')
         return Ke
         
+def function_to_df(self,VerticalCoordIndexer,function):
+    df = function.drop([self.LonIndexer,self.LatIndexer]).isel({self.VerticalCoordIndexer:0}).drop([self.VerticalCoordIndexer]).to_dataframe(str(function[VerticalCoordIndexer][0].data))
+    for lev in function[self.VerticalCoordIndexer][1:]:
+        lev = lev.data
+        df_lev = function.drop([self.LonIndexer,self.LatIndexer]).sel({self.VerticalCoordIndexer:lev}).drop([self.VerticalCoordIndexer]).to_dataframe(str(lev))
+        df = df.join(df_lev)
+    return df

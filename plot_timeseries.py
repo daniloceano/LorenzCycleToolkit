@@ -3,7 +3,17 @@
 """
 Created on Fri Apr 22 17:56:57 2022
 
-@author: danilocoutodsouza
+This script reads an CSV file with energy and conversion terms from the Lorenz
+Energy Cycle (as input from user) and plot a timeseries for each.
+
+Created by:
+    Danilo Couto de Souza
+    Universidade de São Paulo (USP)
+    Instituto de Astornomia, Ciências Atmosféricas e Geociências
+    São Paulo - Brazil
+
+Contact:
+    danilo.oceano@gmail.com
 """
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -29,7 +39,7 @@ def plot_timeseries(df,DataDirectory):
     times = pd.date_range(date[0],date.iloc[-1],periods=len(date))
     # Loop through the distinct group of terms
     for labels in [energy_labels,conversion_labels]:
-        print('Printing '+str(labels)+'...')
+        print('Plotting '+str(labels)+'...')
         # Get values for setting plot range
         maxval = np.amax(np.amax(df[labels]))
         minval = np.amin(np.amin(df[labels]))
@@ -38,15 +48,15 @@ def plot_timeseries(df,DataDirectory):
         plt.figure(figsize=(8,8))
         # Loop trhough terms that are being plotted..
         for term,i in zip(labels,range(len(labels))):
-            plt.grid(b=True,c='gray',linewidth=0.25,linestyle='dashdot')
             plt.plot(times,df[term],c=linecolors[i], marker= markers[i],
                     markerfacecolor=markerfacecolors[i], label=term,
                     linewidth=linewidth,markersize=6, linestyle=linestyles[i])
-            plt.tick_params(axis='x', labelrotation=20)
-            plt.legend()
-            plt.xlim(times[0],times[-1])
-            plt.xticks(fontsize=12)
-            plt.yticks(fontsize=12)
+        plt.grid(b=True,c='gray',linewidth=0.25,linestyle='dashdot')
+        plt.tick_params(axis='x', labelrotation=20)
+        plt.legend()
+        plt.xlim(times[0],times[-1])
+        plt.xticks(fontsize=12)
+        plt.yticks(fontsize=12)
         # Set x labels as dates
         ax = plt.gca()
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
@@ -55,7 +65,7 @@ def plot_timeseries(df,DataDirectory):
             # Saving figure
             fname = DataDirectory+'/energy_terms.png'
             plt.savefig(fname)
-            print(fname+ 'created')
+            print(fname+' created')
         elif term in conversion_labels:
             # Horizontal line for 0
             plt.axhline(y = 0, color = 'k', linestyle = '-',
@@ -64,14 +74,15 @@ def plot_timeseries(df,DataDirectory):
             # Saving figure
             fname = DataDirectory+'/conversion_terms.png'
             plt.savefig(fname)
-            print(fname+ 'created')
+            print(fname+' created')
 
 def main():
     # Open data from energy and conversion terms as input from user from command line
     data = sys.argv[1]
     print('Reading data from: '+data)
     df = pd.read_csv(data)
-    print('Ok!')
+    print(df)
+    print(' ')
     # Diectory for saving figures
     FigsDirectory = 'LEC_Results'
     DataDirectory = FigsDirectory+'/'+data.split('/')[-1].split('.csv')[0]
