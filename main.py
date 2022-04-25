@@ -211,11 +211,13 @@ def main():
         if i[0] == '-':
             j = i.replace('-','')+'S'
             lims += j
-    
-    fname = 'LEC_'+sys.argv[1].split('/')[-1]+'_'+lims+'.csv'
-    df.to_csv(fname)
-    print(fname+' created')
+            
+    infile_name = sys.argv[1].split('/')[-1].split('.nc')[0]
+    outfile_name = 'LEC_'+infile_name+'_'+lims+'.csv'
+    df.to_csv(outfile_name)
+    print(outfile_name+' created')
+    print('All done!')
 
 if __name__ == "__main__":
     main()
-    print('All done!')
+    
