@@ -34,7 +34,7 @@ linewidth = 4
 def plot_timeseries(df,DataDirectory):
     # Guarantee no plots are open
     plt.close('all')
-    # Tines for x axs
+    # Times for x axs
     date = df['Date']
     times = pd.date_range(date[0],date.iloc[-1],periods=len(date))
     # Loop through the distinct group of terms
@@ -75,6 +75,37 @@ def plot_timeseries(df,DataDirectory):
             fname = DataDirectory+'/conversion_terms.png'
             plt.savefig(fname)
             print(fname+' created')
+            
+def plot_boxplot(df,DataDirectory):
+    # Guarantee no plots are open
+    plt.close('all')
+    for labels in [energy_labels,conversion_labels]:
+        plt.figure(figsize=(8,8))
+        plt.grid(b=True,c='gray',linewidth=0.25,linestyle='dashdot')
+        for term,i in zip(labels,range(len(labels))):
+            bplot = plt.boxplot(df[term],positions=[i/3],vert=True,
+                                patch_artist=True,notch=True,labels=[term])
+            bplot['boxes'][-1].set_facecolor(linecolors[i])
+            bplot['boxes'][-1].set_alpha(0.7)
+            # bplot['boxes'][-1].set_antialiased(True)
+            print(bplot['boxes'][-1])
+        # plt.xticks(range(len(labels)), labels
+        plt.legend()
+        if term in energy_labels:
+            plt.ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=14)
+            # Saving figure
+            fname = DataDirectory+'/boxplot_energy_terms.png'
+            plt.savefig(fname)
+            print(fname+' created')
+        elif term in conversion_labels:
+            # Horizontal line for 0
+            plt.axhline(y = 0, color = 'k', linestyle = '-',
+                        linewidth=1, zorder=1,alpha=0.5)
+            plt.ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=14)
+            # Saving figure
+            fname = DataDirectory+'/boxplot_conversion_terms.png'
+            plt.savefig(fname)
+            print(fname+' created')
 
 def main():
     # Open data from energy and conversion terms as input from user from command line
@@ -97,7 +128,8 @@ def main():
                 os.makedirs(DataDirectory)
                 print(DataDirectory+' created')
     # Make plot for timeseries
-    plot_timeseries(df,DataDirectory)
+    # plot_timeseries(df,DataDirectory)
+    plot_boxplot(df,DataDirectory)
     print('All done!')
 
 if __name__ == "__main__":

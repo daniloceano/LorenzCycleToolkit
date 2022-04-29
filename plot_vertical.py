@@ -48,9 +48,9 @@ def get_data_dict(list_terms):
         print('Ok!')
     return data
 
-def create_dir(term):
+def create_dir():
     # Diectory for saving figures
-    FigsDirectory = Directory+'figs_vertical/'
+    FigsDirectory = Directory+'Figures_vertical_profiles/'
     # Check if the directory for saving figures exists. If not, creates it
     if not os.path.exists(FigsDirectory):
                 os.makedirs(FigsDirectory)
@@ -59,15 +59,14 @@ def create_dir(term):
         print(FigsDirectory+' directory exists')
     return FigsDirectory
 
-def main(list_terms):
+def plot_vertical(list_terms):
     # Get info
     data = get_data_dict(list_terms)
     term = list(data.keys())[0]
     ntime = data[term].shape[0] # Number of time steps
-    t_id = data[term].columns[0] # Time indexer
     levs = data[term].columns[1:] # Vertical levels
     # Create dir for saving figs
-    FigsDirectory = create_dir(term)
+    FigsDirectory = create_dir()
     # Loop through time to plot each vertical profile
     for t in range(ntime):
         timestep = data[term].iloc[t].values[0]
@@ -97,10 +96,94 @@ def main(list_terms):
         outfile = FigsDirectory+fname+'_'+timestring+'.png'
         plt.savefig(outfile)
         print('Created '+outfile)
-    print('All done')
     
+def boxplot_time(term_list):
+    data = get_data_dict(term_list)
+    term = list(data.keys())[0]
+    t_id = data[term].columns[0] # Time indexer
+    times = data[term][t_id]
+    plt.close('all') 
+    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(9, 9))
+    i = 0
+    for row in range(2):
+        for col in range(2):
+            ax = axs[row,col]
+            term = term_list[i]
+            ntime = data[term].shape[0]
+            if col == 0 and term in energy_labels:
+                ax.set_ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=14)
+            elif col == 0 and term in conversion_labels:
+                ax.set_ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=14)
+            for t in range(ntime):
+                time_step = (datetime.fromisoformat(times.iloc[t]))
+                bplot = ax.boxplot(data[term].iloc[t].values[1:],
+                                     positions=[mdates.date2num(time_step)],
+                                     patch_artist=True) 
+                bplot['boxes'][-1].set_facecolor(linecolors[i])
+                bplot['boxes'][-1].set_alpha(0.85)
+                locator = mdates.AutoDateLocator(minticks=5, maxticks=12)
+                formatter = mdates.AutoDateFormatter(locator)
+                ax.xaxis.set_major_locator(locator)
+                ax.xaxis.set_major_formatter(formatter)
+                ax.tick_params(axis='x',labelrotation=20)
+                ax.tick_params(size=12)
+                ax.set_title(term, fontsize=14)
+                fig.autofmt_xdate()
+            i += 1
+    if term in energy_labels:
+            fname = 'Energy'
+    elif term in conversion_labels:
+            fname = 'Conversion'
+    outfile = Directory+'boxplot_vertical_time_'+fname+'.png'
+    plt.savefig(outfile)
+    print('Created '+outfile)
+    
+def boxplot_vertical(term_list):
+    data = get_data_dict(term_list)
+    term = list(data.keys())[0]
+    levs = data[term].columns[1:] # Vertical levels
+    plt.close('all') 
+    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(9, 11))
+    i = 0
+    for row in range(2):
+        for col in range(2):
+            ax = axs[row,col]
+            term = term_list[i]
+            if col == 0 and term in energy_labels:
+                ax.set_ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=14)
+            elif col == 0 and term in conversion_labels:
+                ax.set_ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=14)
+            for lev,j in zip(levs,range(len(levs))):
+                bplot = ax.boxplot(data[term][lev].values,positions=[j/3],
+                                   labels=[lev], patch_artist=True)
+                bplot['boxes'][-1].set_facecolor(linecolors[i])
+                bplot['boxes'][-1].set_alpha(0.85)
+                ax.tick_params(axis='x',labelrotation=90)
+                ax.tick_params(size=12)
+                ax.set_title(term, fontsize=14)
+            i +=1
+    if term in energy_labels:
+            fname = 'Energy'
+    elif term in conversion_labels:
+            fname = 'Conversion'
+    outfile = Directory+'boxplot_vertical_'+fname+'.png'
+    plt.savefig(outfile)
+    print('Created '+outfile)
+    
+def main():
+    for term_list in [energy_labels,conversion_labels]:  
+        print('\n-------------------------------------------------------------')
+        print('Creating figures with vertical profiles for each model time')
+        plot_vertical(term_list)
+        print('\n-------------------------------------------------------------')
+        print('Creating boxplot for the temporal evolution of each term')
+        boxplot_time(term_list)
+        print('\n-------------------------------------------------------------')
+        print('Creating boxplot for each vertical level')
+        boxplot_vertical(term_list)
+        print('All done')
+
 if __name__ == "__main__":
-    for term_list in [energy_labels,conversion_labels]:
-        main(term_list)
+    main()
 
 
