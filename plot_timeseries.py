@@ -87,9 +87,6 @@ def plot_boxplot(df,DataDirectory):
                                 patch_artist=True,notch=True,labels=[term])
             bplot['boxes'][-1].set_facecolor(linecolors[i])
             bplot['boxes'][-1].set_alpha(0.7)
-            # bplot['boxes'][-1].set_antialiased(True)
-            print(bplot['boxes'][-1])
-        # plt.xticks(range(len(labels)), labels
         plt.legend()
         if term in energy_labels:
             plt.ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=14)
@@ -128,7 +125,7 @@ def main():
                 os.makedirs(DataDirectory)
                 print(DataDirectory+' created')
     # Make plot for timeseries
-    # plot_timeseries(df,DataDirectory)
+    plot_timeseries(df,DataDirectory)
     plot_boxplot(df,DataDirectory)
     print('All done!')
 

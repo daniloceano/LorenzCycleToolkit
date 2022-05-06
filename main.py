@@ -30,6 +30,7 @@ import dataclasses
 import sys
 from typing import List
 import os
+import numpy as np
 
 
 # This will be printed as an error message
@@ -118,20 +119,30 @@ def get_data(file,varlist,min_lon, max_lon, min_lat, max_lat):
     full_data = full_data.sortby(LonIndexer).sortby(LevelIndexer,ascending=False).sortby(LatIndexer,ascending=False)
     # Fill missing values with 0
     full_data = full_data.fillna(0)
+    try:
+        full_data = full_data.where(full_data.apply(np.isfinite)).fillna(0.0)
+    except:
+        full_data = full_data.fillna(0)
     # load data into memory (code optmization)
     data = full_data.load()
     # Stores data as separated variables
-    tair = data[dfVars.loc['Air Temperature']['Variable']]
-    hgt = data[dfVars.loc['Geopotential Height']['Variable']]
-    rhum = data[dfVars.loc['Relative Humidity']['Variable']]
-    omega = data[dfVars.loc['Omega Velocity']['Variable']]
-    u = data[dfVars.loc['Eastward Wind Component']['Variable']]
-    v = data[dfVars.loc['Northward Wind Component']['Variable']]
-    slp = data[dfVars.loc['Sea Level Pressure']['Variable']]
+    tair = data[dfVars.loc['Air Temperature']['Variable']] \
+        * units(dfVars.loc['Air Temperature']['Units']).to('K')
+    hgt = data[dfVars.loc['Geopotential Height']['Variable']]\
+        *units(dfVars.loc['Geopotential Height']['Units']).to('gpm')
+    rhum = data[dfVars.loc['Relative Humidity']['Variable']]*\
+        units(dfVars.loc['Relative Humidity']['Units']).to('percent')
+    omega = data[dfVars.loc['Omega Velocity']['Variable']]*\
+        units(dfVars.loc['Omega Velocity']['Units']).to('Pa/s')
+    u = data[dfVars.loc['Eastward Wind Component']['Variable']]*\
+        units(dfVars.loc['Eastward Wind Component']['Units'])
+    v = data[dfVars.loc['Northward Wind Component']['Variable']]*\
+        units(dfVars.loc['Northward Wind Component']['Units'])
+    # slp = data[dfVars.loc['Sea Level Pressure']['Variable']]
     # Print variables for the user
     print('List of variables found:')
     print(dfVars)
-    return LonIndexer, LatIndexer, TimeIndexer, LevelIndexer, tair, hgt, rhum, omega, u, v, slp
+    return LonIndexer, LatIndexer, TimeIndexer, LevelIndexer, tair, hgt, rhum, omega, u, v#, slp
 
 
 # The main function. It will open the data, read the variables and calls the
@@ -147,13 +158,13 @@ def main():
     # Data indexers
     LonIndexer, LatIndexer, TimeName, VerticalCoordIndexer = data[0],data[1],data[2], data[3]
     # Data variables
-    tair = data[4]*units(data[4].units).to('K')
-    hgt = data[5]*units(data[5].units).to('gpm')
-    rhum = data[6]*units(data[6].units)
-    omega = data[7]*units(data[7].units).to('Pa/s')
-    u = data[8]*units(data[8].units).to('m/s')
-    v = data[9]*units(data[9].units).to('m/s')
-    slp = data[10]*units(data[10].units).to('Pa')
+    tair = data[4]#*units(data[4].units).to('K')
+    hgt = data[5]#*units(data[5].units).to('gpm')
+    rhum = data[6]#*units(data[6].units)
+    omega = data[7]#*units(data[7].units).to('Pa/s')
+    u = data[8]#*units(data[8].units).to('m/s')
+    v = data[9]#*units(data[9].units).to('m/s')
+    # slp = data[10]*units(data[10].units).to('Pa')
     pres = tair[VerticalCoordIndexer]*units(tair[VerticalCoordIndexer].units).to('Pa')
     #
     print('\n Parameters spcified for the bounding box:')
@@ -233,7 +244,7 @@ def main():
     # 7)
     # First, extract dates to construct the dataframe
     print('\nCreating a csv to store results...')
-    dates = tair.initial_time0_hours.values
+    dates = tair[TimeName].values
     days = dates.astype('datetime64[D]')
     hours = pd.to_datetime(dates).hour
     df = pd.DataFrame(data=[*days],columns=['Date'])

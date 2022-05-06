@@ -250,7 +250,8 @@ def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
     
     """
     FirstTerm = g*TemperatureData/Cp_d
-    SecondTerm = (PressureData*g/Rd)*Differentiate(TemperatureData,PressureData,VerticalCoordIndexer)
+    # SecondTerm = (PressureData*g/Rd)*Differentiate(TemperatureData,PressureData,VerticalCoordIndexer)
+    SecondTerm = (PressureData*g/Rd)*TemperatureData.differentiate(VerticalCoordIndexer)/units.hPa
     function = (FirstTerm-SecondTerm).sel(**{LatIndexer: 
             slice(BoxNorth,BoxSouth),LonIndexer: slice(BoxWest, BoxEast)})
     sigma = CalcAreaAverage(function,LatIndexer,BoxSouth, BoxNorth,LonIndexer)
