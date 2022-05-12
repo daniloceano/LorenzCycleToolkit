@@ -29,11 +29,13 @@ Source for formulas used here:
 Terms calculated using finite differences derivatives:
         First the original terms are copied and for the terms where
         it is needed to perform a spatial deriative, the lat/lon coordinate
-        is converted from degrees to radians. Then, it is used the Xarray's
-        method for computating finite differences derivatives using the 
-        central difference formula. Afterwards, the original lat/lon coords.
-        are restaured, when needed. Lastly, the corresponding units are
-        assigned, when applicable.
+        is converted from degrees to radians. It is necessary to organize the
+        coordinate indexers from the smaller to the greater for the differentition
+        process. For example, latitude from S to N and pressure from top to
+        base. Then, it is used the Xarray's method for computating finite 
+        differences derivatives using the central difference formula. Afterwards,
+        the original lat/lon coords. are restaured, when needed. Lastly, the
+        corresponding units are assigned, when applicable.
 
 """
 import numpy as np
@@ -74,7 +76,7 @@ class ConversionTerms:
         _ = self.omega_ZE*self.tair_ZE
         SecondTerm = CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
         function = (FirstTerm*SecondTerm)
-        Ce = -VerticalTrazpezoidalIntegration(function,self.PressureData,
+        Ce = VerticalTrazpezoidalIntegration(-function,self.PressureData,
                                              self.VerticalCoordIndexer)
         # Check if units are in accordance with expected and convert
         try: 
@@ -99,7 +101,7 @@ class ConversionTerms:
         _ = self.omega_AE*self.tair_AE
         SecondTerm = CalcAreaAverage(_,self.LatIndexer)
         function = (FirstTerm*SecondTerm)
-        Cz = -VerticalTrazpezoidalIntegration(function,self.PressureData,
+        Cz = VerticalTrazpezoidalIntegration(-function,self.PressureData,
                                              self.VerticalCoordIndexer)
         try: 
             Cz = Cz.metpy.convert_units('W/ m **2')
@@ -123,20 +125,22 @@ class ConversionTerms:
         # Derivate tair_AE in respect to latitude
         DelPhi_tairAE = self.tair_AE.copy(deep=True
         ).assign_coords({self.LatIndexer:self.rlats}
-                         ).differentiate(self.LatIndexer).assign_coords(
+                         ).sortby(self.LatIndexer,ascending=True
+                        ).differentiate(self.LatIndexer).assign_coords(
                         {self.LatIndexer: self.tair_AE[self.LatIndexer]})
         _ = (self.v_ZE*self.tair_ZE/(2*Re*self.sigma_AA)) * DelPhi_tairAE
         function = CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
         
         ## Second term of the integral ##
         # Derivate tair_AE in respect to pressure and divide it by sigma
-        DelP_tairAE_sigma = (self.tair_AE/self.sigma_AA).copy(deep=True
+        DelPres_tairAE_sigma = (self.tair_AE/self.sigma_AA).copy(deep=True
+        ).sortby(self.VerticalCoordIndexer,ascending=True
         ).differentiate(self.VerticalCoordIndexer) / units.hPa
-        _ =  (self.omega_ZE*self.tair_ZE) * DelP_tairAE_sigma
+        _ =  (self.omega_ZE*self.tair_ZE) * DelPres_tairAE_sigma
         function += CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
         
         ## Integrate in pressure ##
-        Ca = -VerticalTrazpezoidalIntegration(function,self.PressureData,
+        Ca = VerticalTrazpezoidalIntegration(-function,self.PressureData,
                                              self.VerticalCoordIndexer)
         try: 
             Ca = Ca.metpy.convert_units('W/ m **2')
@@ -162,7 +166,8 @@ class ConversionTerms:
         # the latitude (also in radians)
         DelPhi_uZA_cosphi = (self.u_ZA/self.cos_lats).copy(deep=True
         ).assign_coords({self.LatIndexer:self.rlats}
-                         ).differentiate(self.LatIndexer).assign_coords(
+                         ).sortby(self.LatIndexer,ascending=True
+                        ).differentiate(self.LatIndexer).assign_coords(
                         {self.LatIndexer: self.tair_AE[self.LatIndexer]})
         _ = (self.cos_lats*self.u_ZE*self.v_ZE/Re) * DelPhi_uZA_cosphi
         function = CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
@@ -172,7 +177,8 @@ class ConversionTerms:
         # the latitude (in radians)
         DelPhi_vZA = self.v_ZA.copy(deep=True
         ).assign_coords({self.LatIndexer:self.rlats}
-                         ).differentiate(self.LatIndexer).assign_coords(
+                          ).sortby(self.LatIndexer,ascending=True
+                        ).differentiate(self.LatIndexer).assign_coords(
                         {self.LatIndexer: self.tair_AE[self.LatIndexer]})
         _ = ((self.v_ZE**2)/Re) * DelPhi_vZA
         function += CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
@@ -185,6 +191,7 @@ class ConversionTerms:
         # Differentiate the zonal mean of the zonal wind (u) in regard to the
         # pressure and assign the units in hPa
         DelPres_uZAp = self.u_ZA.copy(deep=True
+                         ).sortby(self.VerticalCoordIndexer,ascending=True
                         ).differentiate(self.VerticalCoordIndexer) / units.hPa
         _ = self.omega_ZE * self.u_ZE * DelPres_uZAp
         function += CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
@@ -193,12 +200,13 @@ class ConversionTerms:
         # Differentiate the zonal mean of the meridional wind (v) in regard to
         # the pressure and assign the units in hPa
         DelPres_vZAp = self.u_ZA.copy(deep=True
+                        ).sortby(self.VerticalCoordIndexer,ascending=True
                         ).differentiate(self.VerticalCoordIndexer) / units.hPa
         _ = self.omega_ZE * self.v_ZE * DelPres_vZAp
         function +=  CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
         
         ## Integrate in pressure ##
-        Ck = -VerticalTrazpezoidalIntegration(function,self.PressureData,
+        Ck = VerticalTrazpezoidalIntegration(function,self.PressureData,
                                              self.VerticalCoordIndexer)/g
         try: 
             Ck = Ck.metpy.convert_units('W/ m **2')

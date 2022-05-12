@@ -71,10 +71,7 @@ def VerticalTrazpezoidalIntegration(VariableData,VerticalAxis,VerticalCoordIndex
     #     DimensionArray = DimensionArray.metpy.convert_units('Pa')
     #     DimensionArray = DimensionArray*units('Pa')
     # Sort from top to bottom
-    if VerticalAxis.metpy.units == units('Pa'):
-        VerticalAxis = VerticalAxis.sortby(VerticalCoordIndexer, ascending=True)
-    elif VerticalAxis.metpy.units == units('m'):
-        VerticalAxis = VerticalAxis.sortby(VerticalCoordIndexer, ascending=False)
+    VerticalAxis = VerticalAxis.sortby(VerticalCoordIndexer, ascending=True)
     # Integrate
     trapz = 0
     for i in range(1,len(VerticalAxis)):
