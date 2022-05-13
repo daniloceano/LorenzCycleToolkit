@@ -37,10 +37,18 @@ class BoxData:
         self.output_dir = output_dir
         
         # Find data gridpoints that match the box limits
-        self.BoxWest = float((TemperatureData[LonIndexer][(np.abs(TemperatureData[LonIndexer] - western_limit)).argmin()]).values)
-        self.BoxEast = float((TemperatureData[LonIndexer][(np.abs(TemperatureData[LonIndexer] - eastern_limit)).argmin()]).values)
-        self.BoxSouth = float((TemperatureData[LatIndexer][(np.abs(TemperatureData[LatIndexer] - southern_limit)).argmin()]).values)
-        self.BoxNorth = float((TemperatureData[LatIndexer][(np.abs(TemperatureData[LatIndexer] - northern_limit)).argmin()]).values)
+        self.BoxWest = float((TemperatureData[LonIndexer]
+                              [(np.abs(TemperatureData[LonIndexer] - 
+                                       western_limit)).argmin()]).values)
+        self.BoxEast = float((TemperatureData[LonIndexer]
+                              [(np.abs(TemperatureData[LonIndexer] - 
+                                       eastern_limit)).argmin()]).values)
+        self.BoxSouth = float((TemperatureData[LatIndexer]
+                               [(np.abs(TemperatureData[LatIndexer] - 
+                                        southern_limit)).argmin()]).values)
+        self.BoxNorth = float((TemperatureData[LatIndexer]
+                               [(np.abs(TemperatureData[LatIndexer] - 
+                                        northern_limit)).argmin()]).values)
         
         # Suffixes used:
         #     ZA = Zonal average (whithin the dfined box)

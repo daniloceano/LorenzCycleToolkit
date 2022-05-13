@@ -22,6 +22,7 @@ Contact:
 """
 from EnergyContents import EnergyContents
 from ConversionTerms import ConversionTerms
+from BoundaryTerms import BoundaryTerms
 from BoxData import BoxData
 from metpy.units import units
 import pandas as pd
@@ -148,11 +149,11 @@ def get_data(file,varlist,min_lon, max_lon, min_lat, max_lat):
 # The main function. It will open the data, read the variables and calls the
 # functions for making the calculations 
 def main():
-    ##################
+    
     # 1) Checks if the inputs are correct.
     tests_args()
     print('')
-    ################## 
+    
     # 2) Open the data
     data = get_data(*sys.argv[1:])   
     # Data indexers
@@ -169,7 +170,7 @@ def main():
     #
     print('\n Parameters spcified for the bounding box:')
     print('min_lon, max_lon, min_lat, max_lat: '+str(sys.argv[3:]))
-    ##################
+    
     # 3) Create folder to save results
     # Convert box limits to strings for apprending to file name
     lims = ''
@@ -203,7 +204,7 @@ def main():
     if not os.path.exists(DataDirectory):
                 os.makedirs(DataDirectory)
                 print(DataDirectory+' created')
-    ##################        
+                
     # 4) 
     print('Computing zonal and area averages and eddy terms for each variable')
     print('and the static stability parameter...')
@@ -219,7 +220,7 @@ def main():
     except:
         raise SystemExit('ERROR!!!!!')
     print('Ok!')
-    ##################
+    
     # 5) 
     print('\n------------------------------------------------------------------------')
     print('Computing zonal and eddy kinectic and available potential energy terms')
@@ -230,7 +231,7 @@ def main():
     except:
         raise SystemExit('ERROR!!!!!')
     print('Ok!')
-    ##################
+    
     # 6)
     print('\n------------------------------------------------------------------------')
     print('Computing the conversion terms between energy contents') 
@@ -240,8 +241,18 @@ def main():
     except:
         raise SystemExit('ERROR!!!!!')
     print('Ok!')
-    ##################
+    
     # 7)
+    print('\n------------------------------------------------------------------------')
+    print('Computing the boundary terms') 
+    try:
+        bt_obj = BoundaryTerms(box_obj)
+        BoundaryList = [bt_obj.calc_baz(),bt_obj.calc_bae()]
+    except:
+        raise SystemExit('ERROR!!!!!')
+    print('Ok!')
+    
+    # 8)
     # First, extract dates to construct the dataframe
     print('\nCreating a csv to store results...')
     dates = tair[TimeName].values
