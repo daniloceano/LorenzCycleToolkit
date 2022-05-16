@@ -85,6 +85,7 @@ class BoundaryTerms:
     def calc_baz(self):
         print('\nComputing Zonal Available Potential energy (Az) transport\
               across boundaries (BAZ)...')
+             # needs revision
         ## First Integral ##
         _ = ((2*self.tair_AE*self.tair_ZE*self.u)
              + (self.tair_AE**2*self.u))/(2*self.sigma_AA)
