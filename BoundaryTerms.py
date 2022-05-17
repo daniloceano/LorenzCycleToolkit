@@ -21,11 +21,10 @@ Contact:
 
 
 Source for formulas used here:
-        Brennan, F. E., & Vincent, D. G. (1980).
-        Zonal and Eddy Components of the Synoptic-Scale Energy Budget
-        during Intensification of Hurricane Carmen (1974),
-        Monthly Weather Review, 108(7), 954-965. Retrieved Jan 25, 2022, from:
-        https://journals.ametsoc.org/view/journals/mwre/108/7/1520-0493_1980_108_0954_zaecot_2_0_co_2.xml
+        Michaelides, S. C. (1987).
+        Limited Area Energetics of Genoa Cyclogenesis,
+        Monthly Weather Review, 115(1), 13-26. Retrieved May 17, 2022, from:
+        https://journals.ametsoc.org/view/journals/mwre/115/1/1520-0493_1987_115_0013_laeogc_2_0_co_2.xml
 
 """
 
@@ -75,11 +74,11 @@ class BoundaryTerms:
         self.BoxNorth = box_obj.BoxNorth
         
         # Using the notation from Michaelides (1987)
-        self.c1 = 1/((Re*(
+        self.c1 = -1/((Re*(
                 np.deg2rad(box_obj.BoxEast)-np.deg2rad(box_obj.BoxWest))*
                 (np.sin(np.deg2rad(box_obj.BoxNorth))-
                 np.sin(np.deg2rad(box_obj.BoxSouth))))/units.radian)
-        self.c2 = 1/(Re*(np.sin(np.deg2rad(box_obj.BoxNorth))-
+        self.c2 = -1/(Re*(np.sin(np.deg2rad(box_obj.BoxNorth))-
             np.sin(np.deg2rad(box_obj.BoxSouth))))
         
     def calc_baz(self):
@@ -95,35 +94,27 @@ class BoundaryTerms:
         # Integrate through latitude
         _ = HorizontalTrazpezoidalIntegration(_,self.LatIndexer)
         # Integrate through pressure levels
-        function = -VerticalTrazpezoidalIntegration(_,self.PressureData,
+        function = VerticalTrazpezoidalIntegration(_,self.PressureData,
                                     self.VerticalCoordIndexer)*self.c1
 
         ## Second Integral ##
-        FirstTerm = 2*self.tair_AE*CalcZonalAverage(self.u_ZE*self.tair_ZE,
-                                LonIndexer=self.LonIndexer)
-        SecondTerm = self.tair_AE**2*self.v_ZA
-        _ = (FirstTerm + SecondTerm)*np.cos(self.rlons)/(2*self.sigma_AA)
+        _ = ((2*self.tair_AE*CalcZonalAverage(self.u_ZE*self.tair_ZE,
+            self.LonIndexer)) + (self.tair_AE**2*self.v_ZA)
+            )*np.cos(self.rlons)/(2*self.sigma_AA)
         # Data at northern boundary minus data at southern boundary
         _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
             **{self.LatIndexer: self.BoxSouth})
         # Integrate through pressure levels
-        function += -VerticalTrazpezoidalIntegration(_,self.PressureData,
+        function += VerticalTrazpezoidalIntegration(_,self.PressureData,
                                     self.VerticalCoordIndexer)*self.c2
         
         ## Third Term ##
-        # In this case, there is an alteration from the formula originally
-        # contained in Brennan, F. E., & Vincent, D. G. (1980). The original
-        # formula does not indicate to do the area average, however if this
-        # is not done, it is impossible to perform the required operations.
-        # Consulting the paper from Muench (1965), one can see that for this
-        # term this area averagin is performed, so here we just assumed that
-        # the absence of the area averaging  operator is a typo.
         _ = (CalcZonalAverage(self.omega_ZE*self.tair_ZE,self.LonIndexer)*
              self.tair_AE*2) + (self.tair_AE**2*self.omega_ZA)
         _ = CalcAreaAverage(_,self.LatIndexer)/(2*self.sigma_AA)
         # Sort the data from bottom to top and then do data at the bottom
         # minus data at top level
-        function += -_.sortby(self.VerticalCoordIndexer,ascending=False
+        function -= _.sortby(self.VerticalCoordIndexer,ascending=False
         ).isel(**{self.VerticalCoordIndexer: 0}) - _.isel(
             **{self.VerticalCoordIndexer: -1})
         try: 
