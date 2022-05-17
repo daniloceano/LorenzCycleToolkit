@@ -237,7 +237,8 @@ def main():
     print('Computing the conversion terms between energy contents') 
     try:
         ct_obj = ConversionTerms(box_obj)
-        ConversionList = [ct_obj.calc_cz(),ct_obj.calc_ca(),ct_obj.calc_ck(),ct_obj.calc_ce()]
+        ConversionList = [ct_obj.calc_cz(),ct_obj.calc_ca(),
+                          ct_obj.calc_ck(),ct_obj.calc_ce()]
     except:
         raise SystemExit('ERROR!!!!!')
     print('Ok!')
@@ -247,7 +248,8 @@ def main():
     print('Computing the boundary terms') 
     try:
         bt_obj = BoundaryTerms(box_obj)
-        BoundaryList = [bt_obj.calc_baz(),bt_obj.calc_bae()]
+        BoundaryList = [bt_obj.calc_baz(),bt_obj.calc_bae(),
+                        bt_obj.calc_bkz()]
     except:
         raise SystemExit('ERROR!!!!!')
     print('Ok!')
