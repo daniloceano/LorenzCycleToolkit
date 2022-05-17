@@ -158,14 +158,14 @@ class BoundaryTerms:
         try: 
             Bae = function.metpy.convert_units('W/ m **2')
         except ValueError:
-            print('Unit error in BAZ')
+            print('Unit error in BAe')
             raise
         print(Bae.values*Bae.metpy.units)
         return Bae
     
     def calc_bkz(self):
-        print('\nComputing Zonal Kinetic Energy (Ae) transport \
-        across boundaries (BAE)...')
+        print('\nComputing Zonal Kinetic Energy (Kz) transport \
+        across boundaries (BKz)...')
         ## First Integral ##
         _ = self.u*(self.u**2+self.v**2-self.u_ZE**2-self.v_ZE**2)/(2*g)
          # Data at eastern boundary minus data at western boundary 
@@ -176,7 +176,6 @@ class BoundaryTerms:
         # Integrate through pressure levels
         function = VerticalTrazpezoidalIntegration(_,self.PressureData,
                                     self.VerticalCoordIndexer)*self.c1
-        
         ## Second Integral ##
         _ = CalcZonalAverage((self.u**2+self.v**2-self.u_ZE**2-self.v_ZE**2)
             *self.v*np.cos(self.rlons),self.LonIndexer)/(2*g)
@@ -196,9 +195,47 @@ class BoundaryTerms:
         try: 
             Bkz = function.metpy.convert_units('W/ m **2')
         except ValueError:
-            print('Unit error in BAZ')
+            print('Unit error in BKz')
             raise
         print(Bkz.values*Bkz.metpy.units)
         return Bkz
+    
+    def calc_bke(self):
+        print('\nComputing Eddy Kinetic Energy (Ke) transport \
+        across boundaries (BKe)...')
+        ## First Integral ##
+        _ = self.u*(self.u_ZE**2+self.v_ZE**2)/(2*g)
+         # Data at eastern boundary minus data at western boundary 
+        _ = _.sel(**{self.LonIndexer: self.BoxEast}) - _.sel(
+            **{self.LonIndexer: self.BoxWest}) 
+        # Integrate through latitude
+        _ = HorizontalTrazpezoidalIntegration(_,self.LatIndexer)
+        # Integrate through pressure levels
+        function = VerticalTrazpezoidalIntegration(_,self.PressureData,
+                                    self.VerticalCoordIndexer)*self.c1
+        
+        ## Second Integral ##
+        _ = CalcZonalAverage((self.u_ZE**2+self.v_ZE**2)
+            *self.v*np.cos(self.rlons),self.LonIndexer)/(2*g)
+        # Data at northern boundary minus data at southern boundary
+        _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
+            **{self.LatIndexer: self.BoxSouth})
+        # Integrate through pressure levels
+        function += VerticalTrazpezoidalIntegration(_,self.PressureData,
+                                    self.VerticalCoordIndexer)*self.c2
+        ## Third Term ##
+        _ = CalcAreaAverage((self.u_ZE**2+self.v_ZE**2)
+            *self.omega,self.LatIndexer,
+            LonIndexer=self.LonIndexer)/(2*g)
+        function -= _.sortby(self.VerticalCoordIndexer,ascending=False
+        ).isel(**{self.VerticalCoordIndexer: 0}) - _.isel(
+            **{self.VerticalCoordIndexer: -1})
+        try: 
+            Bke = function.metpy.convert_units('W/ m **2')
+        except ValueError:
+            print('Unit error in BKe')
+            raise
+        print(Bke.values*Bke.metpy.units)
+        return Bke   
                  
         

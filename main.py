@@ -249,7 +249,7 @@ def main():
     try:
         bt_obj = BoundaryTerms(box_obj)
         BoundaryList = [bt_obj.calc_baz(),bt_obj.calc_bae(),
-                        bt_obj.calc_bkz()]
+                        bt_obj.calc_bkz(),bt_obj.calc_bke()]
     except:
         raise SystemExit('ERROR!!!!!')
     print('Ok!')
