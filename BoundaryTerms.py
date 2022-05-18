@@ -58,9 +58,13 @@ class BoundaryTerms:
         self.omega_ZE = box_obj.omega_ZE
         self.omega_ZA = box_obj.omega_ZA
         self.omega_AE = box_obj.omega_AE
+        self.hgt = box_obj.hgt
+        self.hgt_ZE = box_obj.hgt_ZE
+        self.hgt_ZA = box_obj.hgt_ZA
+        self.hgt_AE = box_obj.hgt_AE
         
-        self.rlats = np.deg2rad(self.tair_AE[self.LatIndexer])
-        self.rlons = np.deg2rad(self.tair_AE[self.LonIndexer])
+        self.rlats = np.deg2rad(box_obj.tair[self.LatIndexer])
+        self.rlons = np.deg2rad(box_obj.tair[self.LonIndexer])
         self.sin_lats = np.sin(self.rlats)
         self.cos_lats = np.cos(self.rlats)
         self.tan_lats = np.tan(self.rlats)
@@ -96,7 +100,7 @@ class BoundaryTerms:
         ## Second Integral ##
         _ = ((2*self.tair_AE*CalcZonalAverage(self.u_ZE*self.tair_ZE,
             self.LonIndexer)) + (self.tair_AE**2*self.v_ZA)
-            )*np.cos(self.rlons)/(2*self.sigma_AA)
+            )*np.cos(self.rlats)/(2*self.sigma_AA)
         # Data at northern boundary minus data at southern boundary
         _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
             **{self.LatIndexer: self.BoxSouth})
@@ -136,7 +140,7 @@ class BoundaryTerms:
         
         ## Second Integral ##
         _ = CalcZonalAverage(self.v*self.tair_ZE**2,self.LonIndexer
-                             )*np.cos(self.rlons)/(2*self.sigma_AA)
+                             )*self.cos_lats/(2*self.sigma_AA)
         # Data at northern boundary minus data at southern boundary
         _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
             **{self.LatIndexer: self.BoxSouth})
@@ -172,7 +176,7 @@ class BoundaryTerms:
                                     self.VerticalCoordIndexer)*self.c1
         ## Second Integral ##
         _ = CalcZonalAverage((self.u**2+self.v**2-self.u_ZE**2-self.v_ZE**2)
-            *self.v*np.cos(self.rlons),self.LonIndexer)/(2*g)
+            *self.v*self.cos_lats,self.LonIndexer)/(2*g)
         # Data at northern boundary minus data at southern boundary
         _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
             **{self.LatIndexer: self.BoxSouth})
@@ -209,7 +213,7 @@ class BoundaryTerms:
         
         ## Second Integral ##
         _ = CalcZonalAverage((self.u_ZE**2+self.v_ZE**2)
-            *self.v*np.cos(self.rlons),self.LonIndexer)/(2*g)
+            *self.v*self.cos_lats,self.LonIndexer)/(2*g)
         # Data at northern boundary minus data at southern boundary
         _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
             **{self.LatIndexer: self.BoxSouth})
@@ -229,6 +233,77 @@ class BoundaryTerms:
             print('Unit error in BKe')
             raise
         print(Bke.values*Bke.metpy.units)
-        return Bke   
+        return Bke 
+    
+    def calc_boz(self):
+        print('\nComputing Zonal Kinetic Energy (Kz) production by fluxes at the boundaries (BΦZ)...')
+        ## First Integral ##
+        _ = (self.v_ZA*self.hgt_AE)/g
+         # Data at eastern boundary minus data at western boundary 
+        # _ = _.sel(**{self.LonIndexer: self.BoxEast}) - _.sel(
+        #     **{self.LonIndexer: self.BoxWest}) 
+        # Integrate through latitude
+        _ = HorizontalTrazpezoidalIntegration(_,self.LatIndexer)
+        # Integrate through pressure levels
+        function = VerticalTrazpezoidalIntegration(_,self.PressureData,
+                                    self.VerticalCoordIndexer)*self.c1
+        
+        ## Second Integral ##
+        _ = (self.v_ZA*self.hgt_AE)*self.cos_lats/g
+        # Data at northern boundary minus data at southern boundary
+        _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
+            **{self.LatIndexer: self.BoxSouth})
+        # Integrate through pressure levels
+        function += VerticalTrazpezoidalIntegration(_,self.PressureData,
+                                    self.VerticalCoordIndexer)*self.c2
+        ## Third Term ##
+        _ = CalcAreaAverage(self.omega_ZE*self.hgt_AE, self.LatIndexer,
+                            LonIndexer=self.LonIndexer)/g
+        function -= _.sortby(self.VerticalCoordIndexer,ascending=False
+        ).isel(**{self.VerticalCoordIndexer: 0}) - _.isel(
+            **{self.VerticalCoordIndexer: -1})
+        try: 
+            Boz = function.metpy.convert_units('W/ m **2')
+        except ValueError:
+            print('Unit error in BΦZ')
+            raise
+        print(Boz.values*Boz.metpy.units)
+        return Boz 
+    
+    def calc_boe(self):
+        print('\nComputing Eddy Kinetic Energy (Kz) production by fluxes at the boundaries (BΦE)...')
+        ## First Integral ##
+        _ = (self.u_ZE*self.hgt_ZE)/g
+         # Data at eastern boundary minus data at western boundary 
+        _ = _.sel(**{self.LonIndexer: self.BoxEast}) - _.sel(
+            **{self.LonIndexer: self.BoxWest}) 
+        # Integrate through latitude
+        _ = HorizontalTrazpezoidalIntegration(_,self.LatIndexer)
+        # Integrate through pressure levels
+        function = VerticalTrazpezoidalIntegration(_,self.PressureData,
+                                    self.VerticalCoordIndexer)*self.c1
+        
+        ## Second Integral ##
+        _ = CalcZonalAverage((self.u_ZE*self.hgt_ZE),
+                             self.LonIndexer)*self.cos_lats/g
+        # Data at northern boundary minus data at southern boundary
+        _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
+            **{self.LatIndexer: self.BoxSouth})
+        # Integrate through pressure levels
+        function += VerticalTrazpezoidalIntegration(_,self.PressureData,
+                                    self.VerticalCoordIndexer)*self.c2
+        ## Third Term ##
+        _ = CalcAreaAverage(self.omega_ZE*self.hgt_ZE, self.LatIndexer,
+                            LonIndexer=self.LonIndexer)/g
+        function -= _.sortby(self.VerticalCoordIndexer,ascending=False
+        ).isel(**{self.VerticalCoordIndexer: 0}) - _.isel(
+            **{self.VerticalCoordIndexer: -1})
+        try: 
+            Boz = function.metpy.convert_units('W/ m **2')
+        except ValueError:
+            print('Unit error in BΦZ')
+            raise
+        print(Boz.values*Boz.metpy.units)
+        return Boz 
                  
         

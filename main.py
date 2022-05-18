@@ -211,7 +211,7 @@ def main():
     try:
         box_obj = BoxData(TemperatureData=tair, PressureData=pres,
                      UWindComponentData=u, VWindComponentData=v,
-                     OmegaData=omega,
+                     OmegaData=omega, HgtData=hgt,
                      LonIndexer=LonIndexer, LatIndexer=LatIndexer, TimeName=TimeName,
                      VerticalCoordIndexer=VerticalCoordIndexer,
                      western_limit=float(sys.argv[3]), eastern_limit=float(sys.argv[4]),
