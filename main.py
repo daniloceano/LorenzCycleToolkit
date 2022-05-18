@@ -263,9 +263,12 @@ def main():
     df = pd.DataFrame(data=[*days],columns=['Date'])
     df['Hour'] = hours
     # Then adds the data to the DataFrame
-    for i,j,k in zip(range(4),['Az','Ae','Kz','Ke'],['Cz','Ca','Ck','Ce']):
+    for i,j,k,l in zip(range(4),['Az','Ae','Kz','Ke'],
+                     ['Cz','Ca','Ck','Ce'],
+                     ['BAz','BAe','BKz','BKe']):
         df[j] = EnergyList[i]
         df[k] = ConversionList[i]
+        df[l] = BoundaryList[i]
     # Lastly, save file
     outfile = DataDirectory+'/'+outfile_name+'.csv'
     df.to_csv(outfile)

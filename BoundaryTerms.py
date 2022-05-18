@@ -30,14 +30,11 @@ Source for formulas used here:
 
 import numpy as np
 from metpy.constants import g
-from metpy.constants import Rd
 from metpy.constants import Re
 from metpy.units import units
 from calc import (CalcAreaAverage,VerticalTrazpezoidalIntegration,
-                  Differentiate, HorizontalTrazpezoidalIntegration,
-                  CalcZonalAverage)
+                  HorizontalTrazpezoidalIntegration, CalcZonalAverage)
 from BoxData import BoxData
-from EnergyContents import function_to_df
 
 class BoundaryTerms:
     
@@ -82,8 +79,7 @@ class BoundaryTerms:
             np.sin(np.deg2rad(box_obj.BoxSouth))))
         
     def calc_baz(self):
-        print('\nComputing Zonal Available Potential Energy (Az) transport \
-        across boundaries (BAZ)...')
+        print('\nComputing Zonal Available Potential Energy (Az) transport across boundaries (BAZ)...')
              # needs revision
         ## First Integral ##
         _ = ((2*self.tair_AE*self.tair_ZE*self.u)
@@ -126,8 +122,7 @@ class BoundaryTerms:
         return Baz
     
     def calc_bae(self):
-        print('\nComputing Eddy Available Potential Energy (Ae) transport \
-        across boundaries (BAE)...')
+        print('\nComputing Eddy Available Potential Energy (Ae) transport across boundaries (BAE)...')
         ## First Integral ##
         _ = (self.u*self.tair_ZE**2)/(2*self.sigma_AA)
          # Data at eastern boundary minus data at western boundary 
@@ -164,8 +159,7 @@ class BoundaryTerms:
         return Bae
     
     def calc_bkz(self):
-        print('\nComputing Zonal Kinetic Energy (Kz) transport \
-        across boundaries (BKz)...')
+        print('\nComputing Zonal Kinetic Energy (Kz) transport across boundaries (BKz)...')
         ## First Integral ##
         _ = self.u*(self.u**2+self.v**2-self.u_ZE**2-self.v_ZE**2)/(2*g)
          # Data at eastern boundary minus data at western boundary 
@@ -201,8 +195,7 @@ class BoundaryTerms:
         return Bkz
     
     def calc_bke(self):
-        print('\nComputing Eddy Kinetic Energy (Ke) transport \
-        across boundaries (BKe)...')
+        print('\nComputing Eddy Kinetic Energy (Ke) transport across boundaries (BKe)...')
         ## First Integral ##
         _ = self.u*(self.u_ZE**2+self.v_ZE**2)/(2*g)
          # Data at eastern boundary minus data at western boundary 

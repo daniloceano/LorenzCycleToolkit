@@ -26,9 +26,10 @@ import sys
 linecolors = ['#A53860','#C9B857','#384A0F','#473BF0']
 markerfacecolors = ['#A53860','w','#384A0F','w']
 conversion_labels = ['Cz','Ca','Ck','Ce']
+energy_labels = ['Az','Ae','Kz','Ke']
+boundary_labels = ['BAz','BAe','BKz','BKe']
 markers = ['s','s','o','o']         
 linestyles = ['-','-','-','-']
-energy_labels = ['Az','Ae','Kz','Ke']
 linewidth = 4
 
 def plot_timeseries(df,DataDirectory):
@@ -38,7 +39,7 @@ def plot_timeseries(df,DataDirectory):
     date = df['Date']
     times = pd.date_range(date[0],date.iloc[-1],periods=len(date))
     # Loop through the distinct group of terms
-    for labels in [energy_labels,conversion_labels]:
+    for labels in [energy_labels,conversion_labels,boundary_labels]:
         print('Plotting '+str(labels)+'...')
         # Get values for setting plot range
         maxval = np.amax(np.amax(df[labels]))
@@ -75,11 +76,20 @@ def plot_timeseries(df,DataDirectory):
             fname = DataDirectory+'/conversion_terms.png'
             plt.savefig(fname)
             print(fname+' created')
+        elif term in boundary_labels:
+            # Horizontal line for 0
+            plt.axhline(y = 0, color = 'k', linestyle = '-',
+                        linewidth=1, zorder=1,alpha=0.8)
+            plt.ylabel('Transport across boundaries '+r' $(W\,m^{-2})$',fontsize=14)
+            # Saving figure
+            fname = DataDirectory+'/boundary_terms.png'
+            plt.savefig(fname)
+            print(fname+' created')
             
 def plot_boxplot(df,DataDirectory):
     # Guarantee no plots are open
     plt.close('all')
-    for labels in [energy_labels,conversion_labels]:
+    for labels in [energy_labels,conversion_labels, boundary_labels]:
         plt.figure(figsize=(8,8))
         plt.grid(b=True,c='gray',linewidth=0.25,linestyle='dashdot')
         for term,i in zip(labels,range(len(labels))):
@@ -101,6 +111,15 @@ def plot_boxplot(df,DataDirectory):
             plt.ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=14)
             # Saving figure
             fname = DataDirectory+'/boxplot_conversion_terms.png'
+            plt.savefig(fname)
+            print(fname+' created')
+        elif term in boundary_labels:
+            # Horizontal line for 0
+            plt.axhline(y = 0, color = 'k', linestyle = '-',
+                        linewidth=1, zorder=1,alpha=0.5)
+            plt.ylabel('Transport across boundaries '+r' $(W\,m^{-2})$',fontsize=14)
+            # Saving figure
+            fname = DataDirectory+'/boxplot_boundary_terms.png'
             plt.savefig(fname)
             print(fname+' created')
 
