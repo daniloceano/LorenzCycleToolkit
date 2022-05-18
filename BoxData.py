@@ -26,6 +26,7 @@ class BoxData:
                  UWindComponentData: xarray.Dataset,
                  VWindComponentData: xarray.Dataset,
                  OmegaData: xarray.Dataset,
+                 HgtData: xarray.Dataset,
                  western_limit: float, eastern_limit: float,
                  southern_limit: float, northern_limit: float,
                  output_dir: str):
@@ -100,6 +101,17 @@ class BoxData:
                                             self.LonIndexer)
         self.omega_ZE = self.omega - self.omega_ZA
         self.omega_AE = self.omega_ZA - self.omega_AA
+        
+        # Geopotential height (g*z) data values, averages and eddy terms
+        self.hgt = HgtData.sel(**{LatIndexer: 
+            slice(self.BoxNorth, self.BoxSouth),
+            LonIndexer: slice(self.BoxWest, self.BoxEast)})
+        self.hgt_ZA = calc.CalcZonalAverage(self.hgt, self.LonIndexer)
+        self.hgt_AA = calc.CalcAreaAverage(self.hgt,self.LatIndexer,
+                                            self.BoxSouth,self.BoxNorth,
+                                            self.LonIndexer)
+        self.hgt_ZE = self.hgt - self.hgt_ZA
+        self.hgt_AE = self.hgt_ZA - self.hgt_AA
         
         # Static stability parameter
         self.sigma_AA = calc.StaticStability(self.tair, self.PressureData, self.VerticalCoordIndexer,
