@@ -145,6 +145,24 @@ def get_data(file,varlist,min_lon, max_lon, min_lat, max_lat):
     print(dfVars)
     return LonIndexer, LatIndexer, TimeIndexer, LevelIndexer, tair, hgt, rhum, omega, u, v#, slp
 
+# Compute the budget equation for the energy terms (Az, Ae, Kz and Ke) using
+# finite differences method (used for estimating generation, disspation and
+# boundary work terms as residuals)
+def calc_budget_diff(df,time):
+    # get time delta in seconds
+    dt = (time[1]-time[0]).values.astype('timedelta64[h]'
+                                    ) / np.timedelta64(1, 's')
+    # Estimate budget values for all energy terms
+    for term in ['Az','Ae','Kz','Ke']:
+        # forward finite difference for the first value
+        forward = (df['Az'].iloc[1]-df['Az'].iloc[0])/dt
+        # central finited differentes for the second value to the one next-to-last
+        central = (df['Az'].iloc[2:].values-df['Az'].iloc[:-2].values)/dt
+        # backward finite difference for the last value
+        backward = (df['Az'].iloc[-1]-df['Az'].iloc[-2])/dt
+        # put all values together
+        name = '∂'+term+'/∂t (finite diff.)'
+        df[name] = [forward,*central,backward]
 
 # The main function. It will open the data, read the variables and calls the
 # functions for making the calculations 

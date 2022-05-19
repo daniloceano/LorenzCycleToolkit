@@ -23,7 +23,7 @@ Contact:
 Source for formulas used here:
         Michaelides, S. C. (1987).
         Limited Area Energetics of Genoa Cyclogenesis,
-        Monthly Weather Review, 115(1), 13-26. Retrieved May 17, 2022, from:
+        Monthly Weather Review, 115(1), 13-26. From:
         https://journals.ametsoc.org/view/journals/mwre/115/1/1520-0493_1987_115_0013_laeogc_2_0_co_2.xml
 
 """
