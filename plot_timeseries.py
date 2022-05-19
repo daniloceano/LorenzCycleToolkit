@@ -23,13 +23,13 @@ import os
 import sys
 
 # Specs for plotting
-linecolors = ['#A53860','#C9B857','#384A0F','#473BF0']
-markerfacecolors = ['#A53860','w','#384A0F','w']
+linecolors = ['#A53860','#C9B857','#384A0F','#473BF0','#873e23','#A13BF0']
+markerfacecolors = ['#A53860','w','#384A0F','w','#873e23', 'w']
 conversion_labels = ['Cz','Ca','Ck','Ce']
 energy_labels = ['Az','Ae','Kz','Ke']
-boundary_labels = ['BAz','BAe','BKz','BKe']
-markers = ['s','s','o','o']         
-linestyles = ['-','-','-','-']
+boundary_labels = ['BAz','BAe','BKz','BKe','BΦZ','BΦE']
+markers = ['s','s','o','o','^','^']         
+linestyles = ['-','-','-','-','-','-']
 linewidth = 4
 
 def plot_timeseries(df,DataDirectory):

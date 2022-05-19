@@ -249,7 +249,8 @@ def main():
     try:
         bt_obj = BoundaryTerms(box_obj)
         BoundaryList = [bt_obj.calc_baz(),bt_obj.calc_bae(),
-                        bt_obj.calc_bkz(),bt_obj.calc_bke()]
+                        bt_obj.calc_bkz(),bt_obj.calc_bke(),
+                        bt_obj.calc_boz(),bt_obj.calc_boe()]
     except:
         raise SystemExit('ERROR!!!!!')
     print('Ok!')
@@ -263,11 +264,11 @@ def main():
     df = pd.DataFrame(data=[*days],columns=['Date'])
     df['Hour'] = hours
     # Then adds the data to the DataFrame
-    for i,j,k,l in zip(range(4),['Az','Ae','Kz','Ke'],
-                     ['Cz','Ca','Ck','Ce'],
-                     ['BAz','BAe','BKz','BKe']):
+    for i,j,k in zip(range(4),['Az','Ae','Kz','Ke'],
+                     ['Cz','Ca','Ck','Ce']):
         df[j] = EnergyList[i]
         df[k] = ConversionList[i]
+    for i,l in zip(range(6),['BAz','BAe','BKz','BKe','BΦZ','BΦE']):
         df[l] = BoundaryList[i]
     # Lastly, save file
     outfile = DataDirectory+'/'+outfile_name+'.csv'

@@ -15,6 +15,7 @@ This version makes the zonal average using only the data whitin the box
 import xarray
 import calc
 import numpy as np
+from metpy.constants import g
 
 class BoxData:
     '''
@@ -112,6 +113,16 @@ class BoxData:
                                             self.LonIndexer)
         self.hgt_ZE = self.hgt - self.hgt_ZA
         self.hgt_AE = self.hgt_ZA - self.hgt_AA
+        
+        # Geopotential (g*z) data values, averages and eddy terms
+        self.geopt = self.hgt*g
+        self.geopt_ZA = calc.CalcZonalAverage(self.geopt, self.LonIndexer)
+        self.geopt_AA = calc.CalcAreaAverage(self.geopt,self.LatIndexer,
+                                            self.BoxSouth,self.BoxNorth,
+                                            self.LonIndexer)
+        self.geopt_ZE = self.geopt - self.geopt_ZA
+        self.geopt_AE = self.geopt_ZA - self.geopt_AA
+        
         
         # Static stability parameter
         self.sigma_AA = calc.StaticStability(self.tair, self.PressureData, self.VerticalCoordIndexer,

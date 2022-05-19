@@ -58,10 +58,10 @@ class BoundaryTerms:
         self.omega_ZE = box_obj.omega_ZE
         self.omega_ZA = box_obj.omega_ZA
         self.omega_AE = box_obj.omega_AE
-        self.hgt = box_obj.hgt
-        self.hgt_ZE = box_obj.hgt_ZE
-        self.hgt_ZA = box_obj.hgt_ZA
-        self.hgt_AE = box_obj.hgt_AE
+        self.geopt = box_obj.geopt
+        self.geopt_ZE = box_obj.geopt_ZE
+        self.geopt_ZA = box_obj.geopt_ZA
+        self.geopt_AE = box_obj.geopt_AE
         
         self.rlats = np.deg2rad(box_obj.tair[self.LatIndexer])
         self.rlons = np.deg2rad(box_obj.tair[self.LonIndexer])
@@ -238,7 +238,7 @@ class BoundaryTerms:
     def calc_boz(self):
         print('\nComputing Zonal Kinetic Energy (Kz) production by fluxes at the boundaries (BΦZ)...')
         ## First Integral ##
-        _ = (self.v_ZA*self.hgt_AE)/g
+        _ = (self.v_ZA*self.geopt_AE)/g
          # Data at eastern boundary minus data at western boundary 
         # _ = _.sel(**{self.LonIndexer: self.BoxEast}) - _.sel(
         #     **{self.LonIndexer: self.BoxWest}) 
@@ -249,7 +249,7 @@ class BoundaryTerms:
                                     self.VerticalCoordIndexer)*self.c1
         
         ## Second Integral ##
-        _ = (self.v_ZA*self.hgt_AE)*self.cos_lats/g
+        _ = (self.v_ZA*self.geopt_AE)*self.cos_lats/g
         # Data at northern boundary minus data at southern boundary
         _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
             **{self.LatIndexer: self.BoxSouth})
@@ -257,7 +257,7 @@ class BoundaryTerms:
         function += VerticalTrazpezoidalIntegration(_,self.PressureData,
                                     self.VerticalCoordIndexer)*self.c2
         ## Third Term ##
-        _ = CalcAreaAverage(self.omega_ZE*self.hgt_AE, self.LatIndexer,
+        _ = CalcAreaAverage(self.omega_ZE*self.geopt_AE, self.LatIndexer,
                             LonIndexer=self.LonIndexer)/g
         function -= _.sortby(self.VerticalCoordIndexer,ascending=False
         ).isel(**{self.VerticalCoordIndexer: 0}) - _.isel(
@@ -273,7 +273,7 @@ class BoundaryTerms:
     def calc_boe(self):
         print('\nComputing Eddy Kinetic Energy (Kz) production by fluxes at the boundaries (BΦE)...')
         ## First Integral ##
-        _ = (self.u_ZE*self.hgt_ZE)/g
+        _ = (self.u_ZE*self.geopt_ZE)/g
          # Data at eastern boundary minus data at western boundary 
         _ = _.sel(**{self.LonIndexer: self.BoxEast}) - _.sel(
             **{self.LonIndexer: self.BoxWest}) 
@@ -284,7 +284,7 @@ class BoundaryTerms:
                                     self.VerticalCoordIndexer)*self.c1
         
         ## Second Integral ##
-        _ = CalcZonalAverage((self.u_ZE*self.hgt_ZE),
+        _ = CalcZonalAverage((self.u_ZE*self.geopt_ZE),
                              self.LonIndexer)*self.cos_lats/g
         # Data at northern boundary minus data at southern boundary
         _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
@@ -293,7 +293,7 @@ class BoundaryTerms:
         function += VerticalTrazpezoidalIntegration(_,self.PressureData,
                                     self.VerticalCoordIndexer)*self.c2
         ## Third Term ##
-        _ = CalcAreaAverage(self.omega_ZE*self.hgt_ZE, self.LatIndexer,
+        _ = CalcAreaAverage(self.omega_ZE*self.geopt_ZE, self.LatIndexer,
                             LonIndexer=self.LonIndexer)/g
         function -= _.sortby(self.VerticalCoordIndexer,ascending=False
         ).isel(**{self.VerticalCoordIndexer: 0}) - _.isel(
