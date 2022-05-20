@@ -150,19 +150,33 @@ def get_data(file,varlist,min_lon, max_lon, min_lat, max_lat):
 # boundary work terms as residuals)
 def calc_budget_diff(df,time):
     # get time delta in seconds
-    dt = (time[1]-time[0]).values.astype('timedelta64[h]'
+    dt = (time[1]-time[0]).astype('timedelta64[h]'
                                     ) / np.timedelta64(1, 's')
     # Estimate budget values for all energy terms
     for term in ['Az','Ae','Kz','Ke']:
-        # forward finite difference for the first value
-        forward = (df['Az'].iloc[1]-df['Az'].iloc[0])/dt
-        # central finited differentes for the second value to the one next-to-last
-        central = (df['Az'].iloc[2:].values-df['Az'].iloc[:-2].values)/dt
-        # backward finite difference for the last value
-        backward = (df['Az'].iloc[-1]-df['Az'].iloc[-2])/dt
-        # put all values together
         name = '∂'+term+'/∂t (finite diff.)'
+        print('\nEstimating '+name)
+        # forward finite difference for the first value
+        forward = (df[term].iloc[1]-df[term].iloc[0])/dt
+        # central finited differentes for the second value to the one next-to-last
+        central = (df[term].iloc[2:].values-df[term].iloc[:-2].values)/dt
+        # backward finite difference for the last value
+        backward = (df[term].iloc[-1]-df[term].iloc[-2])/dt
+        # put all values together
         df[name] = [forward,*central,backward]
+        print(df[name].values*units('W/ m **2'))
+    return df
+
+# Compute the residuals RGz, RKz, RGe and RKe using the budget terms estimated
+# via finite differences
+def calc_residuals(df):
+    print('\nResiduals ('+str((1*units('W/ m **2')).units)+'):')
+    df['RGz'] = df['∂Az/∂t (finite diff.)'] + df['Cz'] + df['Ca'] - df['BAz']
+    df['RGe'] = df['∂Ae/∂t (finite diff.)'] - df['Ca'] + df['Ce'] - df['BAe']
+    df['RKz'] = df['∂Kz/∂t (finite diff.)'] - df['Cz'] - df['Ck'] - df['BKz']
+    df['RKe'] = df['∂Ke/∂t (finite diff.)'] - df['Ce'] + df['Ck'] - df['BKe']
+    print(df[['RGz', 'RKz', 'RGe', 'RKe']])
+    return df
 
 # The main function. It will open the data, read the variables and calls the
 # functions for making the calculations 
@@ -274,8 +288,8 @@ def main():
     print('Ok!')
     
     # 8)
-    # First, extract dates to construct the dataframe
-    print('\nCreating a csv to store results...')
+    print('\nOrganising results in a Pandas DataFrame')
+    # First, extract dates to construct a dataframe
     dates = tair[TimeName].values
     days = dates.astype('datetime64[D]')
     hours = pd.to_datetime(dates).hour
@@ -288,7 +302,21 @@ def main():
         df[k] = ConversionList[i]
     for i,l in zip(range(6),['BAz','BAe','BKz','BKe','BΦZ','BΦE']):
         df[l] = BoundaryList[i]
+        
+    # 9) 
+    print('\n------------------------------------------------------------------------')
+    print('Estimating budget terms (∂X/∂t) using finite differences ')
+    df = calc_budget_diff(df,dates) 
+    print('Ok!')
+    
+    # 10) 
+    print('\n------------------------------------------------------------------------')
+    print('Computing residuals RGz, RKz, RGe and RKe')
+    df = calc_residuals(df)
+    print('Ok!')
+    
     # Lastly, save file
+    print('\nCreating a csv to store results...')
     outfile = DataDirectory+'/'+outfile_name+'.csv'
     df.to_csv(outfile)
     print(outfile+' created')
