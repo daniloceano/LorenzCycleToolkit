@@ -223,7 +223,7 @@ def Differentiate(Data,Axis,AxisName):
 def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
                     LatIndexer,LonIndexer,BoxNorth,BoxSouth,BoxWest, BoxEast):
     """
-    Computates the static stability parameter sigma for all vertical levels
+    Compute the static stability parameter sigma for all vertical levels
     and for the desired domain
     
     Source:

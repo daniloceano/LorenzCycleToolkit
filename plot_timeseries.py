@@ -23,11 +23,16 @@ import os
 import sys
 
 # Specs for plotting
-linecolors = ['#A53860','#C9B857','#384A0F','#473BF0','#873e23','#A13BF0']
-markerfacecolors = ['#A53860','w','#384A0F','w','#873e23', 'w']
+
 conversion_labels = ['Cz','Ca','Ck','Ce']
 energy_labels = ['Az','Ae','Kz','Ke']
 boundary_labels = ['BAz','BAe','BKz','BKe','BΦZ','BΦE']
+budget_diff_labels = ['∂Az/∂t (finite diff.)', '∂Ae/∂t (finite diff.)',
+                 '∂Kz/∂t (finite diff.)', '∂Ke/∂t (finite diff.)']
+residuals_labels = ['RGz', 'RKz', 'RGe', 'RKe']
+
+linecolors = ['#A53860','#C9B857','#384A0F','#473BF0','#873e23','#A13BF0']
+markerfacecolors = ['#A53860','w','#384A0F','w','#873e23', 'w']
 markers = ['s','s','o','o','^','^']         
 linestyles = ['-','-','-','-','-','-']
 linewidth = 4
@@ -39,7 +44,8 @@ def plot_timeseries(df,DataDirectory):
     date = df['Date']
     times = pd.date_range(date[0],date.iloc[-1],periods=len(date))
     # Loop through the distinct group of terms
-    for labels in [energy_labels,conversion_labels,boundary_labels]:
+    for labels in [energy_labels,conversion_labels,boundary_labels,
+                   residuals_labels, budget_diff_labels]:
         print('Plotting '+str(labels)+'...')
         # Get values for setting plot range
         maxval = np.amax(np.amax(df[labels]))
@@ -61,35 +67,42 @@ def plot_timeseries(df,DataDirectory):
         # Set x labels as dates
         ax = plt.gca()
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
+        # Horizontal line for 0
+        if term not in energy_labels:
+            plt.axhline(y = 0, color = 'k', linestyle = '-',
+                        linewidth=1, zorder=1,alpha=0.8)
+        # name y axis and save figure
         if term in energy_labels:
             plt.ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=14)
-            # Saving figure
             fname = DataDirectory+'/energy_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in conversion_labels:
-            # Horizontal line for 0
-            plt.axhline(y = 0, color = 'k', linestyle = '-',
-                        linewidth=1, zorder=1,alpha=0.8)
             plt.ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=14)
-            # Saving figure
             fname = DataDirectory+'/conversion_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in boundary_labels:
-            # Horizontal line for 0
-            plt.axhline(y = 0, color = 'k', linestyle = '-',
-                        linewidth=1, zorder=1,alpha=0.8)
             plt.ylabel('Transport across boundaries '+r' $(W\,m^{-2})$',fontsize=14)
-            # Saving figure
             fname = DataDirectory+'/boundary_terms.png'
+            plt.savefig(fname)
+            print(fname+' created')
+        elif term in residuals_labels:
+            plt.ylabel('Residuals '+r' $(W\,m^{-2})$',fontsize=14)
+            fname = DataDirectory+'/residuals_terms.png'
+            plt.savefig(fname)
+            print(fname+' created')
+        elif term in budget_diff_labels:
+            plt.ylabel('Enery budgets (estimated using finite diffs. '+r' $(W\,m^{-2})$',fontsize=14)
+            fname = DataDirectory+'/budget_diff_terms.png'
             plt.savefig(fname)
             print(fname+' created')
             
 def plot_boxplot(df,DataDirectory):
     # Guarantee no plots are open
     plt.close('all')
-    for labels in [energy_labels,conversion_labels, boundary_labels]:
+    for labels in [energy_labels,conversion_labels, boundary_labels,
+                   residuals_labels, budget_diff_labels]:
         plt.figure(figsize=(8,8))
         plt.grid(b=True,c='gray',linewidth=0.25,linestyle='dashdot')
         for term,i in zip(labels,range(len(labels))):
@@ -98,6 +111,10 @@ def plot_boxplot(df,DataDirectory):
             bplot['boxes'][-1].set_facecolor(linecolors[i])
             bplot['boxes'][-1].set_alpha(0.7)
         plt.legend()
+        # Horizontal line for 0
+        if term not in energy_labels:
+            plt.axhline(y = 0, color = 'k', linestyle = '-',
+                        linewidth=1, zorder=1,alpha=0.8)
         if term in energy_labels:
             plt.ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=14)
             # Saving figure
@@ -105,21 +122,27 @@ def plot_boxplot(df,DataDirectory):
             plt.savefig(fname)
             print(fname+' created')
         elif term in conversion_labels:
-            # Horizontal line for 0
-            plt.axhline(y = 0, color = 'k', linestyle = '-',
-                        linewidth=1, zorder=1,alpha=0.5)
             plt.ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=14)
             # Saving figure
             fname = DataDirectory+'/boxplot_conversion_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in boundary_labels:
-            # Horizontal line for 0
-            plt.axhline(y = 0, color = 'k', linestyle = '-',
-                        linewidth=1, zorder=1,alpha=0.5)
             plt.ylabel('Transport across boundaries '+r' $(W\,m^{-2})$',fontsize=14)
             # Saving figure
             fname = DataDirectory+'/boxplot_boundary_terms.png'
+            plt.savefig(fname)
+            print(fname+' created')
+        elif term in residuals_labels:
+            plt.ylabel('Residuals '+r' $(W\,m^{-2})$',fontsize=14)
+            # Saving figure
+            fname = DataDirectory+'/boxplot_residuals_terms.png'
+            plt.savefig(fname)
+            print(fname+' created')
+        elif term in budget_diff_labels:
+            plt.ylabel('Enery budgets (estimated using finite diffs. '+r' $(W\,m^{-2})$',fontsize=14)
+            # Saving figure
+            fname = DataDirectory+'/boxplot_budget_diff_labels_terms.png'
             plt.savefig(fname)
             print(fname+' created')
 
