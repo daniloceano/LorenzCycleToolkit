@@ -47,9 +47,10 @@ class GenerationDissipationTerms:
         for all vertical levels and for the desired domain
         """
         # Temperature tendency as dT/dt
-        TairTendency = self.tair.differentiate(self.TimeIndexer)
-        # Vertical advection of temperature
-        AdvVT = self.tair.copy(deep=True
+        TairTendency = self.tair.copy(deep=True).differentiate(
+            self.TimeName,datetime_unit='h') 
+        ## Vertical advection of temperature
+        dTdp = self.tair.copy(deep=True
             ).sortby(self.VerticalCoordIndexer,ascending=True
             ).differentiate(self.VerticalCoordIndexer) / units.hPa
     
