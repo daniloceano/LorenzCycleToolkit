@@ -19,6 +19,9 @@ from metpy.units import units
 from metpy.constants import Rd
 from metpy.constants import Cp_d
 from metpy.constants import g
+from metpy.constants import Re
+from metpy.calc import potential_temperature
+
 
 def HorizontalTrazpezoidalIntegration(VariableData,dimension):
     """
@@ -169,7 +172,7 @@ def CalcAreaAverage(VariableData,LatIndexer, BoxSouth=None, BoxNorth=None,
     area_ave  = area_ave/units('radians')
     return area_ave
 
-def Differentiate(Data,Axis,AxisName):
+def Differentiate(Data,AxisName,time=False):
     """
     Computates the partial derivative of some data.
     
@@ -188,7 +191,9 @@ def Differentiate(Data,Axis,AxisName):
     """
     try:
         DataUnits = Data.metpy.units
-        AxisUnits = Axis.metpy.units
+        AxisUnits = Data[AxisName].metpy.units
+        if time:
+            AxisUnits = units('seconds')
         Data = Data.metpy.dequantify()
     except:
         pass
@@ -201,18 +206,30 @@ def Differentiate(Data,Axis,AxisName):
     for step in range(len(steps)):
         # Forward difference for first step
         if step == 0:
-            diff = Data.sel(**{AxisName:steps[step+1]})-Data.sel(**{AxisName:steps[step]})
-            h = steps[step+1].metpy.convert_units(str(AxisUnits))-steps[step].metpy.convert_units(str(AxisUnits))
+            diff = Data.sel(**{AxisName:steps[step+1]})-Data.sel(**{AxisName:steps[step]})                
+            if time:
+                h = steps[step+1]-steps[step]
+                h = h.dt.seconds
+            else:
+                h = steps[step+1].metpy.convert_units(str(AxisUnits))-steps[step].metpy.convert_units(str(AxisUnits))
             DifArray.loc[dict({AxisName:DifArray[AxisName][step]})] = diff/h
         # Backward difference for last step
         elif step == len(steps)-1:
             diff = Data.sel(**{AxisName:steps[step-1]})-Data.sel(**{AxisName:steps[step]})
-            h = steps[step-1].metpy.convert_units(str(AxisUnits))-steps[step].metpy.convert_units(str(AxisUnits))
+            if time:
+                h = steps[step-1]-steps[step]
+                h = h.dt.seconds
+            else:
+                h = steps[step-1].metpy.convert_units(str(AxisUnits))-steps[step].metpy.convert_units(str(AxisUnits))
             DifArray.loc[dict({AxisName:DifArray[AxisName][step]})] = diff/h
         # Centred difference for all othe steps
         else:
             diff = Data.sel(**{AxisName:steps[step+1]})-Data.sel(**{AxisName:steps[step-1]})
-            h = steps[step+1].metpy.convert_units(str(AxisUnits))-steps[step-1].metpy.convert_units(str(AxisUnits))
+            if time:
+                h = steps[step+1]-steps[step-1]
+                h = h.dt.seconds
+            else:
+                h = steps[step+1].metpy.convert_units(str(AxisUnits))-steps[step-1].metpy.convert_units(str(AxisUnits))
             DifArray.loc[dict({AxisName:DifArray[AxisName][step]})] = diff/(2*h)
     # Include units
     DifArray = (DataUnits/AxisUnits)*DifArray
@@ -253,3 +270,47 @@ def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
             slice(BoxNorth,BoxSouth),LonIndexer: slice(BoxWest, BoxEast)})
     sigma = CalcAreaAverage(function,LatIndexer,BoxSouth, BoxNorth,LonIndexer)
     return sigma
+
+def AdiabaticHEating(TemperatureData,PressureData, OmegaData,
+                     UWindComponentData,VWindComponentData,
+                     VerticalCoordIndexer,LatIndexer,LonIndexer,TimeName):
+        """
+        Compute the diabatic heating as a residual form the thermodynamic 
+        equation for all vertical levels and for the desired domain
+        """
+        lons,lats = TemperatureData[LonIndexer],TemperatureData[LatIndexer]
+        cos_lats = np.cos(np.deg2rad(lats))
+        time = TemperatureData[TimeName]
+        ## Temperature tendency as dT/dt ##
+        TairTendency = TemperatureData.copy(deep=True).differentiate(
+            TimeName,datetime_unit='s') / units('seconds')
+        
+        ## Horizontal advection of temperature ##
+        # Differentiate temperature in respect to longitude and latitude
+        dTdlambda = TemperatureData.copy(deep=True).differentiate(LonIndexer)
+        dTdphi = TemperatureData.copy(deep=True).differentiate(LatIndexer)
+        # Get the values for dx and dy in meters
+        dx = np.deg2rad(lons).differentiate(LonIndexer)*cos_lats*Re
+        dy = np.deg2rad(lats.differentiate(LatIndexer))*Re
+        #
+        # For further reflection:
+        # https://towardsdatascience.com/the-correct-way-to-average-the-globe-92ceecd172b7
+        # xlon, ylat = np.meshgrid(self.tair[self.LonIndexer], 
+        #                          self.tair[self.LatIndexer])
+        # dlat = np.deg2rad(np.gradient(ylat, axis=0))
+        # dlon = np.deg2rad(np.gradient(xlon, axis=1))
+        # dy = dlat * Re
+        # dx = dlon * Re * np.cos(np.deg2rad(ylat))
+        #
+        # Horizonal temperature advection
+        AdvHT = -1* ((UWindComponentData*dTdlambda/dx)+(
+                                    VWindComponentData*dTdphi/dy))
+        
+        # Static stability parameter (here we need a slight modified version
+        # from calc.py so the units can match)
+        theta = potential_temperature(PressureData,TemperatureData)
+        sigma = -(TemperatureData/theta) *theta.differentiate(
+            VerticalCoordIndexer)/units.hPa
+        ## Diabatic reating as a residual ##
+        Q = TairTendency-AdvHT-(sigma*OmegaData)
+        return Q

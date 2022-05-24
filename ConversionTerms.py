@@ -66,7 +66,7 @@ class ConversionTerms:
         self.omega_ZE = box_obj.omega_ZE
         self.omega_AE = box_obj.omega_AE
         
-        self.rlats = np.deg2rad(self.tair_AE[self.LatIndexer])
+        self.rlats = np.deg2rad(box_obj.tair[self.LatIndexer])
         self.cos_lats = np.cos(self.rlats)
         self.tan_lats = np.tan(self.rlats)
         
@@ -168,7 +168,7 @@ class ConversionTerms:
         ).assign_coords({self.LatIndexer:self.rlats}
                          ).sortby(self.LatIndexer,ascending=True
                         ).differentiate(self.LatIndexer).assign_coords(
-                        {self.LatIndexer: self.tair_AE[self.LatIndexer]})
+                        {self.LatIndexer: self.u_ZA[self.LatIndexer]})
         _ = (self.cos_lats*self.u_ZE*self.v_ZE/Re) * DelPhi_uZA_cosphi
         function = CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
         
@@ -179,7 +179,7 @@ class ConversionTerms:
         ).assign_coords({self.LatIndexer:self.rlats}
                           ).sortby(self.LatIndexer,ascending=True
                         ).differentiate(self.LatIndexer).assign_coords(
-                        {self.LatIndexer: self.tair_AE[self.LatIndexer]})
+                        {self.LatIndexer: self.v_ZA[self.LatIndexer]})
         _ = ((self.v_ZE**2)/Re) * DelPhi_vZA
         function += CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
         

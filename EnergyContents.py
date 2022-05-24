@@ -51,8 +51,8 @@ class EnergyContents:
         
     def calc_az(self):
         print('\nComputing Zonal Available Potential Energy (Az)...')
-        numerator = CalcAreaAverage(self.tair_AE**2,self.LatIndexer)
-        function = numerator/(2*self.sigma_AA)
+        _ = CalcAreaAverage(self.tair_AE**2,self.LatIndexer)
+        function = _/(2*self.sigma_AA)
         Az = VerticalTrazpezoidalIntegration(function,self.PressureData,
                                              self.VerticalCoordIndexer)
         try: 
@@ -73,8 +73,8 @@ class EnergyContents:
     
     def calc_ae(self):  
         print('\nComputing Eddy Available Potential Energy (Ae)...')
-        numerator = CalcAreaAverage(self.tair_ZE**2,self.LatIndexer,LonIndexer=self.LonIndexer)
-        function = numerator/(2*self.sigma_AA)
+        _ = CalcAreaAverage(self.tair_ZE**2,self.LatIndexer,LonIndexer=self.LonIndexer)
+        function = _/(2*self.sigma_AA)
         Ae = VerticalTrazpezoidalIntegration(function,self.PressureData,
                                              self.VerticalCoordIndexer)
         try: 
