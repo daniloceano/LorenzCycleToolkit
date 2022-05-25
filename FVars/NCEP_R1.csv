@@ -1,0 +1,12 @@
+;standard_name;Variable;Units
+Air Temperature;air_temperature;air;K
+Geopotential Height;geopotential_height;hgt;m
+Relative Humidity;relative_humidity;rhum;percent
+Omega Velocity;omega;omega;Pa/s
+Eastward Wind Component;eastward_wind;uwnd;m/s
+Northward Wind Component;northward_wind;vwnd;m/s
+Sea Level Pressure;pressure;mslp;hPa
+Longitude;;lon
+Latitude;;lat
+Time;;time
+Vertical Level;;level

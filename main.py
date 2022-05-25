@@ -220,23 +220,23 @@ def main():
             j = i+'N'
         lims += j
     # Directory where results will be stored
-    ResultsDirectory = 'LEC_Results'
+    ResultsMainDirectory = '../LEC_Results'
     infile_name = sys.argv[1]
     # Append data limits to outfile name
-    outfile_name = infile_name.split('.nc')[0]+'_'+lims
+    outfile_name = infile_name.split('.nc')[0].split('/')[-1]+'_'+lims
     # Each dataset of results have its own directory, allowing to store results
     # from more than one experiment at each time
-    DataDirectory = ResultsDirectory+'/'+outfile_name
+    ResultsSubDirectory = ResultsMainDirectory+'/'+outfile_name
     # Check if the LEC_Figures directory exists. If not, creates it
-    if not os.path.exists(ResultsDirectory):
-                os.makedirs(ResultsDirectory)
-                print(ResultsDirectory+' created')
+    if not os.path.exists(ResultsMainDirectory):
+                os.makedirs(ResultsMainDirectory)
+                print(ResultsMainDirectory+' created')
     else:
-        print(ResultsDirectory+' directory exists')
+        print(ResultsMainDirectory+' directory exists')
     # Check if a directory for current data exists. If not, creates it
-    if not os.path.exists(DataDirectory):
-                os.makedirs(DataDirectory)
-                print(DataDirectory+' created')
+    if not os.path.exists(ResultsSubDirectory):
+                os.makedirs(ResultsSubDirectory)
+                print(ResultsSubDirectory+' created')
                 
     # 4) 
     print('Computing zonal and area averages and eddy terms for each variable')
@@ -249,7 +249,7 @@ def main():
                      VerticalCoordIndexer=VerticalCoordIndexer,
                      western_limit=float(sys.argv[3]), eastern_limit=float(sys.argv[4]),
                      southern_limit=float(sys.argv[5]), northern_limit=float(sys.argv[6]),
-                     output_dir=DataDirectory)
+                     output_dir=ResultsSubDirectory)
     except:
         raise SystemExit('ERROR!!!!!')
     print('Ok!')
@@ -328,7 +328,7 @@ def main():
     
     # Lastly, save file
     print('\nCreating a csv to store results...')
-    outfile = DataDirectory+'/'+outfile_name+'.csv'
+    outfile = ResultsSubDirectory+'/'+outfile_name+'.csv'
     df.to_csv(outfile)
     print(outfile+' created')
     print('All done!')
