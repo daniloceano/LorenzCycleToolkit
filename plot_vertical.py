@@ -41,7 +41,7 @@ def get_data_dict(list_terms):
     data = {}
     # Loop to store results in dictionary
     for term in list_terms:
-        file = glob.glob(Directory+term+'_*')[0]
+        file = glob.glob(Directory+'/'+term+'_*')[0]
         data[term] = pd.read_csv(file)
         print('\nOpening '+term)
         print(data[term][::data[term].shape[0]-1])
@@ -50,7 +50,7 @@ def get_data_dict(list_terms):
 
 def create_dir():
     # Diectory for saving figures
-    FigsDirectory = Directory+'Figures_vertical_profiles/'
+    FigsDirectory = Directory+'/Figures_vertical_profiles/'
     # Check if the directory for saving figures exists. If not, creates it
     if not os.path.exists(FigsDirectory):
                 os.makedirs(FigsDirectory)
@@ -134,7 +134,7 @@ def boxplot_time(term_list):
             fname = 'Energy'
     elif term in conversion_labels:
             fname = 'Conversion'
-    outfile = Directory+'boxplot_vertical_time_'+fname+'.png'
+    outfile = Directory+'/boxplot_vertical_time_'+fname+'.png'
     plt.savefig(outfile)
     print('Created '+outfile)
     
@@ -166,7 +166,7 @@ def boxplot_vertical(term_list):
             fname = 'Energy'
     elif term in conversion_labels:
             fname = 'Conversion'
-    outfile = Directory+'boxplot_vertical_'+fname+'.png'
+    outfile = Directory+'/boxplot_vertical_'+fname+'.png'
     plt.savefig(outfile)
     print('Created '+outfile)
     

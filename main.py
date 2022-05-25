@@ -34,6 +34,11 @@ from typing import List
 import os
 import numpy as np
 
+import cartopy.crs as ccrs
+import matplotlib.pyplot as plt
+from shapely.geometry.polygon import Polygon
+
+
 
 # This will be printed as an error message
 USAGE = f"Usage: python {sys.argv[0]} [--help] | file fvar min_lon, max_lon, min_lat, max_lat]"
@@ -94,6 +99,33 @@ def convert_lon(df,LonIndexer):
     df.coords[LonIndexer] = (df.coords[LonIndexer] + 180) % 360 - 180
     df = df.sortby(df[LonIndexer])
     return df
+
+# Plot the area limited by the lons and lats values that will be used
+# for the computations
+def plot_area(min_lon, max_lon,min_lat, max_lat, outdir) :
+
+    plt.close('all')
+    datacrs = ccrs.PlateCarree() # projection
+    fig = plt.figure(figsize=(8, 8.5))
+    ax = fig.add_axes([0.05, 0.05, 0.9, 0.9], projection=datacrs,
+                  frameon=True)
+    ax.set_extent([min_lon-20, max_lon+20, max_lat+20, min_lat-20], crs=datacrs)
+    ax.coastlines(zorder = 1)
+    ax.stock_img()
+    # plot selected domain
+    # create a sample polygon, `pgon`
+    pgon = Polygon(((min_lon, min_lat),
+            (min_lon, max_lat),
+            (max_lon, max_lat),
+            (max_lon, min_lat),
+            (min_lon, min_lat)))
+    ax.add_geometries([pgon], crs=datacrs, 
+                      facecolor='red', edgecolor='k', linewidth = 3,
+                      alpha=0.5, zorder = 3)
+    ax.gridlines(draw_labels=True,zorder=2)    
+
+    plt.title('Box defined for compuations \n', fontsize = 22)
+    plt.savefig(outdir+'/box.png')
 
 # Function for opening the data
 def get_data(file,varlist,min_lon, max_lon, min_lat, max_lat):   
@@ -288,7 +320,7 @@ def main():
         raise SystemExit('ERROR!!!!!')
     print('Ok!')
     
-    # 7)
+    # 8)
     print('\n------------------------------------------------------------------------')
     print('Computing generation and disspiation terms') 
     try:
@@ -298,7 +330,7 @@ def main():
         raise SystemExit('ERROR!!!!!')
     print('Ok!')
     
-    # 8)
+    # 9)
     print('\nOrganising results in a Pandas DataFrame')
     # First, extract dates to construct a dataframe
     dates = tair[TimeName].values
@@ -314,24 +346,29 @@ def main():
     for i,l in zip(range(6),['BAz','BAe','BKz','BKe','BΦZ','BΦE']):
         df[l] = BoundaryList[i]
         
-    # 9) 
+    # 10) 
     print('\n------------------------------------------------------------------------')
     print('Estimating budget terms (∂X/∂t) using finite differences ')
     df = calc_budget_diff(df,dates) 
     print('Ok!')
     
-    # 10) 
+    # 11) 
     print('\n------------------------------------------------------------------------')
     print('Computing residuals RGz, RKz, RGe and RKe')
     df = calc_residuals(df)
     print('Ok!')
     
-    # Lastly, save file
+    # 12) save file
     print('\nCreating a csv to store results...')
     outfile = ResultsSubDirectory+'/'+outfile_name+'.csv'
     df.to_csv(outfile)
     print(outfile+' created')
     print('All done!')
+    
+    # 13) Make figures
+    os.system("python plot_timeseries.py "+outfile)
+    os.system("python plot_vertical.py "+ResultsSubDirectory)
+    plot_area(*[float(i) for i in sys.argv[3:]], ResultsSubDirectory)
 
 if __name__ == "__main__":
     main()

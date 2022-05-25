@@ -37,7 +37,7 @@ markers = ['s','s','o','o','^','^']
 linestyles = ['-','-','-','-','-','-']
 linewidth = 4
 
-def plot_timeseries(df,DataDirectory):
+def plot_timeseries(df,ResultsSubDirectory):
     # Guarantee no plots are open
     plt.close('all')
     # Times for x axs
@@ -74,31 +74,31 @@ def plot_timeseries(df,DataDirectory):
         # name y axis and save figure
         if term in energy_labels:
             plt.ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=14)
-            fname = DataDirectory+'/energy_terms.png'
+            fname = ResultsSubDirectory+'/energy_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in conversion_labels:
             plt.ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=14)
-            fname = DataDirectory+'/conversion_terms.png'
+            fname = ResultsSubDirectory+'/conversion_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in boundary_labels:
             plt.ylabel('Transport across boundaries '+r' $(W\,m^{-2})$',fontsize=14)
-            fname = DataDirectory+'/boundary_terms.png'
+            fname = ResultsSubDirectory+'/boundary_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in residuals_labels:
             plt.ylabel('Residuals '+r' $(W\,m^{-2})$',fontsize=14)
-            fname = DataDirectory+'/residuals_terms.png'
+            fname = ResultsSubDirectory+'/residuals_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in budget_diff_labels:
             plt.ylabel('Enery budgets (estimated using finite diffs. '+r' $(W\,m^{-2})$',fontsize=14)
-            fname = DataDirectory+'/budget_diff_terms.png'
+            fname = ResultsSubDirectory+'/budget_diff_terms.png'
             plt.savefig(fname)
             print(fname+' created')
             
-def plot_boxplot(df,DataDirectory):
+def plot_boxplot(df,ResultsSubDirectory):
     # Guarantee no plots are open
     plt.close('all')
     for labels in [energy_labels,conversion_labels, boundary_labels,
@@ -118,31 +118,31 @@ def plot_boxplot(df,DataDirectory):
         if term in energy_labels:
             plt.ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=14)
             # Saving figure
-            fname = DataDirectory+'/boxplot_energy_terms.png'
+            fname = ResultsSubDirectory+'/boxplot_energy_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in conversion_labels:
             plt.ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=14)
             # Saving figure
-            fname = DataDirectory+'/boxplot_conversion_terms.png'
+            fname = ResultsSubDirectory+'/boxplot_conversion_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in boundary_labels:
             plt.ylabel('Transport across boundaries '+r' $(W\,m^{-2})$',fontsize=14)
             # Saving figure
-            fname = DataDirectory+'/boxplot_boundary_terms.png'
+            fname = ResultsSubDirectory+'/boxplot_boundary_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in residuals_labels:
             plt.ylabel('Residuals '+r' $(W\,m^{-2})$',fontsize=14)
             # Saving figure
-            fname = DataDirectory+'/boxplot_residuals_terms.png'
+            fname = ResultsSubDirectory+'/boxplot_residuals_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in budget_diff_labels:
             plt.ylabel('Enery budgets (estimated using finite diffs. '+r' $(W\,m^{-2})$',fontsize=14)
             # Saving figure
-            fname = DataDirectory+'/boxplot_budget_diff_labels_terms.png'
+            fname = ResultsSubDirectory+'/boxplot_budget_diff_labels_terms.png'
             plt.savefig(fname)
             print(fname+' created')
 
@@ -154,21 +154,10 @@ def main():
     print(df)
     print(' ')
     # Diectory for saving figures
-    FigsDirectory = 'LEC_Results'
-    DataDirectory = FigsDirectory+'/'+data.split('/')[-1].split('.csv')[0]
-    # Check if the LEC_Figures directory exists. If not, creates it
-    if not os.path.exists(FigsDirectory):
-                os.makedirs(FigsDirectory)
-                print(FigsDirectory+' created')
-    else:
-        print(FigsDirectory+' directory exists')
-    # Check if a directory for current data exists. If not, creates it
-    if not os.path.exists(DataDirectory):
-                os.makedirs(DataDirectory)
-                print(DataDirectory+' created')
+    ResultsSubDirectory = '/'.join(data.split('/')[:-1])
     # Make plot for timeseries
-    plot_timeseries(df,DataDirectory)
-    plot_boxplot(df,DataDirectory)
+    plot_timeseries(df,ResultsSubDirectory)
+    plot_boxplot(df,ResultsSubDirectory)
     print('All done!')
 
 if __name__ == "__main__":
