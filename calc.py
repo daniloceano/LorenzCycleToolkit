@@ -313,4 +313,4 @@ def AdiabaticHEating(TemperatureData,PressureData, OmegaData,
             VerticalCoordIndexer)/units.hPa
         ## Diabatic reating as a residual ##
         Q = TairTendency-AdvHT-(sigma*OmegaData)
-        return Q
+        return Q*Cp_d

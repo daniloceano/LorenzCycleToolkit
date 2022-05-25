@@ -31,6 +31,9 @@ budget_diff_labels = ['∂Az/∂t (finite diff.)', '∂Ae/∂t (finite diff.)',
                  '∂Kz/∂t (finite diff.)', '∂Ke/∂t (finite diff.)']
 residuals_labels = ['RGz', 'RKz', 'RGe', 'RKe']
 
+# This is for comparing terms estimated as residuals with terms computed  
+comparingG_labels = ['RGz', 'Gz', 'RGe', 'Ge']
+
 linecolors = ['#A53860','#C9B857','#384A0F','#473BF0','#873e23','#A13BF0']
 markerfacecolors = ['#A53860','w','#384A0F','w','#873e23', 'w']
 markers = ['s','s','o','o','^','^']         
@@ -45,7 +48,8 @@ def plot_timeseries(df,ResultsSubDirectory):
     times = pd.date_range(date[0],date.iloc[-1],periods=len(date))
     # Loop through the distinct group of terms
     for labels in [energy_labels,conversion_labels,boundary_labels,
-                   residuals_labels, budget_diff_labels]:
+                   residuals_labels, budget_diff_labels,
+                   comparingG_labels]:
         print('Plotting '+str(labels)+'...')
         # Get values for setting plot range
         maxval = np.amax(np.amax(df[labels]))
@@ -97,6 +101,12 @@ def plot_timeseries(df,ResultsSubDirectory):
             fname = ResultsSubDirectory+'/budget_diff_terms.png'
             plt.savefig(fname)
             print(fname+' created')
+        elif term in comparingG_labels:
+            plt.ylabel('Energy generation '+r' $(W\,m^{-2})$',fontsize=14)
+            fname = ResultsSubDirectory+'/generation_terms_compare.png'
+            plt.savefig(fname)
+            print(fname+' created')
+            
             
 def plot_boxplot(df,ResultsSubDirectory):
     # Guarantee no plots are open

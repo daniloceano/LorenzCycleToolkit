@@ -325,7 +325,7 @@ def main():
     print('Computing generation and disspiation terms') 
     try:
         gdt_obj = GenerationDissipationTerms(box_obj)
-        GenDissList = []
+        GenDissList = [gdt_obj.calc_gz(),gdt_obj.calc_ge()]
     except:
         raise SystemExit('ERROR!!!!!')
     print('Ok!')
@@ -345,7 +345,8 @@ def main():
         df[k] = ConversionList[i]
     for i,l in zip(range(6),['BAz','BAe','BKz','BKe','BΦZ','BΦE']):
         df[l] = BoundaryList[i]
-        
+    for i,m in zip(range(2),['Gz','Ge']):
+        df[m] = GenDissList[i]        
     # 10) 
     print('\n------------------------------------------------------------------------')
     print('Estimating budget terms (∂X/∂t) using finite differences ')
