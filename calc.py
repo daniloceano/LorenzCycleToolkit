@@ -290,7 +290,7 @@ def AdiabaticHEating(TemperatureData,PressureData, OmegaData,
         dTdlambda = TemperatureData.copy(deep=True).differentiate(LonIndexer)
         dTdphi = TemperatureData.copy(deep=True).differentiate(LatIndexer)
         # Get the values for dx and dy in meters
-        dx = np.deg2rad(lons).differentiate(LonIndexer)*cos_lats*Re
+        dx = np.deg2rad(lons.differentiate(LonIndexer))*cos_lats*Re
         dy = np.deg2rad(lats.differentiate(LatIndexer))*Re
         #
         # For further reflection:

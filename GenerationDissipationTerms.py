@@ -58,32 +58,47 @@ class GenerationDissipationTerms:
     
     def calc_gz(self):
         
-        # theta = potential_temperature(self.PressureData,self.tair)
-        # sigma = -(self.tair/theta) *theta.differentiate(
-        #     self.VerticalCoordIndexer)/units.Pa
-        # sigma_AA = CalcAreaAverage(sigma,self.LatIndexer,
-        #                             LonIndexer=self.LonIndexer)
-        # _ = (self.Q_AE*self.tair_AE)/(Cp_d*sigma_AA)
-        
         _ = (self.Q_AE*self.tair_AE)/(Cp_d*self.sigma_AA)
         function = CalcAreaAverage(_,self.LatIndexer,
                                     LonIndexer=self.LonIndexer)
         Gz = VerticalTrazpezoidalIntegration(function,self.PressureData,
                                              self.VerticalCoordIndexer)
-        print((1*Gz.metpy.units).to_base_units())
         try: 
             Gz = Gz.metpy.convert_units('W/ m **2')
         except ValueError:
-            print('Unit error in Ck')
+            print('Unit error in Gz')
             raise
         print(Gz.values*Gz.metpy.units)
         # Save Ca before vertical integration
-        print('Saving Ca for each vertical level...')
+        print('Saving Gz for each vertical level...')
         try:
             df = function_to_df(self,self.VerticalCoordIndexer,function)
-            df.to_csv(self.output_dir+'/Ca_'+self.VerticalCoordIndexer+'.csv')
+            df.to_csv(self.output_dir+'/Gz_'+self.VerticalCoordIndexer+'.csv')
         except:
-            raise('Could not save file with Ca for each level')
+            raise('Could not save file with Gz for each level')
         print('Done!')
         return Gz
+    
+    def calc_ge(self):
+        
+        _ = (self.Q_ZE*self.tair_ZE)/(Cp_d*self.sigma_AA)
+        function = CalcAreaAverage(_,self.LatIndexer,
+                                    LonIndexer=self.LonIndexer)
+        Ge = VerticalTrazpezoidalIntegration(function,self.PressureData,
+                                             self.VerticalCoordIndexer)
+        try: 
+            Ge = Ge.metpy.convert_units('W/ m **2')
+        except ValueError:
+            print('Unit error in Ge')
+            raise
+        print(Ge.values*Ge.metpy.units)
+        # Save Ca before vertical integration
+        print('Saving Ge for each vertical level...')
+        try:
+            df = function_to_df(self,self.VerticalCoordIndexer,function)
+            df.to_csv(self.output_dir+'/Ge_'+self.VerticalCoordIndexer+'.csv')
+        except:
+            raise('Could not save file with Ge for each level')
+        print('Done!')
+        return Ge
         
