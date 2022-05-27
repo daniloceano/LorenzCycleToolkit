@@ -53,7 +53,7 @@ class GenerationDissipationTerms:
         self.Q_ZA = CalcZonalAverage(self.Q,self.LatIndexer)
         self.Q_AA = CalcAreaAverage(self.Q,self.LatIndexer,
                                     LonIndexer=self.LonIndexer)
-        self.Q_ZE = self.Q - self.Q_AA
+        self.Q_ZE = self.Q - self.Q_ZA
         self.Q_AE = self.Q_ZA - self.Q_AA
     
     def calc_gz(self):

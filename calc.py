@@ -21,7 +21,8 @@ from metpy.constants import Cp_d
 from metpy.constants import g
 from metpy.constants import Re
 from metpy.calc import potential_temperature
-
+import metpy.calc as mpcalc
+from cartopy import crs as ccrs
 
 def HorizontalTrazpezoidalIntegration(VariableData,dimension):
     """
@@ -270,6 +271,7 @@ def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
             slice(BoxNorth,BoxSouth),LonIndexer: slice(BoxWest, BoxEast)})
     sigma = CalcAreaAverage(function,LatIndexer,BoxSouth, BoxNorth,LonIndexer)
     return sigma
+    
 
 def AdiabaticHEating(TemperatureData,PressureData, OmegaData,
                      UWindComponentData,VWindComponentData,
@@ -280,31 +282,47 @@ def AdiabaticHEating(TemperatureData,PressureData, OmegaData,
         """
         lons,lats = TemperatureData[LonIndexer],TemperatureData[LatIndexer]
         cos_lats = np.cos(np.deg2rad(lats))
-        time = TemperatureData[TimeName]
         ## Temperature tendency as dT/dt ##
         TairTendency = TemperatureData.copy(deep=True).differentiate(
             TimeName,datetime_unit='s') / units('seconds')
         
         ## Horizontal advection of temperature ##
+
+        ## Using Hallak's formula:
         # Differentiate temperature in respect to longitude and latitude
-        dTdlambda = TemperatureData.copy(deep=True).differentiate(LonIndexer)
-        dTdphi = TemperatureData.copy(deep=True).differentiate(LatIndexer)
+        dTdlambda = TemperatureData.differentiate(LonIndexer)
+        dTdphi = TemperatureData.differentiate(LatIndexer)
         # Get the values for dx and dy in meters
         dx = np.deg2rad(lons.differentiate(LonIndexer))*cos_lats*Re
         dy = np.deg2rad(lats.differentiate(LatIndexer))*Re
-        #
-        # For further reflection:
-        # https://towardsdatascience.com/the-correct-way-to-average-the-globe-92ceecd172b7
-        # xlon, ylat = np.meshgrid(self.tair[self.LonIndexer], 
-        #                          self.tair[self.LatIndexer])
-        # dlat = np.deg2rad(np.gradient(ylat, axis=0))
-        # dlon = np.deg2rad(np.gradient(xlon, axis=1))
-        # dy = dlat * Re
-        # dx = dlon * Re * np.cos(np.deg2rad(ylat))
-        #
         # Horizonal temperature advection
         AdvHT = -1* ((UWindComponentData*dTdlambda/dx)+(
                                     VWindComponentData*dTdphi/dy))
+        
+        # p = (AdvHT[0][2].metpy.convert_units('kelvin/ hour')).plot(
+        #     subplot_kws=dict(projection=ccrs.Orthographic(-60, -10),
+        #                       facecolor="gray"),transform=ccrs.PlateCarree(),)
+        # p.axes.set_global()
+        # p.axes.coastlines()
+        
+        # # From:
+        # # https://gradsaddict.blogspot.com/2019/11/python-tutorial-temperature-advection.html?m=0
+        # proj=ccrs.LambertConformal(central_longitude=-90)
+        # lon,lat=np.meshgrid(TemperatureData[LonIndexer],
+        #                     TemperatureData[LatIndexer])
+        # output=proj.transform_points(ccrs.PlateCarree(),lon,lat)
+        # x,y=output[:,:,0],output[:,:,1]
+        # gradx=np.gradient(x,axis=1)
+        # grady=np.gradient(y,axis=0)
+        # AdvHT=-(UWindComponentData*(np.gradient(TemperatureData,axis=1)/gradx)
+        #        +VWindComponentData*(np.gradient(TemperatureData,axis=0)/grady))
+        # AdvHT = AdvHT / units.m * units.K
+        
+        # p = (AdvHT[0][2].metpy.convert_units('kelvin/ hour')).plot(
+        #     subplot_kws=dict(projection=ccrs.Orthographic(-60, -10),
+        #                       facecolor="gray"),transform=ccrs.PlateCarree(),)
+        # p.axes.set_global()
+        # p.axes.coastlines()
         
         # Static stability parameter (here we need a slight modified version
         # from calc.py so the units can match)
