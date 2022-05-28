@@ -16,11 +16,6 @@ danilo.oceano@gmail.com
 
 import numpy as np
 from metpy.units import units
-from metpy.constants import Rd
-from metpy.constants import Cp_d
-from metpy.constants import g
-from metpy.constants import Re
-from metpy.calc import potential_temperature
 
 
 def HorizontalTrazpezoidalIntegration(VariableData,dimension):
@@ -237,80 +232,3 @@ def Differentiate(Data,AxisName,time=False):
         DifArray = DifArray.metpy.convert_units(str(DataUnits))
     return DifArray
 
-def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
-                    LatIndexer,LonIndexer,BoxNorth,BoxSouth,BoxWest, BoxEast):
-    """
-    Compute the static stability parameter sigma for all vertical levels
-    and for the desired domain
-    
-    Source:
-        Michaelides, S. C. (1987). 
-        Limited Area Energetics of Genoa Cyclogenesis,
-        Monthly Weather Review, 115(1), 13-26. Retrieved Jan 24, 2022, from:
-        https://journals.ametsoc.org/view/journals/mwre/115/1/1520-0493_1987_115_0013_laeogc_2_0_co_2.xml
-    
-    Parameters
-    ----------
-    temp: xarray.Dataset
-        temperature data in Kelvin
-    min_lon, max_lon, minlat, min_lon: float
-        minimum and maximum longitude/latitude to be calculated the zonal average
-
-    Returns
-    -------
-    sigma: xarray.Dataset
-        Dataset containing sigma values for all pressure levels and for the
-        box specyfied by min_lon, max_lon, min_lat and max_lat    
-    
-    """
-    FirstTerm = g*TemperatureData/Cp_d
-    # SecondTerm = (PressureData*g/Rd)*Differentiate(TemperatureData,PressureData,VerticalCoordIndexer)
-    SecondTerm = (PressureData*g/Rd)*TemperatureData.differentiate(VerticalCoordIndexer)/units.hPa
-    function = (FirstTerm-SecondTerm).sel(**{LatIndexer: 
-            slice(BoxNorth,BoxSouth),LonIndexer: slice(BoxWest, BoxEast)})
-    sigma = CalcAreaAverage(function,LatIndexer,BoxSouth, BoxNorth,LonIndexer)
-    return sigma
-
-def AdiabaticHEating(TemperatureData,PressureData, OmegaData,
-                     UWindComponentData,VWindComponentData,
-                     VerticalCoordIndexer,LatIndexer,LonIndexer,TimeName):
-        """
-        Compute the diabatic heating as a residual form the thermodynamic 
-        equation for all vertical levels and for the desired domain
-        """
-        lons,lats = TemperatureData[LonIndexer],TemperatureData[LatIndexer]
-        cos_lats = np.cos(np.deg2rad(lats))
-        time = TemperatureData[TimeName]
-        ## Temperature tendency as dT/dt ##
-        TairTendency = TemperatureData.copy(deep=True).differentiate(
-            TimeName,datetime_unit='s') / units('seconds')
-        
-        ## Horizontal advection of temperature ##
-        # Differentiate temperature in respect to longitude and latitude
-        dTdlambda = TemperatureData.copy(deep=True).differentiate(LonIndexer)
-        dTdphi = TemperatureData.copy(deep=True).differentiate(LatIndexer)
-        # Get the values for dx and dy in meters
-        dx = np.deg2rad(lons.differentiate(LonIndexer))*cos_lats*Re
-        dy = np.deg2rad(lats.differentiate(LatIndexer))*Re
-        #
-        # For further reflection:
-        # https://towardsdatascience.com/the-correct-way-to-average-the-globe-92ceecd172b7
-        # xlon, ylat = np.meshgrid(self.tair[self.LonIndexer], 
-        #                          self.tair[self.LatIndexer])
-        # dlat = np.deg2rad(np.gradient(ylat, axis=0))
-        # dlon = np.deg2rad(np.gradient(xlon, axis=1))
-        # dy = dlat * Re
-        # dx = dlon * Re * np.cos(np.deg2rad(ylat))
-        #
-        # Horizonal temperature advection
-        AdvHT = -1* ((UWindComponentData*dTdlambda/dx)+(
-                                    VWindComponentData*dTdphi/dy))
-        
-        # Static stability parameter (here we need a slight modified version
-        # from calc.py so the units can match)
-        theta = potential_temperature(PressureData,TemperatureData)
-        sigma = -(TemperatureData/theta) *theta.differentiate(
-            VerticalCoordIndexer)/units.hPa
-        ## Diabatic reating as a residual ##
-        Q = TairTendency-AdvHT-(sigma*OmegaData)
-        return Q*Cp_d

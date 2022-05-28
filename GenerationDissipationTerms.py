@@ -10,7 +10,8 @@ import numpy as np
 from metpy.units import units
 from metpy.constants import Cp_d
 from calc import (CalcZonalAverage,CalcAreaAverage,VerticalTrazpezoidalIntegration,
-                  Differentiate,AdiabaticHEating)
+                  Differentiate)
+from thermodynamics import AdiabaticHEating
 from BoxData import BoxData
 from EnergyContents import function_to_df
 
