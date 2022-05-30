@@ -14,6 +14,7 @@ This version makes the zonal average using only the data whitin the box
 
 import xarray
 import calc
+from thermodynamics import StaticStability
 import numpy as np
 from metpy.constants import g
 
@@ -125,7 +126,7 @@ class BoxData:
         
         
         # Static stability parameter
-        self.sigma_AA = calc.StaticStability(self.tair, self.PressureData, self.VerticalCoordIndexer,
+        self.sigma_AA = StaticStability(self.tair, self.PressureData, self.VerticalCoordIndexer,
                         self.LatIndexer, self.LonIndexer
                         ,self.BoxNorth, self.BoxSouth,
                         self.BoxWest, self.BoxEast)

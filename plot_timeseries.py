@@ -40,7 +40,7 @@ markers = ['s','s','o','o','^','^']
 linestyles = ['-','-','-','-','-','-']
 linewidth = 4
 
-def plot_timeseries(df,ResultsSubDirectory):
+def plot_timeseries(df,outdir):
     # Guarantee no plots are open
     plt.close('all')
     # Times for x axs
@@ -78,43 +78,43 @@ def plot_timeseries(df,ResultsSubDirectory):
         # name y axis and save figure
         if term in energy_labels:
             plt.ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=14)
-            fname = ResultsSubDirectory+'/energy_terms.png'
+            fname = outdir+'/timeseires_energy_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in conversion_labels:
             plt.ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=14)
-            fname = ResultsSubDirectory+'/conversion_terms.png'
+            fname = outdir+'/timeseires_conversion_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in boundary_labels:
             plt.ylabel('Transport across boundaries '+r' $(W\,m^{-2})$',fontsize=14)
-            fname = ResultsSubDirectory+'/boundary_terms.png'
+            fname = outdir+'/timeseires_boundary_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in residuals_labels:
             plt.ylabel('Residuals '+r' $(W\,m^{-2})$',fontsize=14)
-            fname = ResultsSubDirectory+'/residuals_terms.png'
+            fname = outdir+'/timeseires_residuals_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in budget_diff_labels:
             plt.ylabel('Enery budgets (estimated using finite diffs. '+r' $(W\,m^{-2})$',fontsize=14)
-            fname = ResultsSubDirectory+'/budget_diff_terms.png'
+            fname = outdir+'/timeseires_budget_diff_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in comparingG_labels:
             plt.ylabel('Energy generation '+r' $(W\,m^{-2})$',fontsize=14)
-            fname = ResultsSubDirectory+'/generation_terms_compare.png'
+            fname = outdir+'/timeseires_generation_terms_compare.png'
             plt.savefig(fname)
             print(fname+' created')
             
             
-def plot_boxplot(df,ResultsSubDirectory):
+def plot_boxplot(df,outdir):
     # Guarantee no plots are open
     plt.close('all')
     for labels in [energy_labels,conversion_labels, boundary_labels,
                    residuals_labels, budget_diff_labels]:
         plt.figure(figsize=(8,8))
-        plt.grid(b=True,c='gray',linewidth=0.25,linestyle='dashdot')
+        plt.grid(visible=True,c='gray',linewidth=0.25,linestyle='dashdot')
         for term,i in zip(labels,range(len(labels))):
             bplot = plt.boxplot(df[term],positions=[i/3],vert=True,
                                 patch_artist=True,notch=True,labels=[term])
@@ -128,31 +128,31 @@ def plot_boxplot(df,ResultsSubDirectory):
         if term in energy_labels:
             plt.ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=14)
             # Saving figure
-            fname = ResultsSubDirectory+'/boxplot_energy_terms.png'
+            fname = outdir+'/boxplot_time_energy_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in conversion_labels:
             plt.ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=14)
             # Saving figure
-            fname = ResultsSubDirectory+'/boxplot_conversion_terms.png'
+            fname = outdir+'/boxplot_time_conversion_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in boundary_labels:
             plt.ylabel('Transport across boundaries '+r' $(W\,m^{-2})$',fontsize=14)
             # Saving figure
-            fname = ResultsSubDirectory+'/boxplot_boundary_terms.png'
+            fname = outdir+'/boxplot_time_boundary_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in residuals_labels:
             plt.ylabel('Residuals '+r' $(W\,m^{-2})$',fontsize=14)
             # Saving figure
-            fname = ResultsSubDirectory+'/boxplot_residuals_terms.png'
+            fname = outdir+'/boxplot_time_residuals_terms.png'
             plt.savefig(fname)
             print(fname+' created')
         elif term in budget_diff_labels:
             plt.ylabel('Enery budgets (estimated using finite diffs. '+r' $(W\,m^{-2})$',fontsize=14)
             # Saving figure
-            fname = ResultsSubDirectory+'/boxplot_budget_diff_labels_terms.png'
+            fname = outdir+'/boxplot_time_budget_diff_labels_terms.png'
             plt.savefig(fname)
             print(fname+' created')
 
@@ -165,9 +165,10 @@ def main():
     print(' ')
     # Diectory for saving figures
     ResultsSubDirectory = '/'.join(data.split('/')[:-1])
+    FigsDir = ResultsSubDirectory+'/Figures/'
     # Make plot for timeseries
-    plot_timeseries(df,ResultsSubDirectory)
-    plot_boxplot(df,ResultsSubDirectory)
+    plot_timeseries(df,FigsDir)
+    plot_boxplot(df,FigsDir)
     print('All done!')
 
 if __name__ == "__main__":

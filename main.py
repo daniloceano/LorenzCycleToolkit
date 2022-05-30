@@ -94,6 +94,14 @@ def tests_args() -> None:
     else:
         validate(args)
         
+def check_create_folder(DirName):
+    if not os.path.exists(DirName):
+                os.makedirs(DirName)
+                print(DirName+' created')
+    else:
+        print(DirName+' directory exists')
+ 
+        
 # Convert longitudes from 0:360 range to -180:180
 def convert_lon(df,LonIndexer):
     df.coords[LonIndexer] = (df.coords[LonIndexer] + 180) % 360 - 180
@@ -125,7 +133,8 @@ def plot_area(min_lon, max_lon,min_lat, max_lat, outdir) :
     ax.gridlines(draw_labels=True,zorder=2)    
 
     plt.title('Box defined for compuations \n', fontsize = 22)
-    plt.savefig(outdir+'/box.png')
+    plt.savefig(outdir+'/Figures/box.png')
+    print('\nCreated figure with box defined for computations')
 
 # Function for opening the data
 def get_data(file,varlist,min_lon, max_lon, min_lat, max_lat):   
@@ -230,7 +239,6 @@ def main():
     omega = data[7]#*units(data[7].units).to('Pa/s')
     u = data[8]#*units(data[8].units).to('m/s')
     v = data[9]#*units(data[9].units).to('m/s')
-    # slp = data[10]*units(data[10].units).to('Pa')
     pres = tair[VerticalCoordIndexer]*units(tair[VerticalCoordIndexer].units).to('Pa')
     #
     print('\n Parameters spcified for the bounding box:')
@@ -260,15 +268,9 @@ def main():
     # from more than one experiment at each time
     ResultsSubDirectory = ResultsMainDirectory+'/'+outfile_name
     # Check if the LEC_Figures directory exists. If not, creates it
-    if not os.path.exists(ResultsMainDirectory):
-                os.makedirs(ResultsMainDirectory)
-                print(ResultsMainDirectory+' created')
-    else:
-        print(ResultsMainDirectory+' directory exists')
+    check_create_folder(ResultsMainDirectory)
     # Check if a directory for current data exists. If not, creates it
-    if not os.path.exists(ResultsSubDirectory):
-                os.makedirs(ResultsSubDirectory)
-                print(ResultsSubDirectory+' created')
+    check_create_folder(ResultsSubDirectory)
                 
     # 4) 
     print('Computing zonal and area averages and eddy terms for each variable')
@@ -367,8 +369,11 @@ def main():
     print('All done!')
     
     # 13) Make figures
+    FigsDirectory = ResultsSubDirectory+'/Figures'
+    check_create_folder(FigsDirectory)
     os.system("python plot_timeseries.py "+outfile)
     os.system("python plot_vertical.py "+ResultsSubDirectory)
+    os.system("python plot_boxplot.py "+ResultsSubDirectory)
     plot_area(*[float(i) for i in sys.argv[3:]], ResultsSubDirectory)
 
 if __name__ == "__main__":

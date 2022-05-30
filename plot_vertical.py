@@ -20,11 +20,13 @@ Contact:
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import numpy as np
+import matplotlib.gridspec as gridspec
 import os
 import sys
 import glob
 from datetime import datetime
+import cmocean as cmo
+
 
 # Specs for plotting
 linecolors = ['#A53860','#C9B857','#384A0F','#473BF0']
@@ -97,91 +99,52 @@ def plot_vertical(list_terms):
         plt.savefig(outfile)
         print('Created '+outfile)
     
-def boxplot_time(term_list):
-    data = get_data_dict(term_list)
+def plot_hovmoller(list_terms):
+    data = get_data_dict(list_terms)
     term = list(data.keys())[0]
-    t_id = data[term].columns[0] # Time indexer
-    times = data[term][t_id]
-    plt.close('all') 
-    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(9, 9))
-    i = 0
-    for row in range(2):
-        for col in range(2):
-            ax = axs[row,col]
-            term = term_list[i]
-            ntime = data[term].shape[0]
-            if col == 0 and term in energy_labels:
-                ax.set_ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=14)
-            elif col == 0 and term in conversion_labels:
-                ax.set_ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=14)
-            for t in range(ntime):
-                time_step = (datetime.fromisoformat(times.iloc[t]))
-                bplot = ax.boxplot(data[term].iloc[t].values[1:],
-                                     positions=[mdates.date2num(time_step)],
-                                     patch_artist=True) 
-                bplot['boxes'][-1].set_facecolor(linecolors[i])
-                bplot['boxes'][-1].set_alpha(0.85)
-                locator = mdates.AutoDateLocator(minticks=5, maxticks=12)
-                formatter = mdates.AutoDateFormatter(locator)
-                ax.xaxis.set_major_locator(locator)
-                ax.xaxis.set_major_formatter(formatter)
-                ax.tick_params(axis='x',labelrotation=20)
-                ax.tick_params(size=12)
-                ax.set_title(term, fontsize=14)
-                fig.autofmt_xdate()
-            i += 1
-    if term in energy_labels:
+    TimeName = data[term].columns[0]
+    dates = data[term][TimeName]
+    times = pd.date_range(dates[0],dates.iloc[-1],periods=len(dates))
+    levs = data[term].columns[1:]
+    fig = plt.figure(figsize=(12, 10))
+    gs = gridspec.GridSpec(nrows=2, ncols=2,  hspace=0.3)
+    for i,term in zip(range(len(list_terms)),list_terms):
+        ax = fig.add_subplot(gs[i])
+        if term in energy_labels:
             fname = 'Energy'
-    elif term in conversion_labels:
+            cmap='cmo.amp'
+            title = 'Energy '+r' $(J\,m^{-2})$'
+        elif term in conversion_labels:
             fname = 'Conversion'
-    outfile = Directory+'/boxplot_vertical_time_'+fname+'.png'
-    plt.savefig(outfile)
-    print('Created '+outfile)
-    
-def boxplot_vertical(term_list):
-    data = get_data_dict(term_list)
-    term = list(data.keys())[0]
-    levs = data[term].columns[1:] # Vertical levels
-    plt.close('all') 
-    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(9, 11))
-    i = 0
-    for row in range(2):
-        for col in range(2):
-            ax = axs[row,col]
-            term = term_list[i]
-            if col == 0 and term in energy_labels:
-                ax.set_ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=14)
-            elif col == 0 and term in conversion_labels:
-                ax.set_ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=14)
-            for lev,j in zip(levs,range(len(levs))):
-                bplot = ax.boxplot(data[term][lev].values,positions=[j/3],
-                                   labels=[lev], patch_artist=True)
-                bplot['boxes'][-1].set_facecolor(linecolors[i])
-                bplot['boxes'][-1].set_alpha(0.85)
-                ax.tick_params(axis='x',labelrotation=90)
-                ax.tick_params(size=12)
-                ax.set_title(term, fontsize=14)
-            i +=1
-    if term in energy_labels:
-            fname = 'Energy'
-    elif term in conversion_labels:
-            fname = 'Conversion'
-    outfile = Directory+'/boxplot_vertical_'+fname+'.png'
+            cmap='cmo.tarn'
+            title = 'Conversion '+r' $(W\,m^{-2})$'
+        cf = ax.contourf(times,levs,data[term][levs].transpose(),
+                    cmap=cmap, extend='both')
+        ax.contour(times,levs,data[term][levs].transpose(),
+                    colors='k', extend='both')
+        ax.tick_params(axis='x',labelrotation=20)
+        ax.tick_params(size=12)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
+        start, end = ax.get_xlim()
+        ax.set_title(term,fontdict={'fontsize':14})
+    # colorbar
+    cb_ax = fig.add_axes([0.93, 0.1, 0.02, 0.8])
+    cbar = fig.colorbar(cf, cax=cb_ax,extend='both')
+    cbar.ax.get_yaxis().labelpad = 15
+    cbar.ax.set_ylabel(title, rotation=270,fontsize=10)
+    outfile = Directory+'/Figures/hovmoller_'+fname+'.png'
     plt.savefig(outfile)
     print('Created '+outfile)
     
 def main():
-    for term_list in [energy_labels,conversion_labels]:  
+    for term_list in [energy_labels,conversion_labels]: 
+        # This will procude a lot of figures!! Not needed for most of uses
+        # print('\n-------------------------------------------------------------')
+        # print('Creating figures with vertical profiles for each model time')
+        # plot_vertical(term_list)
         print('\n-------------------------------------------------------------')
-        print('Creating figures with vertical profiles for each model time')
-        plot_vertical(term_list)
-        print('\n-------------------------------------------------------------')
-        print('Creating boxplot for the temporal evolution of each term')
-        boxplot_time(term_list)
-        print('\n-------------------------------------------------------------')
-        print('Creating boxplot for each vertical level')
-        boxplot_vertical(term_list)
-        print('All done')
+        print('Creating hovmoller diagrams')
+        plot_hovmoller(term_list)
 
 if __name__ == "__main__":
     main()
