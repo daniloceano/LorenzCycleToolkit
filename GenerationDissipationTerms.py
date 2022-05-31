@@ -51,7 +51,7 @@ class GenerationDissipationTerms:
                                     self.u,self.v,self.VerticalCoordIndexer,
                                     self.LatIndexer,self.LonIndexer,
                                     self.TimeName)
-        self.Q_ZA = CalcZonalAverage(self.Q,self.LatIndexer)
+        self.Q_ZA = CalcZonalAverage(self.Q,self.LonIndexer)
         self.Q_AA = CalcAreaAverage(self.Q,self.LatIndexer,
                                     LonIndexer=self.LonIndexer)
         self.Q_ZE = self.Q - self.Q_ZA
@@ -60,8 +60,7 @@ class GenerationDissipationTerms:
     def calc_gz(self):
         
         _ = (self.Q_AE*self.tair_AE)/(Cp_d*self.sigma_AA)
-        function = CalcAreaAverage(_,self.LatIndexer,
-                                    LonIndexer=self.LonIndexer)
+        function = CalcAreaAverage(_,self.LatIndexer)
         Gz = VerticalTrazpezoidalIntegration(function,self.PressureData,
                                              self.VerticalCoordIndexer)
         try: 

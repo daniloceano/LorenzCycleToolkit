@@ -192,20 +192,28 @@ def get_data(file,varlist,min_lon, max_lon, min_lat, max_lat):
 # boundary work terms as residuals)
 def calc_budget_diff(df,time):
     # get time delta in seconds
-    dt = (time[1]-time[0]).astype('timedelta64[h]'
-                                    ) / np.timedelta64(1, 's')
+    dt = float((time[1]-time[0]).astype('timedelta64[h]'
+                                    ) / np.timedelta64(1, 's'))
     # Estimate budget values for all energy terms
     for term in ['Az','Ae','Kz','Ke']:
         name = '∂'+term+'/∂t (finite diff.)'
         print('\nEstimating '+name)
         # forward finite difference for the first value
         forward = (df[term].iloc[1]-df[term].iloc[0])/dt
-        # central finited differentes for the second value to the one next-to-last
-        central = (df[term].iloc[2:].values-df[term].iloc[:-2].values)/dt
+        # central finite differentes for the second and the penultimate values
+        central_second = (df[term].iloc[2]-df[term].iloc[0])/dt
+        central_penultimate = (df[term].iloc[-1]-df[term].iloc[-3])/dt
+        # fourth order for the third to antepenultimate value
+        fourthorder1 = (4/3)*(
+            df[term].iloc[3:-1].values-df[term].iloc[1:-3].values)/(2*dt)
+        fourthorder2 = (1/3)*(
+            df[term].iloc[4:].values-df[term].iloc[1:-3].values)/(4*dt)
+        fourthorder = fourthorder1-fourthorder2
         # backward finite difference for the last value
         backward = (df[term].iloc[-1]-df[term].iloc[-2])/dt
         # put all values together
-        df[name] = [forward,*central,backward]
+        df[name] = [forward,central_second,*fourthorder,
+                    central_penultimate,backward]
         print(df[name].values*units('W/ m **2'))
     return df
 

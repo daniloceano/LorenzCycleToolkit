@@ -33,6 +33,7 @@ linecolors = ['#A53860','#C9B857','#384A0F','#473BF0']
 markerfacecolors = ['#A53860','w','#384A0F','w']
 energy_labels = ['Az','Ae','Kz','Ke']
 conversion_labels = ['Cz','Ca','Ck','Ce']
+generation_labels = ['Gz','Ge']
 markers = ['s','s','o','o']         
 linestyles = ['-','-','-','-']
 linewidth = 4
@@ -106,8 +107,12 @@ def plot_hovmoller(list_terms):
     dates = data[term][TimeName]
     times = pd.date_range(dates[0],dates.iloc[-1],periods=len(dates))
     levs = data[term].columns[1:]
-    fig = plt.figure(figsize=(12, 10))
-    gs = gridspec.GridSpec(nrows=2, ncols=2,  hspace=0.3)
+    if term in generation_labels:
+        fig = plt.figure(figsize=(12, 5))
+        gs = gridspec.GridSpec(nrows=1, ncols=2,right=0.83)
+    else:
+        fig = plt.figure(figsize=(12, 10))
+        gs = gridspec.GridSpec(nrows=2, ncols=2,  hspace=0.3)
     for i,term in zip(range(len(list_terms)),list_terms):
         ax = fig.add_subplot(gs[i])
         if term in energy_labels:
@@ -118,6 +123,10 @@ def plot_hovmoller(list_terms):
             fname = 'Conversion'
             cmap='cmo.tarn'
             title = 'Conversion '+r' $(W\,m^{-2})$'
+        elif term in generation_labels:
+            fname = 'Generation'
+            cmap='cmo.tarn'
+            title = 'Generation '+r' $(W\,m^{-2})$'
         cf = ax.contourf(times,levs,data[term][levs].transpose(),
                     cmap=cmap, extend='both')
         ax.contour(times,levs,data[term][levs].transpose(),
@@ -128,7 +137,10 @@ def plot_hovmoller(list_terms):
         start, end = ax.get_xlim()
         ax.set_title(term,fontdict={'fontsize':14})
     # colorbar
-    cb_ax = fig.add_axes([0.93, 0.1, 0.02, 0.8])
+    if term in generation_labels:
+        cb_ax = fig.add_axes([0.88, 0.1, 0.02, 0.8])
+    else:
+        cb_ax = fig.add_axes([0.93, 0.1, 0.02, 0.8])
     cbar = fig.colorbar(cf, cax=cb_ax,extend='both')
     cbar.ax.get_yaxis().labelpad = 15
     cbar.ax.set_ylabel(title, rotation=270,fontsize=10)
@@ -137,7 +149,7 @@ def plot_hovmoller(list_terms):
     print('Created '+outfile)
     
 def main():
-    for term_list in [energy_labels,conversion_labels]: 
+    for term_list in [energy_labels,conversion_labels,generation_labels]: 
         # This will procude a lot of figures!! Not needed for most of uses
         # print('\n-------------------------------------------------------------')
         # print('Creating figures with vertical profiles for each model time')
