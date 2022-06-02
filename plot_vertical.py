@@ -148,6 +148,7 @@ def plot_hovmoller(list_terms):
     plt.savefig(outfile)
     print('Created '+outfile)
     
+
 def main():
     for term_list in [energy_labels,conversion_labels,generation_labels]: 
         # This will procude a lot of figures!! Not needed for most of uses

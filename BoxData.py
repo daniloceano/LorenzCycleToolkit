@@ -22,11 +22,14 @@ class BoxData:
     '''
     Object containing all meteorological data required for the LEC computation
     '''
-    def __init__(self,  LonIndexer: str, LatIndexer: str, TimeName: str,
+    def __init__(self,  LonIndexer: str, LatIndexer: str,
+                 TimeName: str,
                  VerticalCoordIndexer: str, TemperatureData: xarray.Dataset,
                  PressureData: xarray.Dataset,
                  UWindComponentData: xarray.Dataset,
                  VWindComponentData: xarray.Dataset,
+                 ZonalWindStressData: xarray.Dataset,
+                 MeridionalWindStressData: xarray.Dataset,
                  OmegaData: xarray.Dataset,
                  HgtData: xarray.Dataset,
                  western_limit: float, eastern_limit: float,
@@ -91,6 +94,28 @@ class BoxData:
                                             self.LonIndexer)
         self.v_ZE = self.v - self.v_ZA
         self.v_AE = self.v_ZA - self.v_AA
+        
+        # Zonal wind stress data values, averages and eddy terms
+        self.ust = ZonalWindStressData.sel(**{LatIndexer: 
+            slice(self.BoxNorth, self.BoxSouth),
+            LonIndexer: slice(self.BoxWest, self.BoxEast)})
+        self.ust_ZA = calc.CalcZonalAverage(self.ust, self.LonIndexer)
+        self.ust_AA = calc.CalcAreaAverage(self.ust,self.LatIndexer,
+                                            self.BoxSouth,self.BoxNorth,
+                                            self.LonIndexer)
+        self.ust_ZE = self.ust - self.ust_ZA
+        self.ust_AE = self.ust_ZA - self.ust_AA
+        
+        # Meridional wind stress data values, averages and eddy terms
+        self.vst = MeridionalWindStressData.sel(**{LatIndexer: 
+            slice(self.BoxNorth, self.BoxSouth),
+            self.LonIndexer: slice(self.BoxWest, self.BoxEast)})
+        self.vst_ZA = calc.CalcZonalAverage(self.vst, self.LonIndexer)
+        self.vst_AA = calc.CalcAreaAverage(self.vst,self.LatIndexer,
+                                            self.BoxSouth,self.BoxNorth,
+                                            self.LonIndexer)
+        self.vst_ZE = self.vst - self.vst_ZA
+        self.vst_AE = self.vst_ZA - self.vst_AA
         
         # Omega velocity (vertical velocity in pressure levels) data values,
         # averages and eddy terms

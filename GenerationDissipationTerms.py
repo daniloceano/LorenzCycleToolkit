@@ -9,11 +9,13 @@ Created on Thu Nov 26 18:27:40 2020
 import numpy as np
 from metpy.units import units
 from metpy.constants import Cp_d
-from calc import (CalcZonalAverage,CalcAreaAverage,VerticalTrazpezoidalIntegration,
-                  Differentiate)
+from metpy.constants import g
+from calc import (CalcZonalAverage,CalcAreaAverage,
+                  VerticalTrazpezoidalIntegration)
 from thermodynamics import AdiabaticHEating
 from BoxData import BoxData
 from EnergyContents import function_to_df
+
 
 class GenerationDissipationTerms:
     
@@ -33,6 +35,10 @@ class GenerationDissipationTerms:
         self.v = box_obj.v
         self.v_ZA = box_obj.v_ZA
         self.v_ZE = box_obj.v_ZE
+        self.ust_ZA = box_obj.ust_ZA
+        self.ust_ZE = box_obj.ust_ZE
+        self.vst_ZE = box_obj.vst_ZE
+        self.vst_ZA = box_obj.vst_ZA
         self.sigma_AA = box_obj.sigma_AA
         self.omega= box_obj.omega
         self.omega_ZE = box_obj.omega_ZE
@@ -101,4 +107,18 @@ class GenerationDissipationTerms:
             raise('Could not save file with Ge for each level')
         print('Done!')
         return Ge
-        
+    
+    def calc_dz(self):
+        # Here we will use only the lowest vertical level
+        _ = (self.u_ZA.isel({self.VerticalCoordIndexer:0})*self.ust_ZA) + (
+            self.v_ZA.isel({self.VerticalCoordIndexer:0})*self.vst_ZA)
+        Dz = units.Pa * CalcAreaAverage(_,self.LatIndexer)/g   
+        return Dz
+    
+    def calc_de(self):
+        # Here we will use only the lowest vertical level
+        _ = (self.u_ZE.isel({self.VerticalCoordIndexer:0})*self.ust_ZE) + (
+            self.v_ZE.isel({self.VerticalCoordIndexer:0})*self.vst_ZE)
+        De = units.Pa * CalcAreaAverage(_,self.LatIndexer,
+                                        LonIndexer=self.LonIndexer)/g   
+        return De

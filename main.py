@@ -39,19 +39,43 @@ import matplotlib.pyplot as plt
 from shapely.geometry.polygon import Polygon
 
 
+# Arguments passed by user
+file3D = sys.argv[1]
+file2D = sys.argv[2]
+varlist = sys.argv[3]
+min_lon = float(sys.argv[4])
+max_lon = float(sys.argv[5])
+min_lat = float(sys.argv[6])
+max_lat = float(sys.argv[7])
+output = sys.argv[8]
+
+print(sys.argv)
 
 # This will be printed as an error message
-USAGE = f"Usage: python {sys.argv[0]} [--help] | file fvar min_lon, max_lon, min_lat, max_lat]"
+USAGE = f"Usage: python {sys.argv[0]} [--help] | file file2D fvar\
+ min_lon, max_lon, min_lat, max_lat output\
+     \n\
+     \n    Arguments:\
+     \n    file3D: file containing 3D fileds\
+     \n    file2D: file containing 2D fields (wind stress)\
+     \n    fvar: csv file containing variable and dimension indexers\
+     \n    min_lon: westernmost limit of the box\
+     \n    max_lon: easternmost limit of the box \
+     \n    min_lat: southernmost limit of the box \
+     \n    max_lat: northernmost limit of the box\
+     \n    output: name that will be used as prefix for saving results"
 
 # Object with the inputs given by the user
 @dataclasses.dataclass
 class Arguments:
-    file: str
+    file3D: str
+    file2D: str
     fvar: str
     min_lon: float
     max_lon: float
     min_lat: float
     max_lat: float
+    output: str
 
 # This fucntion will print the inputs type and what was expected
 # It calls the 'validate' function that do the actual variable check
@@ -73,7 +97,7 @@ def check_type(obj):
 # usage message to the user
 def validate(args: List[str]):
     if len(args) > 2:
-        for i in range(2,len(args)):
+        for i in range(3,len(args)-1):
                 args[i] = float(args[i])
     # Attempts to construct the object with the user inputs
     try:
@@ -137,7 +161,7 @@ def plot_area(min_lon, max_lon,min_lat, max_lat, outdir) :
     print('\nCreated figure with box defined for computations')
 
 # Function for opening the data
-def get_data(file,varlist,min_lon, max_lon, min_lat, max_lat):   
+def get_data(file3D, file2D, varlist, min_lon, max_lon, min_lat, max_lat):   
     print('Variables specified by the user in: '+varlist)
     print('Attempting to read '+varlist+' file...')
     try:
@@ -150,12 +174,24 @@ def get_data(file,varlist,min_lon, max_lon, min_lat, max_lat):
     TimeIndexer = dfVars.loc['Time']['Variable']
     LevelIndexer = dfVars.loc['Vertical Level']['Variable']
     print('Ok!')
-    # Open actual data
-    print('Attempting to open '+file+' file...')
+    # Check if the merged file already exists
+    DataDir = os.path.dirname(os.path.realpath(file3D))
+    merged_file = DataDir+'/'+output+'.nc'
+    if not os.path.exists(DataDir+'/'+output+'.nc'):
+        try:
+            print('Attempting to merge '+file3D+' and '+file2D+' into '
+                  + merged_file)
+            os.system("python merge_2d_into_3d.py "
+                       +file3D+' '+file2D+' '+output)
+        except:
+            raise('Could not create '+output+' file')
+    else:
+        print(merged_file+' already exists!')
+    print('Attempting to open '+merged_file)
     try:
-        full_data = convert_lon(xr.open_dataset(file),LonIndexer)
+        full_data = convert_lon(xr.open_dataset(merged_file),LonIndexer)
     except:
-        raise SystemExit('ERROR!!!!!')
+        raise SystemExit('ERROR!!!!!\n COULD NOT OPEN OR MERGE DATA')
     print('Ok!')
     # Sort data coordinates - data from distinc sources might have different
     # arrangements, which could affect the results from the integrations
@@ -181,11 +217,16 @@ def get_data(file,varlist,min_lon, max_lon, min_lat, max_lat):
         units(dfVars.loc['Eastward Wind Component']['Units'])
     v = data[dfVars.loc['Northward Wind Component']['Variable']]*\
         units(dfVars.loc['Northward Wind Component']['Units'])
+    u_stress = data[dfVars.loc['Zonal Wind Stress']['Variable']]*\
+        units(dfVars.loc['Zonal Wind Stress']['Units'])
+    v_stress = data[dfVars.loc['Meridional Wind Stress']['Variable']]*\
+        units(dfVars.loc['Meridional Wind Stress']['Units'])
     # slp = data[dfVars.loc['Sea Level Pressure']['Variable']]
     # Print variables for the user
     print('List of variables found:')
     print(dfVars)
-    return LonIndexer, LatIndexer, TimeIndexer, LevelIndexer, tair, hgt, rhum, omega, u, v#, slp
+    return LonIndexer, LatIndexer, TimeIndexer, LevelIndexer, tair, hgt,\
+        rhum, omega, u, v, u_stress, v_stress
 
 # Compute the budget equation for the energy terms (Az, Ae, Kz and Ke) using
 # finite differences method (used for estimating generation, disspation and
@@ -237,7 +278,7 @@ def main():
     print('')
     
     # 2) Open the data
-    data = get_data(*sys.argv[1:])   
+    data = get_data(file3D, file2D, varlist, min_lon, max_lon, min_lat, max_lat)   
     # Data indexers
     LonIndexer, LatIndexer, TimeName, VerticalCoordIndexer = data[0],data[1],data[2], data[3]
     # Data variables
@@ -247,21 +288,26 @@ def main():
     omega = data[7]#*units(data[7].units).to('Pa/s')
     u = data[8]#*units(data[8].units).to('m/s')
     v = data[9]#*units(data[9].units).to('m/s')
+    u_stress = data[10]
+    v_stress = data[11]
     pres = tair[VerticalCoordIndexer]*units(tair[VerticalCoordIndexer].units).to('Pa')
     #
     print('\n Parameters spcified for the bounding box:')
-    print('min_lon, max_lon, min_lat, max_lat: '+str(sys.argv[3:]))
+    print('min_lon, max_lon, min_lat, max_lat: '+str([min_lon,
+                                                     max_lon, min_lat, max_lat]))
     
     # 3) Create folder to save results
     # Convert box limits to strings for apprending to file name
     lims = ''
-    for i in sys.argv[3:5]:
+    for i in [min_lon, max_lon]:
+        i = str(int(i))
         if i[0] == '-':
             j = i.replace('-','')+'W'
         else:
             j = i+'E'
         lims += j
-    for i in sys.argv[5:]:
+    for i in [min_lat, max_lat]:
+        i = str(int(i))
         if i[0] == '-':
             j = i.replace('-','')+'S'
         else:
@@ -269,9 +315,8 @@ def main():
         lims += j
     # Directory where results will be stored
     ResultsMainDirectory = '../LEC_Results'
-    infile_name = sys.argv[1]
     # Append data limits to outfile name
-    outfile_name = infile_name.split('.nc')[0].split('/')[-1]+'_'+lims
+    outfile_name = output+'_'+lims
     # Each dataset of results have its own directory, allowing to store results
     # from more than one experiment at each time
     ResultsSubDirectory = ResultsMainDirectory+'/'+outfile_name
@@ -286,11 +331,14 @@ def main():
     try:
         box_obj = BoxData(TemperatureData=tair, PressureData=pres,
                      UWindComponentData=u, VWindComponentData=v,
+                     ZonalWindStressData=u_stress,
+                     MeridionalWindStressData=v_stress,
                      OmegaData=omega, HgtData=hgt,
-                     LonIndexer=LonIndexer, LatIndexer=LatIndexer, TimeName=TimeName,
+                     LonIndexer=LonIndexer, LatIndexer=LatIndexer,
+                     TimeName=TimeName,
                      VerticalCoordIndexer=VerticalCoordIndexer,
-                     western_limit=float(sys.argv[3]), eastern_limit=float(sys.argv[4]),
-                     southern_limit=float(sys.argv[5]), northern_limit=float(sys.argv[6]),
+                     western_limit=min_lon, eastern_limit=max_lon,
+                     southern_limit=min_lat, northern_limit=max_lat,
                      output_dir=ResultsSubDirectory)
     except:
         raise SystemExit('ERROR!!!!!')
@@ -335,7 +383,8 @@ def main():
     print('Computing generation and disspiation terms') 
     try:
         gdt_obj = GenerationDissipationTerms(box_obj)
-        GenDissList = [gdt_obj.calc_gz(),gdt_obj.calc_ge()]
+        GenDissList = [gdt_obj.calc_gz(),gdt_obj.calc_ge(),
+                       gdt_obj.calc_dz(),gdt_obj.calc_de()]
     except:
         raise SystemExit('ERROR!!!!!')
     print('Ok!')
@@ -349,14 +398,14 @@ def main():
     df = pd.DataFrame(data=[*days],columns=['Date'])
     df['Hour'] = hours
     # Then adds the data to the DataFrame
-    for i,j,k in zip(range(4),['Az','Ae','Kz','Ke'],
-                     ['Cz','Ca','Ck','Ce']):
+    for i,j,k,l in zip(range(4),['Az','Ae','Kz','Ke'],
+                     ['Cz','Ca','Ck','Ce'],
+                     ['Gz','Ge','Dz','De']):
         df[j] = EnergyList[i]
         df[k] = ConversionList[i]
+        df[l] = GenDissList[i]
     for i,l in zip(range(6),['BAz','BAe','BKz','BKe','BΦZ','BΦE']):
-        df[l] = BoundaryList[i]
-    for i,m in zip(range(2),['Gz','Ge']):
-        df[m] = GenDissList[i]        
+        df[l] = BoundaryList[i]       
     # 10) 
     print('\n------------------------------------------------------------------------')
     print('Estimating budget terms (∂X/∂t) using finite differences ')
@@ -382,7 +431,7 @@ def main():
     os.system("python plot_timeseries.py "+outfile)
     os.system("python plot_vertical.py "+ResultsSubDirectory)
     os.system("python plot_boxplot.py "+ResultsSubDirectory)
-    plot_area(*[float(i) for i in sys.argv[3:]], ResultsSubDirectory)
+    plot_area(min_lon, max_lon,min_lat,max_lat, ResultsSubDirectory)
 
 if __name__ == "__main__":
     main()
