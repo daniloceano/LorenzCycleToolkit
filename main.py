@@ -38,16 +38,20 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 from shapely.geometry.polygon import Polygon
 
+# Box limits used for compuations
+dfbox = pd.read_csv('./box_limits',header=None,delimiter=';',index_col=0)
+fvars = './fvars'
 
 # Arguments passed by user
 file3D = sys.argv[1]
 file2D = sys.argv[2]
-varlist = sys.argv[3]
-min_lon = float(sys.argv[4])
-max_lon = float(sys.argv[5])
-min_lat = float(sys.argv[6])
-max_lat = float(sys.argv[7])
-output = sys.argv[8]
+output = sys.argv[3]
+varlist = fvars
+min_lon = dfbox.loc['min_lon'].values
+max_lon = dfbox.loc['max_lon'].values
+min_lat = dfbox.loc['min_lat'].values
+max_lat = dfbox.loc['max_lat'].values
+
 
 print(sys.argv)
 
@@ -58,11 +62,6 @@ USAGE = f"Usage: python {sys.argv[0]} [--help] | file file2D fvar\
      \n    Arguments:\
      \n    file3D: file containing 3D fileds\
      \n    file2D: file containing 2D fields (wind stress)\
-     \n    fvar: csv file containing variable and dimension indexers\
-     \n    min_lon: westernmost limit of the box\
-     \n    max_lon: easternmost limit of the box \
-     \n    min_lat: southernmost limit of the box \
-     \n    max_lat: northernmost limit of the box\
      \n    output: name that will be used as prefix for saving results"
 
 # Object with the inputs given by the user
@@ -70,11 +69,6 @@ USAGE = f"Usage: python {sys.argv[0]} [--help] | file file2D fvar\
 class Arguments:
     file3D: str
     file2D: str
-    fvar: str
-    min_lon: float
-    max_lon: float
-    min_lat: float
-    max_lat: float
     output: str
 
 # This fucntion will print the inputs type and what was expected
@@ -96,9 +90,6 @@ def check_type(obj):
 # Checks if the inputs matches the expected type and if fails, prints the 
 # usage message to the user
 def validate(args: List[str]):
-    if len(args) > 2:
-        for i in range(3,len(args)-1):
-                args[i] = float(args[i])
     # Attempts to construct the object with the user inputs
     try:
         arguments = Arguments(*args)
