@@ -43,9 +43,7 @@ dfbox = pd.read_csv('./box_limits',header=None,delimiter=';',index_col=0)
 fvars = './fvars'
 
 # Arguments passed by user
-file3D = sys.argv[1]
-file2D = sys.argv[2]
-output = sys.argv[3]
+infile = sys.argv[1]
 varlist = fvars
 min_lon = dfbox.loc['min_lon'].values
 max_lon = dfbox.loc['max_lon'].values
@@ -60,16 +58,12 @@ USAGE = f"Usage: python {sys.argv[0]} [--help] | file file2D fvar\
  min_lon, max_lon, min_lat, max_lat output\
      \n\
      \n    Arguments:\
-     \n    file3D: file containing 3D fileds\
-     \n    file2D: file containing 2D fields (wind stress)\
-     \n    output: name that will be used as prefix for saving results"
+     \n    file: file containing the data to be analysed"
 
 # Object with the inputs given by the user
 @dataclasses.dataclass
 class Arguments:
-    file3D: str
-    file2D: str
-    output: str
+    infile: str
 
 # This fucntion will print the inputs type and what was expected
 # It calls the 'validate' function that do the actual variable check
@@ -152,7 +146,7 @@ def plot_area(min_lon, max_lon,min_lat, max_lat, outdir) :
     print('\nCreated figure with box defined for computations')
 
 # Function for opening the data
-def get_data(file3D, file2D, varlist, min_lon, max_lon, min_lat, max_lat):   
+def get_data(infile, varlist, min_lon, max_lon, min_lat, max_lat):   
     print('Variables specified by the user in: '+varlist)
     print('Attempting to read '+varlist+' file...')
     try:
@@ -166,21 +160,8 @@ def get_data(file3D, file2D, varlist, min_lon, max_lon, min_lat, max_lat):
     LevelIndexer = dfVars.loc['Vertical Level']['Variable']
     print('Ok!')
     # Check if the merged file already exists
-    DataDir = os.path.dirname(os.path.realpath(file3D))
-    merged_file = DataDir+'/'+output+'.nc'
-    if not os.path.exists(DataDir+'/'+output+'.nc'):
-        try:
-            print('Attempting to merge '+file3D+' and '+file2D+' into '
-                  + merged_file)
-            os.system("python merge_2d_into_3d.py "
-                       +file3D+' '+file2D+' '+output)
-        except:
-            raise('Could not create '+output+' file')
-    else:
-        print(merged_file+' already exists!')
-    print('Attempting to open '+merged_file)
     try:
-        full_data = convert_lon(xr.open_dataset(merged_file),LonIndexer)
+        full_data = convert_lon(xr.open_dataset(infile),LonIndexer)
     except:
         raise SystemExit('ERROR!!!!!\n COULD NOT OPEN OR MERGE DATA')
     print('Ok!')
@@ -200,8 +181,6 @@ def get_data(file3D, file2D, varlist, min_lon, max_lon, min_lat, max_lat):
         * units(dfVars.loc['Air Temperature']['Units']).to('K')
     hgt = data[dfVars.loc['Geopotential Height']['Variable']]\
         *units(dfVars.loc['Geopotential Height']['Units']).to('gpm')
-    rhum = data[dfVars.loc['Relative Humidity']['Variable']]*\
-        units(dfVars.loc['Relative Humidity']['Units']).to('percent')
     omega = data[dfVars.loc['Omega Velocity']['Variable']]*\
         units(dfVars.loc['Omega Velocity']['Units']).to('Pa/s')
     u = data[dfVars.loc['Eastward Wind Component']['Variable']]*\
@@ -217,7 +196,7 @@ def get_data(file3D, file2D, varlist, min_lon, max_lon, min_lat, max_lat):
     print('List of variables found:')
     print(dfVars)
     return LonIndexer, LatIndexer, TimeIndexer, LevelIndexer, tair, hgt,\
-        rhum, omega, u, v, u_stress, v_stress
+        omega, u, v, u_stress, v_stress
 
 # Compute the budget equation for the energy terms (Az, Ae, Kz and Ke) using
 # finite differences method (used for estimating generation, disspation and
@@ -269,18 +248,17 @@ def main():
     print('')
     
     # 2) Open the data
-    data = get_data(file3D, file2D, varlist, min_lon, max_lon, min_lat, max_lat)   
+    data = get_data(infile, varlist, min_lon, max_lon, min_lat, max_lat)   
     # Data indexers
     LonIndexer, LatIndexer, TimeName, VerticalCoordIndexer = data[0],data[1],data[2], data[3]
     # Data variables
     tair = data[4]#*units(data[4].units).to('K')
     hgt = data[5]#*units(data[5].units).to('gpm')
-    rhum = data[6]#*units(data[6].units)
-    omega = data[7]#*units(data[7].units).to('Pa/s')
-    u = data[8]#*units(data[8].units).to('m/s')
-    v = data[9]#*units(data[9].units).to('m/s')
-    u_stress = data[10]
-    v_stress = data[11]
+    omega = data[6]#*units(data[7].units).to('Pa/s')
+    u = data[7]#*units(data[8].units).to('m/s')
+    v = data[8]#*units(data[9].units).to('m/s')
+    u_stress = data[9]
+    v_stress = data[10]
     pres = tair[VerticalCoordIndexer]*units(tair[VerticalCoordIndexer].units).to('Pa')
     #
     print('\n Parameters spcified for the bounding box:')
@@ -307,7 +285,7 @@ def main():
     # Directory where results will be stored
     ResultsMainDirectory = '../LEC_Results'
     # Append data limits to outfile name
-    outfile_name = output+'_'+lims
+    outfile_name = ''.join(infile.split('/')[-1].split('.nc'))+'_'+lims
     # Each dataset of results have its own directory, allowing to store results
     # from more than one experiment at each time
     ResultsSubDirectory = ResultsMainDirectory+'/'+outfile_name

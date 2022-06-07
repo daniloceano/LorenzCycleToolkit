@@ -135,7 +135,6 @@ def plot_boxplot(df,outdir):
                                'boundary_labels','residuals_labels', 
                                 'budget_diff_labels','gendiss_labels']):
         plt.figure(figsize=(8,8))
-        plt.grid(visible=True,c='gray',linewidth=0.25,linestyle='dashdot')
         for term,i in zip(labels,range(len(labels))):
             bplot = plt.boxplot(df[term],positions=[i/3],vert=True,
                                 patch_artist=True,notch=True,labels=[term])

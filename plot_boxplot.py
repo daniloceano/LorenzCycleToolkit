@@ -20,8 +20,6 @@ Contact:
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import numpy as np
-import os
 import sys
 import glob
 from datetime import datetime
@@ -35,7 +33,7 @@ markers = ['s','s','o','o']
 linestyles = ['-','-','-','-']
 linewidth = 4
 
-Directory = sys.argv[1]
+Directory = sys.argv[1]+'/'
 
 def get_data_dict(list_terms):
     data = {}
