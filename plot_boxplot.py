@@ -20,25 +20,16 @@ Contact:
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import sys
 import glob
 from datetime import datetime
+import argparse
 
-# Specs for plotting
-linecolors = ['#A53860','#C9B857','#384A0F','#473BF0']
-markerfacecolors = ['#A53860','w','#384A0F','w']
-energy_labels = ['Az','Ae','Kz','Ke']
-conversion_labels = ['Cz','Ca','Ck','Ce']
-markers = ['s','s','o','o']         
-linestyles = ['-','-','-','-']
-linewidth = 4
 
-Directory = sys.argv[1]+'/'
 
-def get_data_dict(list_terms):
+def get_data_dict(term_list):
     data = {}
     # Loop to store results in dictionary
-    for term in list_terms:
+    for term in term_list:
         file = glob.glob(Directory+'/'+term+'_*')[0]
         data[term] = pd.read_csv(file)
         print('\nOpening '+term)
@@ -80,10 +71,13 @@ def boxplot_time(term_list):
                 fig.autofmt_xdate()
             i += 1
     if term in energy_labels:
-            fname = 'Energy'
+        fname = 'Energy'
     elif term in conversion_labels:
-            fname = 'Conversion'
+        fname = 'Conversion'
+        
     outfile = Directory+'/Figures/boxplot_vertical_timeseries_'+fname+'.png'
+    
+
     plt.savefig(outfile)
     print('Created '+outfile)
     
@@ -120,7 +114,8 @@ def boxplot_vertical(term_list):
     print('Created '+outfile)
     
 def main():
-    for term_list in [energy_labels,conversion_labels]:  
+    for term_list in labels_list: 
+        print(term_list)
         print('\n-------------------------------------------------------------')
         print('Creating boxplot for the temporal evolution of each term')
         boxplot_time(term_list)
@@ -130,5 +125,28 @@ def main():
         print('All done')
 
 if __name__ == "__main__":
+    
+    parser = argparse.ArgumentParser(description = "\
+Reads an .csv file with all terms from the Lorenz Energy Cycle and make boxplots.")
+    parser.add_argument("Directory", help = "Directory containing the\
+ results from the main.py program.")
+    parser.add_argument("-r", "--residuals", default = False, action='store_true',
+    help = "If this flag is used, it will plot RGe, RGz, RKz and RKe\
+ instead of Ge, Gz, Dz and De")
+    args = parser.parse_args()
+    Directory = args.Directory
+    
+    # Specs for plotting    
+    conversion_labels = ['Cz','Ca','Ck','Ce']
+    energy_labels = ['Az','Ae','Kz','Ke']
+    linecolors = ['#A53860','#C9B857','#384A0F','#473BF0','#873e23','#A13BF0']
+    markerfacecolors = ['#A53860','w','#384A0F','w','#873e23', 'w']
+    markers = ['s','s','o','o','^','^']         
+    linestyles = ['-','-','-','-','-','-']
+    linewidth = 4   
+    
+    labels_list = [energy_labels,conversion_labels]
+    
+    
     main()
 

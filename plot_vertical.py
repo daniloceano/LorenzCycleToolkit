@@ -22,23 +22,10 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
 import os
-import sys
+import cmocean as cmo
 import glob
 from datetime import datetime
-import cmocean as cmo
-
-
-# Specs for plotting
-linecolors = ['#A53860','#C9B857','#384A0F','#473BF0']
-markerfacecolors = ['#A53860','w','#384A0F','w']
-energy_labels = ['Az','Ae','Kz','Ke']
-conversion_labels = ['Cz','Ca','Ck','Ce']
-generation_labels = ['Gz','Ge']
-markers = ['s','s','o','o']         
-linestyles = ['-','-','-','-']
-linewidth = 4
-
-Directory = sys.argv[1]
+import argparse
 
 def get_data_dict(list_terms):
     data = {}
@@ -141,7 +128,7 @@ def plot_hovmoller(list_terms):
         cb_ax = fig.add_axes([0.88, 0.1, 0.02, 0.8])
     else:
         cb_ax = fig.add_axes([0.93, 0.1, 0.02, 0.8])
-    cbar = fig.colorbar(cf, cax=cb_ax,extend='both')
+    cbar = fig.colorbar(cf, cax=cb_ax)
     cbar.ax.get_yaxis().labelpad = 15
     cbar.ax.set_ylabel(title, rotation=270,fontsize=10)
     outfile = Directory+'/Figures/hovmoller_'+fname+'.png'
@@ -151,15 +138,39 @@ def plot_hovmoller(list_terms):
 
 def main():
     for term_list in [energy_labels,conversion_labels,generation_labels]: 
-        # This will procude a lot of figures!! Not needed for most of uses
-        # print('\n-------------------------------------------------------------')
-        # print('Creating figures with vertical profiles for each model time')
-        # plot_vertical(term_list)
+        if args.vertical:
+            print('\n-------------------------------------------------------------')
+            print('Creating figures with vertical profiles for each model time')
+            plot_vertical(term_list)
         print('\n-------------------------------------------------------------')
         print('Creating hovmoller diagrams')
         plot_hovmoller(term_list)
 
 if __name__ == "__main__":
+    
+    parser = argparse.ArgumentParser(description = "\
+reads CSV files with energy and conversion terms from the Lorenz \
+Energy Cycle, for each vertical level and time step, and plot them for each \
+time step. The user needs to specify the file where the CSV are located")
+    parser.add_argument("Directory", help = "Directory containing the\
+ results from the main.py program.")
+    parser.add_argument("-v", "--vertical", default = False, action='store_true',
+    help = "If this flag is used, it will create figures containing vertical\
+  profiles for each model time. This will procude a lot of figures and is not \
+  needed for most of uses")
+    args = parser.parse_args()
+    Directory = args.Directory
+        
+    # Specs for plotting
+    linecolors = ['#A53860','#C9B857','#384A0F','#473BF0']
+    markerfacecolors = ['#A53860','w','#384A0F','w']
+    energy_labels = ['Az','Ae','Kz','Ke']
+    conversion_labels = ['Cz','Ca','Ck','Ce']
+    generation_labels = ['Gz','Ge']
+    markers = ['s','s','o','o']         
+    linestyles = ['-','-','-','-']
+    linewidth = 4        
+    
     main()
 
 

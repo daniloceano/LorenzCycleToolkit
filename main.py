@@ -28,80 +28,14 @@ from BoxData import BoxData
 from metpy.units import units
 import pandas as pd
 import xarray as xr
-import dataclasses
-import sys
-from typing import List
 import os
 import numpy as np
+import argparse
 
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 from shapely.geometry.polygon import Polygon
 
-# Box limits used for compuations
-dfbox = pd.read_csv('./box_limits',header=None,delimiter=';',index_col=0)
-fvars = './fvars'
-
-# Arguments passed by user
-infile = sys.argv[1]
-varlist = fvars
-min_lon = dfbox.loc['min_lon'].values
-max_lon = dfbox.loc['max_lon'].values
-min_lat = dfbox.loc['min_lat'].values
-max_lat = dfbox.loc['max_lat'].values
-
-
-print(sys.argv)
-
-# This will be printed as an error message
-USAGE = f"Usage: python {sys.argv[0]} [--help] | file file2D fvar\
- min_lon, max_lon, min_lat, max_lat output\
-     \n\
-     \n    Arguments:\
-     \n    file: file containing the data to be analysed"
-
-# Object with the inputs given by the user
-@dataclasses.dataclass
-class Arguments:
-    infile: str
-
-# This fucntion will print the inputs type and what was expected
-# It calls the 'validate' function that do the actual variable check
-def check_type(obj):
-    for field in dataclasses.fields(obj):
-        value = getattr(obj, field.name)
-        print(
-            f"Value: {value}, "
-            f"Expected type {field.type} for {field.name}, "
-            f"got {type(value)}"
-        )
-        # checks if provided type matches the expected type
-        if type(value) != field.type:
-            print("Type Error")
-        else:
-            print("Type Ok")
-
-# Checks if the inputs matches the expected type and if fails, prints the 
-# usage message to the user
-def validate(args: List[str]):
-    # Attempts to construct the object with the user inputs
-    try:
-        arguments = Arguments(*args)
-    except TypeError:
-        raise SystemExit(USAGE)
-    check_type(arguments)
-
-# Checks if the user actually inputed arguments in the first place
-def tests_args() -> None:
-    args = sys.argv[1:]
-    # if no inputs were provided, exits and calls the usage message
-    if not args:
-        raise SystemExit(USAGE)
-    if args[0] == "--help":
-        print(USAGE)
-    # if the inputs were provided, see if they have the expected type
-    else:
-        validate(args)
         
 def check_create_folder(DirName):
     if not os.path.exists(DirName):
@@ -152,22 +86,27 @@ def get_data(infile, varlist, min_lon, max_lon, min_lat, max_lat):
     try:
         dfVars = pd.read_csv(varlist,sep= ';',index_col=0,header=0)
     except:
-        raise SystemExit('ERROR!!!!!')
+        raise SystemExit("Error: verify that there is a 'fvar' text file\
+ located on your working directory")
+    # Print variables for the user
+    print('List of variables found:')
+    print(dfVars)
     # Get data indexers
     LonIndexer = dfVars.loc['Longitude']['Variable']
     LatIndexer = dfVars.loc['Latitude']['Variable']
     TimeIndexer = dfVars.loc['Time']['Variable']
     LevelIndexer = dfVars.loc['Vertical Level']['Variable']
     print('Ok!')
-    # Check if the merged file already exists
+    print('Opening inpyt data...')
     try:
         full_data = convert_lon(xr.open_dataset(infile),LonIndexer)
     except:
-        raise SystemExit('ERROR!!!!!\n COULD NOT OPEN OR MERGE DATA')
+        raise SystemExit('ERROR!!!!!\n COULD NOT OPEN INPUT DATA')
     print('Ok!')
     # Sort data coordinates - data from distinc sources might have different
     # arrangements, which could affect the results from the integrations
-    full_data = full_data.sortby(LonIndexer).sortby(LevelIndexer,ascending=False).sortby(LatIndexer,ascending=False)
+    full_data = full_data.sortby(LonIndexer).sortby(LevelIndexer,
+                            ascending=False).sortby(LatIndexer,ascending=False)
     # Fill missing values with 0
     full_data = full_data.fillna(0)
     try:
@@ -187,16 +126,16 @@ def get_data(infile, varlist, min_lon, max_lon, min_lat, max_lat):
         units(dfVars.loc['Eastward Wind Component']['Units'])
     v = data[dfVars.loc['Northward Wind Component']['Variable']]*\
         units(dfVars.loc['Northward Wind Component']['Units'])
-    u_stress = data[dfVars.loc['Zonal Wind Stress']['Variable']]*\
-        units(dfVars.loc['Zonal Wind Stress']['Units'])
-    v_stress = data[dfVars.loc['Meridional Wind Stress']['Variable']]*\
-        units(dfVars.loc['Meridional Wind Stress']['Units'])
-    # slp = data[dfVars.loc['Sea Level Pressure']['Variable']]
-    # Print variables for the user
-    print('List of variables found:')
-    print(dfVars)
-    return LonIndexer, LatIndexer, TimeIndexer, LevelIndexer, tair, hgt,\
-        omega, u, v, u_stress, v_stress
+    if not args.residuals:
+        u_stress = data[dfVars.loc['Zonal Wind Stress']['Variable']]*\
+            units(dfVars.loc['Zonal Wind Stress']['Units'])
+        v_stress = data[dfVars.loc['Meridional Wind Stress']['Variable']]*\
+            units(dfVars.loc['Meridional Wind Stress']['Units'])
+        return LonIndexer, LatIndexer, TimeIndexer, LevelIndexer, tair, hgt,\
+            omega, u, v, u_stress, v_stress
+    else:
+        return LonIndexer, LatIndexer, TimeIndexer, LevelIndexer, tair, hgt,\
+            omega, u, v
 
 # Compute the budget equation for the energy terms (Az, Ae, Kz and Ke) using
 # finite differences method (used for estimating generation, disspation and
@@ -243,23 +182,26 @@ def calc_residuals(df):
 # functions for making the calculations 
 def main():
     
-    # 1) Checks if the inputs are correct.
-    tests_args()
     print('')
     
     # 2) Open the data
-    data = get_data(infile, varlist, min_lon, max_lon, min_lat, max_lat)   
+    data = get_data(args.infile, varlist, min_lon, max_lon, min_lat, max_lat)   
     # Data indexers
     LonIndexer, LatIndexer, TimeName, VerticalCoordIndexer = data[0],data[1],data[2], data[3]
     # Data variables
-    tair = data[4]#*units(data[4].units).to('K')
-    hgt = data[5]#*units(data[5].units).to('gpm')
-    omega = data[6]#*units(data[7].units).to('Pa/s')
-    u = data[7]#*units(data[8].units).to('m/s')
-    v = data[8]#*units(data[9].units).to('m/s')
-    u_stress = data[9]
-    v_stress = data[10]
-    pres = tair[VerticalCoordIndexer]*units(tair[VerticalCoordIndexer].units).to('Pa')
+    tair = data[4]
+    hgt = data[5]
+    omega = data[6]
+    u = data[7]
+    v = data[8]
+    if not args.residuals:
+        u_stress = data[9]
+        v_stress = data[10]
+    else:
+        u_stress = v*np.nan
+        v_stress = v*np.nan
+    pres = tair[VerticalCoordIndexer]*units(
+        tair[VerticalCoordIndexer].units).to('Pa')
     #
     print('\n Parameters spcified for the bounding box:')
     print('min_lon, max_lon, min_lat, max_lat: '+str([min_lon,
@@ -288,7 +230,7 @@ def main():
     outfile_name = ''.join(infile.split('/')[-1].split('.nc'))+'_'+lims
     # Each dataset of results have its own directory, allowing to store results
     # from more than one experiment at each time
-    ResultsSubDirectory = ResultsMainDirectory+'/'+outfile_name
+    ResultsSubDirectory = ResultsMainDirectory+'/'+outfile_name+'/'
     # Check if the LEC_Figures directory exists. If not, creates it
     check_create_folder(ResultsMainDirectory)
     # Check if a directory for current data exists. If not, creates it
@@ -352,8 +294,11 @@ def main():
     print('Computing generation and disspiation terms') 
     try:
         gdt_obj = GenerationDissipationTerms(box_obj)
-        GenDissList = [gdt_obj.calc_gz(),gdt_obj.calc_ge(),
-                       gdt_obj.calc_dz(),gdt_obj.calc_de()]
+        if args.residuals:
+            GenDissList = [gdt_obj.calc_gz(),gdt_obj.calc_ge()]
+        else:
+             GenDissList = [gdt_obj.calc_gz(),gdt_obj.calc_ge(),
+                            gdt_obj.calc_dz(),gdt_obj.calc_de()]
     except:
         raise SystemExit('ERROR!!!!!')
     print('Ok!')
@@ -367,14 +312,20 @@ def main():
     df = pd.DataFrame(data=[*days],columns=['Date'])
     df['Hour'] = hours
     # Then adds the data to the DataFrame
-    for i,j,k,l in zip(range(4),['Az','Ae','Kz','Ke'],
-                     ['Cz','Ca','Ck','Ce'],
-                     ['Gz','Ge','Dz','De']):
+    for i,j in zip(range(4),['Az','Ae','Kz','Ke']):
         df[j] = EnergyList[i]
+    for i,k in zip(range(4),['Cz','Ca','Ck','Ce']):
         df[k] = ConversionList[i]
-        df[l] = GenDissList[i]
-    for i,l in zip(range(6),['BAz','BAe','BKz','BKe','BΦZ','BΦE']):
-        df[l] = BoundaryList[i]       
+    if args.residuals:
+        for i,l in zip(range(4),['BAz','BAe','BKz','BKe']):
+            df[l] = BoundaryList[i]
+        for i,m in zip(range(4),['Gz','Ge']):
+            df[m] = GenDissList[i]  
+    else:
+        for i,l in  zip(range(4),['Gz','Ge','Dz','De']):
+            df[l] = GenDissList[i]
+        for i,m in zip(range(6),['BAz','BAe','BKz','BKe','BΦZ','BΦE']):
+            df[m] = BoundaryList[i]  
     # 10) 
     print('\n------------------------------------------------------------------------')
     print('Estimating budget terms (∂X/∂t) using finite differences ')
@@ -391,17 +342,50 @@ def main():
     print('\nCreating a csv to store results...')
     outfile = ResultsSubDirectory+'/'+outfile_name+'.csv'
     df.to_csv(outfile)
-    print(outfile+' created')
+    print(outfile+' created') 
     print('All done!')
     
     # 13) Make figures
     FigsDirectory = ResultsSubDirectory+'/Figures'
     check_create_folder(FigsDirectory)
-    os.system("python plot_timeseries.py "+outfile)
+    if args.residuals:
+        flag = ' -r'
+    else:
+        flag = ' '
+    os.system("python plot_timeseries.py "+outfile+flag)
     os.system("python plot_vertical.py "+ResultsSubDirectory)
-    os.system("python plot_boxplot.py "+ResultsSubDirectory)
+    os.system("python plot_boxplot.py "+ResultsSubDirectory+flag)
     plot_area(min_lon, max_lon,min_lat,max_lat, ResultsSubDirectory)
 
 if __name__ == "__main__":
+    
+    # Box limits used for compuations
+    dfbox = pd.read_csv('./box_limits',header=None,delimiter=';',index_col=0)
+    
+    # Arguments passed by user
+    # infile = sys.argv[1]
+    varlist = './fvars'
+    min_lon = dfbox.loc['min_lon'].values
+    max_lon = dfbox.loc['max_lon'].values
+    min_lat = dfbox.loc['min_lat'].values
+    max_lat = dfbox.loc['max_lat'].values
+    
+    parser = argparse.ArgumentParser(description = "\
+Lorenz Energy Cycle program. \n \
+It takes an input NetCDF file and crop the data for the bounding box specified\
+ at the 'box_lims' file. An auxilliary 'fvars' file is also needed, where it is\
+ specified the names used for each variable. It computates the energy, \
+ conversion, boundary, generation and dissipation terms. The results are stored\
+ as csv files in the 'LEC_results' directory on ../ and it also creates figures\
+ for visualising the results.")
+    parser.add_argument("infile", help = "Input .nc file with temperature,\
+ geopotential and meridional, zonal and vertical components of the wind,\
+ in pressure levels")
+    parser.add_argument("-r", "--residuals", default = False, action='store_true',
+    help = "Flag for computing the Dissipation and Generation terms as\
+  residuals (needs to provide the 3D friction terms in the infile)")
+    args = parser.parse_args()
+    infile = args.infile
+        
     main()
     

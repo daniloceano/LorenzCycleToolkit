@@ -129,7 +129,7 @@ class BoxData:
         self.omega_ZE = self.omega - self.omega_ZA
         self.omega_AE = self.omega_ZA - self.omega_AA
         
-        # Geopotential height (g*z) data values, averages and eddy terms
+        # Geopotential height data values, averages and eddy terms
         self.hgt = HgtData.sel(**{LatIndexer: 
             slice(self.BoxNorth, self.BoxSouth),
             LonIndexer: slice(self.BoxWest, self.BoxEast)})
@@ -140,7 +140,7 @@ class BoxData:
         self.hgt_ZE = self.hgt - self.hgt_ZA
         self.hgt_AE = self.hgt_ZA - self.hgt_AA
         
-        # Geopotential (g*z) data values, averages and eddy terms
+        # Geopotential (g*hgt) data values, averages and eddy terms
         self.geopt = self.hgt*g
         self.geopt_ZA = calc.CalcZonalAverage(self.geopt, self.LonIndexer)
         self.geopt_AA = calc.CalcAreaAverage(self.geopt,self.LatIndexer,

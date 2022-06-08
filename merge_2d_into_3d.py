@@ -62,4 +62,4 @@ if __name__ == "__main__":
     
     # Save
     DataDir = os.path.dirname(os.path.realpath(file3D))
-    full_data.to_netcdf(path=DataDir+'/'+output+'.nc')
+    full_data.to_netcdf(path=DataDir+'/'+output)

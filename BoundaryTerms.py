@@ -55,10 +55,12 @@ class BoundaryTerms:
         self.v_ZE = box_obj.v_ZE
         self.omega = box_obj.omega
         self.sigma_AA = box_obj.sigma_AA
+        self.omega_AA = box_obj.omega_AA
         self.omega_ZE = box_obj.omega_ZE
         self.omega_ZA = box_obj.omega_ZA
         self.omega_AE = box_obj.omega_AE
         self.geopt = box_obj.geopt
+        self.geopt_AA = box_obj.geopt_AA
         self.geopt_ZE = box_obj.geopt_ZE
         self.geopt_ZA = box_obj.geopt_ZA
         self.geopt_AE = box_obj.geopt_AE
@@ -236,6 +238,9 @@ class BoundaryTerms:
         return Bke 
     
     def calc_boz(self):
+        """
+        Used Brennan (1980) here.
+        """
         print('\nComputing Zonal Kinetic Energy (Kz) production by fluxes at the boundaries (BΦZ)...')
         ## First Integral ##
         _ = (self.v_ZA*self.geopt_AE)/g
@@ -257,11 +262,10 @@ class BoundaryTerms:
         function += VerticalTrazpezoidalIntegration(_,self.PressureData,
                                     self.VerticalCoordIndexer)*self.c2
         ## Third Term ##
-        _ = CalcAreaAverage(self.omega_ZE*self.geopt_AE, self.LatIndexer,
-                            LonIndexer=self.LonIndexer)/g
+        _ = CalcAreaAverage(self.omega_AE*self.geopt_AE, self.LatIndexer)/g
         function -= _.sortby(self.VerticalCoordIndexer,ascending=False
-        ).isel(**{self.VerticalCoordIndexer: 0}) - _.isel(
-            **{self.VerticalCoordIndexer: -1})
+        ).isel(**{self.VerticalCoordIndexer:-1}) - _.isel(
+            **{self.VerticalCoordIndexer: 0})
         try: 
             Boz = function.metpy.convert_units('W/ m **2')
         except ValueError:
@@ -284,7 +288,7 @@ class BoundaryTerms:
                                     self.VerticalCoordIndexer)*self.c1
         
         ## Second Integral ##
-        _ = CalcZonalAverage((self.u_ZE*self.geopt_ZE),
+        _ = CalcZonalAverage((self.v_ZE*self.geopt_ZE),
                              self.LonIndexer)*self.cos_lats/g
         # Data at northern boundary minus data at southern boundary
         _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
@@ -296,8 +300,8 @@ class BoundaryTerms:
         _ = CalcAreaAverage(self.omega_ZE*self.geopt_ZE, self.LatIndexer,
                             LonIndexer=self.LonIndexer)/g
         function -= _.sortby(self.VerticalCoordIndexer,ascending=False
-        ).isel(**{self.VerticalCoordIndexer: 0}) - _.isel(
-            **{self.VerticalCoordIndexer: -1})
+        ).isel(**{self.VerticalCoordIndexer: -1}) - _.isel(
+            **{self.VerticalCoordIndexer: 0})
         try: 
             Boz = function.metpy.convert_units('W/ m **2')
         except ValueError:
