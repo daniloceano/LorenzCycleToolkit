@@ -355,6 +355,7 @@ def main():
     os.system("python plot_timeseries.py "+outfile+flag)
     os.system("python plot_vertical.py "+ResultsSubDirectory)
     os.system("python plot_boxplot.py "+ResultsSubDirectory+flag)
+    os.system("python draw_cycle.py "+outfile)
     plot_area(min_lon, max_lon,min_lat,max_lat, ResultsSubDirectory)
 
 if __name__ == "__main__":

@@ -215,9 +215,10 @@ def main(time, example=False):
             i+=1
             
     if example == True:
-        plt.savefig(FigsDir+'../LEC_Results/LEC.png')
+        plt.savefig(FigsDir+'LEC_example.png')
     else:
-        plt.savefig(FigsDir+'../LEC_Results/LEC'+str(df.iloc[time]['Date'])+'.png')
+        print(df.iloc[time]['Date'])
+        plt.savefig(FigsDir+'LEC_'+str(daily_means.index[time])+'.png')
 
 
 if __name__ == "__main__":
@@ -232,12 +233,11 @@ The transparecy in each box is set to be proportional to the energy tendency,\
 results from the main.py program.")
 
     args = parser.parse_args()
-    data = args.outfile
-    ResultsSubDirectory = '/'.join(data.split('/')[:-1])
+    outile = args.outfile
+    ResultsSubDirectory = '/'.join(outile.split('/')[:-1])
     FigsDir = ResultsSubDirectory+'/Figures/'
 
-    file = '../LEC_Results/Reg1_wo_stress_60W30W42S17S/Reg1_wo_stress_60W30W42S17S.csv'
-    df = pd.read_csv(file)
+    df = pd.read_csv(outile)
     df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
     # Get mean daily values
     daily_means = df.groupby(pd.Grouper(key="Datetime", freq="1D")).mean()
