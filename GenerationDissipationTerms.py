@@ -40,19 +40,8 @@ class GenerationDissipationTerms:
         self.vst_ZE = box_obj.vst_ZE
         self.vst_ZA = box_obj.vst_ZA
         self.sigma_AA = box_obj.sigma_AA
-        self.omega= box_obj.omega
-        self.omega_ZE = box_obj.omega_ZE
-        self.omega_AE = box_obj.omega_AE
-        
-        self.rlons = np.deg2rad(self.tair[self.LonIndexer])
-        self.cos_lons = np.cos(self.rlons)
-
-        self.rlats = np.deg2rad(self.tair[self.LatIndexer])
-        self.cos_lats = np.cos(self.rlats)
-        self.tan_lats = np.tan(self.rlats)
-        
+        self.omega = box_obj.omega
         self.sigma_AA = box_obj.sigma_AA
-        
         self.Q = AdiabaticHEating(self.tair,self.PressureData,self.omega,
                                     self.u,self.v,self.VerticalCoordIndexer,
                                     self.LatIndexer,self.LonIndexer,

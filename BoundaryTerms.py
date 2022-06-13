@@ -44,7 +44,6 @@ class BoundaryTerms:
         self.LatIndexer = box_obj.LatIndexer
         self.TimeName = box_obj.TimeName
         self.VerticalCoordIndexer = box_obj.VerticalCoordIndexer
-        self.output_dir = box_obj.output_dir
         self.tair_AE = box_obj.tair_AE
         self.tair_ZE = box_obj.tair_ZE
         self.u = box_obj.u
@@ -55,22 +54,13 @@ class BoundaryTerms:
         self.v_ZE = box_obj.v_ZE
         self.omega = box_obj.omega
         self.sigma_AA = box_obj.sigma_AA
-        self.omega_AA = box_obj.omega_AA
         self.omega_ZE = box_obj.omega_ZE
         self.omega_ZA = box_obj.omega_ZA
         self.omega_AE = box_obj.omega_AE
-        self.geopt = box_obj.geopt
-        self.geopt_AA = box_obj.geopt_AA
         self.geopt_ZE = box_obj.geopt_ZE
-        self.geopt_ZA = box_obj.geopt_ZA
         self.geopt_AE = box_obj.geopt_AE
-        
         self.rlats = np.deg2rad(box_obj.tair[self.LatIndexer])
-        self.rlons = np.deg2rad(box_obj.tair[self.LonIndexer])
-        self.sin_lats = np.sin(self.rlats)
         self.cos_lats = np.cos(self.rlats)
-        self.tan_lats = np.tan(self.rlats)
-        
         self.BoxWest = box_obj.BoxWest
         self.BoxEast = box_obj.BoxEast
         self.BoxSouth = box_obj.BoxSouth

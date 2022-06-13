@@ -24,132 +24,72 @@ import sys
 
 
 
-def plot_timeseries(df,outdir):
+def plot_timeseries(df,term_list,linecolor,fname,label,outdir):
     # Guarantee no plots are open
     plt.close('all')
     # Times for x axs
     date = df['Date']
     times = pd.date_range(date[0],date.iloc[-1],periods=len(date))
     # Loop through the distinct group of terms
-    for labels,term_label in zip(labels_list,term_labels):
-        print('Plotting '+str(labels)+'...')
-        # Get values for setting plot range
-        maxval = np.amax(np.amax(df[labels]))
-        minval = np.amin(np.amin(df[labels]))
-        print('Data range: '+str(minval)+' to '+str(maxval))
-        # Create figure
-        plt.figure(figsize=(8,8))
-        # Loop trhough terms that are being plotted..
-        for term,i in zip(labels,range(len(labels))):
-            plt.plot(times,df[term],c=linecolors[i], marker= markers[i],
-                    markerfacecolor=markerfacecolors[i], label=term,
-                    linewidth=linewidth,markersize=6, linestyle=linestyles[i])
-        plt.grid(b=True,c='gray',linewidth=0.25,linestyle='dashdot')
-        plt.tick_params(axis='x', labelrotation=20)
-        plt.legend()
-        plt.xlim(times[0],times[-1])
-        plt.xticks(fontsize=12)
-        plt.yticks(fontsize=12)
-        # Set x labels as dates
-        ax = plt.gca()
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
-        # Horizontal line for 0
-        if term not in energy_labels:
-            plt.axhline(y = 0, color = 'k', linestyle = '-',
-                        linewidth=1, zorder=1,alpha=0.8)
-        # name y axis and save figure
-        if term_label == 'energy_labels':
-            plt.ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=14)
-            fname = outdir+'/timeseires_energy_terms.png'
-            plt.savefig(fname)
-            print(fname+' created')
-        elif term_label == 'conversion_labels':
-            plt.ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=14)
-            fname = outdir+'/timeseires_conversion_terms.png'
-            plt.savefig(fname)
-            print(fname+' created')
-        elif term_label == 'boundary_labels':
-            plt.ylabel('Transport across boundaries '+r' $(W\,m^{-2})$',fontsize=14)
-            fname = outdir+'/timeseires_boundary_terms.png'
-            plt.savefig(fname)
-            print(fname+' created')
-        elif term_label == 'residuals_labels':
-            plt.ylabel('Residuals '+r' $(W\,m^{-2})$',fontsize=14)
-            fname = outdir+'/timeseires_residuals_terms.png'
-            plt.savefig(fname)
-            print(fname+' created')
-        elif term_label == 'budget_diff_labels':
-            plt.ylabel('Enery budgets (estimated using finite diffs. '+r' $(W\,m^{-2})$',fontsize=14)
-            fname = outdir+'/timeseires_budget_diff_terms.png'
-            plt.savefig(fname)
-            print(fname+' created')
-        elif term_label == 'comparingG_labels':
-            plt.ylabel('Energy generation '+r' $(W\,m^{-2})$',fontsize=14)
-            fname = outdir+'/timeseires_generation_terms_compare.png'
-            plt.savefig(fname)
-            print(fname+' created')
-        elif term_label == 'comparingD_labels':
-            plt.ylabel('Energy dissipation '+r' $(W\,m^{-2})$',fontsize=14)
-            fname = outdir+'/timeseires_dissipation_terms_compare.png'
-            plt.savefig(fname)
-            print(fname+' created')
-        elif term_label == 'gendiss_labels':
-            plt.ylabel('Energy dissipation/generation '+r' $(W\,m^{-2})$',fontsize=14)
-            fname = outdir+'/timeseires_gendiss_terms.png'
-            plt.savefig(fname)
-            print(fname+' created')
+    print('Plotting '+str(term_list)+'...')
+    # Get values for setting plot range
+    maxval = np.amax(np.amax(df[term_list]))
+    minval = np.amin(np.amin(df[term_list]))
+    print('Data range: '+str(minval)+' to '+str(maxval))
+    # Create figure
+    plt.figure(figsize=(8,8))
+    # Loop trhough terms that are being plotted..
+    for term,i in zip(term_list,range(len(term_list))):
+        plt.plot(times,df[term],c=linecolor[i],label=term,
+                 linewidth=linewidth)
+    plt.grid(b=True,c='gray',linewidth=0.25,linestyle='dashdot')
+    plt.tick_params(axis='x', labelrotation=20)
+    plt.legend()
+    plt.xlim(times[0],times[-1])
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
+    # Set x labels as dates
+    ax = plt.gca()
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
+    # Horizontal line for 0
+    if term not in energy_labels:
+        plt.axhline(y = 0, color = 'k', linestyle = '-',
+                    linewidth=1, zorder=1,alpha=0.8)
+        
+    # Horizontal line for 0
+    if term not in energy_labels:
+        plt.axhline(y = 0, color = 'k', linestyle = '-',
+                    linewidth=1, zorder=1,alpha=0.8)
+        plt.ylabel(label+r' $(J\,m^{-2})$',fontsize=14)
+    else:
+        plt.ylabel(label+r' $(W\,m^{-2})$',fontsize=14)   
+    # Saving figure
+    plt.savefig(outdir+'timeseires_'+fname+'.png')
+    print('timeseires_'+fname+'.png created')
+
             
-            
-def plot_boxplot(df,outdir):
+def plot_boxplot(df,term_list,linecolor,fname,label,outdir):
     # Guarantee no plots are open
     plt.close('all')
-    for labels,term_label in zip(labels_list,term_labels):
-        plt.figure(figsize=(8,8))
-        for term,i in zip(labels,range(len(labels))):
-            bplot = plt.boxplot(df[term],positions=[i/3],vert=True,
-                                patch_artist=True,notch=True,labels=[term])
-            bplot['boxes'][-1].set_facecolor(linecolors[i])
-            bplot['boxes'][-1].set_alpha(0.7)
-        # Horizontal line for 0
-        if term not in energy_labels:
-            plt.axhline(y = 0, color = 'k', linestyle = '-',
-                        linewidth=1, zorder=1,alpha=0.8)
-        if term_label == 'energy_labels':
-            plt.ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=14)
-            # Saving figure
-            fname = outdir+'/boxplot_time_energy_terms.png'
-            plt.savefig(fname)
-            print(fname+' created')
-        elif term_label == 'conversion_labels':
-            plt.ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=14)
-            # Saving figure
-            fname = outdir+'/boxplot_time_conversion_terms.png'
-            plt.savefig(fname)
-            print(fname+' created')
-        elif term_label == 'boundary_labels':
-            plt.ylabel('Transport across boundaries '+r' $(W\,m^{-2})$',fontsize=14)
-            # Saving figure
-            fname = outdir+'/boxplot_time_boundary_terms.png'
-            plt.savefig(fname)
-            print(fname+' created')
-        elif term_label == 'residuals_labels':
-            plt.ylabel('Residuals '+r' $(W\,m^{-2})$',fontsize=14)
-            # Saving figure
-            fname = outdir+'/boxplot_time_residuals_terms.png'
-            plt.savefig(fname)
-            print(fname+' created')
-        elif term_label == 'budget_diff_labels':
-            plt.ylabel('Enery budgets (estimated using finite diffs. '+r' $(W\,m^{-2})$',fontsize=14)
-            # Saving figure
-            fname = outdir+'/boxplot_time_budget_diff_terms.png'
-            plt.savefig(fname)
-            print(fname+' created')
-        elif term_label == 'gendiss_labels':
-            plt.ylabel('Generation/dissipation '+r' $(W\,m^{-2})$',fontsize=14)
-            # Saving figure
-            fname = outdir+'/boxplot_timegendiss_terms.png'
-            plt.savefig(fname)
-            print(fname+' created')
+    plt.figure(figsize=(8,8))
+    for term,i in zip(term_list,range(len(term_list))):
+        bplot = plt.boxplot(df[term],positions=[i/3],vert=True,
+                            patch_artist=True,notch=True,labels=[term])
+        bplot['boxes'][-1].set_facecolor(linecolor[i])
+        bplot['boxes'][-1].set_alpha(0.7)
+    # Horizontal line for 0
+    if term not in energy_labels:
+        plt.axhline(y = 0, color = 'k', linestyle = '-',
+                    linewidth=1, zorder=1,alpha=0.8)
+        plt.ylabel(label+r' $(J\,m^{-2})$',fontsize=14)
+    else:
+        plt.ylabel(label+r' $(W\,m^{-2})$',fontsize=14)   
+    if term in budget_diff_labels:
+        plt.xticks(rotation=25)
+    # Saving figure
+    plt.savefig(outdir+'boxplot_'+fname+'.png')
+    print('boxplot_'+fname+'.png created')
+
 
 def main():
     print('Reading data from: '+data)
@@ -160,8 +100,11 @@ def main():
     ResultsSubDirectory = '/'.join(data.split('/')[:-1])
     FigsDir = ResultsSubDirectory+'/Figures/'
     # Make plot for timeseries
-    plot_timeseries(df,FigsDir)
-    plot_boxplot(df,FigsDir)
+    for term_list,cols,fname,label in zip(terms_list,cols_list,
+                                      fnames,labels_list):
+        plot_timeseries(df,term_list,cols,fname,label,FigsDir)
+        plot_boxplot(df,term_list,cols,fname,label,FigsDir)
+        
     print('All done!')
 
 if __name__ == "__main__":
@@ -178,10 +121,10 @@ results from the main.py program.")
     args = parser.parse_args()
     data = args.outfile
 
-    # Specs for plotting    
+    ## Specs for plotting ##
+    # Labels for plots
     conversion_labels = ['Cz','Ca','Ck','Ce']
     energy_labels = ['Az','Ae','Kz','Ke']
-    
     budget_diff_labels = ['∂Az/∂t (finite diff.)', '∂Ae/∂t (finite diff.)',
                      '∂Kz/∂t (finite diff.)', '∂Ke/∂t (finite diff.)']
     residuals_labels = ['RGz', 'RKz', 'RGe', 'RKe']
@@ -190,25 +133,36 @@ results from the main.py program.")
     # This is for comparing terms estimated as residuals with terms computed  
     comparingG_labels = ['RGz', 'Gz', 'RGe', 'Ge']
     comparingD_labels = ['RKz', 'Dz', 'RKe', 'De']
+    # Color for plots
     linecolors = ['#A53860','#C9B857','#384A0F','#473BF0','#873e23','#A13BF0']
-    markerfacecolors = ['#A53860','w','#384A0F','w','#873e23', 'w']
+    cols_energy = ['#D472F4','#F6744C','#37ABB4','#AB9E31']
+    cols_conversion = ['#7699F4','#F77183','#34AF89','#D48B32']
+    cols_residual = ['#9D55B5','#9C4930','#28757A','#6E6620']
+    cols_boundary = ['#D59DB0','#F5734C','#388AB5','#B39E15']
+    # Specs for the markers and lines
+    # markerfacecolors = ['#A53860','w','#384A0F','w','#873e23', 'w']
     markers = ['s','s','o','o','^','^']         
     linestyles = ['-','-','-','-','-','-']
-    linewidth = 4   
+    linewidth = 5 
     
     if args.residuals:
         boundary_labels = ['BAz','BAe','BKz','BKe']
-        labels_list = [energy_labels,conversion_labels,
+        terms_list = [energy_labels,conversion_labels,
                                 boundary_labels,residuals_labels, 
-                                budget_diff_labels,residuals_labels,
-                                comparingG_labels]
-        term_labels = ['energy_labels','conversion_labels',
-                               'boundary_labels','residuals_labels', 
-                                'budget_diff_labels','residuals_labels',
-                                'comparingG_labels']
+                                budget_diff_labels,comparingG_labels]
+        cols_list = [cols_energy,cols_conversion,cols_boundary,cols_residual,
+                     cols_energy,linecolors]
+        fnames = ['energy','conversion','boundary','residuals',
+                  'energy_budget','comparing_GenRes']
+        labels_list = ['Energy', 'Conversion', 'Transport across boundaries',
+                       'Residuals', 
+                       'Enery budgets (estimated using finite diffs.)',
+                       'Generation/Residual']
+        
+        
     else:
         boundary_labels = ['BAz','BAe','BKz','BKe','BΦZ','BΦE']
-        labels_list = [energy_labels,conversion_labels,
+        terms_list = [energy_labels,conversion_labels,
                                 boundary_labels,residuals_labels, 
                                 budget_diff_labels,gendiss_labels,
                                 comparingG_labels,comparingD_labels]
