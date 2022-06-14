@@ -222,8 +222,7 @@ def main(time, example=False):
 
 
 if __name__ == "__main__":
-
-    
+ 
     parser = argparse.ArgumentParser(description = "\
 reads an CSV file with all terms from the Lorenz Energy Cycle \
  (as input from user) and make the deafult figures for the Lorenz energy cycle\
