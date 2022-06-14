@@ -25,7 +25,7 @@ import matplotlib.gridspec as gridspec
 import argparse
 
 
-def Ca(ax,value,i,width,head_width):
+def Cz(ax,value,i,width,head_width):
     if isinstance(value, str) or (isinstance(value, float) and value > 0):
         ax.arrow(-0.635, 0.5, 0.78, 0, head_width = head_width, width = width,
                   length_includes_head=True,
@@ -40,20 +40,20 @@ def Ca(ax,value,i,width,head_width):
     ax.text(-0.25,0.55,value,fontdict={'fontsize':18},transform=ax.transAxes,
             verticalalignment='center',horizontalalignment='center')
 
-def Ce(ax,value,i,width,head_width):
+def Ck(ax,value,i,width,head_width):
     if isinstance(value, str) or (isinstance(value, float) and value > 0):
+        ax.arrow(0.5, 0.95, 0, 0.525, head_width = head_width,width = width,
+                 fc=cols_conversion[i],ec=cols_conversion[i],
+                 clip_on=False,transform = ax.transAxes)
+    else:
         ax.arrow(0.5, 1.55, 0, -0.6, head_width = head_width,width = width,
                   length_includes_head=True,
               fc=cols_conversion[i],ec=cols_conversion[i],
               clip_on=False,transform = ax.transAxes)
-    else:
-        ax.arrow(0.5, 0.95, 0, 0.525, head_width = head_width,width = width,
-                 fc=cols_conversion[i],ec=cols_conversion[i],
-                 clip_on=False,transform = ax.transAxes)
     ax.text(0.55,1.25,value,fontdict={'fontsize':18},transform=ax.transAxes,
             verticalalignment='center',horizontalalignment='left')
 
-def Cz(ax,value,i,width,head_width):
+def Ca(ax,value,i,width,head_width):
     if isinstance(value, str) or (isinstance(value, float) and value > 0):
         ax.arrow(0.5, 0.04, 0, -0.59, head_width = head_width,width = width,
                       fc=cols_conversion[i],ec=cols_conversion[i],
@@ -68,17 +68,17 @@ def Cz(ax,value,i,width,head_width):
     ax.text(0.45,-0.26,value,fontdict={'fontsize':18},transform = ax.transAxes,
             verticalalignment='center',horizontalalignment='right')
 
-def Ck(ax,value,i,width,head_width):
+def Ce(ax,value,i,width,head_width):
     if isinstance(value, str) or (isinstance(value, float) and value > 0):
-        ax.arrow(1.64, 0.5, -0.78, 0, head_width = head_width, width = width,
-              fc=cols_conversion[i],ec=cols_conversion[i],
-                       length_includes_head=True,
-              clip_on=False,transform=ax.transAxes)
-    else:
         ax.arrow(0.865, 0.5, 0.78, 0, head_width = head_width, width = width,
                   length_includes_head=True,
                   fc=cols_conversion[i],ec=cols_conversion[i],
                   clip_on=False,transform=ax.transAxes)
+    else:
+        ax.arrow(1.64, 0.5, -0.78, 0, head_width = head_width, width = width,
+              fc=cols_conversion[i],ec=cols_conversion[i],
+                       length_includes_head=True,
+              clip_on=False,transform=ax.transAxes)
     ax.text(1.25,0.44,value,fontdict={'fontsize':18},transform=ax.transAxes,
             verticalalignment='center',horizontalalignment='center')
 
@@ -197,19 +197,19 @@ def main(time, example=False):
             plt.axis('off')
                 
             if row == 0 and col == 0: 
-                Cz(ax,conversion,i,width_conversion,head_conversion)
+                Ca(ax,conversion,i,width_conversion,head_conversion)
                 RGz_RKz(ax,residual,i,width_residual,head_residual)
                 BAz_BAe(ax,boundary,i,width_boundary,head_boundary)
             if row == 0 and col == 1: 
-                Ca(ax,conversion,i,width_conversion,head_conversion)
+                Cz(ax,conversion,i,width_conversion,head_conversion)
                 RGz_RKz(ax,residual,i,width_residual,head_residual)
                 BKz_BKe(ax,boundary,i,width_boundary,head_boundary)
             if row == 1 and col == 0:
-                Ck(ax,conversion,i,width_conversion,head_conversion)
+                Ce(ax,conversion,i,width_conversion,head_conversion)
                 RGe_RKe(ax,residual,i,width_residual,head_residual)
                 BAz_BAe(ax,boundary,i,width_boundary,head_boundary)
             if row == 1 and col == 1:
-                Ce(ax,conversion,i,width_conversion,head_conversion)
+                Ck(ax,conversion,i,width_conversion,head_conversion)
                 RGe_RKe(ax,residual,i,width_residual,head_residual)
                 BKz_BKe(ax,boundary,i,width_boundary,head_boundary)
             i+=1
@@ -233,21 +233,32 @@ The transparecy in each box is set to be proportional to the energy tendency,\
 results from the main.py program.")
 
     args = parser.parse_args()
-    outile = args.outfile
-    ResultsSubDirectory = '/'.join(outile.split('/')[:-1])
+    outfile = args.outfile
+    ResultsSubDirectory = '/'.join(outfile.split('/')[:-1])
     FigsDir = ResultsSubDirectory+'/Figures/'
 
-    df = pd.read_csv(outile)
+    df = pd.read_csv(outfile)
     df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
     # Get mean daily values
     daily_means = df.groupby(pd.Grouper(key="Datetime", freq="1D")).mean()
     
+    # # Specs for plotting
+    # energys = ['∂Az/∂t (finite diff.)', '∂Ae/∂t (finite diff.)',
+    #                  '∂Kz/∂t (finite diff.)', '∂Ke/∂t (finite diff.)']
+    # conversions = ['Cz', 'Ca', 'Ck', 'Ce']
+    # residuals = ['RGz', 'RGe', 'RKz', 'RKe']
+    # boundaries = ['BAz','BAe','BKz','BKe'] 
+    # cols_energy = ['#D472F4','#F6744C','#37ABB4','#AB9E31']
+    # cols_conversion = ['#7699F4','#F77183','#34AF89','#D48B32']
+    # cols_residual = ['#9D55B5','#9C4930','#28757A','#6E6620']
+    # cols_boundary = ['#D59DB0','#F5734C','#388AB5','#B39E15']
+    
     # Specs for plotting
-    energys = ['∂Az/∂t (finite diff.)', '∂Ae/∂t (finite diff.)',
-                     '∂Kz/∂t (finite diff.)', '∂Ke/∂t (finite diff.)']
-    conversions = ['Cz', 'Ca', 'Ck', 'Ce']
-    residuals = ['RGz', 'RGe', 'RKz', 'RKe']
-    boundaries = ['BAz','BAe','BKz','BKe'] 
+    energys = ['∂Az/∂t (finite diff.)','∂Kz/∂t (finite diff.)',
+               '∂Ae/∂t (finite diff.)', '∂Ke/∂t (finite diff.)']
+    conversions = ['Ca', 'Cz', 'Ce', 'Ck']
+    residuals = ['RGz', 'RKz', 'RGe', 'RKe']
+    boundaries = ['BAz','BKz','BAe','BKe'] 
     cols_energy = ['#D472F4','#F6744C','#37ABB4','#AB9E31']
     cols_conversion = ['#7699F4','#F77183','#34AF89','#D48B32']
     cols_residual = ['#9D55B5','#9C4930','#28757A','#6E6620']
@@ -263,8 +274,7 @@ results from the main.py program.")
     conversion_scaled=(x-x.min().min())/(x.max().max()-x.min().min())
     
     main(0,example=True)
-    # # main(0)
     # plot each deaily mean
-    for t in range(len(daily_means)):
-        main(t)
+    # for t in range(len(daily_means)):
+    #     main(t)
     

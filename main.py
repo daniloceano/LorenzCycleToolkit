@@ -17,14 +17,13 @@ Created by:
 Contact:
     danilo.oceano@gmail.com
 
-
-
 """
 from EnergyContents import EnergyContents
 from ConversionTerms import ConversionTerms
 from BoundaryTerms import BoundaryTerms
 from GenerationDissipationTerms import GenerationDissipationTerms
 from BoxData import BoxData
+from compute_terms import calc_budget_diff,calc_residuals
 from metpy.units import units
 import pandas as pd
 import xarray as xr
@@ -32,9 +31,6 @@ import os
 import numpy as np
 import argparse
 
-import cartopy.crs as ccrs
-import matplotlib.pyplot as plt
-from shapely.geometry.polygon import Polygon
 
         
 def check_create_folder(DirName):
@@ -51,33 +47,6 @@ def convert_lon(df,LonIndexer):
     df = df.sortby(df[LonIndexer])
     return df
 
-# Plot the area limited by the lons and lats values that will be used
-# for the computations
-def plot_area(min_lon, max_lon,min_lat, max_lat, outdir) :
-
-    plt.close('all')
-    datacrs = ccrs.PlateCarree() # projection
-    fig = plt.figure(figsize=(8, 8.5))
-    ax = fig.add_axes([0.05, 0.05, 0.9, 0.9], projection=datacrs,
-                  frameon=True)
-    ax.set_extent([min_lon-20, max_lon+20, max_lat+20, min_lat-20], crs=datacrs)
-    ax.coastlines(zorder = 1)
-    ax.stock_img()
-    # plot selected domain
-    # create a sample polygon, `pgon`
-    pgon = Polygon(((min_lon, min_lat),
-            (min_lon, max_lat),
-            (max_lon, max_lat),
-            (max_lon, min_lat),
-            (min_lon, min_lat)))
-    ax.add_geometries([pgon], crs=datacrs, 
-                      facecolor='red', edgecolor='k', linewidth = 3,
-                      alpha=0.5, zorder = 3)
-    ax.gridlines(draw_labels=True,zorder=2)    
-
-    plt.title('Box defined for compuations \n', fontsize = 22)
-    plt.savefig(outdir+'/Figures/box.png')
-    print('\nCreated figure with box defined for computations')
 
 # Function for opening the data
 def get_data(infile, varlist, min_lon, max_lon, min_lat, max_lat):   
@@ -137,46 +106,7 @@ def get_data(infile, varlist, min_lon, max_lon, min_lat, max_lat):
         return LonIndexer, LatIndexer, TimeIndexer, LevelIndexer, tair, hgt,\
             omega, u, v
 
-# Compute the budget equation for the energy terms (Az, Ae, Kz and Ke) using
-# finite differences method (used for estimating generation, disspation and
-# boundary work terms as residuals)
-def calc_budget_diff(df,time):
-    # get time delta in seconds
-    dt = float((time[1]-time[0]).astype('timedelta64[h]'
-                                    ) / np.timedelta64(1, 's'))
-    # Estimate budget values for all energy terms
-    for term in ['Az','Ae','Kz','Ke']:
-        name = '∂'+term+'/∂t (finite diff.)'
-        print('\nEstimating '+name)
-        # forward finite difference for the first value
-        forward = (df[term].iloc[1]-df[term].iloc[0])/dt
-        # central finite differentes for the second and the penultimate values
-        central_second = (df[term].iloc[2]-df[term].iloc[0])/dt
-        central_penultimate = (df[term].iloc[-1]-df[term].iloc[-3])/dt
-        # fourth order for the third to antepenultimate value
-        fourthorder1 = (4/3)*(
-            df[term].iloc[3:-1].values-df[term].iloc[1:-3].values)/(2*dt)
-        fourthorder2 = (1/3)*(
-            df[term].iloc[4:].values-df[term].iloc[1:-3].values)/(4*dt)
-        fourthorder = fourthorder1-fourthorder2
-        # backward finite difference for the last value
-        backward = (df[term].iloc[-1]-df[term].iloc[-2])/dt
-        # put all values together
-        df[name] = [forward,central_second,*fourthorder,
-                    central_penultimate,backward]
-        print(df[name].values*units('W/ m **2'))
-    return df
 
-# Compute the residuals RGz, RKz, RGe and RKe using the budget terms estimated
-# via finite differences
-def calc_residuals(df):
-    print('\nResiduals ('+str((1*units('W/ m **2')).units)+'):')
-    df['RGz'] = df['∂Az/∂t (finite diff.)'] + df['Cz'] + df['Ca'] - df['BAz']
-    df['RGe'] = df['∂Ae/∂t (finite diff.)'] - df['Ca'] + df['Ce'] - df['BAe']
-    df['RKz'] = df['∂Kz/∂t (finite diff.)'] - df['Cz'] - df['Ck'] - df['BKz']
-    df['RKe'] = df['∂Ke/∂t (finite diff.)'] - df['Ce'] + df['Ck'] - df['BKe']
-    print(df[['RGz', 'RKz', 'RGe', 'RKe']])
-    return df
 
 # The main function. It will open the data, read the variables and calls the
 # functions for making the calculations 
@@ -252,7 +182,7 @@ def main():
                      southern_limit=min_lat, northern_limit=max_lat,
                      output_dir=ResultsSubDirectory)
     except:
-        raise SystemExit('ERROR!!!!!')
+        raise SystemExit('Error on creating the box for the computations')
     print('Ok!')
     
     # 5) 
@@ -263,7 +193,7 @@ def main():
         EnergyList = [ec_obj.calc_az(), ec_obj.calc_ae(),
                       ec_obj.calc_kz(),ec_obj.calc_ke()]
     except:
-        raise SystemExit('ERROR!!!!!')
+        raise SystemExit('Error on computing Energy Contents')
     print('Ok!')
     
     # 6)
@@ -274,7 +204,7 @@ def main():
         ConversionList = [ct_obj.calc_cz(),ct_obj.calc_ca(),
                           ct_obj.calc_ck(),ct_obj.calc_ce()]
     except:
-        raise SystemExit('ERROR!!!!!')
+        raise SystemExit('Error on computing Conversion Terms')
     print('Ok!')
     
     # 7)
@@ -286,7 +216,7 @@ def main():
                         bt_obj.calc_bkz(),bt_obj.calc_bke(),
                         bt_obj.calc_boz(),bt_obj.calc_boe()]
     except:
-        raise SystemExit('ERROR!!!!!')
+        raise SystemExit('Error on computing Boundary Terms')
     print('Ok!')
     
     # 8)
@@ -300,7 +230,7 @@ def main():
              GenDissList = [gdt_obj.calc_gz(),gdt_obj.calc_ge(),
                             gdt_obj.calc_dz(),gdt_obj.calc_de()]
     except:
-        raise SystemExit('ERROR!!!!!')
+        raise SystemExit('Error on computing generation/Dissipation Terms')
     print('Ok!')
     
     # 9)
@@ -356,7 +286,8 @@ def main():
     os.system("python plot_vertical.py "+ResultsSubDirectory)
     os.system("python plot_boxplot.py "+ResultsSubDirectory+flag)
     os.system("python draw_cycle.py "+outfile)
-    plot_area(min_lon, max_lon,min_lat,max_lat, ResultsSubDirectory)
+    cmd = "python plot_area.py {0} {1} {2} {3} {4}".format(min_lon, max_lon,min_lat,max_lat, ResultsSubDirectory)
+    os.system(cmd)
 
 if __name__ == "__main__":
     
@@ -366,10 +297,18 @@ if __name__ == "__main__":
     # Arguments passed by user
     # infile = sys.argv[1]
     varlist = './fvars'
-    min_lon = dfbox.loc['min_lon'].values
-    max_lon = dfbox.loc['max_lon'].values
-    min_lat = dfbox.loc['min_lat'].values
-    max_lat = dfbox.loc['max_lat'].values
+    min_lon = float(dfbox.loc['min_lon'].values)
+    max_lon = float(dfbox.loc['max_lon'].values)
+    min_lat = float(dfbox.loc['min_lat'].values)
+    max_lat = float(dfbox.loc['max_lat'].values)
+    
+    # Warns user if limits are wrong
+    if min_lon > max_lon:
+        raise ValueError('Error in box_limits: min_lon > max_lon')
+        quit()
+    if min_lat > max_lat:
+        raise ValueError('Error in box_limits: min_lat > max_lat')
+        quit()
     
     parser = argparse.ArgumentParser(description = "\
 Lorenz Energy Cycle program. \n \
