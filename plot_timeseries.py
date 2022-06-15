@@ -134,11 +134,11 @@ results from the main.py program.")
     comparingG_labels = ['RGz', 'Gz', 'RGe', 'Ge']
     comparingD_labels = ['RKz', 'Dz', 'RKe', 'De']
     # Color for plots
-    linecolors = ['#A53860','#C9B857','#384A0F','#473BF0','#873e23','#A13BF0']
-    cols_energy = ['#D472F4','#F6744C','#37ABB4','#AB9E31']
-    cols_conversion = ['#7699F4','#F77183','#34AF89','#D48B32']
-    cols_residual = ['#9D55B5','#9C4930','#28757A','#6E6620']
-    cols_boundary = ['#D59DB0','#F5734C','#388AB5','#B39E15']
+    cols_energy = ['#3B95BF','#87BF4B','#BFAB37','#BF3D3B']
+    linecolors =  ['#3B95BF','#87BF4B','#BFAB37','#BF3D3B','#873e23','#A13BF0']
+    cols_conversion = ['#3B95BF','#87BF4B','#BFAB37','#BF3D3B']
+    cols_residual =  ['#3B95BF','#87BF4B','#BFAB37','#BF3D3B']
+    cols_boundary =   ['#3B95BF','#87BF4B','#BFAB37','#BF3D3B']
     # Specs for the markers and lines
     # markerfacecolors = ['#A53860','w','#384A0F','w','#873e23', 'w']
     markers = ['s','s','o','o','^','^']         

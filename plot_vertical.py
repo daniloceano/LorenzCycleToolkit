@@ -162,7 +162,7 @@ time step. The user needs to specify the file where the CSV are located")
     Directory = args.Directory
         
     # Specs for plotting
-    linecolors = ['#A53860','#C9B857','#384A0F','#473BF0']
+    linecolors = ['#5EA4BD','#F7EF7C','#96DB6E','#F77B59'] 
     markerfacecolors = ['#A53860','w','#384A0F','w']
     energy_labels = ['Az','Ae','Kz','Ke']
     conversion_labels = ['Cz','Ca','Ck','Ce']

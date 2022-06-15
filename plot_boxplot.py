@@ -139,8 +139,7 @@ Reads an .csv file with all terms from the Lorenz Energy Cycle and make boxplots
     # Specs for plotting    
     conversion_labels = ['Cz','Ca','Ck','Ce']
     energy_labels = ['Az','Ae','Kz','Ke']
-    linecolors = ['#A53860','#C9B857','#384A0F','#473BF0','#873e23','#A13BF0']
-    markerfacecolors = ['#A53860','w','#384A0F','w','#873e23', 'w']
+    linecolors =  ['#3B95BF','#87BF4B','#BFAB37','#BF3D3B','#873e23','#A13BF0']
     markers = ['s','s','o','o','^','^']         
     linestyles = ['-','-','-','-','-','-']
     linewidth = 4   

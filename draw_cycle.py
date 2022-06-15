@@ -241,16 +241,6 @@ results from the main.py program.")
     # Get mean daily values
     daily_means = df.groupby(pd.Grouper(key="Datetime", freq="1D")).mean()
     
-    # # Specs for plotting
-    # energys = ['∂Az/∂t (finite diff.)', '∂Ae/∂t (finite diff.)',
-    #                  '∂Kz/∂t (finite diff.)', '∂Ke/∂t (finite diff.)']
-    # conversions = ['Cz', 'Ca', 'Ck', 'Ce']
-    # residuals = ['RGz', 'RGe', 'RKz', 'RKe']
-    # boundaries = ['BAz','BAe','BKz','BKe'] 
-    # cols_energy = ['#D472F4','#F6744C','#37ABB4','#AB9E31']
-    # cols_conversion = ['#7699F4','#F77183','#34AF89','#D48B32']
-    # cols_residual = ['#9D55B5','#9C4930','#28757A','#6E6620']
-    # cols_boundary = ['#D59DB0','#F5734C','#388AB5','#B39E15']
     
     # Specs for plotting
     energys = ['∂Az/∂t (finite diff.)','∂Kz/∂t (finite diff.)',
@@ -258,10 +248,14 @@ results from the main.py program.")
     conversions = ['Ca', 'Cz', 'Ce', 'Ck']
     residuals = ['RGz', 'RKz', 'RGe', 'RKe']
     boundaries = ['BAz','BKz','BAe','BKe'] 
-    cols_energy = ['#D472F4','#F6744C','#37ABB4','#AB9E31']
-    cols_conversion = ['#7699F4','#F77183','#34AF89','#D48B32']
-    cols_residual = ['#9D55B5','#9C4930','#28757A','#6E6620']
-    cols_boundary = ['#D59DB0','#F5734C','#388AB5','#B39E15']
+    cols_energy = ['#5EA4BD','#F7EF7C','#96DB6E','#F77B59'] 
+    cols_conversion = ['#5C5850','#5C5850','#5C5850','#5C5850']
+    cols_residual = ['#5C5850','#5C5850','#5C5850','#5C5850']
+    cols_boundary =  ['#5C5850','#5C5850','#5C5850','#5C5850']
+    # cols_conversion = ['#6785A6','#254A73','#A8893C','#DE8268']
+    # cols_residual = ['#406F80','#807B40','#578040','#80402E']
+    # cols_boundary = ['#1C4080','#8A8A00','#169A00','#AE241C']
+
     
     # Adjust circle size proportionally to the energy budget
     x = daily_means[energys]
@@ -274,6 +268,6 @@ results from the main.py program.")
     
     main(0,example=True)
     # plot each deaily mean
-    # for t in range(len(daily_means)):
-    #     main(t)
+    for t in range(len(daily_means)):
+        main(t)
     
