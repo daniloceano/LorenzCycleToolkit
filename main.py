@@ -286,6 +286,7 @@ def main():
     os.system("python plot_vertical.py "+ResultsSubDirectory)
     os.system("python plot_boxplot.py "+ResultsSubDirectory+flag)
     os.system("python draw_cycle.py "+outfile)
+    os.system("python LorenzPhaseSpace.py "+outfile)
     cmd = "python plot_area.py {0} {1} {2} {3} {4}".format(min_lon, max_lon,min_lat,max_lat, ResultsSubDirectory)
     os.system(cmd)
 
