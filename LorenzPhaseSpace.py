@@ -103,22 +103,22 @@ def plotSurface():
 
 def MarkerSizeKe(df):
     
-    msizes = [60,100,140,200,240]
-    intervals = [3e5,3.5e5,4.5e5,5e5]
+    msizes = [200,400,600,800,1000]
+    intervals = [3e5,4e5,5e5,6e5]
 
 
     sizes = []
     for val in df['Ke']:
         if val <= intervals[0]:
-            sizes.append(60)
+            sizes.append(msizes[0])
         elif val > intervals[0] and val <= intervals[1]:
-            sizes.append(100)
+            sizes.append(msizes[1])
         elif val > intervals[1] and val <= intervals[2]:
-            sizes.append(140)
+            sizes.append(msizes[2])
         elif val > intervals[2] and val <= intervals[3]:
-            sizes.append(200)
+            sizes.append(msizes[3])
         else:
-            sizes.append(240)
+            sizes.append(msizes[4])
     df['sizes'] = sizes
     
     # Plot legend
@@ -133,12 +133,13 @@ def MarkerSizeKe(df):
     l4 = plt.scatter([],[],c='k', s=msizes[3],label=labels[3])
     l5 = plt.scatter([],[],c='k', s=msizes[4],label=labels[4])
     leg = plt.legend([l1, l2, l3, l4, l5], labels, ncol=1, frameon=True,
-                     fontsize=6, handlelength = 0.5, handleheight = 3,
-                     borderpad = 1.5, scatteryoffsets = [0.1],
-                handletextpad=1.5, title='Eddy Kinect Engery (Ke)', scatterpoints = 1, loc = 1,
-                bbox_to_anchor=(-0.22, -0.56, 0.5, 1),labelcolor = '#383838')
+                     fontsize=10, handlelength = 0.5, handleheight = 3,
+                     borderpad = 1.5, scatteryoffsets = [0.1], framealpha = 1,
+                handletextpad=1.5, title='Eddy Kinect Energy (Ke - '+r' $J\,m^{-2})$',
+                scatterpoints = 1, loc = 1,
+                bbox_to_anchor=(0.7, -0.6, 0.5, 1),labelcolor = '#383838')
     plt.setp(leg.get_title(), color='#383838')
-    plt.setp(leg.get_title(),fontsize=5)
+    plt.setp(leg.get_title(),fontsize=12)
     for i in range(len(leg.legendHandles)):
         leg.legendHandles[i].set_color('#383838')
         leg.legendHandles[i].set_edgecolor('gray')
@@ -150,13 +151,12 @@ def plot2D():
     x = smoothed['Ca']
     y = smoothed['Ck']
     z = smoothed['Ge']
-    w = smoothed['Ke']
     
     plt.close('all')
-    plt.plot(fig_size=(30,30))
-    plt.gcf().subplots_adjust(bottom=0.15)
-    plt.gcf().subplots_adjust(right=0.98)
-    plt.gcf().subplots_adjust(left=0.135)
+    fig = plt.figure(figsize=(10,10))
+    # plt.gcf().subplots_adjust(bottom=0.15)
+    plt.gcf().subplots_adjust(right=0.85)
+    # plt.gcf().subplots_adjust(left=0.135)
     ax = plt.gca()
     
     # Line plot
@@ -178,7 +178,7 @@ def plot2D():
         alpha, offsetalpha = 0.3, 20
         offsetx,offsety = 8.8,17.6
         # c,lw = '#65b6fc',2
-        c,lw = 'grey',2
+        c,lw = 'grey',2.5
         ax.axhline(y=0+(i/offsetx),zorder=0+(i/5),linewidth=lw,
                    alpha=alpha-(i/offsetalpha),c=c)
         ax.axhline(y=0-(i/offsetx),zorder=0+(i/5),linewidth=lw,
@@ -189,60 +189,75 @@ def plot2D():
                alpha=alpha-(i/offsetalpha),c=c)
         
     # Labels
-    ax.set_xlabel('Conversion from zonal to eddy Kinetic Energy (Ck)',
-                  fontsize=10,labelpad=18,c='#383838')
-    ax.set_ylabel('Conversion from zonal to eddy Potential Energy (Ca)',
-                  fontsize=10,labelpad=20,c='#383838')
-    plt.tick_params(labelsize=8)
+    ax.set_xlabel('Conversion from zonal to eddy Kinetic Energy (Ck - '+r' $W\,m^{-2})$',
+                  fontsize=12,labelpad=40,c='#383838')
+    ax.set_ylabel('Conversion from zonal to eddy Potential Energy (Ca - '+r' $W\,m^{-2})$',
+                  fontsize=12,labelpad=40,c='#383838')
+    plt.tick_params(labelsize=10)
     
     # Colorbar
-    cbar = plt.colorbar(dots, extend='both')
-    cbar.ax.set_ylabel('Generation of eddy Potential Energy (Ge)',
-                       rotation=270,fontsize=10,verticalalignment='bottom',
-                       c='#383838',labelpad=20)
+    cax = fig.add_axes([ax.get_position().x1+0.01,
+                        ax.get_position().y0+0.32,0.02,ax.get_position().height/1.74])
+    cbar = plt.colorbar(dots, extend='both',cax=cax)
+    cbar.ax.set_ylabel('Generation of eddy Potential Energy (Ge - '+r' $W\,m^{-2})$',
+                       rotation=270,fontsize=12,verticalalignment='bottom',
+                       c='#383838',labelpad=40)
     for t in cbar.ax.get_yticklabels():
-         t.set_fontsize(8)
+         t.set_fontsize(10)
 
     # Annotate plot
     system = outfile.split('/')[-1].split('_')[0]
     datasource = outfile.split('/')[-1].split('_')[1]
     start, end = str(df['Datetime'][0]),str(df['Datetime'].iloc[-1]) 
     ax.text(0,1.1,'System: '+system+' - Data from: '+datasource,
-            fontsize=12,c='#242424',horizontalalignment='left',
+            fontsize=16,c='#242424',horizontalalignment='left',
             transform=ax.transAxes)
-    ax.text(0,1.06,'Start (A):',fontsize=8,c='#242424',
+    ax.text(0,1.06,'Start (A):',fontsize=14,c='#242424',
             horizontalalignment='left',transform=ax.transAxes)
-    ax.text(0,1.025,'End (Z):',fontsize=8,c='#242424',
+    ax.text(0,1.025,'End (Z):',fontsize=14,c='#242424',
             horizontalalignment='left',transform=ax.transAxes)
-    ax.text(0.14,1.06,start,fontsize=8,c='#242424',
+    ax.text(0.14,1.06,start,fontsize=14,c='#242424',
             horizontalalignment='left',transform=ax.transAxes)
-    ax.text(0.14,1.025,end,fontsize=8,c='#242424',
+    ax.text(0.14,1.025,end,fontsize=14,c='#242424',
             horizontalalignment='left',transform=ax.transAxes)
-    ax.text(-0.11,0.1,'Eddy is providing potential energy \n to the mean flow',
-            rotation=90,fontsize=6,horizontalalignment='center',c='#19616C',
+    annotate_fs = 10
+    ax.text(-0.08,0.1,'Eddy is providing potential energy \n to the mean flow',
+            rotation=90,fontsize=annotate_fs,horizontalalignment='center',c='#19616C',
             transform=ax.transAxes)
-    ax.text(-0.11,0.6,'Eddy is gaining potential energy \n from the mean flow',
-            rotation=90,fontsize=6,horizontalalignment='center',c='#CF6D66',
+    ax.text(-0.08,0.7,'Eddy is gaining potential energy \n from the mean flow',
+            rotation=90,fontsize=annotate_fs,horizontalalignment='center',c='#CF6D66',
             transform=ax.transAxes)
-    ax.text(0.17,-0.11,'Eddy is gaining kinetic energy \n from the mean flow',
-            fontsize=6,horizontalalignment='center',c='#CF6D66',
+    ax.text(0.17,-0.07,'Eddy is gaining kinetic energy \n from the mean flow',
+            fontsize=annotate_fs,horizontalalignment='center',c='#CF6D66',
             transform=ax.transAxes)
-    ax.text(0.7,-0.11,'Eddy is providing kinetic energy \n to the mean flow',
-            fontsize=6,horizontalalignment='center',c='#19616C',
+    ax.text(0.7,-0.07,'Eddy is providing kinetic energy \n to the mean flow',
+            fontsize=annotate_fs,horizontalalignment='center',c='#19616C',
             transform=ax.transAxes)
-    ax.text(1.2,0.2,'Subisidence decreases \n eddy potential energy',
-            rotation=270,fontsize=6,horizontalalignment='center',c='#19616C'
+    ax.text(1.11,0.51,'Subisidence decreases \n eddy potential energy',
+            rotation=270,fontsize=annotate_fs,horizontalalignment='center',c='#19616C'
             ,transform=ax.transAxes)
-    ax.text(1.2,0.65,'Latent heat release feeds \n eddy potential energy',
-            rotation=270,fontsize=6,horizontalalignment='center',c='#CF6D66',
+    ax.text(1.11,0.75,'Latent heat release feeds \n eddy potential energy',
+            rotation=270,fontsize=annotate_fs,horizontalalignment='center',c='#CF6D66',
             transform=ax.transAxes)
+    ax.text(0.17,0.03,'Barotropic instability',
+            fontsize=annotate_fs,horizontalalignment='center',c='#660066',
+            verticalalignment='center', transform=ax.transAxes)
+    ax.text(0.16,0.97,'Barotropic and baroclinic \n instabilities',
+            fontsize=annotate_fs,horizontalalignment='center',c='#800000',
+            verticalalignment='center', transform=ax.transAxes)
+    ax.text(0.7,0.03,'Eddy is feeding the local atmospheric circulation',
+            fontsize=annotate_fs,horizontalalignment='center',c='#000066',
+            verticalalignment='center', transform=ax.transAxes)
+    ax.text(0.7,0.97,'Baroclinic instability',
+            fontsize=annotate_fs,horizontalalignment='center',c='#660066',
+            verticalalignment='center', transform=ax.transAxes)
     
     # Marking start and end of the system
     ax.text(x[0], y[0],'A',
-            zorder=101,fontsize=12,horizontalalignment='center',
+            zorder=101,fontsize=22,horizontalalignment='center',
             verticalalignment='center')
     ax.text(x.iloc[-1], y.iloc[-1], 'Z',
-            zorder=101,fontsize=12,horizontalalignment='center',
+            zorder=101,fontsize=22,horizontalalignment='center',
             verticalalignment='center')
         
     fname = FigsDir+"LPS.png"
