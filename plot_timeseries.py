@@ -131,7 +131,7 @@ results from the main.py program.")
     gendiss_labels = ['Gz', 'Ge', 'Dz', 'De']
     residuals_labels = ['RGz', 'RGe', 'RKz', 'RKe']
     # This is for comparing terms estimated as residuals with terms computed  
-    comparingG_labels = ['RGz', 'Gz', 'RGe', 'Ge']
+    comparingG_labels = ['RGz', 'RGe', 'Gz', 'Ge']
     comparingD_labels = ['RKz', 'Dz', 'RKe', 'De']
     # Color for plots
     cols_energy = ['#3B95BF','#87BF4B','#BFAB37','#BF3D3B']
