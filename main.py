@@ -30,6 +30,7 @@ import xarray as xr
 import os
 import numpy as np
 import argparse
+from metpy.constants import g
 
 
         
@@ -87,8 +88,12 @@ def get_data(infile, varlist, min_lon, max_lon, min_lat, max_lat):
     # Stores data as separated variables
     tair = data[dfVars.loc['Air Temperature']['Variable']] \
         * units(dfVars.loc['Air Temperature']['Units']).to('K')
-    hgt = data[dfVars.loc['Geopotential Height']['Variable']]\
-        *units(dfVars.loc['Geopotential Height']['Units']).to('gpm')
+    if args.geopotential:
+         hgt = (data[dfVars.loc['Geopotential']['Variable']]\
+            *units(dfVars.loc['Geopotential']['Units'])/g).to('gpm')
+    else:
+        hgt = data[dfVars.loc['Geopotential Height']['Variable']]\
+            *units(dfVars.loc['Geopotential Height']['Units']).to('gpm')
     omega = data[dfVars.loc['Omega Velocity']['Variable']]*\
         units(dfVars.loc['Omega Velocity']['Units']).to('Pa/s')
     u = data[dfVars.loc['Eastward Wind Component']['Variable']]*\
@@ -325,6 +330,9 @@ It takes an input NetCDF file and crop the data for the bounding box specified\
     parser.add_argument("-r", "--residuals", default = False, action='store_true',
     help = "Flag for computing the Dissipation and Generation terms as\
   residuals (needs to provide the 3D friction terms in the infile)")
+    parser.add_argument("-g", "--geopotential", default = False,
+    action='store_true',
+    help = "Flag for using geopotential instead of geopotential height")
     args = parser.parse_args()
     infile = args.infile
         
