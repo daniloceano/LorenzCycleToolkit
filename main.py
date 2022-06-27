@@ -89,8 +89,8 @@ def get_data(infile, varlist, min_lon, max_lon, min_lat, max_lat):
     tair = data[dfVars.loc['Air Temperature']['Variable']] \
         * units(dfVars.loc['Air Temperature']['Units']).to('K')
     if args.geopotential:
-         hgt = (data[dfVars.loc['Geopotential']['Variable']]\
-            *units(dfVars.loc['Geopotential']['Units'])/g).to('gpm')
+         hgt = (data[dfVars.loc['Geopotential']['Variable']] \
+        * units(dfVars.loc['Geopotential']['Units'])/g).metpy.convert_units('gpm')
     else:
         hgt = data[dfVars.loc['Geopotential Height']['Variable']]\
             *units(dfVars.loc['Geopotential Height']['Units']).to('gpm')
