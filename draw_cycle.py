@@ -27,22 +27,22 @@ import argparse
 
 def Cz(ax,value,i,width,head_width):
     if isinstance(value, str) or (isinstance(value, float) and value > 0):
-        ax.arrow(-0.635, 0.5, 0.78, 0, head_width = head_width, width = width,
+        ax.arrow(-0.637, 0.5, 0.78, 0, head_width = head_width, width = width,
                   length_includes_head=True,
                   fc=cols_conversion[i],ec=cols_conversion[i],
                   clip_on=False,transform=ax.transAxes)
         
     else:
-        ax.arrow(0.137, 0.5, -0.775, 0, head_width = head_width, width = width,
+        ax.arrow(0.139, 0.5, -0.775, 0, head_width = head_width, width = width,
           length_includes_head=True,
           fc=cols_conversion[i],ec=cols_conversion[i],
           clip_on=False,transform=ax.transAxes)
-    ax.text(-0.25,0.55,value,fontdict={'fontsize':18},transform=ax.transAxes,
+    ax.text(-0.25,0.57,value,fontdict={'fontsize':18},transform=ax.transAxes,
             verticalalignment='center',horizontalalignment='center')
 
 def Ck(ax,value,i,width,head_width):
     if isinstance(value, str) or (isinstance(value, float) and value > 0):
-        ax.arrow(0.5, 0.95, 0, 0.525, head_width = head_width,width = width,
+        ax.arrow(0.5, 0.952, 0, 0.52, head_width = head_width,width = width,
                  fc=cols_conversion[i],ec=cols_conversion[i],
                  clip_on=False,transform = ax.transAxes)
     else:
@@ -70,7 +70,7 @@ def Ca(ax,value,i,width,head_width):
 
 def Ce(ax,value,i,width,head_width):
     if isinstance(value, str) or (isinstance(value, float) and value > 0):
-        ax.arrow(0.865, 0.5, 0.78, 0, head_width = head_width, width = width,
+        ax.arrow(0.86, 0.5, 0.78, 0, head_width = head_width, width = width,
                   length_includes_head=True,
                   fc=cols_conversion[i],ec=cols_conversion[i],
                   clip_on=False,transform=ax.transAxes)
@@ -79,7 +79,7 @@ def Ce(ax,value,i,width,head_width):
               fc=cols_conversion[i],ec=cols_conversion[i],
                        length_includes_head=True,
               clip_on=False,transform=ax.transAxes)
-    ax.text(1.25,0.44,value,fontdict={'fontsize':18},transform=ax.transAxes,
+    ax.text(1.25,0.42,value,fontdict={'fontsize':18},transform=ax.transAxes,
             verticalalignment='center',horizontalalignment='center')
 
 def RGz_RKz(ax,value,i,width,head_width):
@@ -89,7 +89,7 @@ def RGz_RKz(ax,value,i,width,head_width):
           fc=cols_residual[i],ec=cols_residual[i],
           clip_on=False,transform=ax.transAxes)
     else:
-        ax.arrow(0.5, 0.95, 0, 0.275, head_width = head_width, width = width,
+        ax.arrow(0.5, 0.955, 0, 0.275, head_width = head_width, width = width,
           fc=cols_residual[i],ec=cols_residual[i],
                     length_includes_head=True,
           clip_on=False,transform=ax.transAxes)
@@ -114,12 +114,12 @@ def RGe_RKe(ax,value,i,width,head_width):
 
 def BAz_BAe(ax,value,i,width,head_width):
      if isinstance(value, str) or (isinstance(value, float) and value > 0):
-         ax.arrow(-0.13,0.5, 0.275, 0, head_width = head_width, width = width,
+         ax.arrow(-0.135,0.5, 0.275, 0, head_width = head_width, width = width,
                   length_includes_head=True,
                   fc=cols_boundary[i],ec=cols_boundary[i],
                   clip_on=False,transform=ax.transAxes)
      else:
-         ax.arrow(0.15,0.5, -0.275, 0, head_width = head_width, width = width,
+         ax.arrow(0.14,0.5, -0.275, 0, head_width = head_width, width = width,
                   fc=cols_boundary[i],ec=cols_boundary[i],
            length_includes_head=True,
            clip_on=False,transform=ax.transAxes)
@@ -128,12 +128,12 @@ def BAz_BAe(ax,value,i,width,head_width):
 
 def BKz_BKe(ax,value,i,width,head_width):
     if isinstance(value, str) or (isinstance(value, float) and value > 0):
-        ax.arrow(1.13,0.5, -0.275, 0, head_width = head_width, width = width,
+        ax.arrow(1.14,0.5, -0.275, 0, head_width = head_width, width = width,
                  length_includes_head=True,
              fc=cols_boundary[i],ec=cols_boundary[i],
              clip_on=False,transform=ax.transAxes)
     else:
-        ax.arrow(0.86,0.5, 0.275, 0, head_width = head_width, width = width,
+        ax.arrow(0.863,0.5, 0.275, 0, head_width = head_width, width = width,
              fc=cols_boundary[i],ec=cols_boundary[i],
                       length_includes_head=True,
              clip_on=False,transform=ax.transAxes)
@@ -181,7 +181,8 @@ def main(time, example=False):
                 conversion = round(data[conversions[i]],1)
                 residual = round(data[residuals[i]],1)
                 boundary = round(data[boundaries[i]],1)
-                alpha = 0.2+(0.8*energy_scaled[energys[i]].iloc[time])
+                # alpha = 0.2+(0.8*energy_scaled[energys[i]].iloc[time])
+                alpha = .9
                 width_conversion = 0.01+(0.05*conversion_scaled[conversions[i]].iloc[time])
                 width_boundary = 0.01+(0.05*conversion_scaled[boundaries[i]].iloc[time])
                 width_residual = 0.01+(0.05*conversion_scaled[residuals[i]].iloc[time])
