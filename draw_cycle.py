@@ -218,8 +218,9 @@ def main(time, example=False):
     if example == True:
         plt.savefig(FigsDir+'LEC_example.png')
     else:
-        print(df.iloc[time]['Date'])
-        plt.savefig(FigsDir+'LEC_'+str(daily_means.index[time])+'.png')
+        datestr = daily_means.index[time].strftime("%Y-%m-%d")
+        print('Created LEC (daily mean) cyle for: '+datestr)
+        plt.savefig(FigsDir+'LEC_'+datestr+'.png')
 
 
 if __name__ == "__main__":

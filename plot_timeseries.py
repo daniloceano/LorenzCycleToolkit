@@ -41,8 +41,10 @@ def plot_timeseries(df,term_list,linecolor,fname,label,outdir):
     # Loop trhough terms that are being plotted..
     for term,i in zip(term_list,range(len(term_list))):
         plt.plot(times,df[term],c=linecolor[i],label=term,
-                 linewidth=linewidth)
-    plt.grid(b=True,c='gray',linewidth=0.25,linestyle='dashdot')
+                 linewidth=linewidth,
+                 marker=markers[i],markeredgecolor='#383838',
+                 markerfacecolor=markercolor[i])
+    plt.grid(visible=True,c='gray',linewidth=0.25,linestyle='dashdot')
     plt.tick_params(axis='x', labelrotation=20)
     plt.legend()
     plt.xlim(times[0],times[-1])
@@ -141,9 +143,10 @@ results from the main.py program.")
     cols_boundary =   ['#3B95BF','#87BF4B','#BFAB37','#BF3D3B']
     # Specs for the markers and lines
     # markerfacecolors = ['#A53860','w','#384A0F','w','#873e23', 'w']
-    markers = ['s','s','o','o','^','^']         
+    markers = ['s','o','^','v','<','>']     
+    markercolor =  ['#59c0f0','#b0fa61','#f0d643','#f75452','#f07243','#bc6ff7']   
     linestyles = ['-','-','-','-','-','-']
-    linewidth = 5 
+    linewidth = 3 
     
     if args.residuals:
         boundary_labels = ['BAz','BAe','BKz','BKe']
