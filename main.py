@@ -33,7 +33,6 @@ import argparse
 from metpy.constants import g
 
 
-        
 def check_create_folder(DirName):
     if not os.path.exists(DirName):
                 os.makedirs(DirName)
@@ -41,16 +40,14 @@ def check_create_folder(DirName):
     else:
         print(DirName+' directory exists')
  
-        
 # Convert longitudes from 0:360 range to -180:180
 def convert_lon(df,LonIndexer):
     df.coords[LonIndexer] = (df.coords[LonIndexer] + 180) % 360 - 180
     df = df.sortby(df[LonIndexer])
     return df
 
-
 # Function for opening the data
-def get_data(infile, varlist, min_lon, max_lon, min_lat, max_lat):   
+def get_data(infile, varlist):   
     print('Variables specified by the user in: '+varlist)
     print('Attempting to read '+varlist+' file...')
     try:
@@ -62,16 +59,16 @@ def get_data(infile, varlist, min_lon, max_lon, min_lat, max_lat):
     print('List of variables found:')
     print(dfVars)
     # Get data indexers
-    LonIndexer = dfVars.loc['Longitude']['Variable']
-    LatIndexer = dfVars.loc['Latitude']['Variable']
-    TimeIndexer = dfVars.loc['Time']['Variable']
-    LevelIndexer = dfVars.loc['Vertical Level']['Variable']
+    LonIndexer,LatIndexer,TimeIndexer,LevelIndexer = \
+      dfVars.loc['Longitude']['Variable'],dfVars.loc['Latitude']['Variable'],\
+      dfVars.loc['Time']['Variable'],dfVars.loc['Vertical Level']['Variable']
     print('Ok!')
     print('Opening inpyt data...')
     try:
         full_data = convert_lon(xr.open_dataset(infile),LonIndexer)
     except:
-        raise SystemExit('ERROR!!!!!\n COULD NOT OPEN INPUT DATA')
+        raise SystemExit('ERROR!!!!!\n Could not open data. Check if path is\
+correct and file format (should be .nc)')
     print('Ok!')
     # Sort data coordinates - data from distinc sources might have different
     # arrangements, which could affect the results from the integrations
@@ -85,21 +82,21 @@ def get_data(infile, varlist, min_lon, max_lon, min_lat, max_lat):
         full_data = full_data.fillna(0)
     # load data into memory (code optmization)
     data = full_data.load()
-    # Stores data as separated variables
+    # Stores data as separated variables and give them correct units
     tair = data[dfVars.loc['Air Temperature']['Variable']] \
         * units(dfVars.loc['Air Temperature']['Units']).to('K')
-    if args.geopotential:
-         hgt = (data[dfVars.loc['Geopotential']['Variable']] \
-        * units(dfVars.loc['Geopotential']['Units'])/g).metpy.convert_units('gpm')
-    else:
-        hgt = data[dfVars.loc['Geopotential Height']['Variable']]\
-            *units(dfVars.loc['Geopotential Height']['Units']).to('gpm')
     omega = data[dfVars.loc['Omega Velocity']['Variable']]*\
         units(dfVars.loc['Omega Velocity']['Units']).to('Pa/s')
     u = data[dfVars.loc['Eastward Wind Component']['Variable']]*\
         units(dfVars.loc['Eastward Wind Component']['Units'])
     v = data[dfVars.loc['Northward Wind Component']['Variable']]*\
         units(dfVars.loc['Northward Wind Component']['Units'])
+    if args.geopotential:
+         hgt = (data[dfVars.loc['Geopotential']['Variable']] \
+        * units(dfVars.loc['Geopotential']['Units'])/g).metpy.convert_units('gpm')
+    else:
+        hgt = data[dfVars.loc['Geopotential Height']['Variable']]\
+            *units(dfVars.loc['Geopotential Height']['Units']).to('gpm')
     if not args.residuals:
         u_stress = data[dfVars.loc['Zonal Wind Stress']['Variable']]*\
             units(dfVars.loc['Zonal Wind Stress']['Units'])
@@ -111,37 +108,44 @@ def get_data(infile, varlist, min_lon, max_lon, min_lat, max_lat):
         return LonIndexer, LatIndexer, TimeIndexer, LevelIndexer, tair, hgt,\
             omega, u, v
 
-
-
-# The main function. It will open the data, read the variables and calls the
-# functions for making the calculations 
-def main():
-    
-    print('')
-    
+#---------------------------------------------------------------------------
+# Computes the Lorenz Energy Cycle using an eulerian framework.
+# It requires the box_lims file with the limits for the box used for the
+# computations, which is fixed in time. IN this framework we can analyse how
+# the eddies contribute for the local energy cycle.
+def LEC_eulerian():
+    print('Computing energetics using eulerian framework')
+    # Box limits used for compuations
+    dfbox = pd.read_csv('./box_limits',header=None,delimiter=';',index_col=0)
+    min_lon = float(dfbox.loc['min_lon'].values)
+    max_lon = float(dfbox.loc['max_lon'].values)
+    min_lat = float(dfbox.loc['min_lat'].values)
+    max_lat = float(dfbox.loc['max_lat'].values)
+    # Warns user if limits are wrong
+    if min_lon > max_lon:
+        raise ValueError('Error in box_limits: min_lon > max_lon')
+        quit()
+    if min_lat > max_lat:
+        raise ValueError('Error in box_limits: min_lat > max_lat')
+        quit()
     # 2) Open the data
-    data = get_data(args.infile, varlist, min_lon, max_lon, min_lat, max_lat)   
+    data = get_data(infile, varlist)   
     # Data indexers
-    LonIndexer, LatIndexer, TimeName, VerticalCoordIndexer = data[0],data[1],data[2], data[3]
+    LonIndexer, LatIndexer, TimeName, VerticalCoordIndexer = \
+        data[0], data[1], data[2], data[3]
     # Data variables
-    tair = data[4]
-    hgt = data[5]
-    omega = data[6]
-    u = data[7]
-    v = data[8]
+    tair, hgt, omega, u, v = data[4], data[5], data[6], data[7], data[8]
+    pres = tair[VerticalCoordIndexer]*units(
+        tair[VerticalCoordIndexer].units).to('Pa')
     if not args.residuals:
         u_stress = data[9]
         v_stress = data[10]
     else:
         u_stress = v*np.nan
         v_stress = v*np.nan
-    pres = tair[VerticalCoordIndexer]*units(
-        tair[VerticalCoordIndexer].units).to('Pa')
-    #
     print('\n Parameters spcified for the bounding box:')
     print('min_lon, max_lon, min_lat, max_lat: '+str([min_lon,
                                                      max_lon, min_lat, max_lat]))
-    
     # 3) Create folder to save results
     # Convert box limits to strings for apprending to file name
     lims = ''
@@ -170,26 +174,21 @@ def main():
     check_create_folder(ResultsMainDirectory)
     # Check if a directory for current data exists. If not, creates it
     check_create_folder(ResultsSubDirectory)
-                
     # 4) 
     print('Computing zonal and area averages and eddy terms for each variable')
     print('and the static stability parameter...')
     try:
         box_obj = BoxData(TemperatureData=tair, PressureData=pres,
-                     UWindComponentData=u, VWindComponentData=v,
-                     ZonalWindStressData=u_stress,
-                     MeridionalWindStressData=v_stress,
-                     OmegaData=omega, HgtData=hgt,
-                     LonIndexer=LonIndexer, LatIndexer=LatIndexer,
-                     TimeName=TimeName,
-                     VerticalCoordIndexer=VerticalCoordIndexer,
-                     western_limit=min_lon, eastern_limit=max_lon,
-                     southern_limit=min_lat, northern_limit=max_lat,
-                     output_dir=ResultsSubDirectory)
+        UWindComponentData=u, VWindComponentData=v,
+        ZonalWindStressData=u_stress,MeridionalWindStressData=v_stress,
+        OmegaData=omega, HgtData=hgt,LonIndexer=LonIndexer, 
+        LatIndexer=LatIndexer, VerticalCoordIndexer=VerticalCoordIndexer,
+        TimeName=TimeName,western_limit=min_lon, eastern_limit=max_lon,
+        southern_limit=min_lat, northern_limit=max_lat,
+        output_dir=ResultsSubDirectory)
     except:
         raise SystemExit('Error on creating the box for the computations')
     print('Ok!')
-    
     # 5) 
     print('\n------------------------------------------------------------------------')
     print('Computing zonal and eddy kinectic and available potential energy terms')
@@ -200,7 +199,6 @@ def main():
     except:
         raise SystemExit('Error on computing Energy Contents')
     print('Ok!')
-    
     # 6)
     print('\n------------------------------------------------------------------------')
     print('Computing the conversion terms between energy contents') 
@@ -211,7 +209,6 @@ def main():
     except:
         raise SystemExit('Error on computing Conversion Terms')
     print('Ok!')
-    
     # 7)
     print('\n------------------------------------------------------------------------')
     print('Computing the boundary terms') 
@@ -223,7 +220,6 @@ def main():
     except:
         raise SystemExit('Error on computing Boundary Terms')
     print('Ok!')
-    
     # 8)
     print('\n------------------------------------------------------------------------')
     print('Computing generation and disspiation terms') 
@@ -237,7 +233,6 @@ def main():
     except:
         raise SystemExit('Error on computing generation/Dissipation Terms')
     print('Ok!')
-    
     # 9)
     print('\nOrganising results in a Pandas DataFrame')
     # First, extract dates to construct a dataframe
@@ -266,20 +261,17 @@ def main():
     print('Estimating budget terms (∂X/∂t) using finite differences ')
     df = calc_budget_diff(df,dates) 
     print('Ok!')
-    
     # 11) 
     print('\n------------------------------------------------------------------------')
     print('Computing residuals RGz, RKz, RGe and RKe')
     df = calc_residuals(df)
     print('Ok!')
-    
     # 12) save file
     print('\nCreating a csv to store results...')
     outfile = ResultsSubDirectory+'/'+outfile_name+'.csv'
     df.to_csv(outfile)
     print(outfile+' created') 
     print('All done!')
-    
     # 13) Make figures
     FigsDirectory = ResultsSubDirectory+'/Figures'
     check_create_folder(FigsDirectory)
@@ -294,47 +286,46 @@ def main():
     os.system("python LorenzPhaseSpace.py "+outfile)
     cmd = "python plot_area.py {0} {1} {2} {3} {4}".format(min_lon, max_lon,min_lat,max_lat, ResultsSubDirectory)
     os.system(cmd)
+    
+#---------------------------------------------------------------------------
+# Computes the Lorenz Energy Cycle using an eulerian framework.
+# It requires the box_lims file with the limits for the box used for the
+# computations, which is fixed in time. IN this framework we can analyse how
+# the eddies contribute for the local energy cycle.
+def LEC_lagrangian():
+    print('Computing energetics using eulerian framework')
 
 if __name__ == "__main__":
-    
-    # Box limits used for compuations
-    dfbox = pd.read_csv('./box_limits',header=None,delimiter=';',index_col=0)
-    
-    # Arguments passed by user
-    # infile = sys.argv[1]
-    varlist = './fvars'
-    min_lon = float(dfbox.loc['min_lon'].values)
-    max_lon = float(dfbox.loc['max_lon'].values)
-    min_lat = float(dfbox.loc['min_lat'].values)
-    max_lat = float(dfbox.loc['max_lat'].values)
-    
-    # Warns user if limits are wrong
-    if min_lon > max_lon:
-        raise ValueError('Error in box_limits: min_lon > max_lon')
-        quit()
-    if min_lat > max_lat:
-        raise ValueError('Error in box_limits: min_lat > max_lat')
-        quit()
-    
     parser = argparse.ArgumentParser(description = "\
-Lorenz Energy Cycle program. \n \
-It takes an input NetCDF file and crop the data for the bounding box specified\
- at the 'box_lims' file. An auxilliary 'fvars' file is also needed, where it is\
- specified the names used for each variable. It computates the energy, \
- conversion, boundary, generation and dissipation terms. The results are stored\
- as csv files in the 'LEC_results' directory on ../ and it also creates figures\
- for visualising the results.")
-    parser.add_argument("infile", help = "Input .nc file with temperature,\
+Lorenz Energy Cycle (LEC) program. \n \
+The program can compute the LEC using two distinct frameworks:\
+    1) Lagragian framework. A box is definid in the box_lims' file and then the \
+       energetics are computed for a fixed domain.\
+    2) Eulerian framework. The domain is not fixed and follows the system using \
+       the track file.\
+ Both frameworks can be applied at the same time, given the required files are\
+ provided. An auxilliary 'fvars' file is also needed for both frameworks. \
+ It contains thespecified names used for each variable.The program computates \
+ the energy,conversion, boundary, generation anddissipation terms. The results \
+ are stored as csv files in the 'LEC_results' directory on ../ and it also \
+ creates figures for visualising the results.")
+    parser.add_argument("infile", help = "input .nc file with temperature,\
  geopotential and meridional, zonal and vertical components of the wind,\
  in pressure levels")
     parser.add_argument("-r", "--residuals", default = False, action='store_true',
-    help = "Flag for computing the Dissipation and Generation terms as\
-  residuals (needs to provide the 3D friction terms in the infile)")
+    help = "compute the Dissipation and Generation terms as\
+ residuals (needs to provide the 3D friction terms in the infile)")
     parser.add_argument("-g", "--geopotential", default = False,
-    action='store_true',
-    help = "Flag for using geopotential instead of geopotential height")
+    action='store_true', help = "use the geopotential data instead of\
+ geopotential height. The file fvars must be adjusted for doing so.")
+    parser.add_argument("-e", "--eulerian", default = False,
+    action='store_true', help = "compute the energetics for a fixed domain\
+ specified by the box_lims file.")
     args = parser.parse_args()
-    infile = args.infile
-        
-    main()
+    infile  = args.infile
+    # box_limits = args.box_limits
+    varlist = './fvars'
+    # Run the program
+    if args.eulerian:
+        LEC_eulerian()
     
