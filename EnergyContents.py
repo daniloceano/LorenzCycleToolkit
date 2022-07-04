@@ -34,7 +34,8 @@ import xarray as xr
 
 class EnergyContents:
     
-    def __init__(self, box_obj: BoxData):
+    def __init__(self, box_obj: BoxData, method: str):
+        self.method = method
         self.PressureData = box_obj.PressureData
         self.LonIndexer = box_obj.LonIndexer
         self.LatIndexer = box_obj.LatIndexer
@@ -61,14 +62,16 @@ class EnergyContents:
             print('Unit error in Az')
             raise
         print(Az.values*Az.metpy.units)
-        # Save Az before vertical integration
-        print('Saving Az for each vertical level...')
-        try:
-            df = function_to_df(self,self.VerticalCoordIndexer,function)
-            df.to_csv(self.output_dir+'/Az_'+self.VerticalCoordIndexer+'.csv')
-        except:
-            raise('Could not save file with Az for each level')
-        print('Done!')
+        
+        # Save Az before vertical integration when using eulerian method
+        if self.method == 'eulerian':
+            print('Saving Az for each vertical level...')
+            try:
+                df = function_to_df(self,self.VerticalCoordIndexer,function)
+                df.to_csv(self.output_dir+'/Az_'+self.VerticalCoordIndexer+'.csv')
+            except:
+                raise('Could not save file with Az for each level')
+            print('Done!')
         return Az
     
     def calc_ae(self):  
@@ -84,13 +87,14 @@ class EnergyContents:
             raise
         print(Ae.values*Ae.metpy.units)
         # Save Ae before vertical integration
-        print('Saving Ae for each vertical level...')
-        try:
-            df = function_to_df(self,self.VerticalCoordIndexer,function)
-            df.to_csv(self.output_dir+'/Ae_'+self.VerticalCoordIndexer+'.csv')
-        except:
-            raise('Could not save file with Ae for each level')
-        print('Done!')
+        if self.method == 'eulerian':
+            print('Saving Ae for each vertical level...')
+            try:
+                df = function_to_df(self,self.VerticalCoordIndexer,function)
+                df.to_csv(self.output_dir+'/Ae_'+self.VerticalCoordIndexer+'.csv')
+            except:
+                raise('Could not save file with Ae for each level')
+            print('Done!')
         return Ae
     
     def calc_kz(self):
@@ -106,13 +110,14 @@ class EnergyContents:
             raise
         print(Kz.values*Kz.metpy.units)
         # Save Kz before vertical integration
-        print('Saving Kz for each vertical level...')
-        try:
-            df = function_to_df(self,self.VerticalCoordIndexer,function)
-            df.to_csv(self.output_dir+'/Kz_'+self.VerticalCoordIndexer+'.csv')
-        except:
-            raise('Could not save file with Kz for each level')
-        print('Done!')
+        if self.method == 'eulerian':
+            print('Saving Kz for each vertical level...')
+            try:
+                df = function_to_df(self,self.VerticalCoordIndexer,function)
+                df.to_csv(self.output_dir+'/Kz_'+self.VerticalCoordIndexer+'.csv')
+            except:
+                raise('Could not save file with Kz for each level')
+            print('Done!')
         return Kz
     
     def calc_ke(self):
@@ -128,13 +133,14 @@ class EnergyContents:
             raise
         print(Ke.values*Ke.metpy.units)
         # Save Ke before vertical integration
-        print('Saving Ke for each vertical level...')
-        try:
-            df = function_to_df(self,self.VerticalCoordIndexer,function)
-            df.to_csv(self.output_dir+'/Ke_'+self.VerticalCoordIndexer+'.csv')
-        except:
-            raise('Could not save file with Ke for each level')
-        print('Done!')
+        if self.method == 'eulerian':
+            print('Saving Ke for each vertical level...')
+            try:
+                df = function_to_df(self,self.VerticalCoordIndexer,function)
+                df.to_csv(self.output_dir+'/Ke_'+self.VerticalCoordIndexer+'.csv')
+            except:
+                raise('Could not save file with Ke for each level')
+            print('Done!')
         return Ke
         
 def function_to_df(self,VerticalCoordIndexer,function):

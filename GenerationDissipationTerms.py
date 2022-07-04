@@ -19,7 +19,8 @@ from EnergyContents import function_to_df
 
 class GenerationDissipationTerms:
     
-    def __init__(self, box_obj: BoxData):
+    def __init__(self, box_obj: BoxData, method: str):
+        self.method = method
         self.PressureData = box_obj.PressureData
         self.LonIndexer = box_obj.LonIndexer
         self.LatIndexer = box_obj.LatIndexer
@@ -42,10 +43,7 @@ class GenerationDissipationTerms:
         self.sigma_AA = box_obj.sigma_AA
         self.omega = box_obj.omega
         self.sigma_AA = box_obj.sigma_AA
-        self.Q = AdiabaticHEating(self.tair,self.PressureData,self.omega,
-                                    self.u,self.v,self.VerticalCoordIndexer,
-                                    self.LatIndexer,self.LonIndexer,
-                                    self.TimeName)
+        self.Q = box_obj.Q
         self.Q_ZA = CalcZonalAverage(self.Q,self.LonIndexer)
         self.Q_AA = CalcAreaAverage(self.Q,self.LatIndexer,
                                     LonIndexer=self.LonIndexer)
@@ -65,13 +63,14 @@ class GenerationDissipationTerms:
             raise
         print(Gz.values*Gz.metpy.units)
         # Save Ca before vertical integration
-        print('Saving Gz for each vertical level...')
-        try:
-            df = function_to_df(self,self.VerticalCoordIndexer,function)
-            df.to_csv(self.output_dir+'/Gz_'+self.VerticalCoordIndexer+'.csv')
-        except:
-            raise('Could not save file with Gz for each level')
-        print('Done!')
+        if self.method == 'eulerian':
+            print('Saving Gz for each vertical level...')
+            try:
+                df = function_to_df(self,self.VerticalCoordIndexer,function)
+                df.to_csv(self.output_dir+'/Gz_'+self.VerticalCoordIndexer+'.csv')
+            except:
+                raise('Could not save file with Gz for each level')
+            print('Done!')
         return Gz
     
     def calc_ge(self):
@@ -88,13 +87,14 @@ class GenerationDissipationTerms:
             raise
         print(Ge.values*Ge.metpy.units)
         # Save Ca before vertical integration
-        print('Saving Ge for each vertical level...')
-        try:
-            df = function_to_df(self,self.VerticalCoordIndexer,function)
-            df.to_csv(self.output_dir+'/Ge_'+self.VerticalCoordIndexer+'.csv')
-        except:
-            raise('Could not save file with Ge for each level')
-        print('Done!')
+        if self.method == 'eulerian':
+            print('Saving Ge for each vertical level...')
+            try:
+                df = function_to_df(self,self.VerticalCoordIndexer,function)
+                df.to_csv(self.output_dir+'/Ge_'+self.VerticalCoordIndexer+'.csv')
+            except:
+                raise('Could not save file with Ge for each level')
+            print('Done!')
         return Ge
     
     def calc_dz(self):

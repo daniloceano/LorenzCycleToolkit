@@ -49,7 +49,8 @@ from EnergyContents import function_to_df
 
 class ConversionTerms:
     
-    def __init__(self, box_obj: BoxData):
+    def __init__(self, box_obj: BoxData, method: str):
+        self.method = method
         self.PressureData = box_obj.PressureData
         self.LonIndexer = box_obj.LonIndexer
         self.LatIndexer = box_obj.LatIndexer
@@ -86,13 +87,14 @@ class ConversionTerms:
             raise
         print(Ce.values*Ce.metpy.units)
         # Save Ce before vertical integration
-        print('Saving Ce for each vertical level...')
-        try:
-            df = function_to_df(self,self.VerticalCoordIndexer,function)
-            df.to_csv(self.output_dir+'/Ce_'+self.VerticalCoordIndexer+'.csv')
-        except:
-            raise('Could not save file with Ce for each level')
-        print('Done!')
+        if self.method == 'eulerian':
+            print('Saving Ce for each vertical level...')
+            try:
+                df = function_to_df(self,self.VerticalCoordIndexer,function)
+                df.to_csv(self.output_dir+'/Ce_'+self.VerticalCoordIndexer+'.csv')
+            except:
+                raise('Could not save file with Ce for each level')
+            print('Done!')
         return Ce
     
     def calc_cz(self):
@@ -110,13 +112,14 @@ class ConversionTerms:
             raise
         print(Cz.values*Cz.metpy.units)
         # Save Cz before vertical integration
-        print('Saving Cz for each vertical level...')
-        try:
-            df = function_to_df(self,self.VerticalCoordIndexer,function)
-            df.to_csv(self.output_dir+'/Cz_'+self.VerticalCoordIndexer+'.csv')
-        except:
-            raise('Could not save file with Cz for each level')
-        print('Done!')
+        if self.method == 'eulerian':
+            print('Saving Cz for each vertical level...')
+            try:
+                df = function_to_df(self,self.VerticalCoordIndexer,function)
+                df.to_csv(self.output_dir+'/Cz_'+self.VerticalCoordIndexer+'.csv')
+            except:
+                raise('Could not save file with Cz for each level')
+            print('Done!')
         return Cz
     
     def calc_ca(self):
@@ -149,13 +152,14 @@ class ConversionTerms:
             raise
         print(Ca.values*Ca.metpy.units)
         # Save Ca before vertical integration
-        print('Saving Ca for each vertical level...')
-        try:
-            df = function_to_df(self,self.VerticalCoordIndexer,function)
-            df.to_csv(self.output_dir+'/Ca_'+self.VerticalCoordIndexer+'.csv')
-        except:
-            raise('Could not save file with Ca for each level')
-        print('Done!')
+        if self.method == 'eulerian':
+            print('Saving Ca for each vertical level...')
+            try:
+                df = function_to_df(self,self.VerticalCoordIndexer,function)
+                df.to_csv(self.output_dir+'/Ca_'+self.VerticalCoordIndexer+'.csv')
+            except:
+                raise('Could not save file with Ca for each level')
+            print('Done!')
         return Ca
         
     def calc_ck(self):
@@ -215,11 +219,12 @@ class ConversionTerms:
             raise
         print(Ck.values*Ck.metpy.units)
         # Save Ck before vertical integration
-        print('Saving Ck for each vertical level...')
-        try:
-            df = function_to_df(self,self.VerticalCoordIndexer,function)
-            df.to_csv(self.output_dir+'/Ck_'+self.VerticalCoordIndexer+'.csv')
-        except:
-            raise('Could not save file with Ck for each level')
-        print('Done!')
+        if self.method == 'eulerian':
+            print('Saving Ck for each vertical level...')
+            try:
+                df = function_to_df(self,self.VerticalCoordIndexer,function)
+                df.to_csv(self.output_dir+'/Ck_'+self.VerticalCoordIndexer+'.csv')
+            except:
+                raise('Could not save file with Ck for each level')
+            print('Done!')
         return Ck

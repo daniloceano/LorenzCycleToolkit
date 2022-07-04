@@ -23,6 +23,7 @@ from ConversionTerms import ConversionTerms
 from BoundaryTerms import BoundaryTerms
 from GenerationDissipationTerms import GenerationDissipationTerms
 from BoxData import BoxData
+from thermodynamics import AdiabaticHEating
 from compute_terms import calc_budget_diff,calc_residuals
 from metpy.units import units
 import pandas as pd
@@ -137,6 +138,8 @@ def LEC_eulerian():
     tair, hgt, omega, u, v = data[4], data[5], data[6], data[7], data[8]
     pres = tair[VerticalCoordIndexer]*units(
         tair[VerticalCoordIndexer].units).to('Pa')
+    Q = AdiabaticHEating(tair,pres,omega,u,v,VerticalCoordIndexer,
+                                LatIndexer,LonIndexer,TimeName)
     if not args.residuals:
         u_stress = data[9]
         v_stress = data[10]
@@ -182,6 +185,7 @@ def LEC_eulerian():
         UWindComponentData=u, VWindComponentData=v,
         ZonalWindStressData=u_stress,MeridionalWindStressData=v_stress,
         OmegaData=omega, HgtData=hgt,LonIndexer=LonIndexer, 
+        AdiabaticHeatingData=Q,
         LatIndexer=LatIndexer, VerticalCoordIndexer=VerticalCoordIndexer,
         TimeName=TimeName,western_limit=min_lon, eastern_limit=max_lon,
         southern_limit=min_lat, northern_limit=max_lat,
@@ -193,7 +197,7 @@ def LEC_eulerian():
     print('\n------------------------------------------------------------------------')
     print('Computing zonal and eddy kinectic and available potential energy terms')
     try:
-        ec_obj = EnergyContents(box_obj)
+        ec_obj = EnergyContents(box_obj,method='eulerian')
         EnergyList = [ec_obj.calc_az(), ec_obj.calc_ae(),
                       ec_obj.calc_kz(),ec_obj.calc_ke()]
     except:
@@ -203,7 +207,7 @@ def LEC_eulerian():
     print('\n------------------------------------------------------------------------')
     print('Computing the conversion terms between energy contents') 
     try:
-        ct_obj = ConversionTerms(box_obj)
+        ct_obj = ConversionTerms(box_obj,method='eulerian')
         ConversionList = [ct_obj.calc_cz(),ct_obj.calc_ca(),
                           ct_obj.calc_ck(),ct_obj.calc_ce()]
     except:
@@ -224,7 +228,7 @@ def LEC_eulerian():
     print('\n------------------------------------------------------------------------')
     print('Computing generation and disspiation terms') 
     try:
-        gdt_obj = GenerationDissipationTerms(box_obj)
+        gdt_obj = GenerationDissipationTerms(box_obj,method='eulerian')
         if args.residuals:
             GenDissList = [gdt_obj.calc_gz(),gdt_obj.calc_ge()]
         else:
@@ -294,6 +298,99 @@ def LEC_eulerian():
 # the eddies contribute for the local energy cycle.
 def LEC_lagrangian():
     print('Computing energetics using eulerian framework')
+    
+    # 1) Get data
+    data = get_data(infile, varlist)   
+    # Data indexers
+    LonIndexer, LatIndexer, TimeName, VerticalCoordIndexer = \
+        data[0], data[1], data[2], data[3]
+    # Data variables
+    tair, hgt, omega, u, v = data[4], data[5], data[6], data[7], data[8]
+    pres = tair[VerticalCoordIndexer]*units(
+        tair[VerticalCoordIndexer].units).to('Pa')
+    Q = AdiabaticHEating(tair,pres,omega,u,v,VerticalCoordIndexer,
+                                LatIndexer,LonIndexer,TimeName)
+    if not args.residuals:
+        u_stress = data[9]
+        v_stress = data[10]
+    else:
+        u_stress = v*np.nan
+        v_stress = v*np.nan
+        
+    # Directory where results will be stored
+    ResultsMainDirectory = '../LEC_Results'
+    # Append data limits to outfile name
+    outfile_name = ''.join(infile.split('/')[-1].split('.nc'))+'_lagranigan'
+    # Each dataset of results have its own directory, allowing to store results
+    # from more than one experiment at each time
+    ResultsSubDirectory = ResultsMainDirectory+'/'+outfile_name+'/'
+    # Check if the LEC_Figures directory exists. If not, creates it
+    check_create_folder(ResultsMainDirectory)
+    # Check if a directory for current data exists. If not, creates it
+    check_create_folder(ResultsSubDirectory)
+    
+    trackfile = './track'
+    track = pd.read_csv(trackfile,parse_dates=[0],delimiter=';',
+                        names=['time','Lat','Lon'],index_col='time')
+    
+    # Loop for each time step:
+    times = tair[TimeName]
+    for time in times:
+        itair, ihgt, iomega, iu, iv, iu_stress, iv_stress  = \
+            tair.sel({TimeName:time}), \
+                hgt.sel({TimeName:time}), omega.sel({TimeName:time}),\
+                    u.sel({TimeName:time}), v.sel({TimeName:time}),\
+                        u_stress.sel({TimeName:time}),\
+                            v_stress.sel({TimeName:time})
+        
+        
+        itime = str(time.values)
+        min_lon, max_lon = track.loc[itime]['Lon']-7.5,track.loc[itime]['Lon']+7.5
+        min_lat, max_lat = track.loc[itime]['Lat']-7.5,track.loc[itime]['Lat']+7.5
+
+        
+        try:
+            box_obj = BoxData(TemperatureData=itair, PressureData=pres,
+            UWindComponentData=iu, VWindComponentData=iv,
+            ZonalWindStressData=iu_stress,MeridionalWindStressData=iv_stress,
+            OmegaData=iomega, HgtData=ihgt,LonIndexer=LonIndexer, 
+            AdiabaticHeatingData=Q,
+            LatIndexer=LatIndexer, VerticalCoordIndexer=VerticalCoordIndexer,
+            TimeName=TimeName,western_limit=min_lon, eastern_limit=max_lon,
+            southern_limit=min_lat, northern_limit=max_lat,
+            output_dir=ResultsSubDirectory)
+        except:
+            raise SystemExit('Error on creating the box for the computations')
+        try:
+            ec_obj = EnergyContents(box_obj,method='lagrangian')
+            EnergyList = [ec_obj.calc_az(), ec_obj.calc_ae(),
+                          ec_obj.calc_kz(),ec_obj.calc_ke()]
+        except:
+            raise SystemExit('Error on computing Energy Contents')
+        try:
+            ct_obj = ConversionTerms(box_obj,method='lagrangian')
+            ConversionList = [ct_obj.calc_cz(),ct_obj.calc_ca(),
+                              ct_obj.calc_ck(),ct_obj.calc_ce()]
+        except:
+            raise SystemExit('Error on computing Conversion Terms')
+        try:
+            bt_obj = BoundaryTerms(box_obj)
+            BoundaryList = [bt_obj.calc_baz(),bt_obj.calc_bae(),
+                            bt_obj.calc_bkz(),bt_obj.calc_bke(),
+                            bt_obj.calc_boz(),bt_obj.calc_boe()]
+        except:
+            raise SystemExit('Error on computing Boundary Terms')
+        print('Ok!')
+        try:
+            gdt_obj = GenerationDissipationTerms(box_obj,method='lagrangian')
+            if args.residuals:
+                GenDissList = [gdt_obj.calc_gz(),gdt_obj.calc_ge()]
+            else:
+                 GenDissList = [gdt_obj.calc_gz(),gdt_obj.calc_ge(),
+                                gdt_obj.calc_dz(),gdt_obj.calc_de()]
+        except:
+            raise SystemExit('Error on computing Generation Terms')
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = "\

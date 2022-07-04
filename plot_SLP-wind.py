@@ -88,12 +88,12 @@ def main():
     norm = colors.TwoSlopeNorm(vmin=1010, vcenter=1014, vmax=1030)
     lims = [-60, -20, -35, -10]
     
-    plt.close('all')
-    fig = plt.figure(constrained_layout=False,figsize=(10,10))
-    gs = gridspec.GridSpec(1, 1, hspace=0.1, wspace=0,
-                               left=0, right=0.95)
-    
+
     for i in range(len(data[TimeIndexer])):
+        plt.close('all')
+        fig = plt.figure(constrained_layout=False,figsize=(10,10))
+        gs = gridspec.GridSpec(1, 1, hspace=0.1, wspace=0,
+                                   left=0, right=0.95)
         ax = fig.add_subplot(gs[0], projection=proj)
         ax.set_extent(lims) 
         islp = slp.isel({TimeIndexer:i})/100

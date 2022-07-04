@@ -8,8 +8,22 @@ The recursive functions computate the zonal and area averages and eddy terms
 for each variable, as well the static stability index.
 @author: danilocoutodsouza
 
+Suffixes used:
+    ZA = Zonal average (whithin the dfined box)
+    AA = Area average (whithin the dfined box)
+    ZE = zonal eddy (departure from zonal average)
+    AE = area eddy (zonal departures from area averages)
 
-This version makes the zonal average using only the data whitin the box
+
+Created by:
+    Danilo Couto de Souza
+    Universidade de São Paulo (USP)
+    Instituto de Astornomia, Ciências Atmosféricas e Geociências
+    São Paulo - Brazil
+
+Contact:
+    danilo.oceano@gmail.com
+
 """
 
 import xarray
@@ -24,10 +38,12 @@ class BoxData:
     '''
     def __init__(self,  LonIndexer: str, LatIndexer: str,
                  TimeName: str,
-                 VerticalCoordIndexer: str, TemperatureData: xarray.Dataset,
+                 VerticalCoordIndexer: str, 
+                 TemperatureData: xarray.Dataset,
                  PressureData: xarray.Dataset,
                  UWindComponentData: xarray.Dataset,
                  VWindComponentData: xarray.Dataset,
+                 AdiabaticHeatingData: xarray.Dataset,
                  ZonalWindStressData: xarray.Dataset,
                  MeridionalWindStressData: xarray.Dataset,
                  OmegaData: xarray.Dataset,
@@ -55,12 +71,6 @@ class BoxData:
         self.BoxNorth = float((TemperatureData[LatIndexer]
                                [(np.abs(TemperatureData[LatIndexer] - 
                                         northern_limit)).argmin()]).values)
-        
-        # Suffixes used:
-        #     ZA = Zonal average (whithin the dfined box)
-        #     AA = Area average (whithin the dfined box)
-        #     ZE = zonal eddy (departure from zonal average)
-        #     AE = area eddy (zonal departures from area averages)
         
         # Temperature data values, averages and eddy terms
         self.tair = TemperatureData.sel(**{LatIndexer: 
@@ -149,6 +159,14 @@ class BoxData:
         self.geopt_ZE = self.geopt - self.geopt_ZA
         self.geopt_AE = self.geopt_ZA - self.geopt_AA
         
+        self.Q = AdiabaticHeatingData.sel(**{LatIndexer: 
+            slice(self.BoxNorth, self.BoxSouth),
+            LonIndexer: slice(self.BoxWest, self.BoxEast)})
+        self.Q_ZA = calc.CalcZonalAverage(self.Q,self.LonIndexer)
+        self.Q_AA = calc.CalcAreaAverage(self.Q,self.LatIndexer,
+                                    LonIndexer=self.LonIndexer)
+        self.Q_ZE = self.Q - self.Q_ZA
+        self.Q_AE = self.Q_ZA - self.Q_AA
         
         # Static stability parameter
         self.sigma_AA = StaticStability(self.tair, self.PressureData, self.VerticalCoordIndexer,
