@@ -44,12 +44,11 @@ def plot_timeseries(df,term_list,linecolor,fname,label,outdir):
                  linewidth=linewidth,
                  marker=markers[i],markeredgecolor='#383838',
                  markerfacecolor=markercolor[i])
-    plt.grid(visible=True,c='gray',linewidth=0.25,linestyle='dashdot')
-    plt.tick_params(axis='x', labelrotation=20)
+    plt.grid(c='gray',linewidth=0.25,linestyle='dashdot')
+    plt.tick_params(axis='x', labelrotation=20,size=12)
+    plt.tick_params(axis='y',size=12)
     plt.legend()
     plt.xlim(times[0],times[-1])
-    plt.xticks(fontsize=12)
-    plt.yticks(fontsize=12)
     # Set x labels as dates
     ax = plt.gca()
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
