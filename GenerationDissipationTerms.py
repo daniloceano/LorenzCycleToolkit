@@ -51,7 +51,8 @@ class GenerationDissipationTerms:
         self.Q_AE = self.Q_ZA - self.Q_AA
     
     def calc_gz(self):
-        
+        if self.method == 'eulerian':
+            print('\nComputing generation of Zonal Potential Energy (Gz)...')
         _ = (self.Q_AE*self.tair_AE)/(Cp_d*self.sigma_AA)
         function = CalcAreaAverage(_,self.LatIndexer)
         Gz = VerticalTrazpezoidalIntegration(function,self.PressureData,
@@ -61,7 +62,8 @@ class GenerationDissipationTerms:
         except ValueError:
             print('Unit error in Gz')
             raise
-        print(Gz.values*Gz.metpy.units)
+        if self.method == 'eulerian':
+            print(Gz.values*Gz.metpy.units)
         # Save Ca before vertical integration
         if self.method == 'eulerian':
             print('Saving Gz for each vertical level...')
@@ -74,7 +76,8 @@ class GenerationDissipationTerms:
         return Gz
     
     def calc_ge(self):
-        
+        if self.method == 'eulerian':
+            print('\nComputing generation of Eddy Potential Energy (Ge)...')
         _ = (self.Q_ZE*self.tair_ZE)/(Cp_d*self.sigma_AA)
         function = CalcAreaAverage(_,self.LatIndexer,
                                     LonIndexer=self.LonIndexer)
@@ -85,7 +88,8 @@ class GenerationDissipationTerms:
         except ValueError:
             print('Unit error in Ge')
             raise
-        print(Ge.values*Ge.metpy.units)
+        if self.method == 'eulerian':
+            print(Ge.values*Ge.metpy.units)
         # Save Ca before vertical integration
         if self.method == 'eulerian':
             print('Saving Ge for each vertical level...')

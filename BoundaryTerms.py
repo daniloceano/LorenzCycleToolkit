@@ -38,7 +38,8 @@ from BoxData import BoxData
 
 class BoundaryTerms:
     
-    def __init__(self, box_obj: BoxData):
+    def __init__(self, box_obj: BoxData, method: str):
+        self.method = method
         self.PressureData = box_obj.PressureData
         self.LonIndexer = box_obj.LonIndexer
         self.LatIndexer = box_obj.LatIndexer
@@ -75,7 +76,8 @@ class BoundaryTerms:
             np.sin(np.deg2rad(box_obj.BoxSouth))))
         
     def calc_baz(self):
-        print('\nComputing Zonal Available Potential Energy (Az) transport across boundaries (BAZ)...')
+        if self.method == 'eulerian':
+            print('\nComputing Zonal Available Potential Energy (Az) transport across boundaries (BAZ)...')
              # needs revision
         ## First Integral ##
         _ = ((2*self.tair_AE*self.tair_ZE*self.u)
@@ -114,11 +116,13 @@ class BoundaryTerms:
         except ValueError:
             print('Unit error in BAZ')
             raise
-        print(Baz.values*Baz.metpy.units)
+        if self.method == 'eulerian':
+            print(Baz.values*Baz.metpy.units)
         return Baz
     
     def calc_bae(self):
-        print('\nComputing Eddy Available Potential Energy (Ae) transport across boundaries (BAE)...')
+        if self.method == 'eulerian':
+            print('\nComputing Eddy Available Potential Energy (Ae) transport across boundaries (BAE)...')
         ## First Integral ##
         _ = (self.u*self.tair_ZE**2)/(2*self.sigma_AA)
          # Data at eastern boundary minus data at western boundary 
@@ -151,11 +155,13 @@ class BoundaryTerms:
         except ValueError:
             print('Unit error in BAe')
             raise
-        print(Bae.values*Bae.metpy.units)
+        if self.method == 'eulerian':
+            print(Bae.values*Bae.metpy.units)
         return Bae
     
     def calc_bkz(self):
-        print('\nComputing Zonal Kinetic Energy (Kz) transport across boundaries (BKz)...')
+        if self.method == 'eulerian':
+            print('\nComputing Zonal Kinetic Energy (Kz) transport across boundaries (BKz)...')
         ## First Integral ##
         _ = self.u*(self.u**2+self.v**2-self.u_ZE**2-self.v_ZE**2)/(2*g)
          # Data at eastern boundary minus data at western boundary 
@@ -187,11 +193,13 @@ class BoundaryTerms:
         except ValueError:
             print('Unit error in BKz')
             raise
-        print(Bkz.values*Bkz.metpy.units)
+        if self.method == 'eulerian':
+            print(Bkz.values*Bkz.metpy.units)
         return Bkz
     
     def calc_bke(self):
-        print('\nComputing Eddy Kinetic Energy (Ke) transport across boundaries (BKe)...')
+        if self.method == 'eulerian':
+            print('\nComputing Eddy Kinetic Energy (Ke) transport across boundaries (BKe)...')
         ## First Integral ##
         _ = self.u*(self.u_ZE**2+self.v_ZE**2)/(2*g)
          # Data at eastern boundary minus data at western boundary 
@@ -224,14 +232,16 @@ class BoundaryTerms:
         except ValueError:
             print('Unit error in BKe')
             raise
-        print(Bke.values*Bke.metpy.units)
+        if self.method == 'eulerian':
+            print(Bke.values*Bke.metpy.units)
         return Bke 
     
     def calc_boz(self):
         """
         Used Brennan (1980) here.
         """
-        print('\nComputing Zonal Kinetic Energy (Kz) production by fluxes at the boundaries (BΦZ)...')
+        if self.method == 'eulerian':
+            print('\nComputing Zonal Kinetic Energy (Kz) production by fluxes at the boundaries (BΦZ)...')
         ## First Integral ##
         _ = (self.v_ZA*self.geopt_AE)/g
          # Data at eastern boundary minus data at western boundary 
@@ -261,11 +271,13 @@ class BoundaryTerms:
         except ValueError:
             print('Unit error in BΦZ')
             raise
-        print(Boz.values*Boz.metpy.units)
+        if self.method == 'eulerian':
+            print(Boz.values*Boz.metpy.units)
         return Boz 
     
     def calc_boe(self):
-        print('\nComputing Eddy Kinetic Energy (Kz) production by fluxes at the boundaries (BΦE)...')
+        if self.method == 'eulerian':
+            print('\nComputing Eddy Kinetic Energy (Kz) production by fluxes at the boundaries (BΦE)...')
         ## First Integral ##
         _ = (self.u_ZE*self.geopt_ZE)/g
          # Data at eastern boundary minus data at western boundary 
@@ -297,7 +309,8 @@ class BoundaryTerms:
         except ValueError:
             print('Unit error in BΦZ')
             raise
-        print(Boz.values*Boz.metpy.units)
+        if self.method == 'eulerian':
+            print(Boz.values*Boz.metpy.units)
         return Boz 
                  
         

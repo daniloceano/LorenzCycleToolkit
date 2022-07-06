@@ -51,7 +51,8 @@ class EnergyContents:
         self.sigma_AA = box_obj.sigma_AA
         
     def calc_az(self):
-        print('\nComputing Zonal Available Potential Energy (Az)...')
+        if self.method == 'eulerian':
+            print('\nComputing Zonal Available Potential Energy (Az)...')
         _ = CalcAreaAverage(self.tair_AE**2,self.LatIndexer)
         function = _/(2*self.sigma_AA)
         Az = VerticalTrazpezoidalIntegration(function,self.PressureData,
@@ -61,8 +62,8 @@ class EnergyContents:
         except ValueError:
             print('Unit error in Az')
             raise
-        print(Az.values*Az.metpy.units)
-        
+        if self.method == 'eulerian':
+            print(Az.values*Az.metpy.units)
         # Save Az before vertical integration when using eulerian method
         if self.method == 'eulerian':
             print('Saving Az for each vertical level...')
@@ -74,8 +75,9 @@ class EnergyContents:
             print('Done!')
         return Az
     
-    def calc_ae(self):  
-        print('\nComputing Eddy Available Potential Energy (Ae)...')
+    def calc_ae(self): 
+        if self.method == 'eulerian':
+            print('\nComputing Eddy Available Potential Energy (Ae)...')
         _ = CalcAreaAverage(self.tair_ZE**2,self.LatIndexer,LonIndexer=self.LonIndexer)
         function = _/(2*self.sigma_AA)
         Ae = VerticalTrazpezoidalIntegration(function,self.PressureData,
@@ -85,7 +87,8 @@ class EnergyContents:
         except ValueError:
             print('Unit error in Ae')
             raise
-        print(Ae.values*Ae.metpy.units)
+        if self.method == 'eulerian':    
+            print(Ae.values*Ae.metpy.units)
         # Save Ae before vertical integration
         if self.method == 'eulerian':
             print('Saving Ae for each vertical level...')
@@ -98,7 +101,8 @@ class EnergyContents:
         return Ae
     
     def calc_kz(self):
-        print('\nComputing Zonal Kinetic Energy (Kz)...')
+        if self.method == 'eulerian':
+            print('\nComputing Zonal Kinetic Energy (Kz)...')
         _ = (self.u_ZA**2)+(self.v_ZA**2)
         function = CalcAreaAverage(_,self.LatIndexer)
         Kz = VerticalTrazpezoidalIntegration(function,self.PressureData,
@@ -108,7 +112,8 @@ class EnergyContents:
         except ValueError:
             print('Unit error in Kz')
             raise
-        print(Kz.values*Kz.metpy.units)
+        if self.method == 'eulerian':
+            print(Kz.values*Kz.metpy.units)
         # Save Kz before vertical integration
         if self.method == 'eulerian':
             print('Saving Kz for each vertical level...')
@@ -121,7 +126,8 @@ class EnergyContents:
         return Kz
     
     def calc_ke(self):
-        print('\nComputing Eddy Kinetic Energy (Ke)...')
+        if self.method == 'eulerian':
+            print('\nComputing Eddy Kinetic Energy (Ke)...')
         _ = (self.u_ZE**2)+(self.v_ZE**2)
         function = CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
         Ke = VerticalTrazpezoidalIntegration(function,self.PressureData,
@@ -131,7 +137,8 @@ class EnergyContents:
         except ValueError:
             print('Unit error in Ke')
             raise
-        print(Ke.values*Ke.metpy.units)
+        if self.method == 'eulerian':
+            print(Ke.values*Ke.metpy.units)
         # Save Ke before vertical integration
         if self.method == 'eulerian':
             print('Saving Ke for each vertical level...')

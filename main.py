@@ -217,7 +217,7 @@ def LEC_eulerian():
     print('\n------------------------------------------------------------------------')
     print('Computing the boundary terms') 
     try:
-        bt_obj = BoundaryTerms(box_obj)
+        bt_obj = BoundaryTerms(box_obj,method='eulerian')
         BoundaryList = [bt_obj.calc_baz(),bt_obj.calc_bae(),
                         bt_obj.calc_bkz(),bt_obj.calc_bke(),
                         bt_obj.calc_boz(),bt_obj.calc_boe()]
@@ -333,64 +333,134 @@ def LEC_lagrangian():
     track = pd.read_csv(trackfile,parse_dates=[0],delimiter=';',
                         names=['time','Lat','Lon'],index_col='time')
     
+    # Create dict for store results
+    TermsDict = {}
+    energy = ['Az','Ae','Kz','Ke']
+    conversion = ['Cz','Ca','Ck','Ce']
+    boundary = ['BAz','BAe','BKz','BKe','BΦZ','BΦE']
+    gendiss = ['Gz','Ge']
+    if not args.residuals:  
+        gendiss = ['Gz','Ge','Dz','De']
+    for term in [*energy,*conversion,*boundary,*gendiss]:
+        TermsDict[term] = []
+    
     # Loop for each time step:
     times = tair[TimeName]
     for time in times:
-        itair, ihgt, iomega, iu, iv, iu_stress, iv_stress  = \
+        itair, ihgt, iomega, iu, iv, iu_stress, iv_stress, iQ  = \
             tair.sel({TimeName:time}), \
                 hgt.sel({TimeName:time}), omega.sel({TimeName:time}),\
                     u.sel({TimeName:time}), v.sel({TimeName:time}),\
                         u_stress.sel({TimeName:time}),\
-                            v_stress.sel({TimeName:time})
+                            v_stress.sel({TimeName:time}),\
+                                Q.sel({TimeName:time})              
         
-        
+        # Get current time and box limits
         itime = str(time.values)
+        datestr = pd.to_datetime(itime).strftime('%Y-%m-%d %HZ')
         min_lon, max_lon = track.loc[itime]['Lon']-7.5,track.loc[itime]['Lon']+7.5
         min_lat, max_lat = track.loc[itime]['Lat']-7.5,track.loc[itime]['Lat']+7.5
-
+        print('\nComputing terms for '+datestr+'...')
+        print('Box limits (lon/lat): '+str(max_lon)+'/'+str(max_lat),
+              ' '+str(min_lon)+'/'+str(min_lat))
+    
         
+        # Create box object
         try:
             box_obj = BoxData(TemperatureData=itair, PressureData=pres,
             UWindComponentData=iu, VWindComponentData=iv,
             ZonalWindStressData=iu_stress,MeridionalWindStressData=iv_stress,
             OmegaData=iomega, HgtData=ihgt,LonIndexer=LonIndexer, 
-            AdiabaticHeatingData=Q,
+            AdiabaticHeatingData=iQ,
             LatIndexer=LatIndexer, VerticalCoordIndexer=VerticalCoordIndexer,
             TimeName=TimeName,western_limit=min_lon, eastern_limit=max_lon,
             southern_limit=min_lat, northern_limit=max_lat,
             output_dir=ResultsSubDirectory)
         except:
             raise SystemExit('Error on creating the box for the computations')
+        
+        # Compute energy terms
         try:
             ec_obj = EnergyContents(box_obj,method='lagrangian')
-            EnergyList = [ec_obj.calc_az(), ec_obj.calc_ae(),
-                          ec_obj.calc_kz(),ec_obj.calc_ke()]
+            TermsDict['Az'].append(ec_obj.calc_az())
+            TermsDict['Ae'].append(ec_obj.calc_ae())
+            TermsDict['Kz'].append(ec_obj.calc_kz())
+            TermsDict['Ke'].append(ec_obj.calc_ke())
         except:
             raise SystemExit('Error on computing Energy Contents')
+        
+        # Compute conversion terms
         try:
             ct_obj = ConversionTerms(box_obj,method='lagrangian')
-            ConversionList = [ct_obj.calc_cz(),ct_obj.calc_ca(),
-                              ct_obj.calc_ck(),ct_obj.calc_ce()]
+            TermsDict['Ca'].append(ct_obj.calc_ca())
+            TermsDict['Ce'].append(ct_obj.calc_ce())
+            TermsDict['Ck'].append(ct_obj.calc_ck())
+            TermsDict['Cz'].append(ct_obj.calc_cz())
         except:
             raise SystemExit('Error on computing Conversion Terms')
+        
+        # Compute boundary terms
         try:
-            bt_obj = BoundaryTerms(box_obj)
-            BoundaryList = [bt_obj.calc_baz(),bt_obj.calc_bae(),
-                            bt_obj.calc_bkz(),bt_obj.calc_bke(),
-                            bt_obj.calc_boz(),bt_obj.calc_boe()]
+            bt_obj = BoundaryTerms(box_obj,method='lagrangian')
+            TermsDict['BAe'].append(bt_obj.calc_bae().values)
+            TermsDict['BAz'].append(bt_obj.calc_baz())
+            TermsDict['BKe'].append(bt_obj.calc_bke())
+            TermsDict['BKz'].append(bt_obj.calc_bkz())
+            TermsDict['BΦE'].append(bt_obj.calc_boe())
+            TermsDict['BΦZ'].append(bt_obj.calc_boz())
         except:
             raise SystemExit('Error on computing Boundary Terms')
-        print('Ok!')
+        
+        # Compute generation/dissipation terms
         try:
             gdt_obj = GenerationDissipationTerms(box_obj,method='lagrangian')
-            if args.residuals:
-                GenDissList = [gdt_obj.calc_gz(),gdt_obj.calc_ge()]
-            else:
-                 GenDissList = [gdt_obj.calc_gz(),gdt_obj.calc_ge(),
-                                gdt_obj.calc_dz(),gdt_obj.calc_de()]
+            TermsDict['Ge'].append(gdt_obj.calc_ge())
+            TermsDict['Gz'].append(gdt_obj.calc_gz())
+            if not args.residuals:
+                TermsDict['De'].append(gdt_obj.calc_de())
+                TermsDict['Dz'].append(gdt_obj.calc_dz())
         except:
             raise SystemExit('Error on computing Generation Terms')
+            
+    print('\nOrganising results in a Pandas DataFrame')
+    df = pd.DataFrame.from_dict(TermsDict, orient ='columns',dtype = float)
+    days = times.values.astype('datetime64[D]')
+    hours = pd.to_datetime(times.values).hour
+    df['Date'],df['Hour'] = days, hours
     
+    # Print results for user
+    for term in TermsDict.keys():
+        print('\n'+term)
+        print(df[term].tolist())
+    
+    print('\n------------------------------------------------------------------------')
+    print('Estimating budget terms (∂X/∂t) using finite differences ')
+    df = calc_budget_diff(df,times) 
+    print('Ok!')
+    
+    print('\n------------------------------------------------------------------------')
+    print('Computing residuals RGz, RKz, RGe and RKe')
+    df = calc_residuals(df)
+    print('Ok!')
+    
+    print('\nCreating a csv to store results...')
+    outfile = ResultsSubDirectory+'/'+outfile_name+'.csv'
+    df.to_csv(outfile)
+    print(outfile+' created') 
+    print('All done!')
+    # 13) Make figures
+    FigsDirectory = ResultsSubDirectory+'/Figures'
+    check_create_folder(FigsDirectory)
+    if args.residuals:
+        flag = ' -r'
+    else:
+        flag = ' '
+    os.system("python plot_timeseries.py "+outfile+flag)
+    # os.system("python plot_vertical.py "+ResultsSubDirectory)
+    os.system("python plot_boxplot.py "+ResultsSubDirectory+flag)
+    os.system("python draw_cycle.py "+outfile)
+    os.system("python LorenzPhaseSpace.py "+outfile)
+    os.system("python plot_track.py "+outfile)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = "\
@@ -418,6 +488,9 @@ The program can compute the LEC using two distinct frameworks:\
     parser.add_argument("-e", "--eulerian", default = False,
     action='store_true', help = "compute the energetics for a fixed domain\
  specified by the box_lims file.")
+    parser.add_argument("-l", "--lagrangian", default = False,
+    action='store_true', help = "compute the energetics for a fixed domain\
+ specified by the box_lims file.")
     args = parser.parse_args()
     infile  = args.infile
     # box_limits = args.box_limits
@@ -425,4 +498,6 @@ The program can compute the LEC using two distinct frameworks:\
     # Run the program
     if args.eulerian:
         LEC_eulerian()
+    if args.lagrangian:
+        LEC_lagrangian()
     

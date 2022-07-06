@@ -72,7 +72,8 @@ class ConversionTerms:
         self.tan_lats = np.tan(self.rlats)
         
     def calc_ce(self):
-        print('\nComputing conversion between eddy energy terms (Ce)...')
+        if self.method == 'eulerian':
+            print('\nComputing conversion between eddy energy terms (Ce)...')
         FirstTerm = Rd/(self.PressureData*g)
         _ = self.omega_ZE*self.tair_ZE
         SecondTerm = CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
@@ -85,7 +86,8 @@ class ConversionTerms:
         except ValueError:
             print('Unit error in Ce')
             raise
-        print(Ce.values*Ce.metpy.units)
+        if self.method == 'eulerian':
+            print(Ce.values*Ce.metpy.units)
         # Save Ce before vertical integration
         if self.method == 'eulerian':
             print('Saving Ce for each vertical level...')
@@ -98,7 +100,8 @@ class ConversionTerms:
         return Ce
     
     def calc_cz(self):
-        print('\nComputing conversion between zonal energy terms (Cz)...')
+        if self.method == 'eulerian':
+            print('\nComputing conversion between zonal energy terms (Cz)...')
         FirstTerm = Rd/(self.PressureData*g)
         _ = self.omega_AE*self.tair_AE
         SecondTerm = CalcAreaAverage(_,self.LatIndexer)
@@ -110,7 +113,8 @@ class ConversionTerms:
         except ValueError:
             print('Unit error in Cz')
             raise
-        print(Cz.values*Cz.metpy.units)
+        if self.method == 'eulerian':    
+            print(Cz.values*Cz.metpy.units)
         # Save Cz before vertical integration
         if self.method == 'eulerian':
             print('Saving Cz for each vertical level...')
@@ -123,7 +127,8 @@ class ConversionTerms:
         return Cz
     
     def calc_ca(self):
-        print('\nComputing conversion between available potential energy terms (Ca)...')
+        if self.method == 'eulerian':
+            print('\nComputing conversion between available potential energy terms (Ca)...')
         ## First term of the integral ##
         # Derivate tair_AE in respect to latitude
         DelPhi_tairAE = self.tair_AE.copy(deep=True
@@ -150,7 +155,8 @@ class ConversionTerms:
         except ValueError:
             print('Unit error in Ck')
             raise
-        print(Ca.values*Ca.metpy.units)
+        if self.method == 'eulerian':    
+            print(Ca.values*Ca.metpy.units)
         # Save Ca before vertical integration
         if self.method == 'eulerian':
             print('Saving Ca for each vertical level...')
@@ -163,7 +169,8 @@ class ConversionTerms:
         return Ca
         
     def calc_ck(self):
-        print('\nComputing conversion between kinetic energy terms (Ck)...')
+        if self.method == 'eulerian':
+            print('\nComputing conversion between kinetic energy terms (Ck)...')
         ## First term ##
         # Divide the zonal mean of the zonal wind component (u) by the cosine
         # of the latitude (in radians) and then differentiate it in regard to
@@ -217,7 +224,8 @@ class ConversionTerms:
         except ValueError:
             print('Unit error in Ck')
             raise
-        print(Ck.values*Ck.metpy.units)
+        if self.method == 'eulerian':
+            print(Ck.values*Ck.metpy.units)
         # Save Ck before vertical integration
         if self.method == 'eulerian':
             print('Saving Ck for each vertical level...')
