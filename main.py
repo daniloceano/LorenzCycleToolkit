@@ -69,7 +69,7 @@ def get_data(infile, varlist):
         full_data = convert_lon(xr.open_dataset(infile),LonIndexer)
     except:
         raise SystemExit('ERROR!!!!!\n Could not open data. Check if path is\
-correct and file format (should be .nc)')
+ correct, fvars file and file format (should be .nc)')
     print('Ok!')
     # Sort data coordinates - data from distinc sources might have different
     # arrangements, which could affect the results from the integrations
