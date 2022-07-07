@@ -31,8 +31,7 @@ import numpy as np
 # for the computations
 def main():
 
-    track = pd.read_csv('./track',parse_dates=[0],delimiter=';',
-                        names=['time','Lat','Lon'],index_col='time')
+    track = pd.read_csv('./track',parse_dates=[0],delimiter=';',index_col='time')
     outfile = sys.argv[1]
     ResultsSubDirectory = '/'.join(outfile.split('/')[:-1])
     FigsDir = ResultsSubDirectory+'/Figures/'
@@ -63,6 +62,11 @@ def main():
         min_lat, max_lat = lat-7.5,lat+7.5
         
         if i == 0 or i == len(track)-1:
+            c = '#383838'
+        else:
+            c = 'r'
+        
+        if i == 0 or i == len(track)-1 or i == round(len(track)/2):
             # plot selected domain
             # create a sample polygon, `pgon`
             pgon = Polygon(((min_lon, min_lat),
@@ -71,7 +75,7 @@ def main():
                     (max_lon, min_lat),
                     (min_lon, min_lat)))
             ax.add_geometries([pgon], crs=datacrs, 
-                              facecolor='none', edgecolor='#383838',
+                              facecolor='none', edgecolor=c,
                               linewidth = 5,
                               alpha=0.75, zorder=1+i)
         

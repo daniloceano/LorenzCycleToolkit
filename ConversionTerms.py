@@ -88,12 +88,13 @@ class ConversionTerms:
             raise
         if self.method == 'eulerian':
             print(Ce.values*Ce.metpy.units)
-        # Save Ce before vertical integration
-        if self.method == 'eulerian':
             print('Saving Ce for each vertical level...')
+            # Save Ce before vertical integration
             try:
                 df = function_to_df(self,self.VerticalCoordIndexer,function)
-                df.to_csv(self.output_dir+'/Ce_'+self.VerticalCoordIndexer+'.csv')
+                df.to_csv(
+                    self.output_dir+'/Ce_'+self.VerticalCoordIndexer+'.csv',
+                    mode="a", header=None)
             except:
                 raise('Could not save file with Ce for each level')
             print('Done!')
@@ -115,12 +116,13 @@ class ConversionTerms:
             raise
         if self.method == 'eulerian':    
             print(Cz.values*Cz.metpy.units)
-        # Save Cz before vertical integration
-        if self.method == 'eulerian':
             print('Saving Cz for each vertical level...')
+            # Save Cz before vertical integration
             try:
                 df = function_to_df(self,self.VerticalCoordIndexer,function)
-                df.to_csv(self.output_dir+'/Cz_'+self.VerticalCoordIndexer+'.csv')
+                df.to_csv(
+                    self.output_dir+'/Cz_'+self.VerticalCoordIndexer+'.csv',
+                    mode="a", header=None)
             except:
                 raise('Could not save file with Cz for each level')
             print('Done!')
@@ -157,12 +159,13 @@ class ConversionTerms:
             raise
         if self.method == 'eulerian':    
             print(Ca.values*Ca.metpy.units)
-        # Save Ca before vertical integration
-        if self.method == 'eulerian':
             print('Saving Ca for each vertical level...')
+            # Save Ca before vertical integration
             try:
                 df = function_to_df(self,self.VerticalCoordIndexer,function)
-                df.to_csv(self.output_dir+'/Ca_'+self.VerticalCoordIndexer+'.csv')
+                df.to_csv(
+                    self.output_dir+'/Ca_'+self.VerticalCoordIndexer+'.csv',
+                    mode="a", header=None)
             except:
                 raise('Could not save file with Ca for each level')
             print('Done!')
@@ -226,12 +229,13 @@ class ConversionTerms:
             raise
         if self.method == 'eulerian':
             print(Ck.values*Ck.metpy.units)
-        # Save Ck before vertical integration
-        if self.method == 'eulerian':
             print('Saving Ck for each vertical level...')
+            # Save Ck before vertical integration
             try:
                 df = function_to_df(self,self.VerticalCoordIndexer,function)
-                df.to_csv(self.output_dir+'/Ck_'+self.VerticalCoordIndexer+'.csv')
+                df.to_csv(
+                    self.output_dir+'/Ck_'+self.VerticalCoordIndexer+'.csv',
+                    mode="a", header=None)
             except:
                 raise('Could not save file with Ck for each level')
             print('Done!')

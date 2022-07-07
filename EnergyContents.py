@@ -60,18 +60,19 @@ class EnergyContents:
         try: 
             Az = Az.metpy.convert_units('J/ m **2')
         except ValueError:
-            print('Unit error in Az')
-            raise
+            raise ValueError('Unit error in Az')
         if self.method == 'eulerian':
             print(Az.values*Az.metpy.units)
-        # Save Az before vertical integration when using eulerian method
-        if self.method == 'eulerian':
             print('Saving Az for each vertical level...')
+            # Save Az before vertical integration when using eulerian method            
             try:
                 df = function_to_df(self,self.VerticalCoordIndexer,function)
-                df.to_csv(self.output_dir+'/Az_'+self.VerticalCoordIndexer+'.csv')
+                df.to_csv(
+                    self.output_dir+'/Az_'+self.VerticalCoordIndexer+'.csv',
+                    mode="a", header=None)
             except:
-                raise('Could not save file with Az for each level')
+                raise
+                raise ValueError('Could not save file with Az for each level')
             print('Done!')
         return Az
     
@@ -89,12 +90,13 @@ class EnergyContents:
             raise
         if self.method == 'eulerian':    
             print(Ae.values*Ae.metpy.units)
-        # Save Ae before vertical integration
-        if self.method == 'eulerian':
             print('Saving Ae for each vertical level...')
+            # Save Ae before vertical integration
             try:
                 df = function_to_df(self,self.VerticalCoordIndexer,function)
-                df.to_csv(self.output_dir+'/Ae_'+self.VerticalCoordIndexer+'.csv')
+                df.to_csv(
+                    self.output_dir+'/Ae_'+self.VerticalCoordIndexer+'.csv',
+                    mode="a", header=None)
             except:
                 raise('Could not save file with Ae for each level')
             print('Done!')
@@ -114,12 +116,13 @@ class EnergyContents:
             raise
         if self.method == 'eulerian':
             print(Kz.values*Kz.metpy.units)
-        # Save Kz before vertical integration
-        if self.method == 'eulerian':
             print('Saving Kz for each vertical level...')
+            # Save Kz before vertical integration
             try:
                 df = function_to_df(self,self.VerticalCoordIndexer,function)
-                df.to_csv(self.output_dir+'/Kz_'+self.VerticalCoordIndexer+'.csv')
+                df.to_csv(
+                    self.output_dir+'/Kz_'+self.VerticalCoordIndexer+'.csv',
+                    mode="a", header=None)
             except:
                 raise('Could not save file with Kz for each level')
             print('Done!')
@@ -139,12 +142,13 @@ class EnergyContents:
             raise
         if self.method == 'eulerian':
             print(Ke.values*Ke.metpy.units)
-        # Save Ke before vertical integration
-        if self.method == 'eulerian':
             print('Saving Ke for each vertical level...')
+            # Save Ke before vertical integration
             try:
                 df = function_to_df(self,self.VerticalCoordIndexer,function)
-                df.to_csv(self.output_dir+'/Ke_'+self.VerticalCoordIndexer+'.csv')
+                df.to_csv(
+                    self.output_dir+'/Ke_'+self.VerticalCoordIndexer+'.csv',
+                    mode="a", header=None)
             except:
                 raise('Could not save file with Ke for each level')
             print('Done!')

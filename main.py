@@ -33,6 +33,9 @@ import numpy as np
 import argparse
 from metpy.constants import g
 
+import traceback
+import logging
+
 
 def check_create_folder(DirName):
     if not os.path.exists(DirName):
@@ -177,6 +180,12 @@ def LEC_eulerian():
     check_create_folder(ResultsMainDirectory)
     # Check if a directory for current data exists. If not, creates it
     check_create_folder(ResultsSubDirectory)
+    # Create csv files for storing vertical results.
+    # When those terms are computed data is simply appended to csv
+    for term in ['Az','Ae','Kz','Ke','Cz','Ca','Ck','Ce','Ge','Gz']:
+        tmp = pd.DataFrame([],columns=[
+            TimeName,*[float(i)/100 for i in pres.values]])
+        tmp.to_csv(ResultsSubDirectory+term+'_'+VerticalCoordIndexer+'.csv')   
     # 4) 
     print('Computing zonal and area averages and eddy terms for each variable')
     print('and the static stability parameter...')
@@ -315,8 +324,7 @@ def LEC_lagrangian():
         v_stress = data[10]
     else:
         u_stress = v*np.nan
-        v_stress = v*np.nan
-        
+        v_stress = v*np.nan    
     # Directory where results will be stored
     ResultsMainDirectory = '../LEC_Results'
     # Append data limits to outfile name
@@ -328,11 +336,15 @@ def LEC_lagrangian():
     check_create_folder(ResultsMainDirectory)
     # Check if a directory for current data exists. If not, creates it
     check_create_folder(ResultsSubDirectory)
-    
+    # Create csv files for storing vertical results.
+    # When those terms are computed data is simply appended to csv
+    for term in ['Az','Ae','Kz','Ke','Cz','Ca','Ck','Ce','Ge','Gz']:
+        tmp = pd.DataFrame([],columns=[
+            TimeName,*[float(i)/100 for i in pres.values]])
+        tmp.to_csv(ResultsSubDirectory+term+'_'+VerticalCoordIndexer+'.csv')   
+    # Track file
     trackfile = './track'
-    track = pd.read_csv(trackfile,parse_dates=[0],delimiter=';',
-                        names=['time','Lat','Lon'],index_col='time')
-    
+    track = pd.read_csv(trackfile,parse_dates=[0],delimiter=';',index_col='time')
     # Create dict for store results
     TermsDict = {}
     energy = ['Az','Ae','Kz','Ke']
@@ -386,7 +398,8 @@ def LEC_lagrangian():
             TermsDict['Ae'].append(ec_obj.calc_ae())
             TermsDict['Kz'].append(ec_obj.calc_kz())
             TermsDict['Ke'].append(ec_obj.calc_ke())
-        except:
+        except Exception as e:
+            print('An exception occurred: {}'.format(e))
             raise SystemExit('Error on computing Energy Contents')
         
         # Compute conversion terms
@@ -396,7 +409,8 @@ def LEC_lagrangian():
             TermsDict['Ce'].append(ct_obj.calc_ce())
             TermsDict['Ck'].append(ct_obj.calc_ck())
             TermsDict['Cz'].append(ct_obj.calc_cz())
-        except:
+        except Exception as e:
+            print('An exception occurred: {}'.format(e))
             raise SystemExit('Error on computing Conversion Terms')
         
         # Compute boundary terms
@@ -408,7 +422,8 @@ def LEC_lagrangian():
             TermsDict['BKz'].append(bt_obj.calc_bkz())
             TermsDict['BΦE'].append(bt_obj.calc_boe())
             TermsDict['BΦZ'].append(bt_obj.calc_boz())
-        except:
+        except Exception as e:
+            print('An exception occurred: {}'.format(e))
             raise SystemExit('Error on computing Boundary Terms')
         
         # Compute generation/dissipation terms
@@ -419,7 +434,8 @@ def LEC_lagrangian():
             if not args.residuals:
                 TermsDict['De'].append(gdt_obj.calc_de())
                 TermsDict['Dz'].append(gdt_obj.calc_dz())
-        except:
+        except Exception as e:
+            print('An exception occurred: {}'.format(e))
             raise SystemExit('Error on computing Generation Terms')
             
     print('\nOrganising results in a Pandas DataFrame')
@@ -456,7 +472,7 @@ def LEC_lagrangian():
     else:
         flag = ' '
     os.system("python plot_timeseries.py "+outfile+flag)
-    # os.system("python plot_vertical.py "+ResultsSubDirectory)
+    os.system("python plot_vertical.py "+ResultsSubDirectory)
     os.system("python plot_boxplot.py "+ResultsSubDirectory+flag)
     os.system("python draw_cycle.py "+outfile)
     os.system("python LorenzPhaseSpace.py "+outfile)
