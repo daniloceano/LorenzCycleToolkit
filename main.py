@@ -308,7 +308,6 @@ def LEC_eulerian():
 # the eddies contribute for the local energy cycle.
 def LEC_lagrangian():
     print('Computing energetics using eulerian framework')
-    
     # 1) Get data
     data = get_data(infile, varlist)   
     # Data indexers
@@ -340,9 +339,10 @@ def LEC_lagrangian():
     # Create csv files for storing vertical results.
     # When those terms are computed data is simply appended to csv
     for term in ['Az','Ae','Kz','Ke','Cz','Ca','Ck','Ce','Ge','Gz']:
-        tmp = pd.DataFrame([],columns=[
-            TimeName,*[float(i)/100 for i in pres.values]])
-        tmp.to_csv(ResultsSubDirectory+term+'_'+VerticalCoordIndexer+'.csv')   
+        tmp = pd.DataFrame(columns=[TimeName,
+        *[float(i)/100 for i in pres.values]])
+        tmp.to_csv(ResultsSubDirectory+term+'_'+VerticalCoordIndexer+'.csv',
+                   index=None)  
     # Track file
     trackfile = './track'
     track = pd.read_csv(trackfile,parse_dates=[0],delimiter=';',index_col='time')

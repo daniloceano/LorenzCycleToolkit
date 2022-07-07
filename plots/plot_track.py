@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 from shapely.geometry.polygon import Polygon
 import pandas as pd
 import sys
-from LorenzPhaseSpace import MarkerSizeKe
+from plot_LPS import MarkerSizeKe
 import cmocean
 import matplotlib.colors as colors
 import numpy as np

@@ -30,7 +30,7 @@ Source for formulas used here:
 from calc import (VerticalTrazpezoidalIntegration, CalcAreaAverage)
 from metpy.constants import g
 from BoxData import BoxData
-import xarray as xr
+import pandas as pd
 
 class EnergyContents:
     
@@ -51,8 +51,7 @@ class EnergyContents:
         self.sigma_AA = box_obj.sigma_AA
         
     def calc_az(self):
-        if self.method == 'eulerian':
-            print('\nComputing Zonal Available Potential Energy (Az)...')
+        print('\nComputing Zonal Available Potential Energy (Az)...')
         _ = CalcAreaAverage(self.tair_AE**2,self.LatIndexer)
         function = _/(2*self.sigma_AA)
         Az = VerticalTrazpezoidalIntegration(function,self.PressureData,
@@ -61,24 +60,25 @@ class EnergyContents:
             Az = Az.metpy.convert_units('J/ m **2')
         except ValueError:
             raise ValueError('Unit error in Az')
+        print(Az.values*Az.metpy.units)
+        print('Saving Az for each vertical level...')
+        # Save Az before vertical integration          
         if self.method == 'eulerian':
-            print(Az.values*Az.metpy.units)
-            print('Saving Az for each vertical level...')
-            # Save Az before vertical integration when using eulerian method            
-            try:
-                df = function_to_df(self,self.VerticalCoordIndexer,function)
-                df.to_csv(
-                    self.output_dir+'/Az_'+self.VerticalCoordIndexer+'.csv',
-                    mode="a", header=None)
-            except:
-                raise
-                raise ValueError('Could not save file with Az for each level')
-            print('Done!')
+            df = function.drop([self.LonIndexer,self.LatIndexer]
+                ).to_dataframe(name='Ce',dim_order=[
+                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+        else:
+            time = pd.to_datetime(function[self.TimeName].data)
+            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
+                    ).to_dataframe(
+                        name=time).transpose()
+        df.to_csv(self.output_dir+'/Az_'+self.VerticalCoordIndexer+'.csv',
+            mode="a", header=None)
+        print('Done!')
         return Az
     
     def calc_ae(self): 
-        if self.method == 'eulerian':
-            print('\nComputing Eddy Available Potential Energy (Ae)...')
+        print('\nComputing Eddy Available Potential Energy (Ae)...')
         _ = CalcAreaAverage(self.tair_ZE**2,self.LatIndexer,LonIndexer=self.LonIndexer)
         function = _/(2*self.sigma_AA)
         Ae = VerticalTrazpezoidalIntegration(function,self.PressureData,
@@ -88,49 +88,53 @@ class EnergyContents:
         except ValueError:
             print('Unit error in Ae')
             raise
+        print(Ae.values*Ae.metpy.units)
+        print('Saving Ae for each vertical level...')
+        # Save Ae before vertical integration
         if self.method == 'eulerian':    
-            print(Ae.values*Ae.metpy.units)
-            print('Saving Ae for each vertical level...')
-            # Save Ae before vertical integration
-            try:
-                df = function_to_df(self,self.VerticalCoordIndexer,function)
-                df.to_csv(
-                    self.output_dir+'/Ae_'+self.VerticalCoordIndexer+'.csv',
-                    mode="a", header=None)
-            except:
-                raise('Could not save file with Ae for each level')
-            print('Done!')
+            df = function.drop([self.LonIndexer,self.LatIndexer]
+                ).to_dataframe(name='Ce',dim_order=[
+                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+        else:
+            time = pd.to_datetime(function[self.TimeName].data)
+            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
+                    ).to_dataframe(
+                        name=time).transpose()
+        df.to_csv(self.output_dir+'/Ae_'+self.VerticalCoordIndexer+'.csv',
+                mode="a", header=None)
+        print('Done!')
         return Ae
     
     def calc_kz(self):
-        if self.method == 'eulerian':
-            print('\nComputing Zonal Kinetic Energy (Kz)...')
+        print('\nComputing Zonal Kinetic Energy (Kz)...')
         _ = (self.u_ZA**2)+(self.v_ZA**2)
         function = CalcAreaAverage(_,self.LatIndexer)
         Kz = VerticalTrazpezoidalIntegration(function,self.PressureData,
                                              self.VerticalCoordIndexer)/(2*g)
+        print(Kz.values*Kz.metpy.units)
+        print('Saving Kz for each vertical level...')
         try: 
             Kz = Kz.metpy.convert_units('J/ m **2')
         except ValueError:
             print('Unit error in Kz')
             raise
+        # Save Kz before vertical integration
         if self.method == 'eulerian':
-            print(Kz.values*Kz.metpy.units)
-            print('Saving Kz for each vertical level...')
-            # Save Kz before vertical integration
-            try:
-                df = function_to_df(self,self.VerticalCoordIndexer,function)
-                df.to_csv(
-                    self.output_dir+'/Kz_'+self.VerticalCoordIndexer+'.csv',
-                    mode="a", header=None)
-            except:
-                raise('Could not save file with Kz for each level')
-            print('Done!')
+            df = function.drop([self.LonIndexer,self.LatIndexer]
+                ).to_dataframe(name='Ce',dim_order=[
+                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+        else:
+            time = pd.to_datetime(function[self.TimeName].data)
+            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
+                    ).to_dataframe(
+                        name=time).transpose()
+        df.to_csv(self.output_dir+'/Kz_'+self.VerticalCoordIndexer+'.csv',
+                mode="a", header=None)
+        print('Done!')
         return Kz
     
     def calc_ke(self):
-        if self.method == 'eulerian':
-            print('\nComputing Eddy Kinetic Energy (Ke)...')
+        print('\nComputing Eddy Kinetic Energy (Ke)...')
         _ = (self.u_ZE**2)+(self.v_ZE**2)
         function = CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
         Ke = VerticalTrazpezoidalIntegration(function,self.PressureData,
@@ -140,24 +144,20 @@ class EnergyContents:
         except ValueError:
             print('Unit error in Ke')
             raise
+        print(Ke.values*Ke.metpy.units)
+        print('Saving Ke for each vertical level...')
+        # Save Ke before vertical integration
         if self.method == 'eulerian':
-            print(Ke.values*Ke.metpy.units)
-            print('Saving Ke for each vertical level...')
-            # Save Ke before vertical integration
-            try:
-                df = function_to_df(self,self.VerticalCoordIndexer,function)
-                df.to_csv(
-                    self.output_dir+'/Ke_'+self.VerticalCoordIndexer+'.csv',
-                    mode="a", header=None)
-            except:
-                raise('Could not save file with Ke for each level')
-            print('Done!')
+            df = function.drop([self.LonIndexer,self.LatIndexer]
+                ).to_dataframe(name='Ce',dim_order=[
+                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+        else:
+            time = pd.to_datetime(function[self.TimeName].data)
+            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
+                    ).to_dataframe(
+                        name=time).transpose()
+        df.to_csv(self.output_dir+'/Ke_'+self.VerticalCoordIndexer+'.csv',
+                mode="a", header=None)
+        print('Done!')
         return Ke
         
-def function_to_df(self,VerticalCoordIndexer,function):
-    df = function.drop([self.LonIndexer,self.LatIndexer]).isel({self.VerticalCoordIndexer:0}).drop([self.VerticalCoordIndexer]).to_dataframe(str(function[VerticalCoordIndexer][0].data))
-    for lev in function[self.VerticalCoordIndexer][1:]:
-        lev = lev.data
-        df_lev = function.drop([self.LonIndexer,self.LatIndexer]).sel({self.VerticalCoordIndexer:lev}).drop([self.VerticalCoordIndexer]).to_dataframe(str(lev))
-        df = df.join(df_lev)
-    return df

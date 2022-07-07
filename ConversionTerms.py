@@ -43,9 +43,9 @@ from metpy.constants import g
 from metpy.constants import Rd
 from metpy.constants import Re
 from metpy.units import units
-from calc import (CalcAreaAverage,VerticalTrazpezoidalIntegration,Differentiate)
+from calc import (CalcAreaAverage,VerticalTrazpezoidalIntegration)
 from BoxData import BoxData
-from EnergyContents import function_to_df
+import pandas as pd
 
 class ConversionTerms:
     
@@ -72,8 +72,7 @@ class ConversionTerms:
         self.tan_lats = np.tan(self.rlats)
         
     def calc_ce(self):
-        if self.method == 'eulerian':
-            print('\nComputing conversion between eddy energy terms (Ce)...')
+        print('\nComputing conversion between eddy energy terms (Ce)...')
         FirstTerm = Rd/(self.PressureData*g)
         _ = self.omega_ZE*self.tair_ZE
         SecondTerm = CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
@@ -86,23 +85,25 @@ class ConversionTerms:
         except ValueError:
             print('Unit error in Ce')
             raise
+        print(Ce.values*Ce.metpy.units)
+        print('Saving Ce for each vertical level...')
+        # Save Ce before vertical integration
         if self.method == 'eulerian':
-            print(Ce.values*Ce.metpy.units)
-            print('Saving Ce for each vertical level...')
-            # Save Ce before vertical integration
-            try:
-                df = function_to_df(self,self.VerticalCoordIndexer,function)
-                df.to_csv(
-                    self.output_dir+'/Ce_'+self.VerticalCoordIndexer+'.csv',
+            df = function.drop([self.LonIndexer,self.LatIndexer]
+                ).to_dataframe(name='Ce',dim_order=[
+                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+        else:
+            time = pd.to_datetime(function[self.TimeName].data)
+            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
+                    ).to_dataframe(
+                        name=time).transpose()
+        df.to_csv(self.output_dir+'/Ce_'+self.VerticalCoordIndexer+'.csv',
                     mode="a", header=None)
-            except:
-                raise('Could not save file with Ce for each level')
-            print('Done!')
+        print('Done!')
         return Ce
     
     def calc_cz(self):
-        if self.method == 'eulerian':
-            print('\nComputing conversion between zonal energy terms (Cz)...')
+        print('\nComputing conversion between zonal energy terms (Cz)...')
         FirstTerm = Rd/(self.PressureData*g)
         _ = self.omega_AE*self.tair_AE
         SecondTerm = CalcAreaAverage(_,self.LatIndexer)
@@ -114,23 +115,25 @@ class ConversionTerms:
         except ValueError:
             print('Unit error in Cz')
             raise
-        if self.method == 'eulerian':    
-            print(Cz.values*Cz.metpy.units)
-            print('Saving Cz for each vertical level...')
-            # Save Cz before vertical integration
-            try:
-                df = function_to_df(self,self.VerticalCoordIndexer,function)
-                df.to_csv(
-                    self.output_dir+'/Cz_'+self.VerticalCoordIndexer+'.csv',
+        print(Cz.values*Cz.metpy.units)
+        print('Saving Cz for each vertical level...')
+        # Save Cz before vertical integration
+        if self.method == 'eulerian':
+            df = function.drop([self.LonIndexer,self.LatIndexer]
+                ).to_dataframe(name='Ce',dim_order=[
+                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+        else:
+            time = pd.to_datetime(function[self.TimeName].data)
+            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
+                    ).to_dataframe(
+                        name=time).transpose()
+        df.to_csv(self.output_dir+'/Cz_'+self.VerticalCoordIndexer+'.csv',
                     mode="a", header=None)
-            except:
-                raise('Could not save file with Cz for each level')
-            print('Done!')
+        print('Done!')
         return Cz
     
     def calc_ca(self):
-        if self.method == 'eulerian':
-            print('\nComputing conversion between available potential energy terms (Ca)...')
+        print('\nComputing conversion between available potential energy terms (Ca)...')
         ## First term of the integral ##
         # Derivate tair_AE in respect to latitude
         DelPhi_tairAE = self.tair_AE.copy(deep=True
@@ -155,25 +158,26 @@ class ConversionTerms:
         try: 
             Ca = Ca.metpy.convert_units('W/ m **2')
         except ValueError:
-            print('Unit error in Ck')
+            print('Unit error in Ca')
             raise
-        if self.method == 'eulerian':    
-            print(Ca.values*Ca.metpy.units)
-            print('Saving Ca for each vertical level...')
-            # Save Ca before vertical integration
-            try:
-                df = function_to_df(self,self.VerticalCoordIndexer,function)
-                df.to_csv(
-                    self.output_dir+'/Ca_'+self.VerticalCoordIndexer+'.csv',
+        print(Ca.values*Ca.metpy.units)
+        print('Saving Ca for each vertical level...')
+        if self.method == 'eulerian':
+            df = function.drop([self.LonIndexer,self.LatIndexer]
+                ).to_dataframe(name='Ce',dim_order=[
+                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+        else:
+            time = pd.to_datetime(function[self.TimeName].data)
+            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
+                    ).to_dataframe(
+                        name=time).transpose()
+        df.to_csv(self.output_dir+'/Ca_'+self.VerticalCoordIndexer+'.csv',
                     mode="a", header=None)
-            except:
-                raise('Could not save file with Ca for each level')
-            print('Done!')
+        print('Done!')
         return Ca
         
     def calc_ck(self):
-        if self.method == 'eulerian':
-            print('\nComputing conversion between kinetic energy terms (Ck)...')
+        print('\nComputing conversion between kinetic energy terms (Ck)...')
         ## First term ##
         # Divide the zonal mean of the zonal wind component (u) by the cosine
         # of the latitude (in radians) and then differentiate it in regard to
@@ -227,16 +231,19 @@ class ConversionTerms:
         except ValueError:
             print('Unit error in Ck')
             raise
+        print(Ck.values*Ck.metpy.units)
+        print('Saving Ck for each vertical level...')
+        # Save Ck before vertical integration            
         if self.method == 'eulerian':
-            print(Ck.values*Ck.metpy.units)
-            print('Saving Ck for each vertical level...')
-            # Save Ck before vertical integration
-            try:
-                df = function_to_df(self,self.VerticalCoordIndexer,function)
-                df.to_csv(
-                    self.output_dir+'/Ck_'+self.VerticalCoordIndexer+'.csv',
+            df = function.drop([self.LonIndexer,self.LatIndexer]
+                ).to_dataframe(name='Ce',dim_order=[
+                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+        else:
+            time = pd.to_datetime(function[self.TimeName].data)
+            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
+                    ).to_dataframe(
+                        name=time).transpose()
+        df.to_csv(self.output_dir+'/Ck_'+self.VerticalCoordIndexer+'.csv',
                     mode="a", header=None)
-            except:
-                raise('Could not save file with Ck for each level')
-            print('Done!')
+        print('Done!')
         return Ck
