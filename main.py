@@ -292,12 +292,12 @@ def LEC_eulerian():
         flag = ' -r'
     else:
         flag = ' '
-    os.system("python plot_timeseries.py "+outfile+flag)
-    os.system("python plot_vertical.py "+ResultsSubDirectory)
-    os.system("python plot_boxplot.py "+ResultsSubDirectory+flag)
-    os.system("python draw_cycle.py "+outfile)
-    os.system("python LorenzPhaseSpace.py "+outfile)
-    cmd = "python plot_area.py {0} {1} {2} {3} {4}".format(min_lon, max_lon,min_lat,max_lat, ResultsSubDirectory)
+    os.system("python plots/plot_timeseries.py "+outfile+flag)
+    os.system("python plots/plot_vertical.py "+ResultsSubDirectory)
+    os.system("python plots/plot_boxplot.py "+ResultsSubDirectory+flag)
+    os.system("python plots/plot_LEC.py "+outfile)
+    os.system("python plots/plot_LPS.py "+outfile)
+    cmd = "python plots/plot_area.py {0} {1} {2} {3} {4}".format(min_lon, max_lon,min_lat,max_lat, ResultsSubDirectory)
     os.system(cmd)
     
 #---------------------------------------------------------------------------
@@ -471,12 +471,12 @@ def LEC_lagrangian():
         flag = ' -r'
     else:
         flag = ' '
-    os.system("python plot_timeseries.py "+outfile+flag)
-    os.system("python plot_vertical.py "+ResultsSubDirectory)
-    os.system("python plot_boxplot.py "+ResultsSubDirectory+flag)
-    os.system("python draw_cycle.py "+outfile)
-    os.system("python LorenzPhaseSpace.py "+outfile)
-    os.system("python plot_track.py "+outfile)
+    os.system("python plots/plot_timeseries.py "+outfile+flag)
+    os.system("python plots/plot_vertical.py "+ResultsSubDirectory)
+    os.system("python plots/plot_boxplot.py "+ResultsSubDirectory+flag)
+    os.system("python plots/plot_LEC.py "+outfile)
+    os.system("python plots/plot_LPS.py "+outfile)
+    os.system("python plots/plot_track.py "+outfile)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = "\
