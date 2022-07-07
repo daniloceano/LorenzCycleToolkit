@@ -183,9 +183,10 @@ def LEC_eulerian():
     # Create csv files for storing vertical results.
     # When those terms are computed data is simply appended to csv
     for term in ['Az','Ae','Kz','Ke','Cz','Ca','Ck','Ce','Ge','Gz']:
-        tmp = pd.DataFrame([],columns=[
-            TimeName,*[float(i)/100 for i in pres.values]])
-        tmp.to_csv(ResultsSubDirectory+term+'_'+VerticalCoordIndexer+'.csv')   
+        tmp = pd.DataFrame(columns=[TimeName,
+        *[float(i)/100 for i in pres.values]])
+        tmp.to_csv(ResultsSubDirectory+term+'_'+VerticalCoordIndexer+'.csv',
+                   index=None)
     # 4) 
     print('Computing zonal and area averages and eddy terms for each variable')
     print('and the static stability parameter...')
