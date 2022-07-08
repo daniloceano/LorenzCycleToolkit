@@ -6,16 +6,13 @@ Created on Thu Nov 26 18:27:40 2020
 @author: Danilo
 """
 
-import numpy as np
 from metpy.units import units
 from metpy.constants import Cp_d
 from metpy.constants import g
 from calc import (CalcZonalAverage,CalcAreaAverage,
                   VerticalTrazpezoidalIntegration)
-from thermodynamics import AdiabaticHEating
 from BoxData import BoxData
-from EnergyContents import function_to_df
-
+import pandas as pd
 
 class GenerationDissipationTerms:
     
@@ -51,8 +48,7 @@ class GenerationDissipationTerms:
         self.Q_AE = self.Q_ZA - self.Q_AA
     
     def calc_gz(self):
-        if self.method == 'eulerian':
-            print('\nComputing generation of Zonal Potential Energy (Gz)...')
+        print('\nComputing generation of Zonal Potential Energy (Gz)...')
         _ = (self.Q_AE*self.tair_AE)/(Cp_d*self.sigma_AA)
         function = CalcAreaAverage(_,self.LatIndexer)
         Gz = VerticalTrazpezoidalIntegration(function,self.PressureData,
@@ -64,20 +60,25 @@ class GenerationDissipationTerms:
             raise
         if self.method == 'eulerian':
             print(Gz.values*Gz.metpy.units)
-        # Save Ca before vertical integration
+        # Save Gz before vertical integration
+        print(Gz.values*Gz.metpy.units)
+        print('Saving Gz for each vertical level...')
         if self.method == 'eulerian':
-            print('Saving Gz for each vertical level...')
-            try:
-                df = function_to_df(self,self.VerticalCoordIndexer,function)
-                df.to_csv(self.output_dir+'/Gz_'+self.VerticalCoordIndexer+'.csv')
-            except:
-                raise('Could not save file with Gz for each level')
-            print('Done!')
+            df = function.drop([self.LonIndexer,self.LatIndexer]
+                ).to_dataframe(name='Ce',dim_order=[
+                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+        else:
+            time = pd.to_datetime(function[self.TimeName].data)
+            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
+                    ).to_dataframe(
+                        name=time).transpose()
+        df.to_csv(self.output_dir+'/Gz_'+self.VerticalCoordIndexer+'.csv',
+                    mode="a", header=None)
+        print('Done!')
         return Gz
     
     def calc_ge(self):
-        if self.method == 'eulerian':
-            print('\nComputing generation of Eddy Potential Energy (Ge)...')
+        print('\nComputing generation of Eddy Potential Energy (Ge)...')
         _ = (self.Q_ZE*self.tair_ZE)/(Cp_d*self.sigma_AA)
         function = CalcAreaAverage(_,self.LatIndexer,
                                     LonIndexer=self.LonIndexer)
@@ -88,17 +89,21 @@ class GenerationDissipationTerms:
         except ValueError:
             print('Unit error in Ge')
             raise
+        # Save Gz before vertical integration
+        print(Ge.values*Ge.metpy.units)
+        print('Saving Ge for each vertical level...')
         if self.method == 'eulerian':
-            print(Ge.values*Ge.metpy.units)
-        # Save Ca before vertical integration
-        if self.method == 'eulerian':
-            print('Saving Ge for each vertical level...')
-            try:
-                df = function_to_df(self,self.VerticalCoordIndexer,function)
-                df.to_csv(self.output_dir+'/Ge_'+self.VerticalCoordIndexer+'.csv')
-            except:
-                raise('Could not save file with Ge for each level')
-            print('Done!')
+            df = function.drop([self.LonIndexer,self.LatIndexer]
+                ).to_dataframe(name='Ce',dim_order=[
+                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+        else:
+            time = pd.to_datetime(function[self.TimeName].data)
+            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
+                    ).to_dataframe(
+                        name=time).transpose()
+        df.to_csv(self.output_dir+'/Ge_'+self.VerticalCoordIndexer+'.csv',
+                    mode="a", header=None)
+        print('Done!')
         return Ge
     
     def calc_dz(self):
