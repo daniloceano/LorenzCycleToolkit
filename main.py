@@ -36,6 +36,9 @@ from metpy.constants import g
 import traceback
 import logging
 
+import time
+
+
 
 def check_create_folder(DirName):
     if not os.path.exists(DirName):
@@ -359,17 +362,17 @@ def LEC_lagrangian():
     
     # Loop for each time step:
     times = tair[TimeName]
-    for time in times:
+    for t in times:
         itair, ihgt, iomega, iu, iv, iu_stress, iv_stress, iQ  = \
-            tair.sel({TimeName:time}), \
-                hgt.sel({TimeName:time}), omega.sel({TimeName:time}),\
-                    u.sel({TimeName:time}), v.sel({TimeName:time}),\
-                        u_stress.sel({TimeName:time}),\
-                            v_stress.sel({TimeName:time}),\
-                                Q.sel({TimeName:time})              
+            tair.sel({TimeName:t}), \
+                hgt.sel({TimeName:t}), omega.sel({TimeName:t}),\
+                    u.sel({TimeName:t}), v.sel({TimeName:t}),\
+                        u_stress.sel({TimeName:t}),\
+                            v_stress.sel({TimeName:t}),\
+                                Q.sel({TimeName:t})              
         
         # Get current time and box limits
-        itime = str(time.values)
+        itime = str(t.values)
         datestr = pd.to_datetime(itime).strftime('%Y-%m-%d %HZ')
         min_lon, max_lon = track.loc[itime]['Lon']-7.5,track.loc[itime]['Lon']+7.5
         min_lat, max_lat = track.loc[itime]['Lat']-7.5,track.loc[itime]['Lat']+7.5
@@ -377,7 +380,6 @@ def LEC_lagrangian():
         print('Box limits (lon/lat): '+str(max_lon)+'/'+str(max_lat),
               ' '+str(min_lon)+'/'+str(min_lat))
     
-        
         # Create box object
         try:
             box_obj = BoxData(TemperatureData=itair, PressureData=pres,
@@ -391,7 +393,6 @@ def LEC_lagrangian():
             output_dir=ResultsSubDirectory)
         except:
             raise SystemExit('Error on creating the box for the computations')
-        
         # Compute energy terms
         try:
             ec_obj = EnergyContents(box_obj,method='lagrangian')
@@ -402,7 +403,6 @@ def LEC_lagrangian():
         except Exception as e:
             print('An exception occurred: {}'.format(e))
             raise SystemExit('Error on computing Energy Contents')
-        
         # Compute conversion terms
         try:
             ct_obj = ConversionTerms(box_obj,method='lagrangian')
@@ -413,7 +413,6 @@ def LEC_lagrangian():
         except Exception as e:
             print('An exception occurred: {}'.format(e))
             raise SystemExit('Error on computing Conversion Terms')
-        
         # Compute boundary terms
         try:
             bt_obj = BoundaryTerms(box_obj,method='lagrangian')
@@ -426,7 +425,6 @@ def LEC_lagrangian():
         except Exception as e:
             print('An exception occurred: {}'.format(e))
             raise SystemExit('Error on computing Boundary Terms')
-        
         # Compute generation/dissipation terms
         try:
             gdt_obj = GenerationDissipationTerms(box_obj,method='lagrangian')
@@ -438,7 +436,6 @@ def LEC_lagrangian():
         except Exception as e:
             print('An exception occurred: {}'.format(e))
             raise SystemExit('Error on computing Generation Terms')
-            
     print('\nOrganising results in a Pandas DataFrame')
     df = pd.DataFrame.from_dict(TermsDict, orient ='columns',dtype = float)
     days = times.values.astype('datetime64[D]')
@@ -489,10 +486,12 @@ The program can compute the LEC using two distinct frameworks:\
        the track file.\
  Both frameworks can be applied at the same time, given the required files are\
  provided. An auxilliary 'fvars' file is also needed for both frameworks. \
- It contains thespecified names used for each variable.The program computates \
+ It contains thespecified names used for each variable. The program computates \
  the energy,conversion, boundary, generation anddissipation terms. The results \
  are stored as csv files in the 'LEC_results' directory on ../ and it also \
- creates figures for visualising the results.")
+ creates figures for visualising the results. \
+ The use of -r flag is required while the computation of friction parameters \
+ is not implemented")
     parser.add_argument("infile", help = "input .nc file with temperature,\
  geopotential and meridional, zonal and vertical components of the wind,\
  in pressure levels")
@@ -513,8 +512,12 @@ The program can compute the LEC using two distinct frameworks:\
     # box_limits = args.box_limits
     varlist = './fvars'
     # Run the program
+    start_time = time.time()
     if args.eulerian:
         LEC_eulerian()
+    print("--- %s seconds running eulerian framework ---" % (time.time() - start_time))
+    start_time = time.time()
     if args.lagrangian:
         LEC_lagrangian()
+    print("--- %s seconds for running lagrangian framework ---" % (time.time() - start_time))
     
