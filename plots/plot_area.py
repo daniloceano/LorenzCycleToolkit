@@ -30,7 +30,7 @@ def main():
     plt.close('all')
     datacrs = ccrs.PlateCarree() # projection
     fig = plt.figure(figsize=(8, 8.5))
-    ax = fig.add_axes([0.05, 0.05, 0.9, 0.9], projection=datacrs,
+    ax = fig.add_axes([0.1, 0.1, 0.8, 0.83], projection=datacrs,
                   frameon=True)
     ax.set_extent([min_lon-20, max_lon+20, max_lat+20, min_lat-20], crs=datacrs)
     ax.coastlines(zorder = 1)
@@ -45,7 +45,9 @@ def main():
     ax.add_geometries([pgon], crs=datacrs, 
                       facecolor='red', edgecolor='k', linewidth = 3,
                       alpha=0.5, zorder = 3)
-    ax.gridlines(draw_labels=True,zorder=2)    
+    gl = ax.gridlines(draw_labels=True,zorder=2)    
+    gl.xlabel_style = {'size': 16}
+    gl.ylabel_style = {'size': 16}
 
     plt.title('Box defined for compuations \n', fontsize = 22)
     plt.savefig(outdir+'Figures/box.png')

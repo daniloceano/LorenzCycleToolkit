@@ -20,9 +20,6 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
 import argparse
-import sys
-
-
 
 def plot_timeseries(df,term_list,linecolor,fname,label,outdir):
     # Guarantee no plots are open
@@ -38,6 +35,7 @@ def plot_timeseries(df,term_list,linecolor,fname,label,outdir):
     print('Data range: '+str(minval)+' to '+str(maxval))
     # Create figure
     plt.figure(figsize=(8,8))
+    ax = plt.gca()
     # Loop trhough terms that are being plotted..
     for term,i in zip(term_list,range(len(term_list))):
         plt.plot(times,df[term],c=linecolor[i],label=term,
@@ -45,9 +43,10 @@ def plot_timeseries(df,term_list,linecolor,fname,label,outdir):
                  marker=markers[i],markeredgecolor='#383838',
                  markerfacecolor=markercolor[i])
     plt.grid(c='gray',linewidth=0.25,linestyle='dashdot')
-    plt.tick_params(axis='x', labelrotation=20,size=12)
-    plt.tick_params(axis='y',size=12)
-    plt.legend()
+    plt.tick_params(axis='x', labelrotation=20)
+    ax.xaxis.set_tick_params(labelsize=16)
+    ax.yaxis.set_tick_params(labelsize=16)
+    plt.legend(prop={'size': 18})
     plt.xlim(times[0],times[-1])
     # Set x labels as dates
     ax = plt.gca()
@@ -61,9 +60,9 @@ def plot_timeseries(df,term_list,linecolor,fname,label,outdir):
     if term not in energy_labels:
         plt.axhline(y = 0, color = 'k', linestyle = '-',
                     linewidth=1, zorder=1,alpha=0.8)
-        plt.ylabel(label+r' $(J\,m^{-2})$',fontsize=14)
+        plt.ylabel(label+r' $(J\,m^{-2})$',fontsize=18)
     else:
-        plt.ylabel(label+r' $(W\,m^{-2})$',fontsize=14)   
+        plt.ylabel(label+r' $(W\,m^{-2})$',fontsize=18)   
     # Saving figure
     plt.savefig(outdir+'timeseires_'+fname+'.png')
     print('timeseires_'+fname+'.png created')
