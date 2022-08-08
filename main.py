@@ -515,9 +515,9 @@ The program can compute the LEC using two distinct frameworks:\
     start_time = time.time()
     if args.eulerian:
         LEC_eulerian()
-    print("--- %s seconds running eulerian framework ---" % (time.time() - start_time))
+        print("--- %s seconds running eulerian framework ---" % (time.time() - start_time))
     start_time = time.time()
     if args.lagrangian:
         LEC_lagrangian()
-    print("--- %s seconds for running lagrangian framework ---" % (time.time() - start_time))
+        print("--- %s seconds for running lagrangian framework ---" % (time.time() - start_time))
     
