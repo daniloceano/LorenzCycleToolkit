@@ -505,8 +505,8 @@ The program can compute the LEC using two distinct frameworks:\
     action='store_true', help = "compute the energetics for a fixed domain\
  specified by the box_lims file.")
     parser.add_argument("-l", "--lagrangian", default = False,
-    action='store_true', help = "compute the energetics for a fixed domain\
- specified by the box_lims file.")
+    action='store_true', help = "compute the energetics for a mobile domain\
+ specified by the track file.")
     args = parser.parse_args()
     infile  = args.infile
     # box_limits = args.box_limits
