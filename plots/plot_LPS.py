@@ -70,7 +70,7 @@ def MarkerSizeKe(df,flag):
     
     return df
 
-def LorenzPhaseSpace(flag):
+def LorenzPhaseSpace(df,flag,outname):
     
     '''
     flag == 1:
@@ -81,13 +81,13 @@ def LorenzPhaseSpace(flag):
         Will produce Ck x Ce x BKe+RKe plots
     '''
     
-    Ca = smoothed['Ca']
-    Ce = smoothed['Ce']
-    Ck = smoothed['Ck']
-    Ge = smoothed['Ge']
-    RAe = smoothed['Ge']+smoothed['BAe']
-    Re = smoothed['RKe']+smoothed['BKe']
-    smoothed['Rae'], smoothed['Re'] = RAe, Re
+    Ca = df['Ca']
+    Ce = df['Ce']
+    Ck = df['Ck']
+    Ge = df['Ge']
+    RAe = df['Ge']+df['BAe']
+    Re = df['RKe']+df['BKe']
+    df['Rae'], df['Re'] = RAe, Re
     
     plt.close('all')
     fig = plt.figure(figsize=(10,10))
@@ -105,7 +105,7 @@ def LorenzPhaseSpace(flag):
         ax.plot(Ck,Ce,'-',c='gray',zorder=2,linewidth=3)
     
     # Scatter plot
-    s = MarkerSizeKe(smoothed,flag)['sizes']
+    s = MarkerSizeKe(df,flag)['sizes']
 
     # Plot limits
     if flag == 1:
@@ -295,15 +295,15 @@ def LorenzPhaseSpace(flag):
                 zorder=101,fontsize=22,horizontalalignment='center',
                 verticalalignment='center')
         
-    fname = FigsDir+'LPS'+str(flag)+'.png'
+    fname = FigsDir+'LPS'+str(flag)+'_'+outname+'.png'
     plt.savefig(fname,dpi=500)
     print(fname+' created!')
     
-def LorenzPhaseSpace_zoomed():
+def LorenzPhaseSpace_zoomed(df,outname):
     
-    Ca = smoothed['Ca']
-    Ck = smoothed['Ck']
-    Ge = smoothed['Ge']
+    Ca = df['Ca']
+    Ck = df['Ck']
+    Ge = df['Ge']
     
     plt.close('all')
     fig = plt.figure(figsize=(10,10))
@@ -316,12 +316,36 @@ def LorenzPhaseSpace_zoomed():
     ax.plot(Ck,Ca,'-',c='gray',zorder=2,linewidth=3)
     
     # Scatter plot
-    s = MarkerSizeKe(smoothed)['sizes']
+    s = MarkerSizeKe(df,1)['sizes']
 
-    # Plot limits
-    ax.set_xlim(min(Ck)-1,max(Ck)+1)
-    ax.set_ylim(min(Ca)-1,max(Ca)+1)
-    norm = colors.TwoSlopeNorm(vmin=min(Ge), vcenter=0, vmax=max(Ge))
+    # Get limits
+    minCk, maxCk =  min(Ck), max(Ck)
+    minCa, maxCa = min(Ca), max(Ca)
+    minGe, maxGe = min(Ge), max(Ge)
+    # Plot limits for Ck
+    if minCk < -1:
+        minLimitCk = min(Ck)+(min(Ck)*0.3)
+    else:
+        minLimitCk = -1
+    if maxCk > 3:
+        maxLimitCk = max(Ck)+(max(Ck)*0.2)
+    else:
+        maxLimitCk = 3
+    ax.set_xlim(minLimitCk,maxLimitCk)
+    # Plot limits for Ca
+    if minCa < -0.5:
+        minLimitCa = min(Ca)+(min(Ca)*0.3)
+    else:
+        minLimitCa = -0.5
+    if maxCa > 1:
+        maxLimitCa = max(Ca)+(max(Ca)*0.2)
+    else:
+        maxLimitCa = 1
+    ax.set_ylim(minLimitCa,maxLimitCa)
+    
+    
+    norm = colors.TwoSlopeNorm(vmin=min(Ge)+(min(Ge)*0.2),
+                               vcenter=0, vmax=max(Ge)+(max(Ge)*0.2))
         
     dots = ax.scatter(Ck,Ca,c=Ge,cmap=cmocean.cm.curl,s=s,zorder=100,
                         edgecolors='grey', norm=norm)
@@ -372,10 +396,49 @@ def LorenzPhaseSpace_zoomed():
             zorder=101,fontsize=22,horizontalalignment='center',
             verticalalignment='center')
     
-    fname = FigsDir+"LPS_zoom.png"
+    fname = FigsDir+'LPS_'+outname+'_zoom.png'
     plt.savefig(fname,dpi=500)
     print(fname+' created!')
     
+def main():
+    
+    # Open data
+    df = pd.read_csv(outfile)
+    df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
+    
+    # Get 12H means
+    smoothed = df.groupby(pd.Grouper(key="Datetime", freq="12H")).mean()
+    # Set datetime to the date range
+    starts = pd.Series(smoothed.index).dt.strftime('%Y-%m-%d %H:%M')
+    ends = pd.Series(pd.DatetimeIndex(starts) + \
+                     pd.Timedelta(hours=12)).dt.strftime('%Y-%m-%d %H:%M')
+    smoothed['Datetime'] = pd.DataFrame(starts.astype(str)+' - '+\
+                                        ends.astype(str)).values
+    # Get data for cyclone life cycle periods
+    periods = pd.read_csv('./periods',sep= ';',header=0)
+    for i in range(len(periods)):
+        start,end = periods.iloc[i]['start'],periods.iloc[i]['end']
+        selected_dates = df[(df['Datetime'] >= start) & (df['Datetime'] <= end)]
+        if i == 0:
+            period = selected_dates.drop(['Datetime','Date','Hour'],axis=1).mean()
+            period = period.to_frame(name=periods.iloc[i]['Period']).transpose()
+        else:
+            tmp = selected_dates.drop(['Datetime','Date','Hour'],axis=1).mean()
+            tmp = tmp.to_frame(name=periods.iloc[i]['Period']).transpose()
+            period = pd.concat([period,tmp]) 
+    # Set datetime to the period date range
+    period['Datetime'] = (periods['start'].astype(str)+' - '+\
+                                        periods['end'].astype(str)).values
+    
+    # # Make all three LPS kinds, for all timesteps, 12h means and periods
+    # for i in range(3):
+    #     LorenzPhaseSpace(df,i+1,'all')
+    #     LorenzPhaseSpace(smoothed,i+1,'12H')
+    #     LorenzPhaseSpace(period,i+1,'periods')
+    # Make LPS zoomed
+    LorenzPhaseSpace_zoomed(df,'all')
+    LorenzPhaseSpace_zoomed(smoothed,'12H')
+    LorenzPhaseSpace_zoomed(period,'periods')
     
     
 if __name__ == "__main__":
@@ -395,10 +458,4 @@ results from the main.py program.")
     ResultsSubDirectory = '/'.join(outfile.split('/')[:-1])
     FigsDir = ResultsSubDirectory+'/Figures/'
     
-    df = pd.read_csv(outfile)
-    df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
-    smoothed = df.groupby(pd.Grouper(key="Datetime", freq="12H")).mean()
-
-    for i in range(3):
-        LorenzPhaseSpace(i+1)
-    # LorenzPhaseSpace_zoomed()
+    main()

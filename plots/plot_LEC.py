@@ -140,28 +140,39 @@ def BKz_BKe(ax,value,i,width,head_width):
     ax.text(1.18,0.5,value,fontdict={'fontsize':18},transform=ax.transAxes,
             verticalalignment='center',horizontalalignment='left')
 
-
-def main(time, example=False):
-    data = daily_means.iloc[time]
+def plot_LEC(idata,flag):
+    
+    # Adjust box size proportionally to the energy budget
+    x = idata[energys]
+    energy_scaled=(x-x.min())/(x.max()-x.min())
+        
+    # Adjust arrow size proportionally to the conversion rate, residual and 
+    # boundary
+    x = np.abs(idata[conversions+residuals+boundaries])
+    conversion_scaled=(x-x.min())/(x.max()-x.min())
+    
     plt.close('all')
     fig = plt.figure(figsize=(14, 11))
+    plt.axis('off')
     gs = gridspec.GridSpec(nrows=2, ncols=2,hspace=0.5,wspace=0.5,
                            right=(0.89))
-    i = 0
-    if example == True:
+    
+    if flag == 'example':
         plt.title('(Daily mean)',fontsize=20, loc='center',y=0.5,
                   fontdict={'fontweight':'bold'})
-    else:
-        plt.title(str(data.name.date()),fontsize=20, loc='center',y=0.5,
+    elif flag == 'daily_mean':
+        plt.title(str(idata.name.date()),fontsize=20, loc='center',y=0.5,
               fontdict={'fontweight':'bold'})
+    elif flag == 'periods':
+        plt.title((idata['Period']),fontsize=20, loc='center',y=0.5,
+               fontdict={'fontweight':'bold'})
     
-    plt.axis('off')
-
+    i = 0
     for row in range(2):
         for col in range(2):
             ax = fig.add_subplot(gs[row,col])
             
-            if example == True:
+            if flag == 'example':
                 energy = energys[i][:7]
                 plt.text(0.5, 0.5,energy,fontdict={'fontsize':25},
                           transform = ax.transAxes,
@@ -174,21 +185,21 @@ def main(time, example=False):
                 head_conversion,head_boundary,head_residual = 0.05,0.05,0.05
                 
             else:
-                energy = round(data[energys[i]],1)
+                energy = round(idata[energys[i]],1)
                 plt.text(0.5, 0.5,energy,fontdict={'fontsize':20},
                           transform = ax.transAxes,
                           verticalalignment='center',horizontalalignment='center')
-                conversion = round(data[conversions[i]],1)
-                residual = round(data[residuals[i]],1)
-                boundary = round(data[boundaries[i]],1)
+                conversion = round(idata[conversions[i]],1)
+                residual = round(idata[residuals[i]],1)
+                boundary = round(idata[boundaries[i]],1)
                 # alpha = 0.2+(0.8*energy_scaled[energys[i]].iloc[time])
                 alpha = .9
-                width_conversion = 0.01+(0.05*conversion_scaled[conversions[i]].iloc[time])
-                width_boundary = 0.01+(0.05*conversion_scaled[boundaries[i]].iloc[time])
-                width_residual = 0.01+(0.05*conversion_scaled[residuals[i]].iloc[time])
-                head_conversion = 0.05+(0.07*conversion_scaled[conversions[i]].iloc[time])
-                head_boundary = 0.05+(0.07*conversion_scaled[boundaries[i]].iloc[time])
-                head_residual = 0.05+(0.07*conversion_scaled[residuals[i]].iloc[time])
+                width_conversion = 0.01+(0.05*conversion_scaled[conversions[i]])
+                width_boundary = 0.01+(0.05*conversion_scaled[boundaries[i]])
+                width_residual = 0.01+(0.05*conversion_scaled[residuals[i]])
+                head_conversion = 0.05+(0.07*conversion_scaled[conversions[i]])
+                head_boundary = 0.05+(0.07*conversion_scaled[boundaries[i]])
+                head_residual = 0.05+(0.07*conversion_scaled[residuals[i]])
 
             # Draw energy budgets as boxes
             square = plt.Rectangle((0, 0),5,5, fc=cols_energy[i],ec='k',
@@ -215,12 +226,38 @@ def main(time, example=False):
                 BKz_BKe(ax,boundary,i,width_boundary,head_boundary)
             i+=1
             
-    if example == True:
+    if flag == 'example':
         plt.savefig(FigsDir+'LEC_example.png')
-    else:
-        datestr = daily_means.index[time].strftime("%Y-%m-%d")
-        print('Created LEC (daily mean) cyle for: '+datestr)
+        print('Created LEC example figure')
+    elif flag == 'daily_mean':
+        datestr = idata.name.strftime("%Y-%m-%d")
+        print('Created LEC (daily mean) for: '+datestr)
         plt.savefig(FigsDir+'LEC_'+datestr+'.png')
+    elif flag == 'periods':
+        print('Created LEC for period: '+idata['Period'])
+        plt.savefig(FigsDir+'LEC_'+idata['Period']+'.png')
+    
+
+def main():
+    
+    df = pd.read_csv(outfile)
+    df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
+    # Get mean daily values
+    data = df.groupby(pd.Grouper(key="Datetime", freq="1D")).mean()
+    # plot example figure
+    plot_LEC(data,'example')
+    # plot each deaily mean
+    for t in range(len(data)):
+        idata = data.iloc[t]
+        plot_LEC(idata,'daily_mean')
+    # plot means for each periods of the system
+    periods = pd.read_csv('./periods',sep= ';',header=0)
+    for i in range(len(periods)):
+        start,end = periods.iloc[i]['start'],periods.iloc[i]['end']
+        selected_dates = df[(df['Datetime'] >= start) & (df['Datetime'] <= end)]
+        period = selected_dates.drop(['Datetime','Date','Hour'],axis=1).mean()
+        period['Period'] = periods.iloc[i]['Period']
+        plot_LEC(period,'periods')
 
 
 if __name__ == "__main__":
@@ -238,12 +275,6 @@ results from the main.py program.")
     ResultsSubDirectory = '/'.join(outfile.split('/')[:-1])
     FigsDir = ResultsSubDirectory+'/Figures/'
 
-    df = pd.read_csv(outfile)
-    df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
-    # Get mean daily values
-    daily_means = df.groupby(pd.Grouper(key="Datetime", freq="1D")).mean()
-    
-    
     # Specs for plotting
     energys = ['∂Az/∂t (finite diff.)','∂Kz/∂t (finite diff.)',
                '∂Ae/∂t (finite diff.)', '∂Ke/∂t (finite diff.)']
@@ -254,22 +285,7 @@ results from the main.py program.")
     cols_conversion = ['#5C5850','#5C5850','#5C5850','#5C5850']
     cols_residual = ['#5C5850','#5C5850','#5C5850','#5C5850']
     cols_boundary =  ['#5C5850','#5C5850','#5C5850','#5C5850']
-    # cols_conversion = ['#6785A6','#254A73','#A8893C','#DE8268']
-    # cols_residual = ['#406F80','#807B40','#578040','#80402E']
-    # cols_boundary = ['#1C4080','#8A8A00','#169A00','#AE241C']
 
     
-    # Adjust circle size proportionally to the energy budget
-    x = daily_means[energys]
-    energy_scaled=(x-x.min().min())/(x.max().max()-x.min().min())
-        
-    # Adjust arrow size proportionally to the conversion rate, residual and 
-    # boundary
-    x = np.abs(daily_means[conversions+residuals+boundaries])
-    conversion_scaled=(x-x.min().min())/(x.max().max()-x.min().min())
-    
-    main(0,example=True)
-    # plot each deaily mean
-    for t in range(len(daily_means)):
-        main(t)
+    main()
     
