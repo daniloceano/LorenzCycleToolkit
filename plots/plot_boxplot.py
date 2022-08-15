@@ -23,8 +23,7 @@ import matplotlib.dates as mdates
 import glob
 from datetime import datetime
 import argparse
-
-
+import matplotlib.gridspec as gridspec
 
 def get_data_dict(term_list):
     data = {}
@@ -43,17 +42,23 @@ def boxplot_time(term_list):
     t_id = data[term].columns[0] # Time indexer
     times = data[term][t_id]
     plt.close('all') 
-    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(9, 9))
+    fig = plt.figure(figsize=(12, 12))
+    if term in energy_labels:
+        fname = 'Energy'
+        gs = gridspec.GridSpec(nrows=2, ncols=2,  hspace=0.15, wspace=0.2)
+    elif term in conversion_labels:
+        fname = 'Conversion'
+        gs = gridspec.GridSpec(nrows=2, ncols=2,  hspace=0.15, wspace=0.3)
     i = 0
     for row in range(2):
         for col in range(2):
-            ax = axs[row,col]
+            ax = fig.add_subplot(gs[i])
             term = term_list[i]
             ntime = data[term].shape[0]
             if col == 0 and term in energy_labels:
-                ax.set_ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=14)
+                ax.set_ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=18)
             elif col == 0 and term in conversion_labels:
-                ax.set_ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=14)
+                ax.set_ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=18)
             for t in range(ntime):
                 time_step = (datetime.fromisoformat(times.iloc[t]))
                 bplot = ax.boxplot(data[term].iloc[t].values[1:],
@@ -66,19 +71,18 @@ def boxplot_time(term_list):
                 ax.xaxis.set_major_locator(locator)
                 ax.xaxis.set_major_formatter(formatter)
                 ax.tick_params(axis='x',labelrotation=20)
-                ax.tick_params(size=12)
-                ax.set_title(term, fontsize=14)
+                ax.xaxis.set_tick_params(labelsize=16)
+                ax.yaxis.set_tick_params(labelsize=16)
+                ax.set_title(term, fontsize=20)
                 fig.autofmt_xdate()
+                ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
             i += 1
-    if term in energy_labels:
-        fname = 'Energy'
-    elif term in conversion_labels:
-        fname = 'Conversion'
+
         
     outfile = Directory+'/Figures/boxplot_vertical_timeseries_'+fname+'.png'
     
 
-    plt.savefig(outfile)
+    plt.savefig(outfile,bbox_inches='tight')
     print('Created '+outfile)
     
 def boxplot_vertical(term_list):
@@ -86,31 +90,36 @@ def boxplot_vertical(term_list):
     term = list(data.keys())[0]
     levs = data[term].columns[1:] # Vertical levels
     plt.close('all') 
-    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(9, 11))
+    fig = plt.figure(figsize=(13, 10))
+    if term in energy_labels:
+        fname = 'Energy'
+        gs = gridspec.GridSpec(nrows=2, ncols=2,  hspace=0.15, wspace=0.2)
+    elif term in conversion_labels:
+        fname = 'Conversion'
+        gs = gridspec.GridSpec(nrows=2, ncols=2,  hspace=0.15, wspace=0.3)
     i = 0
     for row in range(2):
         for col in range(2):
-            ax = axs[row,col]
+            ax = fig.add_subplot(gs[i])
             term = term_list[i]
             if col == 0 and term in energy_labels:
-                ax.set_ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=14)
+                ax.set_ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=18)
             elif col == 0 and term in conversion_labels:
-                ax.set_ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=14)
+                ax.set_ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=18)
             for lev,j in zip(levs,range(len(levs))):
                 bplot = ax.boxplot(data[term][lev].values,positions=[j/3],
                                    labels=[lev], patch_artist=True)
                 bplot['boxes'][-1].set_facecolor(linecolors[i])
                 bplot['boxes'][-1].set_alpha(0.85)
-                ax.tick_params(axis='x',labelrotation=90)
-                ax.tick_params(size=12)
-                ax.set_title(term, fontsize=14)
+                ax.tick_params(axis='x',labelrotation=60)
+                if row == 0:
+                    ax.axes.xaxis.set_ticklabels([])
+                ax.xaxis.set_tick_params(labelsize=16)
+                ax.yaxis.set_tick_params(labelsize=16)
+                ax.set_title(term, fontsize=20)
             i +=1
-    if term in energy_labels:
-            fname = 'Energy'
-    elif term in conversion_labels:
-            fname = 'Conversion'
     outfile = Directory+'/Figures/boxplot_vertical_'+fname+'.png'
-    plt.savefig(outfile)
+    plt.savefig(outfile,bbox_inches='tight')
     print('Created '+outfile)
     
 def main():

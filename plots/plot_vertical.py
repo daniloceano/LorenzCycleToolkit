@@ -18,9 +18,11 @@ Contact:
 """
 
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
+import matplotlib.colors as colors
 import os
 import cmocean as cmo
 import glob
@@ -72,8 +74,8 @@ def plot_vertical(list_terms):
         plt.grid(b=True,c='gray',linewidth=0.25,linestyle='dashdot')
         plt.tick_params(axis='x', labelrotation=20)
         plt.legend()
-        plt.xticks(fontsize=12)
-        plt.yticks(fontsize=12)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
         plt.title(timestep)
         plt.ylim(levs[0],levs[-1])
         plt.vlines(0, levs[0],levs[-1], color = 'k', linestyle = '-',
@@ -84,7 +86,7 @@ def plot_vertical(list_terms):
         elif term in conversion_labels:
             fname = 'Conversion'
         outfile = FigsDirectory+fname+'_'+timestring+'.png'
-        plt.savefig(outfile)
+        plt.savefig(outfile,bbox_inches='tight')
         print('Created '+outfile)
     
 def plot_hovmoller(list_terms):
@@ -95,44 +97,58 @@ def plot_hovmoller(list_terms):
     times = pd.date_range(dates[0],dates.iloc[-1],periods=len(dates))
     levs = data[term].columns[1:]
     if term in generation_labels:
-        fig = plt.figure(figsize=(12, 5))
-        gs = gridspec.GridSpec(nrows=1, ncols=2,right=0.83)
-    else:
+        fig = plt.figure(figsize=(16, 5))
+        gs = gridspec.GridSpec(nrows=1, ncols=2,
+                               right=0.75, wspace=0.4)
+    elif term in conversion_labels:
         fig = plt.figure(figsize=(12, 10))
-        gs = gridspec.GridSpec(nrows=2, ncols=2,  hspace=0.3)
+        gs = gridspec.GridSpec(nrows=2, ncols=2,
+                               wspace=0.5,hspace=0.3, top=0.95)
+    elif term in energy_labels:
+        fig = plt.figure(figsize=(12, 10))
+        gs = gridspec.GridSpec(nrows=2, ncols=2, 
+                               wspace=0.3,hspace=0.3, top=0.95)
     for i,term in zip(range(len(list_terms)),list_terms):
         ax = fig.add_subplot(gs[i])
+        imin = data[term].min(numeric_only=True).min()
+        imax = data[term].max(numeric_only=True).max()
+        absmax = np.amax([np.abs(imin),imax])
         if term in energy_labels:
             fname = 'Energy'
             cmap='cmo.amp'
             title = 'Energy '+r' $(J\,m^{-2})$'
+            norm = colors.Normalize(vmin=imin,vmax=imax)
         elif term in conversion_labels:
             fname = 'Conversion'
             cmap='cmo.tarn'
+            norm = colors.TwoSlopeNorm(vcenter=0,vmin=-absmax,
+                vmax=absmax)
             title = 'Conversion '+r' $(W\,m^{-2})$'
         elif term in generation_labels:
             fname = 'Generation'
             cmap='cmo.tarn'
+            norm = colors.TwoSlopeNorm(vcenter=0,vmin=-absmax,
+                vmax=absmax)
             title = 'Generation '+r' $(W\,m^{-2})$'
         cf = ax.contourf(times,levs,data[term][levs].transpose(),
-                    cmap=cmap, extend='both')
+                    cmap=cmap, extend='neither', norm=norm)
         ax.contour(times,levs,data[term][levs].transpose(),
-                    colors='k', extend='both')
-        ax.tick_params(axis='x',labelrotation=20)
-        ax.tick_params(size=12)
+                    colors='k', extend='neither')
+        ax.xaxis.set_tick_params(labelsize=16)
+        ax.yaxis.set_tick_params(labelsize=16)
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
         start, end = ax.get_xlim()
-        ax.set_title(term,fontdict={'fontsize':14})
-    # colorbar
-    if term in generation_labels:
-        cb_ax = fig.add_axes([0.88, 0.1, 0.02, 0.8])
-    else:
-        cb_ax = fig.add_axes([0.93, 0.1, 0.02, 0.8])
-    cbar = fig.colorbar(cf, cax=cb_ax)
-    cbar.ax.get_yaxis().labelpad = 15
-    cbar.ax.set_ylabel(title, rotation=270,fontsize=10)
+        ax.set_title(term,fontdict={'fontsize':20})
+        ax.tick_params(axis='x',labelrotation=50)
+        # colorbar
+        cbar = fig.colorbar(cf)
+        if i % 2 != 0:
+            cbar.ax.set_ylabel(title, rotation=270,fontsize=16)
+            cbar.ax.get_yaxis().labelpad = 20
+        for t in cbar.ax.get_yticklabels():
+             t.set_fontsize(14)
     outfile = Directory+'/Figures/hovmoller_'+fname+'.png'
-    plt.savefig(outfile)
+    plt.savefig(outfile,bbox_inches='tight')
     print('Created '+outfile)
     
 
