@@ -25,6 +25,7 @@ import matplotlib.gridspec as gridspec
 import argparse
 
 
+
 def Cz(ax,value,i,width,head_width):
     if isinstance(value, str) or (isinstance(value, float) and value > 0):
         ax.arrow(-0.637, 0.5, 0.78, 0, head_width = head_width, width = width,
@@ -37,7 +38,7 @@ def Cz(ax,value,i,width,head_width):
           length_includes_head=True,
           fc=cols_conversion[i],ec=cols_conversion[i],
           clip_on=False,transform=ax.transAxes)
-    ax.text(-0.25,0.57,value,fontdict={'fontsize':18},transform=ax.transAxes,
+    ax.text(-0.25,0.57,value,fontdict={'fontsize':fs},transform=ax.transAxes,
             verticalalignment='center',horizontalalignment='center')
 
 def Ck(ax,value,i,width,head_width):
@@ -50,7 +51,7 @@ def Ck(ax,value,i,width,head_width):
                   length_includes_head=True,
               fc=cols_conversion[i],ec=cols_conversion[i],
               clip_on=False,transform = ax.transAxes)
-    ax.text(0.55,1.25,value,fontdict={'fontsize':18},transform=ax.transAxes,
+    ax.text(0.55,1.25,value,fontdict={'fontsize':fs},transform=ax.transAxes,
             verticalalignment='center',horizontalalignment='left')
 
 def Ca(ax,value,i,width,head_width):
@@ -65,7 +66,7 @@ def Ca(ax,value,i,width,head_width):
                  length_includes_head=True,
                  fc=cols_conversion[i],ec=cols_conversion[i],
                  clip_on=False,transform = ax.transAxes)
-    ax.text(0.45,-0.26,value,fontdict={'fontsize':18},transform = ax.transAxes,
+    ax.text(0.45,-0.26,value,fontdict={'fontsize':fs},transform = ax.transAxes,
             verticalalignment='center',horizontalalignment='right')
 
 def Ce(ax,value,i,width,head_width):
@@ -79,7 +80,7 @@ def Ce(ax,value,i,width,head_width):
               fc=cols_conversion[i],ec=cols_conversion[i],
                        length_includes_head=True,
               clip_on=False,transform=ax.transAxes)
-    ax.text(1.25,0.42,value,fontdict={'fontsize':18},transform=ax.transAxes,
+    ax.text(1.25,0.42,value,fontdict={'fontsize':fs},transform=ax.transAxes,
             verticalalignment='center',horizontalalignment='center')
 
 def RGz_RKz(ax,value,i,width,head_width):
@@ -93,7 +94,7 @@ def RGz_RKz(ax,value,i,width,head_width):
           fc=cols_residual[i],ec=cols_residual[i],
                     length_includes_head=True,
           clip_on=False,transform=ax.transAxes)
-    ax.text(0.5,1.27,value,fontdict={'fontsize':18},transform=ax.transAxes,
+    ax.text(0.5,1.27,value,fontdict={'fontsize':fs},transform=ax.transAxes,
             verticalalignment='center',horizontalalignment='center')
 
 
@@ -108,7 +109,7 @@ def RGe_RKe(ax,value,i,width,head_width):
                  length_includes_head=True,
       fc=cols_residual[i],ec=cols_residual[i],
       clip_on=False,transform=ax.transAxes)
-    ax.text(0.5,-.28,value,fontdict={'fontsize':18},transform=ax.transAxes,
+    ax.text(0.5,-.28,value,fontdict={'fontsize':fs},transform=ax.transAxes,
             verticalalignment='center',horizontalalignment='center')
     
 
@@ -123,7 +124,7 @@ def BAz_BAe(ax,value,i,width,head_width):
                   fc=cols_boundary[i],ec=cols_boundary[i],
            length_includes_head=True,
            clip_on=False,transform=ax.transAxes)
-     ax.text(-0.18,0.5,value,fontdict={'fontsize':18},transform=ax.transAxes,
+     ax.text(-0.18,0.5,value,fontdict={'fontsize':fs},transform=ax.transAxes,
             verticalalignment='center',horizontalalignment='right')
 
 def BKz_BKe(ax,value,i,width,head_width):
@@ -137,7 +138,7 @@ def BKz_BKe(ax,value,i,width,head_width):
              fc=cols_boundary[i],ec=cols_boundary[i],
                       length_includes_head=True,
              clip_on=False,transform=ax.transAxes)
-    ax.text(1.18,0.5,value,fontdict={'fontsize':18},transform=ax.transAxes,
+    ax.text(1.18,0.5,value,fontdict={'fontsize':fs},transform=ax.transAxes,
             verticalalignment='center',horizontalalignment='left')
 
 def plot_LEC(idata,flag):
@@ -158,13 +159,13 @@ def plot_LEC(idata,flag):
                            right=(0.89))
     
     if flag == 'example':
-        plt.title('(Daily mean)',fontsize=20, loc='center',y=0.5,
+        plt.title('(Daily mean/period)',fontsize=fs, loc='center',y=0.5,
                   fontdict={'fontweight':'bold'})
     elif flag == 'daily_mean':
-        plt.title(str(idata.name.date()),fontsize=20, loc='center',y=0.5,
+        plt.title(str(idata.name.date()),fontsize=fs, loc='center',y=0.5,
               fontdict={'fontweight':'bold'})
     elif flag == 'periods':
-        plt.title((idata['Period']),fontsize=20, loc='center',y=0.5,
+        plt.title((idata['Period']),fontsize=fs, loc='center',y=0.5,
                fontdict={'fontweight':'bold'})
     
     i = 0
@@ -174,7 +175,7 @@ def plot_LEC(idata,flag):
             
             if flag == 'example':
                 energy = energys[i][:7]
-                plt.text(0.5, 0.5,energy,fontdict={'fontsize':25},
+                plt.text(0.5, 0.5,energy,fontdict={'fontsize':fs},
                           transform = ax.transAxes,
                           verticalalignment='center',horizontalalignment='center')
                 conversion = conversions[i]
@@ -186,7 +187,7 @@ def plot_LEC(idata,flag):
                 
             else:
                 energy = round(idata[energys[i]],1)
-                plt.text(0.5, 0.5,energy,fontdict={'fontsize':20},
+                plt.text(0.5, 0.5,energy,fontdict={'fontsize':fs},
                           transform = ax.transAxes,
                           verticalalignment='center',horizontalalignment='center')
                 conversion = round(idata[conversions[i]],1)
@@ -276,6 +277,7 @@ results from the main.py program.")
     FigsDir = ResultsSubDirectory+'/Figures/'
 
     # Specs for plotting
+    fs = 30
     energys = ['∂Az/∂t (finite diff.)','∂Kz/∂t (finite diff.)',
                '∂Ae/∂t (finite diff.)', '∂Ke/∂t (finite diff.)']
     conversions = ['Ca', 'Cz', 'Ce', 'Ck']
