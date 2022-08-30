@@ -56,21 +56,21 @@ def MarkerSizeKe(df,flag):
     l4 = plt.scatter([],[],c='k', s=msizes[3],label=labels[3])
     l5 = plt.scatter([],[],c='k', s=msizes[4],label=labels[4])
     leg = plt.legend([l1, l2, l3, l4, l5], labels, ncol=1, frameon=False,
-                     fontsize=10, handlelength = 0.3, handleheight = 4,
+                     fontsize=12, handlelength = 0.3, handleheight = 4,
                      borderpad = 1.5, scatteryoffsets = [0.1], framealpha = 1,
                 handletextpad=1.5, title=title,
                 scatterpoints = 1, loc = 1,
-                bbox_to_anchor=(0.73, -0.57, 0.5, 1),labelcolor = '#383838')
+                bbox_to_anchor=(0.77, -0.62, 0.5, 1),labelcolor = '#383838')
     leg._legend_box.align = "center"
     plt.setp(leg.get_title(), color='#383838')
-    plt.setp(leg.get_title(),fontsize=12)
+    plt.setp(leg.get_title(),fontsize=15)
     for i in range(len(leg.legendHandles)):
         leg.legendHandles[i].set_color('#383838')
         leg.legendHandles[i].set_edgecolor('gray')
     
     return df
 
-def LorenzPhaseSpace(df,flag,outname):
+def LorenzPhaseSpace(df,flag,outname,example=False):
     
     '''
     flag == 1:
@@ -90,35 +90,37 @@ def LorenzPhaseSpace(df,flag,outname):
     df['Rae'], df['Re'] = RAe, Re
     
     plt.close('all')
-    fig = plt.figure(figsize=(10,10))
-    # plt.gcf().subplots_adjust(bottom=0.15)
-    plt.gcf().subplots_adjust(right=0.85)
-    # plt.gcf().subplots_adjust(left=0.135)
+    fig = plt.figure(figsize=(12,10))
+    plt.gcf().subplots_adjust(bottom=0.15)
+    plt.gcf().subplots_adjust(left=0.14)
+    plt.gcf().subplots_adjust(right=0.82)
     ax = plt.gca()
     
     # Line plot
     if flag == 1:
-        ax.plot(Ck,Ca,'-',c='gray',zorder=2,linewidth=3)
+        lines = ax.plot(Ck,Ca,'-',c='gray',zorder=2,linewidth=3)
     elif flag == 2:
-        ax.plot(Ce,Ca,'-',c='gray',zorder=2,linewidth=3)
+        lines = ax.plot(Ce,Ca,'-',c='gray',zorder=2,linewidth=3)
     elif flag == 3:
-        ax.plot(Ck,Ce,'-',c='gray',zorder=2,linewidth=3)
+        lines = ax.plot(Ck,Ce,'-',c='gray',zorder=2,linewidth=3)
     
     # Scatter plot
     s = MarkerSizeKe(df,flag)['sizes']
 
     # Plot limits
     if flag == 1:
-        ax.set_xlim(-24,24)
-        ax.set_ylim(-7,7)
+        ax.set_xlim(-25,25)
+        ax.set_ylim(-25,25)
         norm = colors.TwoSlopeNorm(vmin=-7, vcenter=0, vmax=15)
         dots = ax.scatter(Ck,Ca,c=Ge,cmap=cmocean.cm.curl,s=s,zorder=100,
                         edgecolors='grey', norm=norm)
         # Labels
-        ax.set_xlabel('Conversion from zonal to eddy Kinetic Energy (Ck - '+r' $W\,m^{-2})$',
-                      fontsize=12,labelpad=40,c='#383838')
-        ax.set_ylabel('Conversion from zonal to eddy Potential Energy (Ca - '+r' $W\,m^{-2})$',
-                      fontsize=12,labelpad=40,c='#383838')
+        ax.set_xlabel(
+        'Conversion from zonal to eddy Kinetic Energy (Ck - '+r' $W\,m^{-2})$',
+                      fontsize=15,labelpad=45,c='#383838')
+        ax.set_ylabel(
+      'Conversion from zonal to eddy Potential Energy (Ca - '+r' $W\,m^{-2})$',
+                      fontsize=15,labelpad=45,c='#383838')
         
     elif flag == 2:
         ax.set_xlim(-18,18)
@@ -128,9 +130,9 @@ def LorenzPhaseSpace(df,flag,outname):
                         edgecolors='grey', norm=norm)
         # Labels
         ax.set_xlabel('Conversion from eddy Potential to Kinectic Energy (Ce - '+r' $W\,m^{-2})$',
-                      fontsize=12,labelpad=40,c='#383838')
+                      fontsize=12,labelpad=45,c='#383838')
         ax.set_ylabel('Conversion from zonal to eddy Potential Energy (Ca - '+r' $W\,m^{-2})$',
-                      fontsize=12,labelpad=40,c='#383838')
+                      fontsize=12,labelpad=45,c='#383838')
         
     elif flag == 3:
         ax.set_xlim(-24,24)
@@ -140,15 +142,19 @@ def LorenzPhaseSpace(df,flag,outname):
                         edgecolors='grey', norm=norm)
         # Labels
         ax.set_xlabel('Conversion from zonal to eddy Kinetic Energy (Ck - '+r' $W\,m^{-2})$',
-                      fontsize=12,labelpad=40,c='#383838')
+                      fontsize=12,labelpad=45,c='#383838')
         ax.set_ylabel('Conversion from eddy Potential to Kinectic Energy (Ce - '+r' $W\,m^{-2})$',
-                      fontsize=12,labelpad=40,c='#383838')
+                      fontsize=12,labelpad=45,c='#383838')
+        
+    if example == True:
+        dots.set_visible(False)
+        ax.lines.pop(0)
         
     # Gradient lines in the center of the plot
     alpha, offsetalpha = 0.3, 20
     lw, c = 2.5, '#383838'
     if flag == 1:
-        offsetx, offsety = 16, 4.3
+        offsetx, offsety = 4, 4
     elif flag == 2:
         offsetx, offsety = 16, 5.7
     elif flag == 3:
@@ -167,34 +173,41 @@ def LorenzPhaseSpace(df,flag,outname):
     # Colorbar
     if flag == 1:
         cax = fig.add_axes([ax.get_position().x1+0.01,
-                        ax.get_position().y0+0.32,0.02,ax.get_position().height/1.74])
+                        ax.get_position().y0+0.34,0.02,ax.get_position().height/1.74])
         cbar = plt.colorbar(dots, extend='both',cax=cax)
         cbar.ax.set_ylabel('Generation of eddy Potential Energy (Ge - '+r' $W\,m^{-2})$',
-                       rotation=270,fontsize=12,verticalalignment='bottom',
-                       c='#383838',labelpad=40)
+                       rotation=270,fontsize=15,verticalalignment='bottom',
+                       c='#383838',labelpad=50)
     elif flag == 2:
         cax = fig.add_axes([ax.get_position().x1+0.01,
                         ax.get_position().y0+0.32,0.02,ax.get_position().height/1.74])
         cbar = plt.colorbar(dots, extend='both',cax=cax)
         cbar.ax.set_ylabel('Sources of eddy Potential Energy (Ge + BAe - '+r' $W\,m^{-2})$',
-                       rotation=270,fontsize=12,verticalalignment='bottom',
-                       c='#383838',labelpad=40)
+                       rotation=270,fontsize=15,verticalalignment='bottom',
+                       c='#383838',labelpad=50)
     elif flag == 3:
         cax = fig.add_axes([ax.get_position().x1+0.01,
                         ax.get_position().y0+0.32,0.02,ax.get_position().height/1.74])
         cbar = plt.colorbar(dots, extend='both',cax=cax)
         cbar.ax.set_ylabel('Sinks of eddy Kinectic Energy (RKe + BKe - '+r' $W\,m^{-2})$',
-                       rotation=270,fontsize=12,verticalalignment='bottom',
-                       c='#383838',labelpad=40)
+                       rotation=270,fontsize=15,verticalalignment='bottom',
+                       c='#383838',labelpad=50)
     for t in cbar.ax.get_yticklabels():
-         t.set_fontsize(10)
+         t.set_fontsize(13)
         
 
     # Annotate plot
-    plt.tick_params(labelsize=10)
-    system = outfile.split('/')[-1].split('_')[0]
-    datasource = outfile.split('/')[-1].split('_')[1]
-    start, end = str(df['Datetime'][0]),str(df['Datetime'].iloc[-1]) 
+    ax.xaxis.set_tick_params(labelsize=13)
+    ax.yaxis.set_tick_params(labelsize=13)
+    # Annotate plot
+    if example == True:
+        system = ''
+        datasource = ''
+        start, end = '',''
+    else:
+        system = outfile.split('/')[-1].split('_')[0]
+        datasource = outfile.split('/')[-1].split('_')[1]
+        start, end = str(df['Datetime'][0]),str(df['Datetime'].iloc[-1]) 
     ax.text(0,1.1,'System: '+system+' - Data from: '+datasource,
             fontsize=16,c='#242424',horizontalalignment='left',
             transform=ax.transAxes)
@@ -206,17 +219,17 @@ def LorenzPhaseSpace(df,flag,outname):
             horizontalalignment='left',transform=ax.transAxes)
     ax.text(0.14,1.025,end,fontsize=14,c='#242424',
             horizontalalignment='left',transform=ax.transAxes)
-    annotate_fs = 10
+    annotate_fs = 15
     if flag == 1:
         y_upper = 'Eddy is gaining potential energy \n from the mean flow'
         y_lower = 'Eddy is providing potential energy \n to the mean flow'
         x_left = 'Eddy is gaining kinetic energy \n from the mean flow'
         x_right = 'Eddy is providing kinetic energy \n to the mean flow'
-        col_lower = 'Subisidence decreases \n eddy potential energy'
-        col_upper = 'Latent heat release feeds \n eddy potential energy'
+        col_lower = 'Subisidence decreases\neddy potential energy'
+        col_upper = 'Latent heat release feeds\neddy potential energy'
         lower_left = 'Barotropic instability'
-        upper_left = 'Eddy growth by barotropic and\n baroclinic processes'
-        lower_right = 'Eddy is feeding the local atmospheric circulation'
+        upper_left = 'Eddy growth by barotropic\nand baroclinic processes'
+        lower_right = 'Eddy is feeding the\nlocal atmospheric circulation'
         upper_right = 'Gain of eddy potential energy\n via baroclinic processes'
     elif flag == 2:
         y_upper = 'Eddy is gaining potential energy \n from the mean flow'
@@ -241,59 +254,63 @@ def LorenzPhaseSpace(df,flag,outname):
         lower_right = 'Eddy dissipation'
         upper_right = 'Pure baroclinic instability'
         
-    ax.text(-0.08,0.12,y_lower,
+    # if example == True:
+        
+        
+    ax.text(-0.09,0.01,y_lower,
             rotation=90,fontsize=annotate_fs,horizontalalignment='center',c='#19616C',
             transform=ax.transAxes)
-    ax.text(-0.08,0.65,y_upper,
+    ax.text(-0.09,0.55,y_upper,
             rotation=90,fontsize=annotate_fs,horizontalalignment='center',c='#CF6D66',
             transform=ax.transAxes)
-    ax.text(0.22,-0.08,x_left,
+    ax.text(0.25,-0.1,x_left,
             fontsize=annotate_fs,horizontalalignment='center',c='#CF6D66',
             transform=ax.transAxes)
-    ax.text(0.75,-0.08,x_right,
+    ax.text(0.75,-0.1,x_right,
             fontsize=annotate_fs,horizontalalignment='center',c='#19616C',
             transform=ax.transAxes)
-    ax.text(1.13,0.51,col_lower,
+    ax.text(1.15,0.40,col_lower,
             rotation=270,fontsize=annotate_fs,horizontalalignment='center',c='#19616C'
             ,transform=ax.transAxes)
-    ax.text(1.13,0.75,col_upper,
+    ax.text(1.15,0.75,col_upper,
             rotation=270,fontsize=annotate_fs,horizontalalignment='center',c='#CF6D66',
             transform=ax.transAxes)
-    ax.text(0.22,0.03,lower_left,
+    ax.text(0.22,0.05,lower_left,
             fontsize=annotate_fs,horizontalalignment='center',c='#660066',
             verticalalignment='center', transform=ax.transAxes)
-    ax.text(0.22,0.97,upper_left,
+    ax.text(0.24,0.95,upper_left,
             fontsize=annotate_fs,horizontalalignment='center',c='#800000',
             verticalalignment='center', transform=ax.transAxes)
-    ax.text(0.75,0.03,lower_right,
+    ax.text(0.75,0.05,lower_right,
             fontsize=annotate_fs,horizontalalignment='center',c='#000066',
             verticalalignment='center', transform=ax.transAxes)
-    ax.text(0.75,0.97,upper_right,
+    ax.text(0.75,0.95,upper_right,
             fontsize=annotate_fs,horizontalalignment='center',c='#660066',
             verticalalignment='center', transform=ax.transAxes)
     
     # Marking start and end of the system
-    if flag == 1:
-        ax.text(Ck[0], Ca[0],'A',
-                zorder=101,fontsize=22,horizontalalignment='center',
-                verticalalignment='center')
-        ax.text(Ck.iloc[-1], Ca.iloc[-1], 'Z',
-                zorder=101,fontsize=22,horizontalalignment='center',
-                verticalalignment='center')
-    elif flag == 2:
-        ax.text(Ce[0], Ca[0],'A',
-                zorder=101,fontsize=22,horizontalalignment='center',
-                verticalalignment='center')
-        ax.text(Ce.iloc[-1], Ca.iloc[-1], 'Z',
-                zorder=101,fontsize=22,horizontalalignment='center',
-                verticalalignment='center')
-    elif flag == 3:
-        ax.text(Ck[0], Ce[0],'A',
-                zorder=101,fontsize=22,horizontalalignment='center',
-                verticalalignment='center')
-        ax.text(Ck.iloc[-1], Ce.iloc[-1], 'Z',
-                zorder=101,fontsize=22,horizontalalignment='center',
-                verticalalignment='center')
+    if example == False:
+        if flag == 1:
+            ax.text(Ck[0], Ca[0],'A',
+                    zorder=101,fontsize=22,horizontalalignment='center',
+                    verticalalignment='center')
+            ax.text(Ck.iloc[-1], Ca.iloc[-1], 'Z',
+                    zorder=101,fontsize=22,horizontalalignment='center',
+                    verticalalignment='center')
+        elif flag == 2:
+            ax.text(Ce[0], Ca[0],'A',
+                    zorder=101,fontsize=22,horizontalalignment='center',
+                    verticalalignment='center')
+            ax.text(Ce.iloc[-1], Ca.iloc[-1], 'Z',
+                    zorder=101,fontsize=22,horizontalalignment='center',
+                    verticalalignment='center')
+        elif flag == 3:
+            ax.text(Ck[0], Ce[0],'A',
+                    zorder=101,fontsize=22,horizontalalignment='center',
+                    verticalalignment='center')
+            ax.text(Ck.iloc[-1], Ce.iloc[-1], 'Z',
+                    zorder=101,fontsize=22,horizontalalignment='center',
+                    verticalalignment='center')
         
     fname = FigsDir+'LPS'+str(flag)+'_'+outname+'.png'
     plt.savefig(fname,dpi=500)
@@ -360,7 +377,8 @@ def LorenzPhaseSpace_zoomed(df,outname):
                   fontsize=12,labelpad=10,c='#383838')
     ax.set_ylabel('Conversion from zonal to eddy Potential Energy (Ca - '+r' $W\,m^{-2})$',
                   fontsize=12,labelpad=10,c='#383838')
-    plt.tick_params(labelsize=10)
+    ax.xaxis.set_tick_params(labelsize=13)
+    ax.yaxis.set_tick_params(labelsize=13)
     
     # Colorbar
     cax = fig.add_axes([ax.get_position().x1+0.01,
@@ -370,9 +388,9 @@ def LorenzPhaseSpace_zoomed(df,outname):
                        rotation=270,fontsize=12,verticalalignment='bottom',
                        c='#383838',labelpad=10)
     for t in cbar.ax.get_yticklabels():
-         t.set_fontsize(10)
+         t.set_fontsize(13)
 
-    # Annotate plot
+
     system = outfile.split('/')[-1].split('_')[0]
     datasource = outfile.split('/')[-1].split('_')[1]
     start, end = str(df['Datetime'][0]),str(df['Datetime'].iloc[-1]) 
@@ -435,10 +453,17 @@ def main():
     #     LorenzPhaseSpace(df,i+1,'all')
     #     LorenzPhaseSpace(smoothed,i+1,'12H')
     #     LorenzPhaseSpace(period,i+1,'periods')
-    # Make LPS zoomed
-    LorenzPhaseSpace_zoomed(df,'all')
-    LorenzPhaseSpace_zoomed(smoothed,'12H')
-    LorenzPhaseSpace_zoomed(period,'periods')
+    
+    # Make LPS for all timesteps, 12h means and periods
+    LorenzPhaseSpace(df,1,'example',example=True)
+    # LorenzPhaseSpace(df,1,'all')
+    # LorenzPhaseSpace(smoothed,1,'12H')
+    # LorenzPhaseSpace(period,1,'periods')
+    
+    # # Make LPS zoomed
+    # LorenzPhaseSpace_zoomed(df,'all')
+    # LorenzPhaseSpace_zoomed(smoothed,'12H')
+    # LorenzPhaseSpace_zoomed(period,'periods')
     
     
 if __name__ == "__main__":
