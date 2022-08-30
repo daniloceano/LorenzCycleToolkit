@@ -19,7 +19,33 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 from shapely.geometry.polygon import Polygon
 import sys
+import cartopy.feature as cfeature
+from cartopy.feature import NaturalEarthFeature, COASTLINE
+from cartopy.feature import BORDERS
 
+def map_features(ax):
+    ax.add_feature(COASTLINE,edgecolor='#283618',linewidth=1)
+    ax.add_feature(BORDERS,edgecolor='#283618',linewidth=1)
+    return ax
+
+def Brazil_states(ax):    
+    
+    _ = ax.add_feature(cfeature.NaturalEarthFeature('physical',
+                        'land', '50m', edgecolor='face', facecolor='#a4ab98'))
+    
+    states = NaturalEarthFeature(category='cultural', scale='50m', 
+                                 facecolor='none',
+                                  name='admin_1_states_provinces_lines')
+    _ = ax.add_feature(states, edgecolor='#283618',linewidth=1)
+    
+    cities = NaturalEarthFeature(category='cultural', scale='50m',
+                                 facecolor='none',
+                                  name='populated_places')
+    _ = ax.add_feature(cities, edgecolor='#283618',linewidth=1)
+    
+    
+    
+    
 # Plot the area limited by the lons and lats values that will be used
 # for the computations
 def main():
@@ -33,8 +59,9 @@ def main():
     ax = fig.add_axes([0.1, 0.1, 0.8, 0.83], projection=datacrs,
                   frameon=True)
     ax.set_extent([min_lon-20, max_lon+20, max_lat+20, min_lat-20], crs=datacrs)
-    ax.coastlines(zorder = 1)
-    ax.stock_img()
+    Brazil_states(ax)
+    map_features(ax)
+    
     # plot selected domain
     # create a sample polygon, `pgon`
     pgon = Polygon(((min_lon, min_lat),
@@ -43,8 +70,8 @@ def main():
             (max_lon, min_lat),
             (min_lon, min_lat)))
     ax.add_geometries([pgon], crs=datacrs, 
-                      facecolor='red', edgecolor='k', linewidth = 3,
-                      alpha=0.5, zorder = 3)
+                      facecolor='None', edgecolor='#BF3D3B', linewidth = 3,
+                      alpha=1, zorder = 3)
     gl = ax.gridlines(draw_labels=True,zorder=2)    
     gl.xlabel_style = {'size': 16}
     gl.ylabel_style = {'size': 16}
