@@ -23,8 +23,7 @@ import numpy as np
 # boundary work terms as residuals)
 def calc_budget_diff(df,time):
     # get time delta in seconds
-    dt = float((time[1]-time[0]).astype('timedelta64[h]'
-                                    ) / np.timedelta64(1, 's'))
+    dt = float((time[1]-time[0]) / np.timedelta64(1, 's'))
     # Estimate budget values for all energy terms
     for term in ['Az','Ae','Kz','Ke']:
         name = '∂'+term+'/∂t (finite diff.)'
