@@ -21,11 +21,29 @@ import matplotlib.pyplot as plt
 from shapely.geometry.polygon import Polygon
 import pandas as pd
 import sys
-from plot_LPS import MarkerSizeKe
 import cmocean
 import matplotlib.colors as colors
 import numpy as np
+from bisect import bisect_left
 
+
+def take_closest(myList, myNumber):
+    """
+    Assumes myList is sorted. Returns closest value to myNumber.
+
+    If two numbers are equally close, return the smallest number.
+    """
+    pos = bisect_left(myList, myNumber)
+    if pos == 0:
+        return myList[0]
+    if pos == len(myList):
+        return myList[-1]
+    before = myList[pos - 1]
+    after = myList[pos]
+    if after - myNumber < myNumber - before:
+        return after
+    else:
+        return before
 
 # Plot the area limited by the lons and lats values that will be used
 # for the computations
@@ -38,6 +56,10 @@ def main():
         
     min_lon,max_lon,min_lat,max_lat=min(track['Lon']),max(track['Lon']),\
         min(track['Lat']),max(track['Lat'])
+    
+    # DataFrame with results
+    df = pd.read_csv(outfile)
+    df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
     
     plt.close('all')
     datacrs = ccrs.PlateCarree() # projection
@@ -63,10 +85,14 @@ def main():
     gl.bottom_labels = None
     gl.right_labels = None
     
-    for i in range(len(track)):
-    
-        itime = str(track.iloc[i].name)
-        lon,lat = track.loc[itime]['Lon'], track.loc[itime]['Lat']
+    for i in range(len(df['Datetime'])):
+        
+        # Model timestep
+        itime = str(df['Datetime'].iloc[i])
+        
+        itime_track = track.index[track.index==itime]
+        lon = track.loc[itime_track]['Lon'].values
+        lat = track.loc[itime_track]['Lat'].values
         
         min_lon, max_lon = lon-7.5,lon+7.5
         min_lat, max_lat = lat-7.5,lat+7.5
@@ -85,7 +111,6 @@ def main():
                               linewidth = 5,
                               alpha=0.75, zorder=1+i)
         
-    df = pd.read_csv(outfile)
     
     # use potential energy for dot color
     Ae = df['Ae']
@@ -134,8 +159,10 @@ def main():
     
     plt.plot(track['Lon'], track['Lat'],c='#383838')
     norm = colors.TwoSlopeNorm(vmin=min(Ae), vcenter=np.mean(Ae), vmax=max(Ae))
-    dots = plt.scatter(track['Lon'], track['Lat'],c=Ae,cmap=cmocean.cm.matter,
-                       s=df['sizes'],zorder=100, edgecolors='grey', norm=norm)
+    dots = plt.scatter(track['Lon'].loc[df['Datetime']],
+                       track['Lat'].loc[df['Datetime']],
+                       c=Ae,cmap=cmocean.cm.matter,s=df['sizes'],zorder=100, 
+                       edgecolors='grey', norm=norm)
     
     # colorbar
     cax = fig.add_axes([ax.get_position().x1+0.02,
@@ -146,8 +173,10 @@ def main():
                    c='#383838',labelpad=15)
     
     # mark beginning and end of system
-    start = [track.iloc[0]['Lon'],track.iloc[0]['Lat']]
-    end = [track.iloc[-1]['Lon'],track.iloc[-1]['Lat']]
+    start = [track.loc[df['Datetime'][0]]['Lon'],
+             track.loc[df['Datetime'][0]]['Lat']]
+    end =  [track.loc[df['Datetime'].iloc[-1]]['Lon'],
+             track.loc[df['Datetime'].iloc[-1]]['Lat']]
     ax.text(*start,'A',zorder=101,fontsize=24,horizontalalignment='center',
             verticalalignment='center')
     ax.text(*end,'Z',zorder=101,fontsize=24,horizontalalignment='center',

@@ -454,16 +454,16 @@ def main():
     #     LorenzPhaseSpace(smoothed,i+1,'12H')
     #     LorenzPhaseSpace(period,i+1,'periods')
     
-    # Make LPS for all timesteps, 12h means and periods
+    # Make LPS1 for all timesteps, 12h means and periods
     LorenzPhaseSpace(df,1,'example',example=True)
-    # LorenzPhaseSpace(df,1,'all')
-    # LorenzPhaseSpace(smoothed,1,'12H')
-    # LorenzPhaseSpace(period,1,'periods')
+    LorenzPhaseSpace(df,1,'all')
+    LorenzPhaseSpace(smoothed,1,'12H')
+    LorenzPhaseSpace(period,1,'periods')
     
     # # Make LPS zoomed
-    # LorenzPhaseSpace_zoomed(df,'all')
-    # LorenzPhaseSpace_zoomed(smoothed,'12H')
-    # LorenzPhaseSpace_zoomed(period,'periods')
+    LorenzPhaseSpace_zoomed(df,'all')
+    LorenzPhaseSpace_zoomed(smoothed,'12H')
+    LorenzPhaseSpace_zoomed(period,'periods')
     
     
 if __name__ == "__main__":
@@ -478,8 +478,6 @@ results from the main.py program.")
 
     args = parser.parse_args()
     outfile = args.outfile
-    # outfile = '../LEC_Results/Reg1_NCEP-R2_60W30W42S17S/Reg1_NCEP-R2_60W30W42S17S.csv'
-    # outfile = '../LEC_Results/Catarina_NCEP-R2_55W36W35S20S/Catarina_NCEP-R2_55W36W35S20S.csv' 
     ResultsSubDirectory = '/'.join(outfile.split('/')[:-1])
     FigsDir = ResultsSubDirectory+'/Figures/'
     
