@@ -33,9 +33,6 @@ import numpy as np
 import argparse
 from metpy.constants import g
 
-import traceback
-import logging
-
 import time
 
 
@@ -360,8 +357,11 @@ def LEC_lagrangian():
     for term in [*energy,*conversion,*boundary,*gendiss]:
         TermsDict[term] = []
     
+    # Slice the time array so the first and the last timestep will be the same
+    # as in the track file
+    times = pd.to_datetime(tair[TimeName].values)
+    times = times[(times>=track.index[0]) & (times<=track.index[-1])]
     # Loop for each time step:
-    times = tair[TimeName]
     for t in times:
         itair, ihgt, iomega, iu, iv, iu_stress, iv_stress, iQ  = \
             tair.sel({TimeName:t}), \
@@ -372,10 +372,16 @@ def LEC_lagrangian():
                                 Q.sel({TimeName:t})              
         
         # Get current time and box limits
-        itime = str(t.values)
+        itime = str(t)
         datestr = pd.to_datetime(itime).strftime('%Y-%m-%d %HZ')
-        min_lon, max_lon = track.loc[itime]['Lon']-7.5,track.loc[itime]['Lon']+7.5
-        min_lat, max_lat = track.loc[itime]['Lat']-7.5,track.loc[itime]['Lat']+7.5
+        # Track timestep closest to the model timestep, just in case
+        # the track file has a poorer temporal resolution
+        track_itime = track.index[track.index.get_loc(
+            datestr, method='nearest')].strftime('%Y-%m-%d %HZ')
+        min_lon = track.loc[track_itime]['Lon']-7.5
+        max_lon = track.loc[track_itime]['Lon']+7.5
+        min_lat = track.loc[track_itime]['Lat']-7.5
+        max_lat = track.loc[track_itime]['Lat']+7.5
         print('\nComputing terms for '+datestr+'...')
         print('Box limits (lon/lat): '+str(max_lon)+'/'+str(max_lat),
               ' '+str(min_lon)+'/'+str(min_lat))
@@ -509,7 +515,6 @@ The program can compute the LEC using two distinct frameworks:\
  specified by the track file.")
     args = parser.parse_args()
     infile  = args.infile
-    # box_limits = args.box_limits
     varlist = './fvars'
     # Run the program
     start_time = time.time()
