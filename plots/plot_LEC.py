@@ -266,8 +266,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = "\
 reads an CSV file with all terms from the Lorenz Energy Cycle \
  (as input from user) and make the deafult figures for the Lorenz energy cycle\
-The transparecy in each box is set to be proportional to the energy tendency,\
- as well as the arrows are set to be proportional to the conversion rates.")
+ The arrows are set to be proportional to the conversion rates.")
     parser.add_argument("outfile", help = "The .csv file containing the \
 results from the main.py program.")
 

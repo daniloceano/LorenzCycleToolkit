@@ -17,18 +17,12 @@ import cmocean
 import glob
 
 
-def MarkerSizeKe(df,flag):
+def MarkerSizeKe(df):
     
     msizes = [200,400,600,800,1000]
-    
-    if flag == 1 or flag ==3:
-        intervals = [3e5,4e5,5e5,6e5]
-        data = df['Ke']
-        title = 'Eddy Kinect\n    Energy\n(Ke - '+r' $J\,m^{-2})$'
-    elif flag == 2:
-        intervals = [1e5,1.75e5,2.25e5,3e5]
-        data = df['Ae']
-        title = 'Eddy Potential\n      Energy\n(Ae - '+r' $J\,m^{-2})$'
+    intervals = [3e5,4e5,5e5,6e5]
+    data = df['Ke']
+    title = 'Eddy Kinect\n    Energy\n(Ke - '+r' $J\,m^{-2})$'
 
     sizes = []
     for val in data:
@@ -70,7 +64,7 @@ def MarkerSizeKe(df,flag):
     
     return df
 
-def LorenzPhaseSpace(df,flag,outname,example=False):
+def LorenzPhaseSpace(df,outname,example=False):
     
     '''
     flag == 1:
@@ -96,55 +90,28 @@ def LorenzPhaseSpace(df,flag,outname,example=False):
     plt.gcf().subplots_adjust(right=0.82)
     ax = plt.gca()
     
+    
     # Line plot
-    if flag == 1:
-        lines = ax.plot(Ck,Ca,'-',c='gray',zorder=2,linewidth=3)
-    elif flag == 2:
-        lines = ax.plot(Ce,Ca,'-',c='gray',zorder=2,linewidth=3)
-    elif flag == 3:
-        lines = ax.plot(Ck,Ce,'-',c='gray',zorder=2,linewidth=3)
+    ax.plot(Ck,Ca,'-',c='gray',zorder=2,linewidth=3)
     
     # Scatter plot
-    s = MarkerSizeKe(df,flag)['sizes']
+    s = MarkerSizeKe(df)['sizes']
 
     # Plot limits
-    if flag == 1:
-        ax.set_xlim(-25,25)
-        ax.set_ylim(-25,25)
-        norm = colors.TwoSlopeNorm(vmin=-7, vcenter=0, vmax=15)
-        dots = ax.scatter(Ck,Ca,c=Ge,cmap=cmocean.cm.curl,s=s,zorder=100,
-                        edgecolors='grey', norm=norm)
-        # Labels
-        ax.set_xlabel(
-        'Conversion from zonal to eddy Kinetic Energy (Ck - '+r' $W\,m^{-2})$',
-                      fontsize=15,labelpad=45,c='#383838')
-        ax.set_ylabel(
-      'Conversion from zonal to eddy Potential Energy (Ca - '+r' $W\,m^{-2})$',
-                      fontsize=15,labelpad=45,c='#383838')
-        
-    elif flag == 2:
-        ax.set_xlim(-18,18)
-        ax.set_ylim(-7,7)
-        norm = colors.TwoSlopeNorm(vmin=-7, vcenter=0, vmax=15)
-        dots = ax.scatter(Ce,Ca,c=RAe,cmap=cmocean.cm.curl,s=s,zorder=100,
-                        edgecolors='grey', norm=norm)
-        # Labels
-        ax.set_xlabel('Conversion from eddy Potential to Kinectic Energy (Ce - '+r' $W\,m^{-2})$',
-                      fontsize=12,labelpad=45,c='#383838')
-        ax.set_ylabel('Conversion from zonal to eddy Potential Energy (Ca - '+r' $W\,m^{-2})$',
-                      fontsize=12,labelpad=45,c='#383838')
-        
-    elif flag == 3:
-        ax.set_xlim(-24,24)
-        ax.set_ylim(-18,18)
-        norm = colors.TwoSlopeNorm(vmin=-40, vcenter=0, vmax=5)
-        dots = ax.scatter(Ck,Ce,c=Re,cmap=cmocean.cm.curl,s=s,zorder=100,
-                        edgecolors='grey', norm=norm)
-        # Labels
-        ax.set_xlabel('Conversion from zonal to eddy Kinetic Energy (Ck - '+r' $W\,m^{-2})$',
-                      fontsize=12,labelpad=45,c='#383838')
-        ax.set_ylabel('Conversion from eddy Potential to Kinectic Energy (Ce - '+r' $W\,m^{-2})$',
-                      fontsize=12,labelpad=45,c='#383838')
+    ax.set_xlim(-30,30)
+    ax.set_ylim(-3,12)
+    
+    norm = colors.TwoSlopeNorm(vmin=-7, vcenter=0, vmax=15)
+    dots = ax.scatter(Ck,Ca,c=Ge,cmap=cmocean.cm.curl,s=s,zorder=100,
+                  edgecolors='grey', norm=norm)
+      # Labels
+    ax.set_xlabel(
+      'Conversion from zonal to eddy Kinetic Energy (Ck - '+r' $W\,m^{-2})$',
+                    fontsize=15,labelpad=45,c='#383838')
+    ax.set_ylabel(
+    'Conversion from zonal to eddy Potential Energy (Ca - '+r' $W\,m^{-2})$',
+                    fontsize=15,labelpad=45,c='#383838')
+
         
     if example == True:
         dots.set_visible(False)
@@ -153,12 +120,7 @@ def LorenzPhaseSpace(df,flag,outname,example=False):
     # Gradient lines in the center of the plot
     alpha, offsetalpha = 0.3, 20
     lw, c = 2.5, '#383838'
-    if flag == 1:
-        offsetx, offsety = 4, 4
-    elif flag == 2:
-        offsetx, offsety = 16, 5.7
-    elif flag == 3:
-        offsetx, offsety = 7, 4.3
+    offsetx, offsety = 4, 4
     for i in range(7):
         ax.axhline(y=0+(i/offsetx),zorder=0+(i/5),linewidth=lw,
                    alpha=alpha-(i/offsetalpha),c=c)
@@ -168,30 +130,22 @@ def LorenzPhaseSpace(df,flag,outname,example=False):
                alpha=alpha-(i/offsetalpha),c=c)
         ax.axvline(x=0-(i/offsety),zorder=0+(i/5),linewidth=lw,
                alpha=alpha-(i/offsetalpha),c=c)
+        # Vertical line showing when Ca is more important than Ck
+        plt.plot(np.arange(0-(i/offsety),-40-(i/offsety),-1),
+                 np.arange(0,40), c=c,zorder=1, 
+                 alpha=0.2-(i/offsetalpha*.5))
+        plt.plot(np.arange(0+(i/offsety),-40+(i/offsety),-1),
+                 np.arange(0,40), c=c,zorder=1, linewidth=lw,
+                 alpha=0.2-(i/offsetalpha*.5))
         
    
     # Colorbar
-    if flag == 1:
-        cax = fig.add_axes([ax.get_position().x1+0.01,
-                        ax.get_position().y0+0.34,0.02,ax.get_position().height/1.74])
-        cbar = plt.colorbar(dots, extend='both',cax=cax)
-        cbar.ax.set_ylabel('Generation of eddy Potential Energy (Ge - '+r' $W\,m^{-2})$',
-                       rotation=270,fontsize=15,verticalalignment='bottom',
-                       c='#383838',labelpad=50)
-    elif flag == 2:
-        cax = fig.add_axes([ax.get_position().x1+0.01,
-                        ax.get_position().y0+0.32,0.02,ax.get_position().height/1.74])
-        cbar = plt.colorbar(dots, extend='both',cax=cax)
-        cbar.ax.set_ylabel('Sources of eddy Potential Energy (Ge + BAe - '+r' $W\,m^{-2})$',
-                       rotation=270,fontsize=15,verticalalignment='bottom',
-                       c='#383838',labelpad=50)
-    elif flag == 3:
-        cax = fig.add_axes([ax.get_position().x1+0.01,
-                        ax.get_position().y0+0.32,0.02,ax.get_position().height/1.74])
-        cbar = plt.colorbar(dots, extend='both',cax=cax)
-        cbar.ax.set_ylabel('Sinks of eddy Kinectic Energy (RKe + BKe - '+r' $W\,m^{-2})$',
-                       rotation=270,fontsize=15,verticalalignment='bottom',
-                       c='#383838',labelpad=50)
+    cax = fig.add_axes([ax.get_position().x1+0.01,
+                    ax.get_position().y0+0.34,0.02,ax.get_position().height/1.74])
+    cbar = plt.colorbar(dots, extend='both',cax=cax)
+    cbar.ax.set_ylabel('Generation of eddy Potential Energy (Ge - '+r' $W\,m^{-2})$',
+                   rotation=270,fontsize=15,verticalalignment='bottom',
+                   c='#383838',labelpad=50)
     for t in cbar.ax.get_yticklabels():
          t.set_fontsize(13)
         
@@ -220,42 +174,17 @@ def LorenzPhaseSpace(df,flag,outname,example=False):
     ax.text(0.14,1.025,end,fontsize=14,c='#242424',
             horizontalalignment='left',transform=ax.transAxes)
     annotate_fs = 15
-    if flag == 1:
-        y_upper = 'Eddy is gaining potential energy \n from the mean flow'
-        y_lower = 'Eddy is providing potential energy \n to the mean flow'
-        x_left = 'Eddy is gaining kinetic energy \n from the mean flow'
-        x_right = 'Eddy is providing kinetic energy \n to the mean flow'
-        col_lower = 'Subisidence decreases\neddy potential energy'
-        col_upper = 'Latent heat release feeds\neddy potential energy'
-        lower_left = 'Barotropic instability'
-        upper_left = 'Eddy growth by barotropic\nand baroclinic processes'
-        lower_right = 'Eddy is feeding the\nlocal atmospheric circulation'
-        upper_right = 'Gain of eddy potential energy\n via baroclinic processes'
-    elif flag == 2:
-        y_upper = 'Eddy is gaining potential energy \n from the mean flow'
-        y_lower = 'Eddy is providing potential energy \n to the mean flow'
-        x_left = 'Eddy is converting kinetic energy \n into potential energy'
-        x_right = 'Eddy is converting potential energy \n into kinetic energy'
-        col_lower = 'Destruction of eddy\n potential energy'
-        col_upper = 'Creation of eddy\n potential energy'
-        lower_left = 'Eddy lifting the local center of mass up'
-        upper_left = 'Net gain of eddy potential energy'
-        lower_right = 'Eddy center of mass being lowered'
-        upper_right = 'Gain of eddy potential energy\n via baroclinic processes'
-    elif flag == 3:
-        y_upper =  'Eddy is converting potential energy \n into kinetic energy'
-        y_lower = 'Eddy is converting kinetic energy \n into potential energy'
-        x_left = 'Eddy is gaining kinetic energy \n from the mean flow'
-        x_right = 'Eddy is providing kinetic energy \n to the mean flow'
-        col_lower = 'Destruction of eddy\n kinetic energy'
-        col_upper = 'Creation of eddy\n kinetic energy'
-        lower_left = 'Pure barotropic instability'
-        upper_left = 'Barotropic and baroclinic \n instabilities'
-        lower_right = 'Eddy dissipation'
-        upper_right = 'Pure baroclinic instability'
-        
-    # if example == True:
-        
+    y_upper = 'Eddy is gaining potential energy \n from the mean flow'
+    y_lower = 'Eddy is providing potential energy \n to the mean flow'
+    x_left = 'Eddy is gaining kinetic energy \n from the mean flow'
+    x_right = 'Eddy is providing kinetic energy \n to the mean flow'
+    col_lower = 'Subisidence decreases\neddy potential energy'
+    col_upper = 'Latent heat release feeds\neddy potential energy'
+    lower_left = 'Barotropic instability'
+    upper_left = 'Eddy growth by barotropic\nand baroclinic processes'
+    lower_right = 'Eddy is feeding the\nlocal atmospheric circulation'
+    upper_right = 'Gain of eddy potential energy\n via baroclinic processes'
+                
         
     ax.text(-0.09,0.01,y_lower,
             rotation=90,fontsize=annotate_fs,horizontalalignment='center',c='#19616C',
@@ -290,29 +219,14 @@ def LorenzPhaseSpace(df,flag,outname,example=False):
     
     # Marking start and end of the system
     if example == False:
-        if flag == 1:
-            ax.text(Ck[0], Ca[0],'A',
-                    zorder=101,fontsize=22,horizontalalignment='center',
-                    verticalalignment='center')
-            ax.text(Ck.iloc[-1], Ca.iloc[-1], 'Z',
-                    zorder=101,fontsize=22,horizontalalignment='center',
-                    verticalalignment='center')
-        elif flag == 2:
-            ax.text(Ce[0], Ca[0],'A',
-                    zorder=101,fontsize=22,horizontalalignment='center',
-                    verticalalignment='center')
-            ax.text(Ce.iloc[-1], Ca.iloc[-1], 'Z',
-                    zorder=101,fontsize=22,horizontalalignment='center',
-                    verticalalignment='center')
-        elif flag == 3:
-            ax.text(Ck[0], Ce[0],'A',
-                    zorder=101,fontsize=22,horizontalalignment='center',
-                    verticalalignment='center')
-            ax.text(Ck.iloc[-1], Ce.iloc[-1], 'Z',
-                    zorder=101,fontsize=22,horizontalalignment='center',
-                    verticalalignment='center')
+        ax.text(Ck[0], Ca[0],'A',
+                zorder=101,fontsize=22,horizontalalignment='center',
+                verticalalignment='center')
+        ax.text(Ck.iloc[-1], Ca.iloc[-1], 'Z',
+                zorder=101,fontsize=22,horizontalalignment='center',
+                verticalalignment='center')
         
-    fname = FigsDir+'LPS'+str(flag)+'_'+outname+'.png'
+    fname = FigsDir+'LPS'+'_'+outname+'.png'
     plt.savefig(fname,dpi=500)
     print(fname+' created!')
     
@@ -433,7 +347,7 @@ def main():
     smoothed['Datetime'] = pd.DataFrame(starts.astype(str)+' - '+\
                                         ends.astype(str)).values
     # Get data for cyclone life cycle periods
-    periods = pd.read_csv('./periods',sep= ';',header=0)
+    periods = pd.read_csv('./inputs/periods',sep= ';',header=0)
     for i in range(len(periods)):
         start,end = periods.iloc[i]['start'],periods.iloc[i]['end']
         selected_dates = df[(df['Datetime'] >= start) & (df['Datetime'] <= end)]
@@ -447,32 +361,26 @@ def main():
     # Set datetime to the period date range
     period['Datetime'] = (periods['start'].astype(str)+' - '+\
                                         periods['end'].astype(str)).values
-    
-    # # Make all three LPS kinds, for all timesteps, 12h means and periods
-    # for i in range(3):
-    #     LorenzPhaseSpace(df,i+1,'all')
-    #     LorenzPhaseSpace(smoothed,i+1,'12H')
-    #     LorenzPhaseSpace(period,i+1,'periods')
+
     
     # Make LPS1 for all timesteps, 12h means and periods
-    LorenzPhaseSpace(df,1,'example',example=True)
-    LorenzPhaseSpace(df,1,'all')
-    LorenzPhaseSpace(smoothed,1,'12H')
-    LorenzPhaseSpace(period,1,'periods')
+    LorenzPhaseSpace(df,'example',example=True)
+    LorenzPhaseSpace(df,'all')
+    LorenzPhaseSpace(smoothed,'12H')
+    LorenzPhaseSpace(smoothed,'24H')
+    LorenzPhaseSpace(period,'periods')
     
     # # Make LPS zoomed
     LorenzPhaseSpace_zoomed(df,'all')
     LorenzPhaseSpace_zoomed(smoothed,'12H')
+    LorenzPhaseSpace_zoomed(smoothed,'24H')
     LorenzPhaseSpace_zoomed(period,'periods')
     
     
 if __name__ == "__main__":
  
     parser = argparse.ArgumentParser(description = "\
-reads an CSV file with all terms from the Lorenz Energy Cycle \
-  (as input from user) and make the deafult figures for the Lorenz energy cycle\
-The transparecy in each box is set to be proportional to the energy tendency,\
-  as well as the arrows are set to be proportional to the conversion rates.")
+Lorenz Phase Space.")
     parser.add_argument("outfile", help = "The .csv file containing the \
 results from the main.py program.")
 
