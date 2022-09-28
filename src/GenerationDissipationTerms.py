@@ -9,7 +9,7 @@ Created on Thu Nov 26 18:27:40 2020
 from metpy.units import units
 from metpy.constants import Cp_d
 from metpy.constants import g
-from calc import (CalcZonalAverage,CalcAreaAverage,
+from Math import (CalcZonalAverage,CalcAreaAverage,
                   VerticalTrazpezoidalIntegration)
 from BoxData import BoxData
 import pandas as pd

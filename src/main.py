@@ -24,7 +24,7 @@ from BoundaryTerms import BoundaryTerms
 from GenerationDissipationTerms import GenerationDissipationTerms
 from BoxData import BoxData
 from thermodynamics import AdiabaticHEating
-from compute_terms import calc_budget_diff,calc_residuals
+from BudgetResidual import calc_budget_diff,calc_residuals
 from metpy.units import units
 import pandas as pd
 import xarray as xr
@@ -120,7 +120,7 @@ def get_data(infile, varlist):
 def LEC_eulerian():
     print('Computing energetics using eulerian framework')
     # Box limits used for compuations
-    dfbox = pd.read_csv('./inputs/box_limits',header=None,delimiter=';',index_col=0)
+    dfbox = pd.read_csv('../inputs/box_limits',header=None,delimiter=';',index_col=0)
     min_lon = float(dfbox.loc['min_lon'].values)
     max_lon = float(dfbox.loc['max_lon'].values)
     min_lat = float(dfbox.loc['min_lat'].values)
@@ -293,12 +293,12 @@ def LEC_eulerian():
         flag = ' -r'
     else:
         flag = ' '
-    os.system("python plots/plot_timeseries.py "+outfile+flag)
-    os.system("python plots/plot_vertical.py "+ResultsSubDirectory)
-    os.system("python plots/plot_boxplot.py "+ResultsSubDirectory+flag)
-    os.system("python plots/plot_LEC.py "+outfile)
-    os.system("python plots/plot_LPS.py "+outfile)
-    cmd = "python plots/plot_area.py {0} {1} {2} {3} {4}".format(min_lon, max_lon,min_lat,max_lat, ResultsSubDirectory)
+    os.system("python ../plots/plot_timeseries.py "+outfile+flag)
+    os.system("python ../plots/plot_vertical.py "+ResultsSubDirectory)
+    os.system("python ../plots/plot_boxplot.py "+ResultsSubDirectory+flag)
+    os.system("python ../plots/plot_LEC.py "+outfile)
+    os.system("python ../plots/plot_LPS.py "+outfile)
+    cmd = "python ../plots/plot_area.py {0} {1} {2} {3} {4}".format(min_lon, max_lon,min_lat,max_lat, ResultsSubDirectory)
     os.system(cmd)
     
 #---------------------------------------------------------------------------
@@ -344,7 +344,7 @@ def LEC_lagrangian():
         tmp.to_csv(ResultsSubDirectory+term+'_'+VerticalCoordIndexer+'.csv',
                    index=None)  
     # Track file
-    trackfile = './inputs/track'
+    trackfile = '../inputs/track'
     track = pd.read_csv(trackfile,parse_dates=[0],delimiter=';',index_col='time')
     # Create dict for store results
     TermsDict = {}
@@ -475,12 +475,12 @@ def LEC_lagrangian():
         flag = ' -r'
     else:
         flag = ' '
-    os.system("python plots/plot_timeseries.py "+outfile+flag)
-    os.system("python plots/plot_vertical.py "+ResultsSubDirectory)
-    os.system("python plots/plot_boxplot.py "+ResultsSubDirectory+flag)
-    os.system("python plots/plot_LEC.py "+outfile)
-    os.system("python plots/plot_LPS.py "+outfile)
-    os.system("python plots/plot_track.py "+outfile)
+    os.system("python ../plots/plot_timeseries.py "+outfile+flag)
+    os.system("python ../plots/plot_vertical.py "+ResultsSubDirectory)
+    os.system("python ../plots/plot_boxplot.py "+ResultsSubDirectory+flag)
+    os.system("python ../plots/plot_LEC.py "+outfile)
+    os.system("python ../plots/plot_LPS.py "+outfile)
+    os.system("python ../plots/plot_track.py "+outfile)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = "\
@@ -515,7 +515,7 @@ The program can compute the LEC using two distinct frameworks:\
  specified by the track file.")
     args = parser.parse_args()
     infile  = args.infile
-    varlist = './inputs/fvars'
+    varlist = '../inputs/fvars'
     # Run the program
     start_time = time.time()
     if args.eulerian:

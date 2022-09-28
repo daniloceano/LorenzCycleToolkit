@@ -49,7 +49,7 @@ def take_closest(myList, myNumber):
 # for the computations
 def main():
 
-    track = pd.read_csv('./inputs/track',parse_dates=[0],
+    track = pd.read_csv('../inputs/track',parse_dates=[0],
                         delimiter=';',index_col='time')
     outfile = sys.argv[1]
     ResultsSubDirectory = '/'.join(outfile.split('/')[:-1])

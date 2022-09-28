@@ -27,7 +27,7 @@ Contact:
 """
 
 import xarray
-import calc
+import Math
 from thermodynamics import StaticStability
 import numpy as np
 from metpy.constants import g
@@ -76,8 +76,8 @@ class BoxData:
         self.tair = TemperatureData.sel(**{LatIndexer: 
             slice(self.BoxNorth, self.BoxSouth),
             LonIndexer: slice(self.BoxWest, self.BoxEast)})
-        self.tair_ZA = calc.CalcZonalAverage(self.tair, self.LonIndexer)
-        self.tair_AA = calc.CalcAreaAverage(self.tair, self.LatIndexer,
+        self.tair_ZA = Math.CalcZonalAverage(self.tair, self.LonIndexer)
+        self.tair_AA = Math.CalcAreaAverage(self.tair, self.LatIndexer,
                                             self.BoxSouth,self.BoxNorth,
                                             self.LonIndexer)
         self.tair_ZE = self.tair - self.tair_ZA
@@ -87,8 +87,8 @@ class BoxData:
         self.u = UWindComponentData.sel(**{LatIndexer: 
             slice(self.BoxNorth, self.BoxSouth),
             LonIndexer: slice(self.BoxWest, self.BoxEast)})
-        self.u_ZA = calc.CalcZonalAverage(self.u, self.LonIndexer)
-        self.u_AA = calc.CalcAreaAverage(self.u,self.LatIndexer,
+        self.u_ZA = Math.CalcZonalAverage(self.u, self.LonIndexer)
+        self.u_AA = Math.CalcAreaAverage(self.u,self.LatIndexer,
                                             self.BoxSouth,self.BoxNorth,
                                             self.LonIndexer)
         self.u_ZE = self.u - self.u_ZA
@@ -98,8 +98,8 @@ class BoxData:
         self.v = VWindComponentData.sel(**{LatIndexer: 
             slice(self.BoxNorth, self.BoxSouth),
             LonIndexer: slice(self.BoxWest, self.BoxEast)})
-        self.v_ZA = calc.CalcZonalAverage(self.v, self.LonIndexer)
-        self.v_AA = calc.CalcAreaAverage(self.v,self.LatIndexer,
+        self.v_ZA = Math.CalcZonalAverage(self.v, self.LonIndexer)
+        self.v_AA = Math.CalcAreaAverage(self.v,self.LatIndexer,
                                             self.BoxSouth,self.BoxNorth,
                                             self.LonIndexer)
         self.v_ZE = self.v - self.v_ZA
@@ -109,8 +109,8 @@ class BoxData:
         self.ust = ZonalWindStressData.sel(**{LatIndexer: 
             slice(self.BoxNorth, self.BoxSouth),
             LonIndexer: slice(self.BoxWest, self.BoxEast)})
-        self.ust_ZA = calc.CalcZonalAverage(self.ust, self.LonIndexer)
-        self.ust_AA = calc.CalcAreaAverage(self.ust,self.LatIndexer,
+        self.ust_ZA = Math.CalcZonalAverage(self.ust, self.LonIndexer)
+        self.ust_AA = Math.CalcAreaAverage(self.ust,self.LatIndexer,
                                             self.BoxSouth,self.BoxNorth,
                                             self.LonIndexer)
         self.ust_ZE = self.ust - self.ust_ZA
@@ -120,8 +120,8 @@ class BoxData:
         self.vst = MeridionalWindStressData.sel(**{LatIndexer: 
             slice(self.BoxNorth, self.BoxSouth),
             self.LonIndexer: slice(self.BoxWest, self.BoxEast)})
-        self.vst_ZA = calc.CalcZonalAverage(self.vst, self.LonIndexer)
-        self.vst_AA = calc.CalcAreaAverage(self.vst,self.LatIndexer,
+        self.vst_ZA = Math.CalcZonalAverage(self.vst, self.LonIndexer)
+        self.vst_AA = Math.CalcAreaAverage(self.vst,self.LatIndexer,
                                             self.BoxSouth,self.BoxNorth,
                                             self.LonIndexer)
         self.vst_ZE = self.vst - self.vst_ZA
@@ -132,8 +132,8 @@ class BoxData:
         self.omega = OmegaData.sel(**{LatIndexer: 
             slice(self.BoxNorth, self.BoxSouth),
             LonIndexer: slice(self.BoxWest, self.BoxEast)})
-        self.omega_ZA = calc.CalcZonalAverage(self.omega, self.LonIndexer)
-        self.omega_AA = calc.CalcAreaAverage(self.omega,self.LatIndexer,
+        self.omega_ZA = Math.CalcZonalAverage(self.omega, self.LonIndexer)
+        self.omega_AA = Math.CalcAreaAverage(self.omega,self.LatIndexer,
                                             self.BoxSouth,self.BoxNorth,
                                             self.LonIndexer)
         self.omega_ZE = self.omega - self.omega_ZA
@@ -143,8 +143,8 @@ class BoxData:
         self.hgt = HgtData.sel(**{LatIndexer: 
             slice(self.BoxNorth, self.BoxSouth),
             LonIndexer: slice(self.BoxWest, self.BoxEast)})
-        self.hgt_ZA = calc.CalcZonalAverage(self.hgt, self.LonIndexer)
-        self.hgt_AA = calc.CalcAreaAverage(self.hgt,self.LatIndexer,
+        self.hgt_ZA = Math.CalcZonalAverage(self.hgt, self.LonIndexer)
+        self.hgt_AA = Math.CalcAreaAverage(self.hgt,self.LatIndexer,
                                             self.BoxSouth,self.BoxNorth,
                                             self.LonIndexer)
         self.hgt_ZE = self.hgt - self.hgt_ZA
@@ -152,8 +152,8 @@ class BoxData:
         
         # Geopotential (g*hgt) data values, averages and eddy terms
         self.geopt = self.hgt*g
-        self.geopt_ZA = calc.CalcZonalAverage(self.geopt, self.LonIndexer)
-        self.geopt_AA = calc.CalcAreaAverage(self.geopt,self.LatIndexer,
+        self.geopt_ZA = Math.CalcZonalAverage(self.geopt, self.LonIndexer)
+        self.geopt_AA = Math.CalcAreaAverage(self.geopt,self.LatIndexer,
                                             self.BoxSouth,self.BoxNorth,
                                             self.LonIndexer)
         self.geopt_ZE = self.geopt - self.geopt_ZA
@@ -162,8 +162,8 @@ class BoxData:
         self.Q = AdiabaticHeatingData.sel(**{LatIndexer: 
             slice(self.BoxNorth, self.BoxSouth),
             LonIndexer: slice(self.BoxWest, self.BoxEast)})
-        self.Q_ZA = calc.CalcZonalAverage(self.Q,self.LonIndexer)
-        self.Q_AA = calc.CalcAreaAverage(self.Q,self.LatIndexer,
+        self.Q_ZA = Math.CalcZonalAverage(self.Q,self.LonIndexer)
+        self.Q_AA = Math.CalcAreaAverage(self.Q,self.LatIndexer,
                                     LonIndexer=self.LonIndexer)
         self.Q_ZE = self.Q - self.Q_ZA
         self.Q_AE = self.Q_ZA - self.Q_AA

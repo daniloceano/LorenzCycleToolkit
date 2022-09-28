@@ -27,7 +27,7 @@ Source for formulas used here:
         https://journals.ametsoc.org/view/journals/mwre/108/7/1520-0493_1980_108_0954_zaecot_2_0_co_2.xml
 """
 
-from calc import (VerticalTrazpezoidalIntegration, CalcAreaAverage)
+from Math import (VerticalTrazpezoidalIntegration, CalcAreaAverage)
 from metpy.constants import g
 from BoxData import BoxData
 import pandas as pd

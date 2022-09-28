@@ -32,7 +32,7 @@ import numpy as np
 from metpy.constants import g
 from metpy.constants import Re
 from metpy.units import units
-from calc import (CalcAreaAverage,VerticalTrazpezoidalIntegration,
+from Math import (CalcAreaAverage,VerticalTrazpezoidalIntegration,
                   HorizontalTrazpezoidalIntegration, CalcZonalAverage)
 from BoxData import BoxData
 

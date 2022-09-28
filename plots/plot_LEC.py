@@ -252,7 +252,7 @@ def main():
         idata = data.iloc[t]
         plot_LEC(idata,'daily_mean')
     # plot means for each periods of the system
-    periods = pd.read_csv('./periods',sep= ';',header=0)
+    periods = pd.read_csv('../inputs/periods',sep= ';',header=0)
     for i in range(len(periods)):
         start,end = periods.iloc[i]['start'],periods.iloc[i]['end']
         selected_dates = df[(df['Datetime'] >= start) & (df['Datetime'] <= end)]

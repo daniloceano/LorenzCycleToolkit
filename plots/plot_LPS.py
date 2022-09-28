@@ -120,7 +120,7 @@ def LorenzPhaseSpace(df,outname,example=False):
     # Gradient lines in the center of the plot
     alpha, offsetalpha = 0.3, 20
     lw, c = 2.5, '#383838'
-    offsetx, offsety = 4, 4
+    offsetx, offsety = 16, 4.3
     for i in range(7):
         ax.axhline(y=0+(i/offsetx),zorder=0+(i/5),linewidth=lw,
                    alpha=alpha-(i/offsetalpha),c=c)
@@ -347,7 +347,7 @@ def main():
     smoothed['Datetime'] = pd.DataFrame(starts.astype(str)+' - '+\
                                         ends.astype(str)).values
     # Get data for cyclone life cycle periods
-    periods = pd.read_csv('./inputs/periods',sep= ';',header=0)
+    periods = pd.read_csv('../inputs/periods',sep= ';',header=0)
     for i in range(len(periods)):
         start,end = periods.iloc[i]['start'],periods.iloc[i]['end']
         selected_dates = df[(df['Datetime'] >= start) & (df['Datetime'] <= end)]

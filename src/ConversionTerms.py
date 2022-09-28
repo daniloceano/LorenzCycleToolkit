@@ -43,7 +43,7 @@ from metpy.constants import g
 from metpy.constants import Rd
 from metpy.constants import Re
 from metpy.units import units
-from calc import (CalcAreaAverage,VerticalTrazpezoidalIntegration)
+from Math import (CalcAreaAverage,VerticalTrazpezoidalIntegration)
 from BoxData import BoxData
 import pandas as pd
 
