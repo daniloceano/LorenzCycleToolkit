@@ -67,12 +67,6 @@ def MarkerSizeKe(df):
 def LorenzPhaseSpace(df,outname,example=False):
     
     '''
-    flag == 1:
-        Will produce Ck x Ca x Ge plots
-    flag == 2:
-        Will produce Ce x Ca x Ge+BAe plots
-    flasg == 3:
-        Will produce Ck x Ce x BKe+RKe plots
     '''
     
     Ca = df['Ca']
@@ -90,10 +84,6 @@ def LorenzPhaseSpace(df,outname,example=False):
     plt.gcf().subplots_adjust(right=0.82)
     ax = plt.gca()
     
-    
-    # Line plot
-    ax.plot(Ck,Ca,'-',c='gray',zorder=2,linewidth=3)
-    
     # Scatter plot
     s = MarkerSizeKe(df)['sizes']
 
@@ -101,9 +91,24 @@ def LorenzPhaseSpace(df,outname,example=False):
     ax.set_xlim(-30,30)
     ax.set_ylim(-3,12)
     
+    # arrows connecting dots
+    Q = ax.quiver(Ck[:-1], Ca[:-1],
+              (Ck[1:].values-Ck[:-1].values),
+              (Ca[1:].values-Ca[:-1].values),
+              angles='xy', scale_units='xy', color='#383838',
+              scale=1,zorder=3)
+    
     norm = colors.TwoSlopeNorm(vmin=-7, vcenter=0, vmax=15)
+    
+    # plot the moment of maximum intensity
+    m = ax.scatter(Ck.loc[s.idxmax()],Ca.loc[s.idxmax()],
+               c='None',s=s.loc[s.idxmax()]*1.1,
+               zorder=100,edgecolors='k', norm=norm, linewidth=3)
+    
+    # plot dots as Ge
     dots = ax.scatter(Ck,Ca,c=Ge,cmap=cmocean.cm.curl,s=s,zorder=100,
                   edgecolors='grey', norm=norm)
+    
       # Labels
     ax.set_xlabel(
       'Conversion from zonal to eddy Kinetic Energy (Ck - '+r' $W\,m^{-2})$',
@@ -115,7 +120,8 @@ def LorenzPhaseSpace(df,outname,example=False):
         
     if example == True:
         dots.set_visible(False)
-        ax.lines.pop(0)
+        Q.remove()
+        m.remove()
         
     # Gradient lines in the center of the plot
     alpha, offsetalpha = 0.3, 20
@@ -131,14 +137,13 @@ def LorenzPhaseSpace(df,outname,example=False):
         ax.axvline(x=0-(i/offsety),zorder=0+(i/5),linewidth=lw,
                alpha=alpha-(i/offsetalpha),c=c)
         # Vertical line showing when Ca is more important than Ck
-        plt.plot(np.arange(0-(i/offsety),-40-(i/offsety),-1),
+        ax.plot(np.arange(0-(i/offsety),-40-(i/offsety),-1),
                  np.arange(0,40), c=c,zorder=1, 
                  alpha=0.2-(i/offsetalpha*.5))
-        plt.plot(np.arange(0+(i/offsety),-40+(i/offsety),-1),
+        ax.plot(np.arange(0+(i/offsety),-40+(i/offsety),-1),
                  np.arange(0,40), c=c,zorder=1, linewidth=lw,
                  alpha=0.2-(i/offsetalpha*.5))
         
-   
     # Colorbar
     cax = fig.add_axes([ax.get_position().x1+0.01,
                     ax.get_position().y0+0.34,0.02,ax.get_position().height/1.74])
@@ -148,11 +153,11 @@ def LorenzPhaseSpace(df,outname,example=False):
                    c='#383838',labelpad=50)
     for t in cbar.ax.get_yticklabels():
          t.set_fontsize(13)
-        
-
+         
     # Annotate plot
     ax.xaxis.set_tick_params(labelsize=13)
     ax.yaxis.set_tick_params(labelsize=13)
+    
     # Annotate plot
     if example == True:
         system = ''
@@ -243,11 +248,11 @@ def LorenzPhaseSpace_zoomed(df,outname):
     # plt.gcf().subplots_adjust(left=0.135)
     ax = plt.gca()
     
-    # Line plot
-    ax.plot(Ck,Ca,'-',c='gray',zorder=2,linewidth=3)
+    # # Line plot
+    # ax.plot(Ck,Ca,'-',c='gray',zorder=2,linewidth=3)
     
     # Scatter plot
-    s = MarkerSizeKe(df,1)['sizes']
+    s = MarkerSizeKe(df)['sizes']
 
     # Get limits
     minCk, maxCk =  min(Ck), max(Ck)
@@ -275,16 +280,31 @@ def LorenzPhaseSpace_zoomed(df,outname):
     ax.set_ylim(minLimitCa,maxLimitCa)
     
     
+    # arrows connecting dots
+    ax.quiver(Ck[:-1], Ca[:-1],
+              (Ck[1:].values-Ck[:-1].values),
+              (Ca[1:].values-Ca[:-1].values),
+              angles='xy', scale_units='xy', color='#383838',
+              scale=1,zorder=3)
+    
     norm = colors.TwoSlopeNorm(vmin=min(Ge)+(min(Ge)*0.2),
                                vcenter=0, vmax=max(Ge)+(max(Ge)*0.2))
-        
+    
+    # plot the moment of maximum intensity
+    ax.scatter(Ck.loc[s.idxmax()],Ca.loc[s.idxmax()],
+               c='None',s=s.loc[s.idxmax()]*1.1,
+               zorder=100,edgecolors='k', norm=norm, linewidth=3)
+    
+    # plot dots as Ge
     dots = ax.scatter(Ck,Ca,c=Ge,cmap=cmocean.cm.curl,s=s,zorder=100,
                         edgecolors='grey', norm=norm)
     
-    # Gradient lines in the center of the plot
+    # Lines in the center of the plot
     c,lw,alpha = '#383838',20,0.2
     ax.axhline(y=0,linewidth=lw,c=c,alpha=alpha,zorder=1)
     ax.axvline(x=0,linewidth=lw,c=c,alpha=alpha,zorder=1)
+    ax.plot(range(0,-40,-1),range(0,40,1),
+            linewidth=lw/3,c=c,alpha=alpha,zorder=1)
         
     # Labels
     ax.set_xlabel('Conversion from zonal to eddy Kinetic Energy (Ck - '+r' $W\,m^{-2})$',
@@ -362,8 +382,7 @@ def main():
     period['Datetime'] = (periods['start'].astype(str)+' - '+\
                                         periods['end'].astype(str)).values
 
-    
-    # Make LPS1 for all timesteps, 12h means and periods
+    # Make LPS for all timesteps, 12h means and periods
     LorenzPhaseSpace(df,'example',example=True)
     LorenzPhaseSpace(df,'all')
     LorenzPhaseSpace(smoothed,'12H')
@@ -375,7 +394,6 @@ def main():
     LorenzPhaseSpace_zoomed(smoothed,'12H')
     LorenzPhaseSpace_zoomed(smoothed,'24H')
     LorenzPhaseSpace_zoomed(period,'periods')
-    
     
 if __name__ == "__main__":
  
