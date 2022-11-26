@@ -77,8 +77,11 @@ class ConversionTerms:
         _ = self.omega_ZE*self.tair_ZE
         SecondTerm = CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
         function = (FirstTerm*SecondTerm)
-        Ce = VerticalTrazpezoidalIntegration(-function,self.PressureData,
-                                             self.VerticalCoordIndexer)
+        # Ce = VerticalTrazpezoidalIntegration(-function,self.PressureData,
+        #                                      self.VerticalCoordIndexer)
+        Ce = function.integrate(self.VerticalCoordIndexer
+                           ) * function[self.VerticalCoordIndexer].metpy.units
+        
         # Check if units are in accordance with expected and convert
         try: 
             Ce = Ce.metpy.convert_units('W/ m **2')
@@ -108,8 +111,10 @@ class ConversionTerms:
         _ = self.omega_AE*self.tair_AE
         SecondTerm = CalcAreaAverage(_,self.LatIndexer)
         function = (FirstTerm*SecondTerm)
-        Cz = VerticalTrazpezoidalIntegration(-function,self.PressureData,
-                                             self.VerticalCoordIndexer)
+        # Cz = VerticalTrazpezoidalIntegration(-function,self.PressureData,
+        #                                      self.VerticalCoordIndexer)
+        Cz = function.integrate(self.VerticalCoordIndexer
+                            ) * function[self.VerticalCoordIndexer].metpy.units
         try: 
             Cz = Cz.metpy.convert_units('W/ m **2')
         except ValueError:
@@ -153,8 +158,10 @@ class ConversionTerms:
         function += CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
         
         ## Integrate in pressure ##
-        Ca = VerticalTrazpezoidalIntegration(-function,self.PressureData,
-                                             self.VerticalCoordIndexer)
+        # Ca = VerticalTrazpezoidalIntegration(-function,self.PressureData,
+        #                                      self.VerticalCoordIndexer)
+        Ca = function.integrate(self.VerticalCoordIndexer
+                            ) * function[self.VerticalCoordIndexer].metpy.units
         try: 
             Ca = Ca.metpy.convert_units('W/ m **2')
         except ValueError:
@@ -224,8 +231,10 @@ class ConversionTerms:
         function +=  CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
         
         ## Integrate in pressure ##
-        Ck = VerticalTrazpezoidalIntegration(function,self.PressureData,
-                                             self.VerticalCoordIndexer)/g
+        # Ck = VerticalTrazpezoidalIntegration(function,self.PressureData,
+        #                                      self.VerticalCoordIndexer)/g
+        Ck = -function.integrate(self.VerticalCoordIndexer
+                        ) * function[self.VerticalCoordIndexer].metpy.units/g
         try: 
             Ck = Ck.metpy.convert_units('W/ m **2')
         except ValueError:

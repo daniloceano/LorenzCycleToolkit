@@ -88,8 +88,10 @@ class BoundaryTerms:
         # Integrate through latitude
         _ = HorizontalTrazpezoidalIntegration(_,self.LatIndexer)
         # Integrate through pressure levels
-        function = VerticalTrazpezoidalIntegration(_,self.PressureData,
-                                    self.VerticalCoordIndexer)*self.c1
+        # function = VerticalTrazpezoidalIntegration(_,self.PressureData,
+        #                             self.VerticalCoordIndexer)*self.c1
+        function = -_.integrate(self.VerticalCoordIndexer
+                    ) * _[self.VerticalCoordIndexer].metpy.units*self.c1
 
         ## Second Integral ##
         _ = ((2*self.tair_AE*CalcZonalAverage(self.u_ZE*self.tair_ZE,
@@ -99,8 +101,10 @@ class BoundaryTerms:
         _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
             **{self.LatIndexer: self.BoxSouth})
         # Integrate through pressure levels
-        function += VerticalTrazpezoidalIntegration(_,self.PressureData,
-                                    self.VerticalCoordIndexer)*self.c2
+        # function += VerticalTrazpezoidalIntegration(_,self.PressureData,
+        #                             self.VerticalCoordIndexer)*self.c2
+        function += -_.integrate(self.VerticalCoordIndexer
+                    )* _[self.VerticalCoordIndexer].metpy.units*self.c2
         
         ## Third Term ##
         _ = (CalcZonalAverage(self.omega_ZE*self.tair_ZE,self.LonIndexer)*
@@ -131,8 +135,10 @@ class BoundaryTerms:
         # Integrate through latitude
         _ = HorizontalTrazpezoidalIntegration(_,self.LatIndexer)
         # Integrate through pressure levels
-        function = VerticalTrazpezoidalIntegration(_,self.PressureData,
-                                    self.VerticalCoordIndexer)*self.c1
+        # function = VerticalTrazpezoidalIntegration(_,self.PressureData,
+        #                             self.VerticalCoordIndexer)*self.c1
+        function = -_.integrate(self.VerticalCoordIndexer
+                    )* _[self.VerticalCoordIndexer].metpy.units*self.c1
         
         ## Second Integral ##
         _ = CalcZonalAverage(self.v*self.tair_ZE**2,self.LonIndexer
@@ -141,8 +147,10 @@ class BoundaryTerms:
         _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
             **{self.LatIndexer: self.BoxSouth})
         # Integrate through pressure levels
-        function += VerticalTrazpezoidalIntegration(_,self.PressureData,
-                                    self.VerticalCoordIndexer)*self.c2
+        # function += VerticalTrazpezoidalIntegration(_,self.PressureData,
+        #                             self.VerticalCoordIndexer)*self.c2
+        function += -_.integrate(self.VerticalCoordIndexer
+                    )* _[self.VerticalCoordIndexer].metpy.units*self.c2
         
         ## Third Term ##
         _ = CalcAreaAverage(self.omega*self.tair_ZE**2,self.LatIndexer,
@@ -170,8 +178,11 @@ class BoundaryTerms:
         # Integrate through latitude
         _ = HorizontalTrazpezoidalIntegration(_,self.LatIndexer)
         # Integrate through pressure levels
-        function = VerticalTrazpezoidalIntegration(_,self.PressureData,
-                                    self.VerticalCoordIndexer)*self.c1
+        # function = VerticalTrazpezoidalIntegration(_,self.PressureData,
+        #                             self.VerticalCoordIndexer)*self.c1
+        function = -_.integrate(self.VerticalCoordIndexer
+                    )* _[self.VerticalCoordIndexer].metpy.units*self.c1
+        
         ## Second Integral ##
         _ = CalcZonalAverage((self.u**2+self.v**2-self.u_ZE**2-self.v_ZE**2)
             *self.v*self.cos_lats,self.LonIndexer)/(2*g)
@@ -179,8 +190,11 @@ class BoundaryTerms:
         _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
             **{self.LatIndexer: self.BoxSouth})
         # Integrate through pressure levels
-        function += VerticalTrazpezoidalIntegration(_,self.PressureData,
-                                    self.VerticalCoordIndexer)*self.c2
+        # function += VerticalTrazpezoidalIntegration(_,self.PressureData,
+        #                             self.VerticalCoordIndexer)*self.c2
+        function += -_.integrate(self.VerticalCoordIndexer
+                    )* _[self.VerticalCoordIndexer].metpy.units*self.c2
+        
         ## Third Term ##
         _ = CalcAreaAverage((self.u**2+self.v**2-self.u_ZE**2-self.v_ZE**2)
             *self.omega,self.LatIndexer,
@@ -208,8 +222,10 @@ class BoundaryTerms:
         # Integrate through latitude
         _ = HorizontalTrazpezoidalIntegration(_,self.LatIndexer)
         # Integrate through pressure levels
-        function = VerticalTrazpezoidalIntegration(_,self.PressureData,
-                                    self.VerticalCoordIndexer)*self.c1
+        # function = VerticalTrazpezoidalIntegration(_,self.PressureData,
+        #                             self.VerticalCoordIndexer)*self.c1
+        function = -_.integrate(self.VerticalCoordIndexer
+                    )* _[self.VerticalCoordIndexer].metpy.units*self.c1
         
         ## Second Integral ##
         _ = CalcZonalAverage((self.u_ZE**2+self.v_ZE**2)
@@ -218,8 +234,11 @@ class BoundaryTerms:
         _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
             **{self.LatIndexer: self.BoxSouth})
         # Integrate through pressure levels
-        function += VerticalTrazpezoidalIntegration(_,self.PressureData,
-                                    self.VerticalCoordIndexer)*self.c2
+        # function += VerticalTrazpezoidalIntegration(_,self.PressureData,
+        #                             self.VerticalCoordIndexer)*self.c2
+        function += -_.integrate(self.VerticalCoordIndexer
+                    )* _[self.VerticalCoordIndexer].metpy.units*self.c2
+        
         ## Third Term ##
         _ = CalcAreaAverage((self.u_ZE**2+self.v_ZE**2)
             *self.omega,self.LatIndexer,
@@ -250,8 +269,10 @@ class BoundaryTerms:
         # Integrate through latitude
         _ = HorizontalTrazpezoidalIntegration(_,self.LatIndexer)
         # Integrate through pressure levels
-        function = VerticalTrazpezoidalIntegration(_,self.PressureData,
-                                    self.VerticalCoordIndexer)*self.c1
+        # function = VerticalTrazpezoidalIntegration(_,self.PressureData,
+        #                             self.VerticalCoordIndexer)*self.c1
+        function  = -_.integrate(self.VerticalCoordIndexer
+                    )* _[self.VerticalCoordIndexer].metpy.units*self.c1
         
         ## Second Integral ##
         _ = (self.v_ZA*self.geopt_AE)*self.cos_lats/g
@@ -259,8 +280,11 @@ class BoundaryTerms:
         _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
             **{self.LatIndexer: self.BoxSouth})
         # Integrate through pressure levels
-        function += VerticalTrazpezoidalIntegration(_,self.PressureData,
-                                    self.VerticalCoordIndexer)*self.c2
+        # function += VerticalTrazpezoidalIntegration(_,self.PressureData,
+        #                             self.VerticalCoordIndexer)*self.c2
+        function += -_.integrate(self.VerticalCoordIndexer
+                    )* _[self.VerticalCoordIndexer].metpy.units*self.c2
+        
         ## Third Term ##
         _ = CalcAreaAverage(self.omega_AE*self.geopt_AE, self.LatIndexer)/g
         function -= _.sortby(self.VerticalCoordIndexer,ascending=False
@@ -286,8 +310,10 @@ class BoundaryTerms:
         # Integrate through latitude
         _ = HorizontalTrazpezoidalIntegration(_,self.LatIndexer)
         # Integrate through pressure levels
-        function = VerticalTrazpezoidalIntegration(_,self.PressureData,
-                                    self.VerticalCoordIndexer)*self.c1
+        # function = VerticalTrazpezoidalIntegration(_,self.PressureData,
+        #                             self.VerticalCoordIndexer)*self.c1
+        function = -_.integrate(self.VerticalCoordIndexer
+                    )* _[self.VerticalCoordIndexer].metpy.units*self.c1
         
         ## Second Integral ##
         _ = CalcZonalAverage((self.v_ZE*self.geopt_ZE),
@@ -296,8 +322,11 @@ class BoundaryTerms:
         _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
             **{self.LatIndexer: self.BoxSouth})
         # Integrate through pressure levels
-        function += VerticalTrazpezoidalIntegration(_,self.PressureData,
-                                    self.VerticalCoordIndexer)*self.c2
+        # function += VerticalTrazpezoidalIntegration(_,self.PressureData,
+        #                             self.VerticalCoordIndexer)*self.c2
+        function += -_.integrate(self.VerticalCoordIndexer
+                    )* _[self.VerticalCoordIndexer].metpy.units*self.c2
+        
         ## Third Term ##
         _ = CalcAreaAverage(self.omega_ZE*self.geopt_ZE, self.LatIndexer,
                             LonIndexer=self.LonIndexer)/g

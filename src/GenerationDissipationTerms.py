@@ -51,8 +51,11 @@ class GenerationDissipationTerms:
         print('\nComputing generation of Zonal Potential Energy (Gz)...')
         _ = (self.Q_AE*self.tair_AE)/(Cp_d*self.sigma_AA)
         function = CalcAreaAverage(_,self.LatIndexer)
-        Gz = VerticalTrazpezoidalIntegration(function,self.PressureData,
-                                             self.VerticalCoordIndexer)
+        # Gz = VerticalTrazpezoidalIntegration(function,self.PressureData,
+        #                                      self.VerticalCoordIndexer)
+        Gz = -function.integrate(self.VerticalCoordIndexer
+                    )* function[self.VerticalCoordIndexer].metpy.units
+        
         try: 
             Gz = Gz.metpy.convert_units('W/ m **2')
         except ValueError:
@@ -82,8 +85,11 @@ class GenerationDissipationTerms:
         _ = (self.Q_ZE*self.tair_ZE)/(Cp_d*self.sigma_AA)
         function = CalcAreaAverage(_,self.LatIndexer,
                                     LonIndexer=self.LonIndexer)
-        Ge = VerticalTrazpezoidalIntegration(function,self.PressureData,
-                                             self.VerticalCoordIndexer)
+        # Ge = VerticalTrazpezoidalIntegration(function,self.PressureData,
+        #                                      self.VerticalCoordIndexer)
+        Ge = -function.integrate(self.VerticalCoordIndexer
+                    )* function[self.VerticalCoordIndexer].metpy.units
+        
         try: 
             Ge = Ge.metpy.convert_units('W/ m **2')
         except ValueError:
