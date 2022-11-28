@@ -126,9 +126,11 @@ class EnergyContents:
             raise
         # Save Kz before vertical integration
         if self.method == 'eulerian':
-            df = function.drop([self.LonIndexer,self.LatIndexer]
-                ).to_dataframe(name='Ce',dim_order=[
-                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+            # df = function.drop([self.LonIndexer,self.LatIndexer]
+            #     ).to_dataframe(name='Ce',dim_order=[
+            #         self.TimeName,self.VerticalCoordIndexer]).unstack()
+            df = function.drop([self.LatIndexer,
+                "rlats","coslats"]).to_dataframe(name='Kz').unstack()     
         else:
             time = pd.to_datetime(function[self.TimeName].data)
             df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
@@ -156,9 +158,13 @@ class EnergyContents:
         print('Saving Ke for each vertical level...')
         # Save Ke before vertical integration
         if self.method == 'eulerian':
-            df = function.drop([self.LonIndexer,self.LatIndexer]
-                ).to_dataframe(name='Ce',dim_order=[
-                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+            # df = function.drop([self.LonIndexer,self.LatIndexer,
+            #                     "rlats","rlons","coslats"]
+            #     ).to_dataframe(name='Ce',dim_order=[
+            #         self.TimeName,self.VerticalCoordIndexer]).unstack()
+            df = function.drop([self.LonIndexer,self.LatIndexer,
+                                "rlats","rlons","coslats"]
+                ).to_dataframe(name='Ke').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
             df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]

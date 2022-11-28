@@ -82,8 +82,7 @@ def get_data(infile, varlist):
     # Sort data coordinates - data from distinc sources might have different
     # arrangements, which could affect the results from the integrations
     data = data.sortby(LonIndexer).sortby(LevelIndexer,
-                ascending=False).sortby(LatIndexer,ascending=False).sortby(
-                "rlats",ascending=False).sortby("coslats",ascending=False)
+                ascending=False).sortby(LatIndexer,ascending=False)
                         
     # Fill missing values with 0
     data = data.fillna(0)

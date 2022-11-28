@@ -2,11 +2,17 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Jan 31 20:15:59 2022
+
 Create an object that will store, whithin a bounding box specified by the user,
 all meteorological data required by the Lorenz Energy Cycle computations.
-The recursive functions computate the zonal and area averages and eddy terms 
-for each variable, as well the static stability index.
-@author: danilocoutodsouza
+
+The program uses xarray built-in function for integrations. For using it, it 
+would be necessary to sort the data from south to north and from west to east,
+but for saving up memory, it was using a negative sign in front of the 
+integrations for the latitude coordinate.
+
+Also, it was created a dimension for the radians of the latitude and longitude,
+for the integration
 
 Suffixes used:
     ZA = Zonal average (whithin the dfined box)
@@ -23,7 +29,8 @@ Created by:
 
 Contact:
     danilo.oceano@gmail.com
-
+    
+@author: daniloceano
 """
 
 import xarray
@@ -58,37 +65,28 @@ class BoxData:
         
         # Temperature data values
         self.tair = (data[dfVars.loc['Air Temperature']['Variable']] \
-             * units(dfVars.loc['Air Temperature']['Units']).to('K')).sel(
-                 **{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
-                 self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
+              * units(dfVars.loc['Air Temperature']['Units']).to('K')).sel(
+                  **{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
+                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         # Set length for doing averages
         self.xlength = self.tair['rlons'][-1]- self.tair['rlons'][0]
         self.ylength = np.sin(self.tair['rlats'][0]
                               ) - np.sin(self.tair['rlats'][-1])
-        ########################################################
-        self.tair_ZA = Math.CalcZonalAverage(self.tair , self.LonIndexer)
-        self.tair_AA = Math.CalcAreaAverage(self.tair ,self.LatIndexer,
-                                            self.southern_limit,self.northern_limit,
-                                            self.LonIndexer)
+        # Compute averages and eddy terms
+        self.tair_ZA = self.tair.integrate("rlons")/self.xlength
+        self.tair_AA = -(self.tair_ZA*self.tair_ZA["coslats"]).integrate(
+                            "rlats")/self.ylength
         self.tair_ZE = self.tair - self.tair_ZA
         self.tair_AE = self.tair_ZA - self.tair_AA
-        ########################################################
-        # # Compute averages and eddy terms
-        # self.tair_ZA = self.tair.integrate("rlons")/self.xlength
-        # self.tair_AA = (self.tair_ZA*self.tair_ZA["coslats"]
-        #                 ).integrate("coslats")/self.ylength
-        # self.tair_ZE = self.tair - self.tair_ZA
-        # self.tair_AE = self.tair_ZA - self.tair_AA
         
         # Zonal wind component data values, averages and eddy terms
         self.u = (data[dfVars.loc['Eastward Wind Component']['Variable']] \
              * units(dfVars.loc['Eastward Wind Component']['Units']).to('m/s')
              ).sel(**{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
-        self.u_ZA = Math.CalcZonalAverage(self.u, self.LonIndexer)
-        self.u_AA = Math.CalcAreaAverage(self.u,self.LatIndexer,
-                                            self.southern_limit,self.northern_limit,
-                                            self.LonIndexer)
+        self.u_ZA = self.u.integrate("rlons")/self.xlength
+        self.u_AA = -(self.u_ZA*self.u_ZA["coslats"]).integrate(
+                            "rlats")/self.ylength
         self.u_ZE = self.u - self.u_ZA
         self.u_AE = self.u_ZA - self.u_AA
         
@@ -97,10 +95,9 @@ class BoxData:
              * units(dfVars.loc['Northward Wind Component']['Units']).to('m/s')
              ).sel(**{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
-        self.v_ZA = Math.CalcZonalAverage(self.v, self.LonIndexer)
-        self.v_AA = Math.CalcAreaAverage(self.v,self.LatIndexer,
-                                            self.southern_limit,self.northern_limit,
-                                            self.LonIndexer)
+        self.v_ZA = self.v.integrate("rlons")/self.xlength
+        self.v_AA = -(self.v_ZA*self.v_ZA["coslats"]).integrate(
+                            "rlats")/self.ylength
         self.v_ZE = self.v - self.v_ZA
         self.v_AE = self.v_ZA - self.v_AA
         
@@ -118,17 +115,14 @@ class BoxData:
                  ).sel(**{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
                      self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
                           
-        self.ust_ZA = Math.CalcZonalAverage(self.ust, self.LonIndexer)
-        self.ust_AA = Math.CalcAreaAverage(self.ust,self.LatIndexer,
-                                            self.southern_limit,self.northern_limit,
-                                            self.LonIndexer)
+        self.ust_ZA = self.ust.integrate("rlons")/self.xlength
+        self.ust_AA = -(self.ust_ZA*self.ust_ZA["coslats"]).integrate(
+                            "rlats")/self.ylength
+        self.vst_ZA = self.vst.integrate("rlons")/self.xlength
+        self.vst_AA = -(self.vst_ZA*self.vst_ZA["coslats"]).integrate(
+                            "rlats")/self.ylength
         self.ust_ZE = self.ust - self.ust_ZA
         self.ust_AE = self.ust_ZA - self.ust_AA
-        
-        self.vst_ZA = Math.CalcZonalAverage(self.vst, self.LonIndexer)
-        self.vst_AA = Math.CalcAreaAverage(self.vst,self.LatIndexer,
-                                            self.southern_limit,self.northern_limit,
-                                            self.LonIndexer)
         self.vst_ZE = self.vst - self.vst_ZA
         self.vst_AE = self.vst_ZA - self.vst_AA
         
@@ -138,10 +132,9 @@ class BoxData:
              * units(dfVars.loc['Omega Velocity']['Units']).to('Pa/s')
              ).sel(**{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
-        self.omega_ZA = Math.CalcZonalAverage(self.omega, self.LonIndexer)
-        self.omega_AA = Math.CalcAreaAverage(self.omega,self.LatIndexer,
-                                            self.southern_limit,self.northern_limit,
-                                            self.LonIndexer)
+        self.omega_ZA = self.omega.integrate("rlons")/self.xlength
+        self.omega_AA = -(self.omega_ZA*self.omega_ZA["coslats"]).integrate(
+                                    "rlats")/self.ylength
         self.omega_ZE = self.omega - self.omega_ZA
         self.omega_AE = self.omega_ZA - self.omega_AA
         
