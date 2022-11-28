@@ -62,18 +62,18 @@ class BoundaryTerms:
         self.geopt_AE = box_obj.geopt_AE
         self.rlats = np.deg2rad(box_obj.tair[self.LatIndexer])
         self.cos_lats = np.cos(self.rlats)
-        self.BoxWest = box_obj.BoxWest
-        self.BoxEast = box_obj.BoxEast
-        self.BoxSouth = box_obj.BoxSouth
-        self.BoxNorth = box_obj.BoxNorth
+        self.western_limit = box_obj.western_limit
+        self.eastern_limit = box_obj.eastern_limit
+        self.southern_limit = box_obj.southern_limit
+        self.northern_limit = box_obj.northern_limit
         
         # Using the notation from Michaelides (1987)
         self.c1 = -1/((Re*(
-                np.deg2rad(box_obj.BoxEast)-np.deg2rad(box_obj.BoxWest))*
-                (np.sin(np.deg2rad(box_obj.BoxNorth))-
-                np.sin(np.deg2rad(box_obj.BoxSouth))))/units.radian)
-        self.c2 = -1/(Re*(np.sin(np.deg2rad(box_obj.BoxNorth))-
-            np.sin(np.deg2rad(box_obj.BoxSouth))))
+                np.deg2rad(box_obj.eastern_limit)-np.deg2rad(box_obj.western_limit))*
+                (np.sin(np.deg2rad(box_obj.northern_limit))-
+                np.sin(np.deg2rad(box_obj.southern_limit))))/units.radian)
+        self.c2 = -1/(Re*(np.sin(np.deg2rad(box_obj.northern_limit))-
+            np.sin(np.deg2rad(box_obj.southern_limit))))
         
     def calc_baz(self):
         if self.method == 'eulerian':
@@ -83,8 +83,8 @@ class BoundaryTerms:
         _ = ((2*self.tair_AE*self.tair_ZE*self.u)
              + (self.tair_AE**2*self.u))/(2*self.sigma_AA)
         # Data at eastern boundary minus data at western boundary 
-        _ = _.sel(**{self.LonIndexer: self.BoxEast}) - _.sel(
-            **{self.LonIndexer: self.BoxWest})
+        _ = _.sel(**{self.LonIndexer: self.eastern_limit}) - _.sel(
+            **{self.LonIndexer: self.western_limit})
         # Integrate through latitude
         _ = HorizontalTrazpezoidalIntegration(_,self.LatIndexer)
         # Integrate through pressure levels
@@ -98,8 +98,8 @@ class BoundaryTerms:
             self.LonIndexer)) + (self.tair_AE**2*self.v_ZA)
             )*np.cos(self.rlats)/(2*self.sigma_AA)
         # Data at northern boundary minus data at southern boundary
-        _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
-            **{self.LatIndexer: self.BoxSouth})
+        _ = _.sel(**{self.LatIndexer: self.northern_limit}) - _.sel(
+            **{self.LatIndexer: self.southern_limit})
         # Integrate through pressure levels
         # function += VerticalTrazpezoidalIntegration(_,self.PressureData,
         #                             self.VerticalCoordIndexer)*self.c2
@@ -130,8 +130,8 @@ class BoundaryTerms:
         ## First Integral ##
         _ = (self.u*self.tair_ZE**2)/(2*self.sigma_AA)
          # Data at eastern boundary minus data at western boundary 
-        _ = _.sel(**{self.LonIndexer: self.BoxEast}) - _.sel(
-            **{self.LonIndexer: self.BoxWest}) 
+        _ = _.sel(**{self.LonIndexer: self.eastern_limit}) - _.sel(
+            **{self.LonIndexer: self.western_limit}) 
         # Integrate through latitude
         _ = HorizontalTrazpezoidalIntegration(_,self.LatIndexer)
         # Integrate through pressure levels
@@ -144,8 +144,8 @@ class BoundaryTerms:
         _ = CalcZonalAverage(self.v*self.tair_ZE**2,self.LonIndexer
                              )*self.cos_lats/(2*self.sigma_AA)
         # Data at northern boundary minus data at southern boundary
-        _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
-            **{self.LatIndexer: self.BoxSouth})
+        _ = _.sel(**{self.LatIndexer: self.northern_limit}) - _.sel(
+            **{self.LatIndexer: self.southern_limit})
         # Integrate through pressure levels
         # function += VerticalTrazpezoidalIntegration(_,self.PressureData,
         #                             self.VerticalCoordIndexer)*self.c2
@@ -173,8 +173,8 @@ class BoundaryTerms:
         ## First Integral ##
         _ = self.u*(self.u**2+self.v**2-self.u_ZE**2-self.v_ZE**2)/(2*g)
          # Data at eastern boundary minus data at western boundary 
-        _ = _.sel(**{self.LonIndexer: self.BoxEast}) - _.sel(
-            **{self.LonIndexer: self.BoxWest}) 
+        _ = _.sel(**{self.LonIndexer: self.eastern_limit}) - _.sel(
+            **{self.LonIndexer: self.western_limit}) 
         # Integrate through latitude
         _ = HorizontalTrazpezoidalIntegration(_,self.LatIndexer)
         # Integrate through pressure levels
@@ -187,8 +187,8 @@ class BoundaryTerms:
         _ = CalcZonalAverage((self.u**2+self.v**2-self.u_ZE**2-self.v_ZE**2)
             *self.v*self.cos_lats,self.LonIndexer)/(2*g)
         # Data at northern boundary minus data at southern boundary
-        _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
-            **{self.LatIndexer: self.BoxSouth})
+        _ = _.sel(**{self.LatIndexer: self.northern_limit}) - _.sel(
+            **{self.LatIndexer: self.southern_limit})
         # Integrate through pressure levels
         # function += VerticalTrazpezoidalIntegration(_,self.PressureData,
         #                             self.VerticalCoordIndexer)*self.c2
@@ -217,8 +217,8 @@ class BoundaryTerms:
         ## First Integral ##
         _ = self.u*(self.u_ZE**2+self.v_ZE**2)/(2*g)
          # Data at eastern boundary minus data at western boundary 
-        _ = _.sel(**{self.LonIndexer: self.BoxEast}) - _.sel(
-            **{self.LonIndexer: self.BoxWest}) 
+        _ = _.sel(**{self.LonIndexer: self.eastern_limit}) - _.sel(
+            **{self.LonIndexer: self.western_limit}) 
         # Integrate through latitude
         _ = HorizontalTrazpezoidalIntegration(_,self.LatIndexer)
         # Integrate through pressure levels
@@ -231,8 +231,8 @@ class BoundaryTerms:
         _ = CalcZonalAverage((self.u_ZE**2+self.v_ZE**2)
             *self.v*self.cos_lats,self.LonIndexer)/(2*g)
         # Data at northern boundary minus data at southern boundary
-        _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
-            **{self.LatIndexer: self.BoxSouth})
+        _ = _.sel(**{self.LatIndexer: self.northern_limit}) - _.sel(
+            **{self.LatIndexer: self.southern_limit})
         # Integrate through pressure levels
         # function += VerticalTrazpezoidalIntegration(_,self.PressureData,
         #                             self.VerticalCoordIndexer)*self.c2
@@ -264,8 +264,8 @@ class BoundaryTerms:
         ## First Integral ##
         _ = (self.v_ZA*self.geopt_AE)/g
          # Data at eastern boundary minus data at western boundary 
-        # _ = _.sel(**{self.LonIndexer: self.BoxEast}) - _.sel(
-        #     **{self.LonIndexer: self.BoxWest}) 
+        # _ = _.sel(**{self.LonIndexer: self.eastern_limit}) - _.sel(
+        #     **{self.LonIndexer: self.western_limit}) 
         # Integrate through latitude
         _ = HorizontalTrazpezoidalIntegration(_,self.LatIndexer)
         # Integrate through pressure levels
@@ -277,8 +277,8 @@ class BoundaryTerms:
         ## Second Integral ##
         _ = (self.v_ZA*self.geopt_AE)*self.cos_lats/g
         # Data at northern boundary minus data at southern boundary
-        _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
-            **{self.LatIndexer: self.BoxSouth})
+        _ = _.sel(**{self.LatIndexer: self.northern_limit}) - _.sel(
+            **{self.LatIndexer: self.southern_limit})
         # Integrate through pressure levels
         # function += VerticalTrazpezoidalIntegration(_,self.PressureData,
         #                             self.VerticalCoordIndexer)*self.c2
@@ -305,8 +305,8 @@ class BoundaryTerms:
         ## First Integral ##
         _ = (self.u_ZE*self.geopt_ZE)/g
          # Data at eastern boundary minus data at western boundary 
-        _ = _.sel(**{self.LonIndexer: self.BoxEast}) - _.sel(
-            **{self.LonIndexer: self.BoxWest}) 
+        _ = _.sel(**{self.LonIndexer: self.eastern_limit}) - _.sel(
+            **{self.LonIndexer: self.western_limit}) 
         # Integrate through latitude
         _ = HorizontalTrazpezoidalIntegration(_,self.LatIndexer)
         # Integrate through pressure levels
@@ -319,8 +319,8 @@ class BoundaryTerms:
         _ = CalcZonalAverage((self.v_ZE*self.geopt_ZE),
                              self.LonIndexer)*self.cos_lats/g
         # Data at northern boundary minus data at southern boundary
-        _ = _.sel(**{self.LatIndexer: self.BoxNorth}) - _.sel(
-            **{self.LatIndexer: self.BoxSouth})
+        _ = _.sel(**{self.LatIndexer: self.northern_limit}) - _.sel(
+            **{self.LatIndexer: self.southern_limit})
         # Integrate through pressure levels
         # function += VerticalTrazpezoidalIntegration(_,self.PressureData,
         #                             self.VerticalCoordIndexer)*self.c2
