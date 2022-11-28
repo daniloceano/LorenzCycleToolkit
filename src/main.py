@@ -23,7 +23,6 @@ from ConversionTerms import ConversionTerms
 from BoundaryTerms import BoundaryTerms
 from GenerationDissipationTerms import GenerationDissipationTerms
 from BoxData import BoxData
-from thermodynamics import AdiabaticHEating
 from BudgetResidual import calc_budget_diff,calc_residuals
 from metpy.units import units
 import pandas as pd
@@ -67,50 +66,30 @@ def get_data(infile, varlist):
       dfVars.loc['Longitude']['Variable'],dfVars.loc['Latitude']['Variable'],\
       dfVars.loc['Time']['Variable'],dfVars.loc['Vertical Level']['Variable']
     print('Ok!')
-    print('Opening inpyt data...')
+    print('Opening input data...')
     try:
         full_data = convert_lon(xr.open_dataset(infile),LonIndexer)
     except:
         raise SystemExit('ERROR!!!!!\n Could not open data. Check if path is\
  correct, fvars file and file format (should be .nc)')
     print('Ok!')
-    # Sort data coordinates - data from distinc sources might have different
-    # arrangements, which could affect the results from the integrations
-    full_data = full_data.sortby(LonIndexer).sortby(LevelIndexer,
-                            ascending=False).sortby(LatIndexer,ascending=False)
-    # Fill missing values with 0
-    full_data = full_data.fillna(0)
-    try:
-        full_data = full_data.where(full_data.apply(np.isfinite)).fillna(0.0)
-    except:
-        full_data = full_data.fillna(0)
     # load data into memory (code optmization)
     data = full_data.load()
-    # Stores data as separated variables and give them correct units
-    tair = data[dfVars.loc['Air Temperature']['Variable']] \
-        * units(dfVars.loc['Air Temperature']['Units']).to('K')
-    omega = data[dfVars.loc['Omega Velocity']['Variable']]*\
-        units(dfVars.loc['Omega Velocity']['Units']).to('Pa/s')
-    u = data[dfVars.loc['Eastward Wind Component']['Variable']]*\
-        units(dfVars.loc['Eastward Wind Component']['Units'])
-    v = data[dfVars.loc['Northward Wind Component']['Variable']]*\
-        units(dfVars.loc['Northward Wind Component']['Units'])
-    if args.geopotential:
-         hgt = (data[dfVars.loc['Geopotential']['Variable']] \
-        * units(dfVars.loc['Geopotential']['Units'])/g).metpy.convert_units('gpm')
-    else:
-        hgt = data[dfVars.loc['Geopotential Height']['Variable']]\
-            *units(dfVars.loc['Geopotential Height']['Units']).to('gpm')
-    if not args.residuals:
-        u_stress = data[dfVars.loc['Zonal Wind Stress']['Variable']]*\
-            units(dfVars.loc['Zonal Wind Stress']['Units'])
-        v_stress = data[dfVars.loc['Meridional Wind Stress']['Variable']]*\
-            units(dfVars.loc['Meridional Wind Stress']['Units'])
-        return LonIndexer, LatIndexer, TimeIndexer, LevelIndexer, tair, hgt,\
-            omega, u, v, u_stress, v_stress
-    else:
-        return LonIndexer, LatIndexer, TimeIndexer, LevelIndexer, tair, hgt,\
-            omega, u, v
+    # Sort data coordinates - data from distinc sources might have different
+    # arrangements, which could affect the results from the integrations
+    data = data.sortby(LonIndexer).sortby(LevelIndexer,
+                            ascending=False).sortby(LatIndexer,ascending=False)
+    # Fill missing values with 0
+    data = data.fillna(0)
+    try:
+        data = data.where(data.apply(np.isfinite)).fillna(0.0)
+    except:
+        data = data.fillna(0)
+    # Assign lat and lon as radians, for calculations
+    data = data.assign_coords({"rlats": np.deg2rad(data[LatIndexer])})
+    data = data.assign_coords({"rlons": np.deg2rad(data[LonIndexer])})
+    
+    return data
 
 #---------------------------------------------------------------------------
 # Computes the Lorenz Energy Cycle using an eulerian framework.
@@ -133,22 +112,15 @@ def LEC_eulerian():
         raise ValueError('Error in box_limits: min_lat > max_lat')
         quit()
     # 2) Open the data
-    data = get_data(infile, varlist)   
-    # Data indexers
-    LonIndexer, LatIndexer, TimeName, VerticalCoordIndexer = \
-        data[0], data[1], data[2], data[3]
-    # Data variables
-    tair, hgt, omega, u, v = data[4], data[5], data[6], data[7], data[8]
-    pres = tair[VerticalCoordIndexer]*units(
-        tair[VerticalCoordIndexer].units).to('Pa')
-    Q = AdiabaticHEating(tair,pres,omega,u,v,VerticalCoordIndexer,
-                                LatIndexer,LonIndexer,TimeName)
-    if not args.residuals:
-        u_stress = data[9]
-        v_stress = data[10]
-    else:
-        u_stress = v*np.nan
-        v_stress = v*np.nan
+    data = get_data(infile, varlist)  
+    # Indexers
+    dfVars = pd.read_csv(varlist,sep= ';',index_col=0,header=0)
+    LonIndexer,LatIndexer,TimeName,VerticalCoordIndexer = \
+      dfVars.loc['Longitude']['Variable'],dfVars.loc['Latitude']['Variable'],\
+      dfVars.loc['Time']['Variable'],dfVars.loc['Vertical Level']['Variable']
+    pres = data[VerticalCoordIndexer]*units(
+         data[VerticalCoordIndexer].units).to('Pa')
+    
     print('\n Parameters spcified for the bounding box:')
     print('min_lon, max_lon, min_lat, max_lat: '+str([min_lon,
                                                      max_lon, min_lat, max_lat]))
@@ -191,13 +163,8 @@ def LEC_eulerian():
     print('Computing zonal and area averages and eddy terms for each variable')
     print('and the static stability parameter...')
     try:
-        box_obj = BoxData(TemperatureData=tair, PressureData=pres,
-        UWindComponentData=u, VWindComponentData=v,
-        ZonalWindStressData=u_stress,MeridionalWindStressData=v_stress,
-        OmegaData=omega, HgtData=hgt,LonIndexer=LonIndexer, 
-        AdiabaticHeatingData=Q,
-        LatIndexer=LatIndexer, VerticalCoordIndexer=VerticalCoordIndexer,
-        TimeName=TimeName,western_limit=min_lon, eastern_limit=max_lon,
+        box_obj = BoxData(data=data, dfVars=dfVars, args=args,
+        western_limit=min_lon, eastern_limit=max_lon,
         southern_limit=min_lat, northern_limit=max_lat,
         output_dir=ResultsSubDirectory)
     except:
@@ -250,7 +217,7 @@ def LEC_eulerian():
     # 9)
     print('\nOrganising results in a Pandas DataFrame')
     # First, extract dates to construct a dataframe
-    dates = tair[TimeName].values
+    dates = data[TimeName].values
     days = dates.astype('datetime64[D]')
     hours = pd.to_datetime(dates).hour
     df = pd.DataFrame(data=[*days],columns=['Date'])

@@ -28,140 +28,142 @@ Contact:
 
 import xarray
 import Math
-from thermodynamics import StaticStability
-import numpy as np
+import argparse
+from thermodynamics import StaticStability, AdiabaticHEating
 from metpy.constants import g
+from metpy.units import units
+import numpy as np
+import pandas as pd
 
 class BoxData:
     '''
     Object containing all meteorological data required for the LEC computation
     '''
-    def __init__(self,  LonIndexer: str, LatIndexer: str,
-                 TimeName: str,
-                 VerticalCoordIndexer: str, 
-                 TemperatureData: xarray.Dataset,
-                 PressureData: xarray.Dataset,
-                 UWindComponentData: xarray.Dataset,
-                 VWindComponentData: xarray.Dataset,
-                 AdiabaticHeatingData: xarray.Dataset,
-                 ZonalWindStressData: xarray.Dataset,
-                 MeridionalWindStressData: xarray.Dataset,
-                 OmegaData: xarray.Dataset,
-                 HgtData: xarray.Dataset,
+    def __init__(self, data: xarray.Dataset, dfVars: pd.DataFrame,
                  western_limit: float, eastern_limit: float,
                  southern_limit: float, northern_limit: float,
-                 output_dir: str):
-        self.PressureData = PressureData
-        self.LonIndexer = LonIndexer
-        self.LatIndexer = LatIndexer
-        self.TimeName = TimeName
-        self.VerticalCoordIndexer = VerticalCoordIndexer
+                 args: argparse.Namespace, output_dir: str):
+        self.LonIndexer = dfVars.loc['Longitude']['Variable']
+        self.LatIndexer = dfVars.loc['Latitude']['Variable']
+        self.TimeName = dfVars.loc['Time']['Variable']
+        self.VerticalCoordIndexer = dfVars.loc['Vertical Level']['Variable']
+        self.PressureData = data[self.VerticalCoordIndexer]*units(
+             data[self.VerticalCoordIndexer].units).to('Pa')
+        self.args = args
         self.output_dir = output_dir
-        
-        # Find data gridpoints that match the box limits
-        self.BoxWest = float((TemperatureData[LonIndexer]
-                              [(np.abs(TemperatureData[LonIndexer] - 
-                                       western_limit)).argmin()]).values)
-        self.BoxEast = float((TemperatureData[LonIndexer]
-                              [(np.abs(TemperatureData[LonIndexer] - 
-                                       eastern_limit)).argmin()]).values)
-        self.BoxSouth = float((TemperatureData[LatIndexer]
-                               [(np.abs(TemperatureData[LatIndexer] - 
-                                        southern_limit)).argmin()]).values)
-        self.BoxNorth = float((TemperatureData[LatIndexer]
-                               [(np.abs(TemperatureData[LatIndexer] - 
-                                        northern_limit)).argmin()]).values)
+        self.western_limit = western_limit
+        self.eastern_limit = eastern_limit
+        self.southern_limit = southern_limit
+        self.northern_limit = northern_limit
+        self.xlength = data['rlons'][-1]- data['rlons'][0]
+        self.ylength = data['rlats'][0]- data['rlats'][-1]
         
         # Temperature data values, averages and eddy terms
-        self.tair = TemperatureData.sel(**{LatIndexer: 
-            slice(self.BoxNorth, self.BoxSouth),
-            LonIndexer: slice(self.BoxWest, self.BoxEast)})
+        self.tair = (data[dfVars.loc['Air Temperature']['Variable']] \
+             * units(dfVars.loc['Air Temperature']['Units']).to('K')).sel(
+                 **{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
+                 self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
+                 
+                 
         self.tair_ZA = Math.CalcZonalAverage(self.tair, self.LonIndexer)
         self.tair_AA = Math.CalcAreaAverage(self.tair, self.LatIndexer,
-                                            self.BoxSouth,self.BoxNorth,
+                                            self.southern_limit,self.northern_limit,
                                             self.LonIndexer)
         self.tair_ZE = self.tair - self.tair_ZA
         self.tair_AE = self.tair_ZA - self.tair_AA
         
         # Zonal wind component data values, averages and eddy terms
-        self.u = UWindComponentData.sel(**{LatIndexer: 
-            slice(self.BoxNorth, self.BoxSouth),
-            LonIndexer: slice(self.BoxWest, self.BoxEast)})
+        self.u = (data[dfVars.loc['Eastward Wind Component']['Variable']] \
+             * units(dfVars.loc['Eastward Wind Component']['Units']).to('m/s')
+             ).sel(**{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
+                 self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         self.u_ZA = Math.CalcZonalAverage(self.u, self.LonIndexer)
         self.u_AA = Math.CalcAreaAverage(self.u,self.LatIndexer,
-                                            self.BoxSouth,self.BoxNorth,
+                                            self.southern_limit,self.northern_limit,
                                             self.LonIndexer)
         self.u_ZE = self.u - self.u_ZA
         self.u_AE = self.u_ZA - self.u_AA
         
         # Meridional wind component data values, averages and eddy terms
-        self.v = VWindComponentData.sel(**{LatIndexer: 
-            slice(self.BoxNorth, self.BoxSouth),
-            LonIndexer: slice(self.BoxWest, self.BoxEast)})
+        self.v = (data[dfVars.loc['Northward Wind Component']['Variable']] \
+             * units(dfVars.loc['Northward Wind Component']['Units']).to('m/s')
+             ).sel(**{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
+                 self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         self.v_ZA = Math.CalcZonalAverage(self.v, self.LonIndexer)
         self.v_AA = Math.CalcAreaAverage(self.v,self.LatIndexer,
-                                            self.BoxSouth,self.BoxNorth,
+                                            self.southern_limit,self.northern_limit,
                                             self.LonIndexer)
         self.v_ZE = self.v - self.v_ZA
         self.v_AE = self.v_ZA - self.v_AA
         
-        # Zonal wind stress data values, averages and eddy terms
-        self.ust = ZonalWindStressData.sel(**{LatIndexer: 
-            slice(self.BoxNorth, self.BoxSouth),
-            LonIndexer: slice(self.BoxWest, self.BoxEast)})
+        # Zonal and Meridional wind stress data values, averages and eddy terms
+        if args.residuals:
+            self.ust = self.tair*np.nan
+            self.vst = self.tair*np.nan
+        else:
+            self.ust = (data[dfVars.loc['Zonal Wind Stress']['Variable']] \
+                 * units(dfVars.loc['Zonal Wind Stress']['Units'])
+                 ).sel(**{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
+                     self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
+            self.vst = (data[dfVars.loc['Meridional Wind Stress']['Variable']] \
+                 * units(dfVars.loc['Meridional Wind Stress']['Units'])
+                 ).sel(**{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
+                     self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
+                          
         self.ust_ZA = Math.CalcZonalAverage(self.ust, self.LonIndexer)
         self.ust_AA = Math.CalcAreaAverage(self.ust,self.LatIndexer,
-                                            self.BoxSouth,self.BoxNorth,
+                                            self.southern_limit,self.northern_limit,
                                             self.LonIndexer)
         self.ust_ZE = self.ust - self.ust_ZA
         self.ust_AE = self.ust_ZA - self.ust_AA
         
-        # Meridional wind stress data values, averages and eddy terms
-        self.vst = MeridionalWindStressData.sel(**{LatIndexer: 
-            slice(self.BoxNorth, self.BoxSouth),
-            self.LonIndexer: slice(self.BoxWest, self.BoxEast)})
         self.vst_ZA = Math.CalcZonalAverage(self.vst, self.LonIndexer)
         self.vst_AA = Math.CalcAreaAverage(self.vst,self.LatIndexer,
-                                            self.BoxSouth,self.BoxNorth,
+                                            self.southern_limit,self.northern_limit,
                                             self.LonIndexer)
         self.vst_ZE = self.vst - self.vst_ZA
         self.vst_AE = self.vst_ZA - self.vst_AA
         
         # Omega velocity (vertical velocity in pressure levels) data values,
         # averages and eddy terms
-        self.omega = OmegaData.sel(**{LatIndexer: 
-            slice(self.BoxNorth, self.BoxSouth),
-            LonIndexer: slice(self.BoxWest, self.BoxEast)})
+        self.omega = (data[dfVars.loc['Omega Velocity']['Variable']] \
+             * units(dfVars.loc['Omega Velocity']['Units']).to('Pa/s')
+             ).sel(**{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
+                 self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         self.omega_ZA = Math.CalcZonalAverage(self.omega, self.LonIndexer)
         self.omega_AA = Math.CalcAreaAverage(self.omega,self.LatIndexer,
-                                            self.BoxSouth,self.BoxNorth,
+                                            self.southern_limit,self.northern_limit,
                                             self.LonIndexer)
         self.omega_ZE = self.omega - self.omega_ZA
         self.omega_AE = self.omega_ZA - self.omega_AA
         
-        # Geopotential height data values, averages and eddy terms
-        self.hgt = HgtData.sel(**{LatIndexer: 
-            slice(self.BoxNorth, self.BoxSouth),
-            LonIndexer: slice(self.BoxWest, self.BoxEast)})
-        self.hgt_ZA = Math.CalcZonalAverage(self.hgt, self.LonIndexer)
-        self.hgt_AA = Math.CalcAreaAverage(self.hgt,self.LatIndexer,
-                                            self.BoxSouth,self.BoxNorth,
-                                            self.LonIndexer)
-        self.hgt_ZE = self.hgt - self.hgt_ZA
-        self.hgt_AE = self.hgt_ZA - self.hgt_AA
-        
-        # Geopotential (g*hgt) data values, averages and eddy terms
-        self.geopt = self.hgt*g
+        # Geopotential (g*hgt) height data values data values, a
+        # verages and eddy terms
+        if args.geopotential:
+            self.geopt = (data[dfVars.loc['Geopotential']['Variable']] \
+             * units(dfVars.loc['Geopotential']['Units']/g
+             ).metpy.convert_units('gpm')).sel(
+                **{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
+                 self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
+        else:
+            self.geopt = (data[dfVars.loc['Geopotential Height']['Variable']] \
+             * units(dfVars.loc['Geopotential Height']['Units'])
+             ).sel(**{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
+                 self.LonIndexer: slice(self.western_limit, self.eastern_limit)}
+                      ).metpy.convert_units('gpm')        
         self.geopt_ZA = Math.CalcZonalAverage(self.geopt, self.LonIndexer)
         self.geopt_AA = Math.CalcAreaAverage(self.geopt,self.LatIndexer,
-                                            self.BoxSouth,self.BoxNorth,
+                                            self.southern_limit,self.northern_limit,
                                             self.LonIndexer)
         self.geopt_ZE = self.geopt - self.geopt_ZA
         self.geopt_AE = self.geopt_ZA - self.geopt_AA
         
-        self.Q = AdiabaticHeatingData.sel(**{LatIndexer: 
-            slice(self.BoxNorth, self.BoxSouth),
-            LonIndexer: slice(self.BoxWest, self.BoxEast)})
+        self.Q = AdiabaticHEating(self.tair,self.tair[self.VerticalCoordIndexer],
+                self.omega, self.u,self.v,self.VerticalCoordIndexer,
+                self.LatIndexer,self.LonIndexer,self.TimeName).sel(
+                **{self.LatIndexer:slice(self.northern_limit, 
+                                         self.southern_limit),
+                self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         self.Q_ZA = Math.CalcZonalAverage(self.Q,self.LonIndexer)
         self.Q_AA = Math.CalcAreaAverage(self.Q,self.LatIndexer,
                                     LonIndexer=self.LonIndexer)
@@ -171,5 +173,5 @@ class BoxData:
         # Static stability parameter
         self.sigma_AA = StaticStability(self.tair, self.PressureData, self.VerticalCoordIndexer,
                         self.LatIndexer, self.LonIndexer
-                        ,self.BoxNorth, self.BoxSouth,
-                        self.BoxWest, self.BoxEast)
+                        ,self.northern_limit, self.southern_limit,
+                        self.western_limit, self.eastern_limit)
