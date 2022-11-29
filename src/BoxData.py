@@ -153,10 +153,9 @@ class BoxData:
                                             self.southern_limit),
              self.LonIndexer: slice(self.western_limit, self.eastern_limit)}
                       ).metpy.convert_units('m**2/s**2')        
-        self.geopt_ZA = Math.CalcZonalAverage(self.geopt, self.LonIndexer)
-        self.geopt_AA = Math.CalcAreaAverage(self.geopt,self.LatIndexer,
-                                            self.southern_limit,self.northern_limit,
-                                            self.LonIndexer)
+        self.geopt_ZA = self.geopt.integrate("rlons")/self.xlength
+        self.geopt_AA = -(self.geopt_ZA*self.geopt_ZA["coslats"]).integrate(
+                            "rlats")/self.ylength
         self.geopt_ZE = self.geopt - self.geopt_ZA
         self.geopt_AE = self.geopt_ZA - self.geopt_AA
         
@@ -166,9 +165,9 @@ class BoxData:
                 **{self.LatIndexer:slice(self.northern_limit, 
                                          self.southern_limit),
                 self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
-        self.Q_ZA = Math.CalcZonalAverage(self.Q,self.LonIndexer)
-        self.Q_AA = Math.CalcAreaAverage(self.Q,self.LatIndexer,
-                                    LonIndexer=self.LonIndexer)
+        self.Q_ZA = self.Q.integrate("rlons")/self.xlength
+        self.Q_AA = -(self.Q_ZA*self.Q_ZA["coslats"]).integrate(
+                            "rlats")/self.ylength
         self.Q_ZE = self.Q - self.Q_ZA
         self.Q_AE = self.Q_ZA - self.Q_AA
         
