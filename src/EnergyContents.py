@@ -67,7 +67,7 @@ class EnergyContents:
         # Save Az before vertical integration          
         if self.method == 'eulerian':
             df = function.drop([self.LonIndexer,self.LatIndexer]
-                ).to_dataframe(name='Ce',dim_order=[
+                ).to_dataframe(name='Az',dim_order=[
                     self.TimeName,self.VerticalCoordIndexer]).unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)

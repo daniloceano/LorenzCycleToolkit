@@ -124,9 +124,12 @@ class ConversionTerms:
         print('Saving Cz for each vertical level...')
         # Save Cz before vertical integration
         if self.method == 'eulerian':
-            df = function.drop([self.LonIndexer,self.LatIndexer]
-                ).to_dataframe(name='Ce',dim_order=[
-                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+            # df = function.drop([self.LonIndexer,self.LatIndexer]
+            #     ).to_dataframe(name='Ce',dim_order=[
+            #         self.TimeName,self.VerticalCoordIndexer]).unstack()
+            df = function.drop([self.LatIndexer,
+                "rlats","coslats"]).to_dataframe(name='Cz',dim_order=[
+                         self.TimeName,self.VerticalCoordIndexer]).unstack() 
         else:
             time = pd.to_datetime(function[self.TimeName].data)
             df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
