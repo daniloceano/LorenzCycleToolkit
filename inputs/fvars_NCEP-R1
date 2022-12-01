@@ -2,8 +2,8 @@
 Air Temperature;air_temperature;air;K
 Geopotential Height;geopotential_height;hgt;m
 Omega Velocity;omega;omega;Pa/s
-Eastward Wind Component;uwnd;uwnd;m/s
-Northward Wind Component;vwnd;vwnd;m/s
+Eastward Wind Component;uwnd;U_GRD_2_ISBL;m/s
+Northward Wind Component;vwnd;V_GRD_2_ISBL;m/s
 Longitude;;lon
 Latitude;;lat
 Time;;time

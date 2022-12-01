@@ -58,10 +58,14 @@ class BoxData:
              data[self.VerticalCoordIndexer].units).to('Pa')
         self.args = args
         self.output_dir = output_dir
-        self.western_limit = western_limit
-        self.eastern_limit = eastern_limit
-        self.southern_limit = southern_limit
-        self.northern_limit = northern_limit
+        self.western_limit = data[self.LonIndexer].sel(
+            {self.LonIndexer:western_limit}, method='nearest')
+        self.eastern_limit = data[self.LonIndexer].sel(
+            {self.LonIndexer:eastern_limit}, method='nearest')
+        self.southern_limit = data[self.LatIndexer].sel(
+            {self.LatIndexer:southern_limit}, method='nearest')
+        self.northern_limit = data[self.LatIndexer].sel(
+            {self.LatIndexer:northern_limit}, method='nearest')
         
         # Temperature data values
         self.tair = (data[dfVars.loc['Air Temperature']['Variable']] \
