@@ -266,7 +266,8 @@ def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
     """
     FirstTerm = g*TemperatureData/Cp_d
     # SecondTerm = (PressureData*g/Rd)*Differentiate(TemperatureData,PressureData,VerticalCoordIndexer)
-    SecondTerm = (PressureData*g/Rd)*TemperatureData.differentiate(VerticalCoordIndexer)/units.hPa
+    SecondTerm = (PressureData*g/Rd
+                  )*TemperatureData.differentiate(VerticalCoordIndexer)/units.hPa
     function = (FirstTerm-SecondTerm).sel(**{LatIndexer: 
             slice(BoxNorth,BoxSouth),LonIndexer: slice(BoxWest, BoxEast)})
     sigma = CalcAreaAverage(function,LatIndexer,BoxSouth, BoxNorth,LonIndexer)
@@ -290,8 +291,10 @@ def AdiabaticHEating(TemperatureData,PressureData, OmegaData,
 
         ## Using Hallak's formula:
         # Differentiate temperature in respect to longitude and latitude
-        dTdlambda = TemperatureData.differentiate(LonIndexer)
-        dTdphi = TemperatureData.differentiate(LatIndexer)
+        # dTdlambda = TemperatureData.differentiate(LonIndexer)
+        dTdlambda = TemperatureData.differentiate("rlons")
+        # dTdphi = TemperatureData.differentiate(LatIndexer)
+        dTdphi = TemperatureData.differentiate("rlats")*TemperatureData["coslats"]
         # Get the values for dx and dy in meters
         dx = np.deg2rad(lons.differentiate(LonIndexer))*cos_lats*Re
         dy = np.deg2rad(lats.differentiate(LatIndexer))*Re

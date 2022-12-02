@@ -79,10 +79,10 @@ def get_data(infile, varlist):
     data = data.assign_coords({"rlats": np.deg2rad(data[LatIndexer])})
     data = data.assign_coords({"coslats": np.cos(np.deg2rad(data[LatIndexer]))})
     data = data.assign_coords({"rlons": np.deg2rad(data[LonIndexer])})
-    # Sort data coordinates - data from distinc sources might have different
+    # Sort data coordinates as data from distinc sources might have different
     # arrangements, which could affect the results from the integrations
     data = data.sortby(LonIndexer).sortby(LevelIndexer,
-                ascending=False).sortby(LatIndexer,ascending=False)
+                ascending=True).sortby(LatIndexer,ascending=True)
                         
     # Fill missing values with 0
     data = data.fillna(0)

@@ -54,10 +54,11 @@ class EnergyContents:
         
     def calc_az(self):
         print('\nComputing Zonal Available Potential Energy (Az)...')
-        _AA = -((self.tair_AE**2)*self.tair_AE["coslats"]).integrate(
+        _AA = ((self.tair_AE**2)*self.tair_AE["coslats"]).integrate(
                             "rlats")/self.ylength
         function = _AA/(2*self.sigma_AA)
-        Az = -function.integrate(self.VerticalCoordIndexer
+        
+        Az = function.integrate(self.VerticalCoordIndexer
                             ) * function[self.VerticalCoordIndexer].metpy.units
         try: 
             Az = Az.metpy.convert_units('J/ m **2')
@@ -85,7 +86,7 @@ class EnergyContents:
         _ZA = (self.tair_ZE**2).integrate("rlons")/self.xlength
         _AA = -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
         function = _AA/(2*self.sigma_AA)
-        Ae = -function.integrate(self.VerticalCoordIndexer
+        Ae = function.integrate(self.VerticalCoordIndexer
                             ) * function[self.VerticalCoordIndexer].metpy.units
         try: 
             Ae = Ae.metpy.convert_units('J/ m **2')
@@ -113,7 +114,7 @@ class EnergyContents:
         print('\nComputing Zonal Kinetic Energy (Kz)...')
         _ = (self.u_ZA**2)+(self.v_ZA**2)
         function = -(_*_["coslats"]).integrate("rlats")/self.ylength
-        Kz = -function.integrate(self.VerticalCoordIndexer
+        Kz = function.integrate(self.VerticalCoordIndexer
                     ) * function[self.VerticalCoordIndexer].metpy.units/(2*g)
         print(Kz.values*Kz.metpy.units)
         print('Saving Kz for each vertical level...')
@@ -141,7 +142,7 @@ class EnergyContents:
         _ZA = _.integrate("rlons")/self.xlength
         function = -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
 
-        Ke = -function.integrate(self.VerticalCoordIndexer
+        Ke = function.integrate(self.VerticalCoordIndexer
                     ) * function[self.VerticalCoordIndexer].metpy.units/(2*g)
         try: 
             Ke = Ke.metpy.convert_units('J/ m **2')

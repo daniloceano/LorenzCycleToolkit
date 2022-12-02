@@ -177,7 +177,7 @@ class BoundaryTerms:
         _ZA = (self.omega*self.tair_ZE**2).integrate("rlons")/self.xlength
         _AA = (-(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength 
                /(2*self.sigma_AA))
-        _ = _AA.sortby(self.VerticalCoordIndexer,ascending=False)
+        _ = _AA.sortby(self.VerticalCoordIndexer)
         function -= _.isel(**{self.VerticalCoordIndexer: 0}) - _AA.isel(
             **{self.VerticalCoordIndexer: -1})
         # function -= _.sortby(self.VerticalCoordIndexer,ascending=False

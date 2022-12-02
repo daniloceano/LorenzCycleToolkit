@@ -70,7 +70,7 @@ class BoxData:
         # Temperature data values
         self.tair = (data[dfVars.loc['Air Temperature']['Variable']] \
               * units(dfVars.loc['Air Temperature']['Units']).to('K')).sel(
-                  **{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
+                  **{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                   self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         # Set length for doing averages
         self.xlength = self.tair['rlons'][-1]- self.tair['rlons'][0]
@@ -86,7 +86,7 @@ class BoxData:
         # Zonal wind component data values, averages and eddy terms
         self.u = (data[dfVars.loc['Eastward Wind Component']['Variable']] \
              * units(dfVars.loc['Eastward Wind Component']['Units']).to('m/s')
-             ).sel(**{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
+             ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         self.u_ZA = self.u.integrate("rlons")/self.xlength
         self.u_AA = -(self.u_ZA*self.u_ZA["coslats"]).integrate(
@@ -97,7 +97,7 @@ class BoxData:
         # Meridional wind component data values, averages and eddy terms
         self.v = (data[dfVars.loc['Northward Wind Component']['Variable']] \
              * units(dfVars.loc['Northward Wind Component']['Units']).to('m/s')
-             ).sel(**{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
+             ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         self.v_ZA = self.v.integrate("rlons")/self.xlength
         self.v_AA = -(self.v_ZA*self.v_ZA["coslats"]).integrate(
@@ -112,11 +112,11 @@ class BoxData:
         else:
             self.ust = (data[dfVars.loc['Zonal Wind Stress']['Variable']] \
                  * units(dfVars.loc['Zonal Wind Stress']['Units'])
-                 ).sel(**{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
+                 ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                      self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
             self.vst = (data[dfVars.loc['Meridional Wind Stress']['Variable']] \
                  * units(dfVars.loc['Meridional Wind Stress']['Units'])
-                 ).sel(**{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
+                 ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                      self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
                           
         self.ust_ZA = self.ust.integrate("rlons")/self.xlength
@@ -134,7 +134,7 @@ class BoxData:
         # averages and eddy terms
         self.omega = (data[dfVars.loc['Omega Velocity']['Variable']] \
              * units(dfVars.loc['Omega Velocity']['Units']).to('Pa/s')
-             ).sel(**{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
+             ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         self.omega_ZA = self.omega.integrate("rlons")/self.xlength
         self.omega_AA = -(self.omega_ZA*self.omega_ZA["coslats"]).integrate(
@@ -148,7 +148,7 @@ class BoxData:
             self.geopt = (data[dfVars.loc['Geopotential']['Variable']] \
              * units(dfVars.loc['Geopotential']['Units']
              ).metpy.convert_units('m**2/s**2')).sel(
-                **{self.LatIndexer:slice(self.northern_limit, self.southern_limit),
+                **{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         else:
             self.geopt = (data[dfVars.loc['Geopotential Height']['Variable']]*g\
@@ -178,5 +178,5 @@ class BoxData:
         # Static stability parameter
         self.sigma_AA = StaticStability(self.tair, self.PressureData, self.VerticalCoordIndexer,
                         self.LatIndexer, self.LonIndexer
-                        ,self.northern_limit, self.southern_limit,
+                        ,self.southern_limit, self.northern_limit,
                         self.western_limit, self.eastern_limit)
