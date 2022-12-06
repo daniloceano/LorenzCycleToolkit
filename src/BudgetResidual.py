@@ -21,7 +21,18 @@ import numpy as np
 # Compute the budget equation for the energy terms (Az, Ae, Kz and Ke) using
 # finite differences method (used for estimating generation, disspation and
 # boundary work terms as residuals)
-def calc_budget_diff(df,time):
+def calc_budget_diff(df,dates):
+    # get time delta in seconds
+    dt = float((dates[1]-dates[0]) / np.timedelta64(1, 's'))
+    # Estimate budget values for all energy terms
+    for term in ['Az','Ae','Kz','Ke']:
+        name = '∂'+term+'/∂t (finite diff.)'
+        print('\nEstimating '+name)
+        df[name] = np.gradient(df[term],dt)
+        print(df[name].values*units('W/ m **2'))
+    return df
+
+def calc_budget_diff_4th(df,time):
     # get time delta in seconds
     dt = float((time[1]-time[0]) / np.timedelta64(1, 's'))
     # Estimate budget values for all energy terms
@@ -53,7 +64,7 @@ def calc_residuals(df):
     print('\nResiduals ('+str((1*units('W/ m **2')).units)+'):')
     df['RGz'] = df['∂Az/∂t (finite diff.)'] + df['Cz'] + df['Ca'] - df['BAz']
     df['RGe'] = df['∂Ae/∂t (finite diff.)'] - df['Ca'] + df['Ce'] - df['BAe']
-    df['RKz'] = df['∂Kz/∂t (finite diff.)'] - df['Cz'] - df['Ck'] - df['BKz']
-    df['RKe'] = df['∂Ke/∂t (finite diff.)'] - df['Ce'] + df['Ck'] - df['BKe']
+    df['RKz'] = -df['∂Kz/∂t (finite diff.)'] + df['Cz'] + df['Ck'] + df['BKz']
+    df['RKe'] = -df['∂Ke/∂t (finite diff.)'] + df['Ce'] - df['Ck'] + df['BKe']
     print(df[['RGz', 'RKz', 'RGe', 'RKe']])
     return df

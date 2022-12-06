@@ -50,11 +50,11 @@ class GenerationDissipationTerms:
     
     def calc_gz(self):
         print('\nComputing generation of Zonal Potential Energy (Gz)...')
-        _ = (self.Q_AE*self.tair_AE)/(Cp_d*self.sigma_AA)
-        function = -(_*_["coslats"]).integrate("rlats")/self.ylength
-        Gz = -function.integrate(self.VerticalCoordIndexer
+        _ = self.Q_AE*self.tair_AE
+        _AA = (_*_["coslats"]).integrate("rlats")/self.ylength
+        function = _AA/(Cp_d*self.sigma_AA)
+        Gz = function.integrate(self.VerticalCoordIndexer
                     )* function[self.VerticalCoordIndexer].metpy.units
-        
         try: 
             Gz = Gz.metpy.convert_units('W/ m **2')
         except ValueError:
@@ -80,9 +80,10 @@ class GenerationDissipationTerms:
     
     def calc_ge(self):
         print('\nComputing generation of Eddy Potential Energy (Ge)...')
-        _ = (self.Q_ZE*self.tair_ZE)/(Cp_d*self.sigma_AA)
+        _ = self.Q_ZE*self.tair_ZE
         _ZA = _.integrate("rlons")/self.xlength
-        function = -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        _AA = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        function = _AA/(Cp_d*self.sigma_AA)
         Ge = function.integrate(self.VerticalCoordIndexer
                     )* function[self.VerticalCoordIndexer].metpy.units
         try: 
