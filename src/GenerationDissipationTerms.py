@@ -41,18 +41,17 @@ class GenerationDissipationTerms:
         self.omega = box_obj.omega
         self.sigma_AA = box_obj.sigma_AA
         self.Q = box_obj.Q
-        self.Q_ZA = CalcZonalAverage(self.Q,self.LonIndexer)
-        self.Q_AA = CalcAreaAverage(self.Q,self.LatIndexer,
-                                    LonIndexer=self.LonIndexer)
-        self.Q_ZE = self.Q - self.Q_ZA
-        self.Q_AE = self.Q_ZA - self.Q_AA
+        self.Q_ZA = box_obj.Q_ZA
+        self.Q_AA = box_obj.Q_AA
+        self.Q_ZE = box_obj.Q_ZE
+        self.Q_AE = box_obj.Q_AE
+        self.xlength = box_obj.xlength
+        self.ylength = box_obj.ylength
     
     def calc_gz(self):
         print('\nComputing generation of Zonal Potential Energy (Gz)...')
         _ = (self.Q_AE*self.tair_AE)/(Cp_d*self.sigma_AA)
-        function = CalcAreaAverage(_,self.LatIndexer)
-        # Gz = VerticalTrazpezoidalIntegration(function,self.PressureData,
-        #                                      self.VerticalCoordIndexer)
+        function = -(_*_["coslats"]).integrate("rlats")/self.ylength
         Gz = -function.integrate(self.VerticalCoordIndexer
                     )* function[self.VerticalCoordIndexer].metpy.units
         
@@ -67,8 +66,7 @@ class GenerationDissipationTerms:
         print(Gz.values*Gz.metpy.units)
         print('Saving Gz for each vertical level...')
         if self.method == 'eulerian':
-            df = function.drop([self.LonIndexer,self.LatIndexer]
-                ).to_dataframe(name='Ce',dim_order=[
+            df = function.to_dataframe(name='Ce',dim_order=[
                     self.TimeName,self.VerticalCoordIndexer]).unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
@@ -83,13 +81,10 @@ class GenerationDissipationTerms:
     def calc_ge(self):
         print('\nComputing generation of Eddy Potential Energy (Ge)...')
         _ = (self.Q_ZE*self.tair_ZE)/(Cp_d*self.sigma_AA)
-        function = CalcAreaAverage(_,self.LatIndexer,
-                                    LonIndexer=self.LonIndexer)
-        # Ge = VerticalTrazpezoidalIntegration(function,self.PressureData,
-        #                                      self.VerticalCoordIndexer)
-        Ge = -function.integrate(self.VerticalCoordIndexer
+        _ZA = _.integrate("rlons")/self.xlength
+        function = -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        Ge = function.integrate(self.VerticalCoordIndexer
                     )* function[self.VerticalCoordIndexer].metpy.units
-        
         try: 
             Ge = Ge.metpy.convert_units('W/ m **2')
         except ValueError:
@@ -99,8 +94,7 @@ class GenerationDissipationTerms:
         print(Ge.values*Ge.metpy.units)
         print('Saving Ge for each vertical level...')
         if self.method == 'eulerian':
-            df = function.drop([self.LonIndexer,self.LatIndexer]
-                ).to_dataframe(name='Ce',dim_order=[
+            df = function.to_dataframe(name='Ce',dim_order=[
                     self.TimeName,self.VerticalCoordIndexer]).unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)

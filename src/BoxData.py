@@ -74,14 +74,14 @@ class BoxData:
                   self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         # Set length for doing averages
         self.xlength = self.tair['rlons'][-1]- self.tair['rlons'][0]
-        self.ylength = np.sin(self.tair['rlats'][0]
-                              ) - np.sin(self.tair['rlats'][-1])
+        self.ylength = np.sin(self.tair['rlats'][-1]
+                              ) - np.sin(self.tair['rlats'][0])
         # Compute averages and eddy terms
         self.tair_ZA = self.tair.integrate("rlons")/self.xlength
-        self.tair_AA = -(self.tair_ZA*self.tair_ZA["coslats"]).integrate(
+        self.tair_AA = (self.tair_ZA*self.tair_ZA["coslats"]).integrate(
                             "rlats")/self.ylength
         self.tair_ZE = self.tair - self.tair_ZA
-        self.tair_AE = self.tair_ZA - self.tair_AA
+        self.tair_AE = self.tair_ZA - self.tair_AA 
         
         # Zonal wind component data values, averages and eddy terms
         self.u = (data[dfVars.loc['Eastward Wind Component']['Variable']] \
@@ -100,7 +100,7 @@ class BoxData:
              ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         self.v_ZA = self.v.integrate("rlons")/self.xlength
-        self.v_AA = -(self.v_ZA*self.v_ZA["coslats"]).integrate(
+        self.v_AA = (self.v_ZA*self.v_ZA["coslats"]).integrate(
                             "rlats")/self.ylength
         self.v_ZE = self.v - self.v_ZA
         self.v_AE = self.v_ZA - self.v_AA
@@ -120,10 +120,10 @@ class BoxData:
                      self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
                           
         self.ust_ZA = self.ust.integrate("rlons")/self.xlength
-        self.ust_AA = -(self.ust_ZA*self.ust_ZA["coslats"]).integrate(
+        self.ust_AA = (self.ust_ZA*self.ust_ZA["coslats"]).integrate(
                             "rlats")/self.ylength
         self.vst_ZA = self.vst.integrate("rlons")/self.xlength
-        self.vst_AA = -(self.vst_ZA*self.vst_ZA["coslats"]).integrate(
+        self.vst_AA = (self.vst_ZA*self.vst_ZA["coslats"]).integrate(
                             "rlats")/self.ylength
         self.ust_ZE = self.ust - self.ust_ZA
         self.ust_AE = self.ust_ZA - self.ust_AA
@@ -137,7 +137,7 @@ class BoxData:
              ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         self.omega_ZA = self.omega.integrate("rlons")/self.xlength
-        self.omega_AA = -(self.omega_ZA*self.omega_ZA["coslats"]).integrate(
+        self.omega_AA = (self.omega_ZA*self.omega_ZA["coslats"]).integrate(
                                     "rlats")/self.ylength
         self.omega_ZE = self.omega - self.omega_ZA
         self.omega_AE = self.omega_ZA - self.omega_AA
@@ -153,12 +153,12 @@ class BoxData:
         else:
             self.geopt = (data[dfVars.loc['Geopotential Height']['Variable']]*g\
              * units(dfVars.loc['Geopotential Height']['Units'])
-             ).sel(**{self.LatIndexer:slice(self.northern_limit,
-                                            self.southern_limit),
+             ).sel(**{self.LatIndexer:slice(self.southern_limit,
+                                            self.northern_limit),
              self.LonIndexer: slice(self.western_limit, self.eastern_limit)}
                       ).metpy.convert_units('m**2/s**2')        
         self.geopt_ZA = self.geopt.integrate("rlons")/self.xlength
-        self.geopt_AA = -(self.geopt_ZA*self.geopt_ZA["coslats"]).integrate(
+        self.geopt_AA = (self.geopt_ZA*self.geopt_ZA["coslats"]).integrate(
                             "rlats")/self.ylength
         self.geopt_ZE = self.geopt - self.geopt_ZA
         self.geopt_AE = self.geopt_ZA - self.geopt_AA
@@ -166,9 +166,8 @@ class BoxData:
         self.Q = AdiabaticHEating(self.tair,self.tair[self.VerticalCoordIndexer],
                 self.omega, self.u,self.v,self.VerticalCoordIndexer,
                 self.LatIndexer,self.LonIndexer,self.TimeName).sel(
-                **{self.LatIndexer:slice(self.northern_limit, 
-                                         self.southern_limit),
-                self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
+                    **{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
+                    self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         self.Q_ZA = self.Q.integrate("rlons")/self.xlength
         self.Q_AA = -(self.Q_ZA*self.Q_ZA["coslats"]).integrate(
                             "rlats")/self.ylength
@@ -177,6 +176,4 @@ class BoxData:
         
         # Static stability parameter
         self.sigma_AA = StaticStability(self.tair, self.PressureData, self.VerticalCoordIndexer,
-                        self.LatIndexer, self.LonIndexer
-                        ,self.southern_limit, self.northern_limit,
-                        self.western_limit, self.eastern_limit)
+                        self.xlength, self.ylength)

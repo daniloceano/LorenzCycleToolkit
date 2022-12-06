@@ -25,8 +25,11 @@ from metpy.constants import Re
 from metpy.calc import potential_temperature
 
 
+# def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
+#                     LatIndexer,LonIndexer,BoxNorth,BoxSouth,BoxWest, BoxEast):
 def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
-                    LatIndexer,LonIndexer,BoxNorth,BoxSouth,BoxWest, BoxEast):
+                    xlength,ylength):    
+    
     """
     Compute the static stability parameter sigma for all vertical levels
     and for the desired domain
@@ -52,12 +55,13 @@ def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
     
     """
     FirstTerm = g*TemperatureData/Cp_d
-    # SecondTerm = (PressureData*g/Rd)*Differentiate(TemperatureData,PressureData,VerticalCoordIndexer)
-    SecondTerm = (PressureData*g/Rd)*TemperatureData.differentiate(VerticalCoordIndexer)/units.hPa
-    function = (FirstTerm-SecondTerm).sel(**{LatIndexer: 
-            slice(BoxNorth,BoxSouth),LonIndexer: slice(BoxWest, BoxEast)})
-    sigma = CalcAreaAverage(function,LatIndexer,BoxSouth, BoxNorth,LonIndexer)
-    return sigma
+    SecondTerm = (PressureData*g/Rd)
+    ThirdTerm = TemperatureData.differentiate(VerticalCoordIndexer
+                            )/TemperatureData[VerticalCoordIndexer].metpy.units
+    function = (FirstTerm-(SecondTerm*ThirdTerm))
+    sigma_ZA = function.integrate("rlons")/xlength
+    sigma_AA = (sigma_ZA*sigma_ZA["coslats"]).integrate("rlats")/ylength
+    return sigma_AA
 
 def TairTendency(TemperatureData,TimeName,LatIndexer,LonIndexer,
                  VerticalCoordIndexer):

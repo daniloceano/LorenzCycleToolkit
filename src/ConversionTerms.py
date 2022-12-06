@@ -162,8 +162,7 @@ class ConversionTerms:
         print(Ca.values*Ca.metpy.units)
         print('Saving Ca for each vertical level...')
         if self.method == 'eulerian':
-            df = function.drop([self.LonIndexer,self.LatIndexer]
-                ).to_dataframe(name='Ca',dim_order=[
+            df = function.to_dataframe(name='Ca',dim_order=[
                     self.TimeName,self.VerticalCoordIndexer]).unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)

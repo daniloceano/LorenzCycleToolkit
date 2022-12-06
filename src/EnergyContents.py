@@ -57,7 +57,6 @@ class EnergyContents:
         _AA = ((self.tair_AE**2)*self.tair_AE["coslats"]).integrate(
                             "rlats")/self.ylength
         function = _AA/(2*self.sigma_AA)
-        
         Az = function.integrate(self.VerticalCoordIndexer
                             ) * function[self.VerticalCoordIndexer].metpy.units
         try: 
@@ -68,9 +67,7 @@ class EnergyContents:
         print('Saving Az for each vertical level...')
         # Save Az before vertical integration          
         if self.method == 'eulerian':
-            df = function.drop([self.LonIndexer,self.LatIndexer,
-                                "rlats","rlons","coslats"]
-                               ).to_dataframe(name='Az').unstack()
+            df = function.to_dataframe(name='Az').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
             df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
@@ -84,7 +81,7 @@ class EnergyContents:
     def calc_ae(self): 
         print('\nComputing Eddy Available Potential Energy (Ae)...')
         _ZA = (self.tair_ZE**2).integrate("rlons")/self.xlength
-        _AA = -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        _AA = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
         function = _AA/(2*self.sigma_AA)
         Ae = function.integrate(self.VerticalCoordIndexer
                             ) * function[self.VerticalCoordIndexer].metpy.units
@@ -97,9 +94,7 @@ class EnergyContents:
         print('Saving Ae for each vertical level...')
         # Save Ae before vertical integration
         if self.method == 'eulerian':    
-            df = function.drop([self.LonIndexer,self.LatIndexer,
-                                "rlats","rlons","coslats"]
-                               ).to_dataframe(name='Ae').unstack()
+            df = function.to_dataframe(name='Ae').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
             df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
@@ -113,7 +108,7 @@ class EnergyContents:
     def calc_kz(self):
         print('\nComputing Zonal Kinetic Energy (Kz)...')
         _ = (self.u_ZA**2)+(self.v_ZA**2)
-        function = -(_*_["coslats"]).integrate("rlats")/self.ylength
+        function = (_*_["coslats"]).integrate("rlats")/self.ylength
         Kz = function.integrate(self.VerticalCoordIndexer
                     ) * function[self.VerticalCoordIndexer].metpy.units/(2*g)
         print(Kz.values*Kz.metpy.units)
@@ -140,7 +135,7 @@ class EnergyContents:
         print('\nComputing Eddy Kinetic Energy (Ke)...')
         _ = (self.u_ZE**2)+(self.v_ZE**2)
         _ZA = _.integrate("rlons")/self.xlength
-        function = -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        function = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
 
         Ke = function.integrate(self.VerticalCoordIndexer
                     ) * function[self.VerticalCoordIndexer].metpy.units/(2*g)
