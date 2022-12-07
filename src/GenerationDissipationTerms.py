@@ -9,8 +9,6 @@ Created on Thu Nov 26 18:27:40 2020
 from metpy.units import units
 from metpy.constants import Cp_d
 from metpy.constants import g
-from Math import (CalcZonalAverage,CalcAreaAverage,
-                  VerticalTrazpezoidalIntegration)
 from BoxData import BoxData
 import pandas as pd
 
@@ -111,13 +109,16 @@ class GenerationDissipationTerms:
         # Here we will use only the lowest vertical level
         _ = (self.u_ZA.isel({self.VerticalCoordIndexer:0})*self.ust_ZA) + (
             self.v_ZA.isel({self.VerticalCoordIndexer:0})*self.vst_ZA)
-        Dz = units.Pa * CalcAreaAverage(_,self.LatIndexer)/g   
+        _ZA = _.integrate("rlons")/self.xlength
+        _AA = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        Dz = units.Pa *  _AA/g   
         return Dz
     
     def calc_de(self):
         # Here we will use only the lowest vertical level
         _ = (self.u_ZE.isel({self.VerticalCoordIndexer:0})*self.ust_ZE) + (
             self.v_ZE.isel({self.VerticalCoordIndexer:0})*self.vst_ZE)
-        De = units.Pa * CalcAreaAverage(_,self.LatIndexer,
-                                        LonIndexer=self.LonIndexer)/g   
+        _ZA = _.integrate("rlons")/self.xlength
+        _AA = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        De = units.Pa * _AA/g   
         return De

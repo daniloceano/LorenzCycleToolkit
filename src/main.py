@@ -25,12 +25,12 @@ from GenerationDissipationTerms import GenerationDissipationTerms
 from BoxData import BoxData
 from BudgetResidual import calc_budget_diff,calc_residuals
 from metpy.units import units
+from thermodynamics import AdiabaticHEating
 import pandas as pd
 import xarray as xr
 import os
 import numpy as np
 import argparse
-from metpy.constants import g
 
 import time
 
@@ -277,23 +277,26 @@ def LEC_eulerian():
 # the eddies contribute for the local energy cycle.
 def LEC_lagrangian():
     print('Computing energetics using eulerian framework')
-    # 1) Get data
-    data = get_data(infile, varlist)   
-    # Data indexers
-    LonIndexer, LatIndexer, TimeName, VerticalCoordIndexer = \
-        data[0], data[1], data[2], data[3]
-    # Data variables
-    tair, hgt, omega, u, v = data[4], data[5], data[6], data[7], data[8]
-    pres = tair[VerticalCoordIndexer]*units(
-        tair[VerticalCoordIndexer].units).to('Pa')
-    Q = AdiabaticHEating(tair,pres,omega,u,v,VerticalCoordIndexer,
-                                LatIndexer,LonIndexer,TimeName)
-    if not args.residuals:
-        u_stress = data[9]
-        v_stress = data[10]
-    else:
-        u_stress = v*np.nan
-        v_stress = v*np.nan    
+    # 2) Open the data
+    data = get_data(infile, varlist)  
+    # Indexers
+    dfVars = pd.read_csv(varlist,sep= ';',index_col=0,header=0)
+    LonIndexer,LatIndexer,TimeName,VerticalCoordIndexer = \
+      dfVars.loc['Longitude']['Variable'],dfVars.loc['Latitude']['Variable'],\
+      dfVars.loc['Time']['Variable'],dfVars.loc['Vertical Level']['Variable']
+    pres = data[VerticalCoordIndexer]*units(
+         data[VerticalCoordIndexer].units).to('Pa')
+    # Get variables for computing Adiabatic Heating
+    tair =  (data[dfVars.loc['Air Temperature']['Variable']] * 
+             units(dfVars.loc['Air Temperature']['Units']).to('K'))
+    omega = (data[dfVars.loc['Omega Velocity']['Variable']] *
+             units(dfVars.loc['Omega Velocity']['Units']).to('Pa/s'))
+    u = (data[dfVars.loc['Eastward Wind Component']['Variable']] *
+         units(dfVars.loc['Eastward Wind Component']['Units']).to('m/s'))
+    v = (data[dfVars.loc['Northward Wind Component']['Variable']] *
+         units(dfVars.loc['Northward Wind Component']['Units']).to('m/s'))
+    Q = AdiabaticHEating(tair, pres, omega ,u, v,
+            VerticalCoordIndexer,LatIndexer,LonIndexer,TimeName)
     # Directory where results will be stored
     ResultsMainDirectory = '../LEC_Results'
     # Append data limits to outfile name
@@ -328,18 +331,12 @@ def LEC_lagrangian():
     
     # Slice the time array so the first and the last timestep will be the same
     # as in the track file
-    times = pd.to_datetime(tair[TimeName].values)
+    times = pd.to_datetime(data[TimeName].values)
     times = times[(times>=track.index[0]) & (times<=track.index[-1])]
     # Loop for each time step:
     for t in times:
-        itair, ihgt, iomega, iu, iv, iu_stress, iv_stress, iQ  = \
-            tair.sel({TimeName:t}), \
-                hgt.sel({TimeName:t}), omega.sel({TimeName:t}),\
-                    u.sel({TimeName:t}), v.sel({TimeName:t}),\
-                        u_stress.sel({TimeName:t}),\
-                            v_stress.sel({TimeName:t}),\
-                                Q.sel({TimeName:t})              
-        
+        idata = data.sel({TimeName:t})
+        iQ = Q.sel({TimeName:t})
         # Get current time and box limits
         itime = str(t)
         datestr = pd.to_datetime(itime).strftime('%Y-%m-%d %HZ')
@@ -357,15 +354,10 @@ def LEC_lagrangian():
     
         # Create box object
         try:
-            box_obj = BoxData(TemperatureData=itair, PressureData=pres,
-            UWindComponentData=iu, VWindComponentData=iv,
-            ZonalWindStressData=iu_stress,MeridionalWindStressData=iv_stress,
-            OmegaData=iomega, HgtData=ihgt,LonIndexer=LonIndexer, 
-            AdiabaticHeatingData=iQ,
-            LatIndexer=LatIndexer, VerticalCoordIndexer=VerticalCoordIndexer,
-            TimeName=TimeName,western_limit=min_lon, eastern_limit=max_lon,
+            box_obj = BoxData(data=idata, dfVars=dfVars, args=args,
+            western_limit=min_lon, eastern_limit=max_lon,
             southern_limit=min_lat, northern_limit=max_lat,
-            output_dir=ResultsSubDirectory)
+            output_dir=ResultsSubDirectory, Q=iQ)
         except:
             raise SystemExit('Error on creating the box for the computations')
         # Compute energy terms

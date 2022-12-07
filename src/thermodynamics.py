@@ -16,7 +16,6 @@ danilo.oceano@gmail.com
 """
 
 import numpy as np
-from Math import CalcAreaAverage
 from metpy.units import units
 from metpy.constants import Rd
 from metpy.constants import Cp_d

@@ -49,7 +49,8 @@ class BoxData:
     def __init__(self, data: xarray.Dataset, dfVars: pd.DataFrame,
                  western_limit: float, eastern_limit: float,
                  southern_limit: float, northern_limit: float,
-                 args: argparse.Namespace, output_dir: str):
+                 args: argparse.Namespace, output_dir: str,
+                 Q=None):
         self.LonIndexer = dfVars.loc['Longitude']['Variable']
         self.LatIndexer = dfVars.loc['Latitude']['Variable']
         self.TimeName = dfVars.loc['Time']['Variable']
@@ -163,11 +164,13 @@ class BoxData:
         self.geopt_ZE = self.geopt - self.geopt_ZA
         self.geopt_AE = self.geopt_ZA - self.geopt_AA
         
+        # Adiaatic heating
         self.Q = AdiabaticHEating(self.tair,self.tair[self.VerticalCoordIndexer],
-                self.omega, self.u,self.v,self.VerticalCoordIndexer,
-                self.LatIndexer,self.LonIndexer,self.TimeName).sel(
-                    **{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
-                    self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
+            self.omega, self.u,self.v,self.VerticalCoordIndexer,
+            self.LatIndexer,self.LonIndexer,self.TimeName).sel(
+                **{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
+                self.LonIndexer: slice(self.western_limit, self.eastern_limit)}) if Q is None else Q
+        
         self.Q_ZA = self.Q.integrate("rlons")/self.xlength
         self.Q_AA = -(self.Q_ZA*self.Q_ZA["coslats"]).integrate(
                             "rlats")/self.ylength
