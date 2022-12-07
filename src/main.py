@@ -31,7 +31,7 @@ import xarray as xr
 import os
 import numpy as np
 import argparse
-
+import sys
 import time
 
 
@@ -276,7 +276,7 @@ def LEC_eulerian():
 # computations, which is fixed in time. IN this framework we can analyse how
 # the eddies contribute for the local energy cycle.
 def LEC_lagrangian():
-    print('Computing energetics using eulerian framework')
+    print('Computing energetics using lagrangian framework')
     # 2) Open the data
     data = get_data(infile, varlist)  
     # Indexers
@@ -328,13 +328,17 @@ def LEC_lagrangian():
         gendiss = ['Gz','Ge','Dz','De']
     for term in [*energy,*conversion,*boundary,*gendiss]:
         TermsDict[term] = []
-    
+        
     # Slice the time array so the first and the last timestep will be the same
     # as in the track file
     times = pd.to_datetime(data[TimeName].values)
     times = times[(times>=track.index[0]) & (times<=track.index[-1])]
+    if len(times) == 0:
+        print("Mismatch between trackfile and data! Check that and try again!")
+        sys.exit(1)
     # Loop for each time step:
     for t in times:
+        print(t)
         idata = data.sel({TimeName:t})
         iQ = Q.sel({TimeName:t})
         # Get current time and box limits

@@ -92,9 +92,8 @@ class ConversionTerms:
             df = function.to_dataframe(name='Ce').unstack().transpose()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
-                    ).to_dataframe(
-                        name=time).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time
+                                                             ).transpose()
         df.to_csv(self.output_dir+'/Ce_'+self.VerticalCoordIndexer+'.csv',
                     mode="a", header=None)
         print('Done!')
@@ -121,9 +120,8 @@ class ConversionTerms:
             df = function.to_dataframe(name='Cz').unstack().transpose()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
-                    ).to_dataframe(
-                        name=time).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time
+                                                             ).transpose()
         df.to_csv(self.output_dir+'/Cz_'+self.VerticalCoordIndexer+'.csv',
                     mode="a", header=None)
         print('Done!')
@@ -166,9 +164,8 @@ class ConversionTerms:
                     self.TimeName,self.VerticalCoordIndexer]).unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
-                    ).to_dataframe(
-                        name=time).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time
+                                                             ).transpose()
         df.to_csv(self.output_dir+'/Ca_'+self.VerticalCoordIndexer+'.csv',
                     mode="a", header=None)
         print('Done!')
@@ -236,9 +233,8 @@ class ConversionTerms:
             df = function.to_dataframe(name='Ck').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
-                    ).to_dataframe(
-                        name=time).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time
+                                                             ).transpose()
         df.to_csv(self.output_dir+'/Ck_'+self.VerticalCoordIndexer+'.csv',
                     mode="a", header=None)
         print('Done!')

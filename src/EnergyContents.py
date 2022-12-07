@@ -70,9 +70,8 @@ class EnergyContents:
             df = function.to_dataframe(name='Az').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
-                    ).to_dataframe(
-                        name=time).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time
+                                                             ).transpose()
         df.to_csv(self.output_dir+'/Az_'+self.VerticalCoordIndexer+'.csv',
             mode="a", header=None)
         print('Done!')
@@ -97,9 +96,8 @@ class EnergyContents:
             df = function.to_dataframe(name='Ae').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
-                    ).to_dataframe(
-                        name=time).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time
+                                                             ).transpose()
         df.to_csv(self.output_dir+'/Ae_'+self.VerticalCoordIndexer+'.csv',
                 mode="a", header=None)
         print('Done!')
@@ -123,9 +121,8 @@ class EnergyContents:
             df = function.to_dataframe(name='Kz').unstack()   
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
-                    ).to_dataframe(
-                        name=time).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time
+                                                             ).transpose()
         df.to_csv(self.output_dir+'/Kz_'+self.VerticalCoordIndexer+'.csv',
                 mode="a", header=None)
         print('Done!')
@@ -151,9 +148,8 @@ class EnergyContents:
             df = function.to_dataframe(name='Ke').unstack() 
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
-                    ).to_dataframe(
-                        name=time).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time
+                                                             ).transpose()
         df.to_csv(self.output_dir+'/Ke_'+self.VerticalCoordIndexer+'.csv',
                 mode="a", header=None)
         print('Done!')

@@ -68,9 +68,8 @@ class GenerationDissipationTerms:
                     self.TimeName,self.VerticalCoordIndexer]).unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
-                    ).to_dataframe(
-                        name=time).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time
+                                                             ).transpose()
         df.to_csv(self.output_dir+'/Gz_'+self.VerticalCoordIndexer+'.csv',
                     mode="a", header=None)
         print('Done!')
@@ -97,9 +96,8 @@ class GenerationDissipationTerms:
                     self.TimeName,self.VerticalCoordIndexer]).unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
-                    ).to_dataframe(
-                        name=time).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time
+                                                             ).transpose()
         df.to_csv(self.output_dir+'/Ge_'+self.VerticalCoordIndexer+'.csv',
                     mode="a", header=None)
         print('Done!')
