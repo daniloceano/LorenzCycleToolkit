@@ -49,14 +49,15 @@ class EnergyContents:
         self.v_ZA = box_obj.v_ZA
         self.v_ZE = box_obj.v_ZE
         self.sigma_AA = box_obj.sigma_AA
+        self.xlength = box_obj.xlength
+        self.ylength = box_obj.ylength
         
     def calc_az(self):
         print('\nComputing Zonal Available Potential Energy (Az)...')
-        _ = CalcAreaAverage(self.tair_AE**2,self.LatIndexer)
-        function = _/(2*self.sigma_AA)
-        # Az = VerticalTrazpezoidalIntegration(function,self.PressureData,
-        #                                      self.VerticalCoordIndexer)
-        Az = -function.integrate(self.VerticalCoordIndexer
+        _AA = ((self.tair_AE**2)*self.tair_AE["coslats"]).integrate(
+                            "rlats")/self.ylength
+        function = _AA/(2*self.sigma_AA)
+        Az = function.integrate(self.VerticalCoordIndexer
                             ) * function[self.VerticalCoordIndexer].metpy.units
         try: 
             Az = Az.metpy.convert_units('J/ m **2')
@@ -66,14 +67,11 @@ class EnergyContents:
         print('Saving Az for each vertical level...')
         # Save Az before vertical integration          
         if self.method == 'eulerian':
-            df = function.drop([self.LonIndexer,self.LatIndexer]
-                ).to_dataframe(name='Ce',dim_order=[
-                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+            df = function.to_dataframe(name='Az').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
-                    ).to_dataframe(
-                        name=time).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time
+                                                             ).transpose()
         df.to_csv(self.output_dir+'/Az_'+self.VerticalCoordIndexer+'.csv',
             mode="a", header=None)
         print('Done!')
@@ -81,11 +79,10 @@ class EnergyContents:
     
     def calc_ae(self): 
         print('\nComputing Eddy Available Potential Energy (Ae)...')
-        _ = CalcAreaAverage(self.tair_ZE**2,self.LatIndexer,LonIndexer=self.LonIndexer)
-        function = _/(2*self.sigma_AA)
-        # Ae = VerticalTrazpezoidalIntegration(function,self.PressureData,
-        #                                      self.VerticalCoordIndexer)
-        Ae = -function.integrate(self.VerticalCoordIndexer
+        _ZA = (self.tair_ZE**2).integrate("rlons")/self.xlength
+        _AA = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        function = _AA/(2*self.sigma_AA)
+        Ae = function.integrate(self.VerticalCoordIndexer
                             ) * function[self.VerticalCoordIndexer].metpy.units
         try: 
             Ae = Ae.metpy.convert_units('J/ m **2')
@@ -96,14 +93,11 @@ class EnergyContents:
         print('Saving Ae for each vertical level...')
         # Save Ae before vertical integration
         if self.method == 'eulerian':    
-            df = function.drop([self.LonIndexer,self.LatIndexer]
-                ).to_dataframe(name='Ce',dim_order=[
-                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+            df = function.to_dataframe(name='Ae').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
-                    ).to_dataframe(
-                        name=time).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time
+                                                             ).transpose()
         df.to_csv(self.output_dir+'/Ae_'+self.VerticalCoordIndexer+'.csv',
                 mode="a", header=None)
         print('Done!')
@@ -112,10 +106,8 @@ class EnergyContents:
     def calc_kz(self):
         print('\nComputing Zonal Kinetic Energy (Kz)...')
         _ = (self.u_ZA**2)+(self.v_ZA**2)
-        function = CalcAreaAverage(_,self.LatIndexer)
-        # Kz = VerticalTrazpezoidalIntegration(function,self.PressureData,
-        #                                      self.VerticalCoordIndexer)/(2*g)
-        Kz = -function.integrate(self.VerticalCoordIndexer
+        function = (_*_["coslats"]).integrate("rlats")/self.ylength
+        Kz = function.integrate(self.VerticalCoordIndexer
                     ) * function[self.VerticalCoordIndexer].metpy.units/(2*g)
         print(Kz.values*Kz.metpy.units)
         print('Saving Kz for each vertical level...')
@@ -126,14 +118,11 @@ class EnergyContents:
             raise
         # Save Kz before vertical integration
         if self.method == 'eulerian':
-            df = function.drop([self.LonIndexer,self.LatIndexer]
-                ).to_dataframe(name='Ce',dim_order=[
-                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+            df = function.to_dataframe(name='Kz').unstack()   
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
-                    ).to_dataframe(
-                        name=time).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time
+                                                             ).transpose()
         df.to_csv(self.output_dir+'/Kz_'+self.VerticalCoordIndexer+'.csv',
                 mode="a", header=None)
         print('Done!')
@@ -142,10 +131,10 @@ class EnergyContents:
     def calc_ke(self):
         print('\nComputing Eddy Kinetic Energy (Ke)...')
         _ = (self.u_ZE**2)+(self.v_ZE**2)
-        function = CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
-        # Ke = VerticalTrazpezoidalIntegration(function,self.PressureData,
-        #                                      self.VerticalCoordIndexer)/(2*g)
-        Ke = -function.integrate(self.VerticalCoordIndexer
+        _ZA = _.integrate("rlons")/self.xlength
+        function = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+
+        Ke = function.integrate(self.VerticalCoordIndexer
                     ) * function[self.VerticalCoordIndexer].metpy.units/(2*g)
         try: 
             Ke = Ke.metpy.convert_units('J/ m **2')
@@ -156,14 +145,11 @@ class EnergyContents:
         print('Saving Ke for each vertical level...')
         # Save Ke before vertical integration
         if self.method == 'eulerian':
-            df = function.drop([self.LonIndexer,self.LatIndexer]
-                ).to_dataframe(name='Ce',dim_order=[
-                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+            df = function.to_dataframe(name='Ke').unstack() 
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
-                    ).to_dataframe(
-                        name=time).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time
+                                                             ).transpose()
         df.to_csv(self.output_dir+'/Ke_'+self.VerticalCoordIndexer+'.csv',
                 mode="a", header=None)
         print('Done!')

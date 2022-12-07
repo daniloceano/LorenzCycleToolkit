@@ -43,7 +43,6 @@ from metpy.constants import g
 from metpy.constants import Rd
 from metpy.constants import Re
 from metpy.units import units
-from Math import (CalcAreaAverage,VerticalTrazpezoidalIntegration)
 from BoxData import BoxData
 import pandas as pd
 
@@ -57,6 +56,7 @@ class ConversionTerms:
         self.TimeName = box_obj.TimeName
         self.VerticalCoordIndexer = box_obj.VerticalCoordIndexer
         self.output_dir = box_obj.output_dir
+        
         self.tair_AE = box_obj.tair_AE
         self.tair_ZE = box_obj.tair_ZE
         self.u_ZA = box_obj.u_ZA
@@ -66,22 +66,19 @@ class ConversionTerms:
         self.sigma_AA = box_obj.sigma_AA
         self.omega_ZE = box_obj.omega_ZE
         self.omega_AE = box_obj.omega_AE
-        
-        self.rlats = np.deg2rad(box_obj.tair[self.LatIndexer])
-        self.cos_lats = np.cos(self.rlats)
-        self.tan_lats = np.tan(self.rlats)
+        self.tan_lats = np.tan(box_obj.tair["rlats"])
+        self.xlength = box_obj.xlength
+        self.ylength = box_obj.ylength
         
     def calc_ce(self):
         print('\nComputing conversion between eddy energy terms (Ce)...')
         FirstTerm = Rd/(self.PressureData*g)
-        _ = self.omega_ZE*self.tair_ZE
-        SecondTerm = CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
+        _ZA = (self.omega_ZE*self.tair_ZE).integrate("rlons")/self.xlength
+        SecondTerm = -(_ZA*_ZA["coslats"]).integrate(
+                            "rlats")/self.ylength
         function = (FirstTerm*SecondTerm)
-        # Ce = VerticalTrazpezoidalIntegration(-function,self.PressureData,
-        #                                      self.VerticalCoordIndexer)
         Ce = function.integrate(self.VerticalCoordIndexer
                            ) * function[self.VerticalCoordIndexer].metpy.units
-        
         # Check if units are in accordance with expected and convert
         try: 
             Ce = Ce.metpy.convert_units('W/ m **2')
@@ -92,14 +89,11 @@ class ConversionTerms:
         print('Saving Ce for each vertical level...')
         # Save Ce before vertical integration
         if self.method == 'eulerian':
-            df = function.drop([self.LonIndexer,self.LatIndexer]
-                ).to_dataframe(name='Ce',dim_order=[
-                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+            df = function.to_dataframe(name='Ce').unstack().transpose()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
-                    ).to_dataframe(
-                        name=time).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time
+                                                             ).transpose()
         df.to_csv(self.output_dir+'/Ce_'+self.VerticalCoordIndexer+'.csv',
                     mode="a", header=None)
         print('Done!')
@@ -107,12 +101,11 @@ class ConversionTerms:
     
     def calc_cz(self):
         print('\nComputing conversion between zonal energy terms (Cz)...')
-        FirstTerm = Rd/(self.PressureData*g)
+        FirstTerm = Rd/(self.PressureData*g)        
         _ = self.omega_AE*self.tair_AE
-        SecondTerm = CalcAreaAverage(_,self.LatIndexer)
+        SecondTerm = -(_*_["coslats"]).integrate(
+                            "rlats")/self.ylength
         function = (FirstTerm*SecondTerm)
-        # Cz = VerticalTrazpezoidalIntegration(-function,self.PressureData,
-        #                                      self.VerticalCoordIndexer)
         Cz = function.integrate(self.VerticalCoordIndexer
                             ) * function[self.VerticalCoordIndexer].metpy.units
         try: 
@@ -124,14 +117,11 @@ class ConversionTerms:
         print('Saving Cz for each vertical level...')
         # Save Cz before vertical integration
         if self.method == 'eulerian':
-            df = function.drop([self.LonIndexer,self.LatIndexer]
-                ).to_dataframe(name='Ce',dim_order=[
-                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+            df = function.to_dataframe(name='Cz').unstack().transpose()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
-                    ).to_dataframe(
-                        name=time).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time
+                                                             ).transpose()
         df.to_csv(self.output_dir+'/Cz_'+self.VerticalCoordIndexer+'.csv',
                     mode="a", header=None)
         print('Done!')
@@ -141,25 +131,25 @@ class ConversionTerms:
         print('\nComputing conversion between available potential energy terms (Ca)...')
         ## First term of the integral ##
         # Derivate tair_AE in respect to latitude
-        DelPhi_tairAE = self.tair_AE.copy(deep=True
-        ).assign_coords({self.LatIndexer:self.rlats}
-                         ).sortby(self.LatIndexer,ascending=True
-                        ).differentiate(self.LatIndexer).assign_coords(
-                        {self.LatIndexer: self.tair_AE[self.LatIndexer]})
-        _ = (self.v_ZE*self.tair_ZE/(2*Re*self.sigma_AA)) * DelPhi_tairAE
-        function = CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
+        DelPhi_tairAE = self.tair_AE.sortby(self.LatIndexer,ascending=True
+                        ).differentiate("rlats")
+        
+        _ = (self.v_ZE*self.tair_ZE) * DelPhi_tairAE
+        _ZA = _.integrate("rlons")/self.xlength
+        _AA = -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        function = _AA/(2*Re*self.sigma_AA)
         
         ## Second term of the integral ##
         # Derivate tair_AE in respect to pressure and divide it by sigma
-        DelPres_tairAE_sigma = (self.tair_AE/self.sigma_AA).copy(deep=True
+        DelPres_tairAE = (self.tair_AE).copy(deep=True
         ).sortby(self.VerticalCoordIndexer,ascending=True
         ).differentiate(self.VerticalCoordIndexer) / units.hPa
-        _ =  (self.omega_ZE*self.tair_ZE) * DelPres_tairAE_sigma
-        function += CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
-        
+        _ =  (self.omega_ZE*self.tair_ZE) * DelPres_tairAE
+        _ZA = _.integrate("rlons")/self.xlength
+        _AA = -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        function += _AA/self.sigma_AA
+
         ## Integrate in pressure ##
-        # Ca = VerticalTrazpezoidalIntegration(-function,self.PressureData,
-        #                                      self.VerticalCoordIndexer)
         Ca = function.integrate(self.VerticalCoordIndexer
                             ) * function[self.VerticalCoordIndexer].metpy.units
         try: 
@@ -170,14 +160,12 @@ class ConversionTerms:
         print(Ca.values*Ca.metpy.units)
         print('Saving Ca for each vertical level...')
         if self.method == 'eulerian':
-            df = function.drop([self.LonIndexer,self.LatIndexer]
-                ).to_dataframe(name='Ce',dim_order=[
+            df = function.to_dataframe(name='Ca',dim_order=[
                     self.TimeName,self.VerticalCoordIndexer]).unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
-                    ).to_dataframe(
-                        name=time).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time
+                                                             ).transpose()
         df.to_csv(self.output_dir+'/Ca_'+self.VerticalCoordIndexer+'.csv',
                     mode="a", header=None)
         print('Done!')
@@ -189,37 +177,35 @@ class ConversionTerms:
         # Divide the zonal mean of the zonal wind component (u) by the cosine
         # of the latitude (in radians) and then differentiate it in regard to
         # the latitude (also in radians)
-        DelPhi_uZA_cosphi = (self.u_ZA/self.cos_lats).copy(deep=True
-        ).assign_coords({self.LatIndexer:self.rlats}
-                         ).sortby(self.LatIndexer,ascending=True
-                        ).differentiate(self.LatIndexer).assign_coords(
-                        {self.LatIndexer: self.u_ZA[self.LatIndexer]})
-        _ = (self.cos_lats*self.u_ZE*self.v_ZE/Re) * DelPhi_uZA_cosphi
-        function = CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
+        DelPhi_uZA_cosphi = (self.u_ZA/self.u_ZA["coslats"]).copy(deep=True
+                ).sortby(self.LatIndexer,ascending=True).differentiate("rlats")                     
+        _ = (self.u_ZE["coslats"]*self.u_ZE*self.v_ZE/Re) * DelPhi_uZA_cosphi
+        _ZA = _.integrate("rlons")/self.xlength
+        function = -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
         
         ## Second term ##
         # Differentiate the zonal mean of the meridional wind (v) in regard to
         # the latitude (in radians)
-        DelPhi_vZA = self.v_ZA.copy(deep=True
-        ).assign_coords({self.LatIndexer:self.rlats}
-                          ).sortby(self.LatIndexer,ascending=True
-                        ).differentiate(self.LatIndexer).assign_coords(
-                        {self.LatIndexer: self.v_ZA[self.LatIndexer]})
+        DelPhi_vZA = self.v_ZA.copy(deep=True).sortby(
+            self.LatIndexer,ascending=True).differentiate("rlats")
         _ = ((self.v_ZE**2)/Re) * DelPhi_vZA
-        function += CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
+        _ZA = _.integrate("rlons")/self.xlength
+        function += -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
         
         ## Third term ##
         _ = (self.tan_lats*(self.u_ZE**2)*self.v_ZA)/Re
-        function += CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
+        _ZA = _.integrate("rlons")/self.xlength
+        function += -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
         
         ## Fourth term ##
         # Differentiate the zonal mean of the zonal wind (u) in regard to the
         # pressure and assign the units in hPa
-        DelPres_uZAp = self.u_ZA.copy(deep=True
-                         ).sortby(self.VerticalCoordIndexer,ascending=True
-                        ).differentiate(self.VerticalCoordIndexer) / units.hPa
+        DelPres_uZAp = self.u_ZA.copy(deep=True).sortby(
+            self.VerticalCoordIndexer,ascending=True).differentiate(
+                self.VerticalCoordIndexer) / units.hPa
         _ = self.omega_ZE * self.u_ZE * DelPres_uZAp
-        function += CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
+        _ZA = _.integrate("rlons")/self.xlength
+        function += -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
         
         ## Fifith term ##
         # Differentiate the zonal mean of the meridional wind (v) in regard to
@@ -228,11 +214,11 @@ class ConversionTerms:
                         ).sortby(self.VerticalCoordIndexer,ascending=True
                         ).differentiate(self.VerticalCoordIndexer) / units.hPa
         _ = self.omega_ZE * self.v_ZE * DelPres_vZAp
-        function +=  CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
+        _ZA = _.integrate("rlons")/self.xlength
+        function += -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        # function +=  CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
         
         ## Integrate in pressure ##
-        # Ck = VerticalTrazpezoidalIntegration(function,self.PressureData,
-        #                                      self.VerticalCoordIndexer)/g
         Ck = -function.integrate(self.VerticalCoordIndexer
                         ) * function[self.VerticalCoordIndexer].metpy.units/g
         try: 
@@ -244,14 +230,11 @@ class ConversionTerms:
         print('Saving Ck for each vertical level...')
         # Save Ck before vertical integration            
         if self.method == 'eulerian':
-            df = function.drop([self.LonIndexer,self.LatIndexer]
-                ).to_dataframe(name='Ce',dim_order=[
-                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+            df = function.to_dataframe(name='Ck').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.LonIndexer,self.LatIndexer,self.TimeName]
-                    ).to_dataframe(
-                        name=time).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time
+                                                             ).transpose()
         df.to_csv(self.output_dir+'/Ck_'+self.VerticalCoordIndexer+'.csv',
                     mode="a", header=None)
         print('Done!')
