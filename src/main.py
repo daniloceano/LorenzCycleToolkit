@@ -34,8 +34,6 @@ import argparse
 import sys
 import time
 
-
-
 def check_create_folder(DirName):
     if not os.path.exists(DirName):
                 os.makedirs(DirName)
