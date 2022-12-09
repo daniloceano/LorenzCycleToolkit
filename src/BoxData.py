@@ -146,11 +146,10 @@ class BoxData:
         # Geopotential (g*hgt) height data values data values, a
         # verages and eddy terms
         if args.geopotential:
-            self.geopt = ((data[dfVars.loc['Geopotential']['Variable']] \
-             * units(dfVars.loc['Geopotential']['Units']
-             )).metpy.convert_units('m**2/s**2')).sel(
-                **{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
-                 self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
+            self.geopt = (data[dfVars.loc['Geopotential']['Variable']] \
+                 * units(dfVars.loc['Geopotential']['Units']).to('m**2/s**2')
+                 ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
+                     self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         else:
             self.geopt = (data[dfVars.loc['Geopotential Height']['Variable']]*g\
              * units(dfVars.loc['Geopotential Height']['Units'])

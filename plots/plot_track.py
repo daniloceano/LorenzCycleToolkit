@@ -160,6 +160,16 @@ def main():
     
     plt.plot(track['Lon'], track['Lat'],c='#383838')
     norm = colors.TwoSlopeNorm(vmin=min(Ae), vcenter=np.mean(Ae), vmax=max(Ae))
+    
+    # if trackfile was made for a range of data with less time steps than the
+    # actual data
+    if len(track) < len(df):
+        df = df[df['Datetime'].isin(track.index)]
+        Ae = df['Ae']
+    # if data has less time steps than the track file
+    elif len(df) < len(track):
+        track = track[track.index.isin(df['Datetime'])]
+    
     dots = plt.scatter(track['Lon'].loc[df['Datetime']],
                        track['Lat'].loc[df['Datetime']],
                        c=Ae,cmap=cmocean.cm.matter,s=df['sizes'],zorder=100, 
