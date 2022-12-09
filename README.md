@@ -16,3 +16,15 @@ More details on running the program are provided bellow.
 
 # Usage
 
+## Eulerian framework
+
+The first step is to delimite the computational domain in the csv text file [boxlimits](inputs/box_limits) that should look like this:
+
+![image](https://user-images.githubusercontent.com/56005607/206709581-34ebe0a7-ff45-4bd4-86e0-8cce8dde91ea.png)
+
+Then, it is required to specify in the [fvars](inputs/fvars) file the how the variables are named in the NetCDF file and which units are being used:  
+
+![image](https://user-images.githubusercontent.com/56005607/206710982-37e2c5a3-4379-41c2-840a-ba2af0cd28a9.png)
+
+Note that you should only change the colums corresponding to "Variable" and "Units". Modying the first column will make the program unable to look for the variables in the NetCDF file.
+
