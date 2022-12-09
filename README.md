@@ -16,3 +16,8 @@ More details on running the program are provided bellow.
 
 # Usage
 
+## Eulerian framework
+
+The first step is to delimite the computational domain in the csv text file [boxlimits](inputs/box_limits)
+
+![image](https://user-images.githubusercontent.com/56005607/206709581-34ebe0a7-ff45-4bd4-86e0-8cce8dde91ea.png)
