@@ -67,7 +67,7 @@ Alhtough it is not necessary to, it is advisible to use a file naming convenctio
 
 The default behaviour for computing the energetics, and the one intended by the works of Lorenz, was to compute the dissipation terms directly by using wind stress fields. However, for many of the reanalysis data, those variables are not available for all levels of the atmosphere. Therefore, the dissipation terms might be estimated as residuals from:
 
-![image](https://user-images.githubusercontent.com/56005607/206727485-bf256946-1fb9-47c3-a9ae-7e73e0d46952.png)
+![image](https://user-images.githubusercontent.com/56005607/206728409-b95deaae-50c8-49e4-bce1-b27e8aed628a.png)
 
 and:
 
