@@ -131,12 +131,11 @@ class ConversionTerms:
         print('\nComputing conversion between available potential energy terms (Ca)...')
         ## First term of the integral ##
         # Derivate tair_AE in respect to latitude
-        DelPhi_tairAE = self.tair_AE.sortby(self.LatIndexer,ascending=True
-                        ).differentiate("rlats")
-        
+        DelPhi_tairAE = (self.tair_AE*self.tair_AE["coslats"]
+                         ).differentiate("rlats")
         _ = (self.v_ZE*self.tair_ZE) * DelPhi_tairAE
         _ZA = _.integrate("rlons")/self.xlength
-        _AA = -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        _AA = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
         function = _AA/(2*Re*self.sigma_AA)
         
         ## Second term of the integral ##
@@ -146,7 +145,7 @@ class ConversionTerms:
         ).differentiate(self.VerticalCoordIndexer) / units.hPa
         _ =  (self.omega_ZE*self.tair_ZE) * DelPres_tairAE
         _ZA = _.integrate("rlons")/self.xlength
-        _AA = -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        _AA = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
         function += _AA/self.sigma_AA
 
         ## Integrate in pressure ##
@@ -177,25 +176,24 @@ class ConversionTerms:
         # Divide the zonal mean of the zonal wind component (u) by the cosine
         # of the latitude (in radians) and then differentiate it in regard to
         # the latitude (also in radians)
-        DelPhi_uZA_cosphi = (self.u_ZA/self.u_ZA["coslats"]).copy(deep=True
-                ).sortby(self.LatIndexer,ascending=True).differentiate("rlats")                     
+        DelPhi_uZA_cosphi = (self.u_ZA/self.u_ZA["coslats"]
+                             ).differentiate("rlats")                     
         _ = (self.u_ZE["coslats"]*self.u_ZE*self.v_ZE/Re) * DelPhi_uZA_cosphi
         _ZA = _.integrate("rlons")/self.xlength
-        function = -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        function = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
         
         ## Second term ##
         # Differentiate the zonal mean of the meridional wind (v) in regard to
         # the latitude (in radians)
-        DelPhi_vZA = self.v_ZA.copy(deep=True).sortby(
-            self.LatIndexer,ascending=True).differentiate("rlats")
+        DelPhi_vZA = (self.v_ZA*self.v_ZA["coslats"]).differentiate("rlats")
         _ = ((self.v_ZE**2)/Re) * DelPhi_vZA
         _ZA = _.integrate("rlons")/self.xlength
-        function += -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        function += (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
         
         ## Third term ##
         _ = (self.tan_lats*(self.u_ZE**2)*self.v_ZA)/Re
         _ZA = _.integrate("rlons")/self.xlength
-        function += -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        function += (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
         
         ## Fourth term ##
         # Differentiate the zonal mean of the zonal wind (u) in regard to the
@@ -205,7 +203,7 @@ class ConversionTerms:
                 self.VerticalCoordIndexer) / units.hPa
         _ = self.omega_ZE * self.u_ZE * DelPres_uZAp
         _ZA = _.integrate("rlons")/self.xlength
-        function += -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        function += (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
         
         ## Fifith term ##
         # Differentiate the zonal mean of the meridional wind (v) in regard to
@@ -215,11 +213,11 @@ class ConversionTerms:
                         ).differentiate(self.VerticalCoordIndexer) / units.hPa
         _ = self.omega_ZE * self.v_ZE * DelPres_vZAp
         _ZA = _.integrate("rlons")/self.xlength
-        function += -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        function += (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
         # function +=  CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
         
         ## Integrate in pressure ##
-        Ck = -function.integrate(self.VerticalCoordIndexer
+        Ck = function.integrate(self.VerticalCoordIndexer
                         ) * function[self.VerticalCoordIndexer].metpy.units/g
         try: 
             Ck = Ck.metpy.convert_units('W/ m **2')
