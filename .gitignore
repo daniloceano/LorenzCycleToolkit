@@ -1,6 +1,12 @@
 # Results folder
 LEC_Results/
 
+# Inputs
+inputs/fvars
+inputs/box_lims
+inputs/track
+inputs/fvars
+
 # Mac stuff
 .DS_Store
 
