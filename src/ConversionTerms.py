@@ -38,6 +38,7 @@ Terms calculated using finite differences derivatives:
         corresponding units are assigned, when applicable.
 
 """
+from Math import (CalcZonalAverage, CalcAreaAverage)
 import numpy as np
 from metpy.constants import g
 from metpy.constants import Rd
@@ -73,9 +74,8 @@ class ConversionTerms:
     def calc_ce(self):
         print('\nComputing conversion between eddy energy terms (Ce)...')
         FirstTerm = Rd/(self.PressureData*g)
-        _ZA = (self.omega_ZE*self.tair_ZE).integrate("rlons")/self.xlength
-        SecondTerm = -(_ZA*_ZA["coslats"]).integrate(
-                            "rlats")/self.ylength
+        _ = self.omega_ZE*self.tair_ZE
+        SecondTerm = -CalcAreaAverage(_,self.ylength,xlength=self.xlength)
         function = (FirstTerm*SecondTerm)
         Ce = function.integrate(self.VerticalCoordIndexer
                            ) * function[self.VerticalCoordIndexer].metpy.units
@@ -103,8 +103,7 @@ class ConversionTerms:
         print('\nComputing conversion between zonal energy terms (Cz)...')
         FirstTerm = Rd/(self.PressureData*g)        
         _ = self.omega_AE*self.tair_AE
-        SecondTerm = -(_*_["coslats"]).integrate(
-                            "rlats")/self.ylength
+        SecondTerm = -CalcAreaAverage(_,self.ylength)
         function = (FirstTerm*SecondTerm)
         Cz = function.integrate(self.VerticalCoordIndexer
                             ) * function[self.VerticalCoordIndexer].metpy.units
@@ -134,19 +133,16 @@ class ConversionTerms:
         DelPhi_tairAE = (self.tair_AE*self.tair_AE["coslats"]
                          ).differentiate("rlats")
         _ = (self.v_ZE*self.tair_ZE) * DelPhi_tairAE
-        _ZA = _.integrate("rlons")/self.xlength
-        _AA = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
-        function = _AA/(2*Re*self.sigma_AA)
+        function = CalcAreaAverage(_,self.ylength, xlength=self.xlength
+                                   )/(2*Re*self.sigma_AA)
         
         ## Second term of the integral ##
         # Derivate tair_AE in respect to pressure and divide it by sigma
-        DelPres_tairAE = (self.tair_AE).copy(deep=True
-        ).sortby(self.VerticalCoordIndexer,ascending=True
-        ).differentiate(self.VerticalCoordIndexer) / units.hPa
+        DelPres_tairAE = (self.tair_AE).differentiate(
+            self.VerticalCoordIndexer) / units.hPa
         _ =  (self.omega_ZE*self.tair_ZE) * DelPres_tairAE
-        _ZA = _.integrate("rlons")/self.xlength
-        _AA = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
-        function += _AA/self.sigma_AA
+        function += CalcAreaAverage(_,self.ylength, xlength=self.xlength
+                                     )/self.sigma_AA
 
         ## Integrate in pressure ##
         Ca = function.integrate(self.VerticalCoordIndexer
@@ -179,42 +175,34 @@ class ConversionTerms:
         DelPhi_uZA_cosphi = (self.u_ZA/self.u_ZA["coslats"]
                              ).differentiate("rlats")                     
         _ = (self.u_ZE["coslats"]*self.u_ZE*self.v_ZE/Re) * DelPhi_uZA_cosphi
-        _ZA = _.integrate("rlons")/self.xlength
-        function = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        function = CalcAreaAverage(_,self.ylength, xlength=self.xlength)
         
         ## Second term ##
         # Differentiate the zonal mean of the meridional wind (v) in regard to
         # the latitude (in radians)
         DelPhi_vZA = (self.v_ZA*self.v_ZA["coslats"]).differentiate("rlats")
         _ = ((self.v_ZE**2)/Re) * DelPhi_vZA
-        _ZA = _.integrate("rlons")/self.xlength
-        function += (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        function += CalcAreaAverage(_,self.ylength, xlength=self.xlength)
         
         ## Third term ##
         _ = (self.tan_lats*(self.u_ZE**2)*self.v_ZA)/Re
-        _ZA = _.integrate("rlons")/self.xlength
-        function += (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        function += CalcAreaAverage(_,self.ylength, xlength=self.xlength)
         
         ## Fourth term ##
         # Differentiate the zonal mean of the zonal wind (u) in regard to the
         # pressure and assign the units in hPa
-        DelPres_uZAp = self.u_ZA.copy(deep=True).sortby(
-            self.VerticalCoordIndexer,ascending=True).differentiate(
+        DelPres_uZAp = self.u_ZA.differentiate(
                 self.VerticalCoordIndexer) / units.hPa
         _ = self.omega_ZE * self.u_ZE * DelPres_uZAp
-        _ZA = _.integrate("rlons")/self.xlength
-        function += (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
+        function += CalcAreaAverage(_,self.ylength, xlength=self.xlength)
         
         ## Fifith term ##
         # Differentiate the zonal mean of the meridional wind (v) in regard to
         # the pressure and assign the units in hPa
-        DelPres_vZAp = self.u_ZA.copy(deep=True
-                        ).sortby(self.VerticalCoordIndexer,ascending=True
-                        ).differentiate(self.VerticalCoordIndexer) / units.hPa
+        DelPres_vZAp = self.u_ZA.differentiate(
+            self.VerticalCoordIndexer) / units.hPa
         _ = self.omega_ZE * self.v_ZE * DelPres_vZAp
-        _ZA = _.integrate("rlons")/self.xlength
-        function += (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
-        # function +=  CalcAreaAverage(_,self.LatIndexer,LonIndexer=self.LonIndexer)
+        function += CalcAreaAverage(_,self.ylength, xlength=self.xlength)
         
         ## Integrate in pressure ##
         Ck = function.integrate(self.VerticalCoordIndexer
@@ -237,3 +225,16 @@ class ConversionTerms:
                     mode="a", header=None)
         print('Done!')
         return Ck
+    
+
+# import matplotlib.pyplot as plt
+# plt.close('all')
+# Ce.plot(marker='o',c='k'),
+# Cz.plot(marker='s',c='k'),
+# # (Ke/1e5).plot(marker='o',c='k'),
+# # (Kz/1e5).plot(marker='o',c='grey'),
+# plt.ylim([-8,16]),
+# plt.xlim([Ce.time[0],Ce.time[-8]]),
+# plt.yticks(range(-8,16,4)),
+# plt.grid(linestyle='dashed')  
+# plt.axhline(0)
