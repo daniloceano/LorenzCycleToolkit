@@ -34,7 +34,7 @@ Contact:
 """
 
 import xarray
-import Math
+from Math import (CalcZonalAverage, CalcAreaAverage)
 import argparse
 from thermodynamics import StaticStability, AdiabaticHEating
 from metpy.constants import g
@@ -59,6 +59,10 @@ class BoxData:
              data[self.VerticalCoordIndexer].units).to('Pa')
         self.args = args
         self.output_dir = output_dir
+        
+        self.dx = float(data[self.LatIndexer][1]-data[self.LatIndexer][0])
+        
+        # Domain limits 
         self.western_limit = data[self.LonIndexer].sel(
             {self.LonIndexer:western_limit}, method='nearest')
         self.eastern_limit = data[self.LonIndexer].sel(
@@ -68,19 +72,18 @@ class BoxData:
         self.northern_limit = data[self.LatIndexer].sel(
             {self.LatIndexer:northern_limit}, method='nearest')
         
-        # Temperature data values
+        # Set length for doing averages
+        self.xlength = self.eastern_limit['rlons']-self.western_limit['rlons']
+        self.ylength = np.sin(self.northern_limit['rlats']
+                              ) - np.sin(self.southern_limit['rlats'])
+        
+        # Temperature data values, averages and eddy terms
         self.tair = (data[dfVars.loc['Air Temperature']['Variable']] \
               * units(dfVars.loc['Air Temperature']['Units']).to('K')).sel(
                   **{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                   self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
-        # Set length for doing averages
-        self.xlength = self.tair['rlons'][-1]- self.tair['rlons'][0]
-        self.ylength = np.sin(self.tair['rlats'][-1]
-                              ) - np.sin(self.tair['rlats'][0])
-        # Compute averages and eddy terms
-        self.tair_ZA = self.tair.integrate("rlons")/self.xlength
-        self.tair_AA = (self.tair_ZA*self.tair_ZA["coslats"]).integrate(
-                            "rlats")/self.ylength
+        self.tair_ZA = CalcZonalAverage(self.tair,self.xlength)
+        self.tair_AA = CalcAreaAverage(self.tair_ZA,self.ylength)
         self.tair_ZE = self.tair - self.tair_ZA
         self.tair_AE = self.tair_ZA - self.tair_AA 
         
@@ -89,9 +92,8 @@ class BoxData:
              * units(dfVars.loc['Eastward Wind Component']['Units']).to('m/s')
              ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
-        self.u_ZA = self.u.integrate("rlons")/self.xlength
-        self.u_AA = -(self.u_ZA*self.u_ZA["coslats"]).integrate(
-                            "rlats")/self.ylength
+        self.u_ZA = CalcZonalAverage(self.u,self.xlength)
+        self.u_AA = CalcAreaAverage(self.u_ZA,self.ylength)
         self.u_ZE = self.u - self.u_ZA
         self.u_AE = self.u_ZA - self.u_AA
         
@@ -100,9 +102,8 @@ class BoxData:
              * units(dfVars.loc['Northward Wind Component']['Units']).to('m/s')
              ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
-        self.v_ZA = self.v.integrate("rlons")/self.xlength
-        self.v_AA = (self.v_ZA*self.v_ZA["coslats"]).integrate(
-                            "rlats")/self.ylength
+        self.v_ZA = CalcZonalAverage(self.v,self.xlength)
+        self.v_AA = CalcAreaAverage(self.v_ZA,self.ylength)
         self.v_ZE = self.v - self.v_ZA
         self.v_AE = self.v_ZA - self.v_AA
         
@@ -120,12 +121,10 @@ class BoxData:
                  ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                      self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
                           
-        self.ust_ZA = self.ust.integrate("rlons")/self.xlength
-        self.ust_AA = (self.ust_ZA*self.ust_ZA["coslats"]).integrate(
-                            "rlats")/self.ylength
-        self.vst_ZA = self.vst.integrate("rlons")/self.xlength
-        self.vst_AA = (self.vst_ZA*self.vst_ZA["coslats"]).integrate(
-                            "rlats")/self.ylength
+        self.ust_ZA = CalcZonalAverage(self.ust,self.xlength)
+        self.ust_AA = CalcAreaAverage(self.ust_ZA,self.ylength)
+        self.vst_ZA = CalcZonalAverage(self.vst,self.xlength)
+        self.vst_AA = CalcAreaAverage(self.vst_ZA,self.ylength)
         self.ust_ZE = self.ust - self.ust_ZA
         self.ust_AE = self.ust_ZA - self.ust_AA
         self.vst_ZE = self.vst - self.vst_ZA
@@ -137,9 +136,8 @@ class BoxData:
              * units(dfVars.loc['Omega Velocity']['Units']).to('Pa/s')
              ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
-        self.omega_ZA = self.omega.integrate("rlons")/self.xlength
-        self.omega_AA = (self.omega_ZA*self.omega_ZA["coslats"]).integrate(
-                                    "rlats")/self.ylength
+        self.omega_ZA = CalcZonalAverage(self.omega,self.xlength)
+        self.omega_AA = CalcAreaAverage(self.omega_ZA,self.ylength)
         self.omega_ZE = self.omega - self.omega_ZA
         self.omega_AE = self.omega_ZA - self.omega_AA
         
@@ -157,9 +155,8 @@ class BoxData:
                                             self.northern_limit),
              self.LonIndexer: slice(self.western_limit, self.eastern_limit)}
                       ).metpy.convert_units('m**2/s**2')        
-        self.geopt_ZA = self.geopt.integrate("rlons")/self.xlength
-        self.geopt_AA = (self.geopt_ZA*self.geopt_ZA["coslats"]).integrate(
-                            "rlats")/self.ylength
+        self.geopt_ZA = CalcZonalAverage(self.geopt,self.xlength)
+        self.geopt_AA = CalcAreaAverage(self.geopt_ZA,self.ylength)
         self.geopt_ZE = self.geopt - self.geopt_ZA
         self.geopt_AE = self.geopt_ZA - self.geopt_AA
         
@@ -175,9 +172,8 @@ class BoxData:
         else:
             print("could not compute Q. Check flags!")
         
-        self.Q_ZA = self.Q.integrate("rlons")/self.xlength
-        self.Q_AA = -(self.Q_ZA*self.Q_ZA["coslats"]).integrate(
-                            "rlats")/self.ylength
+        self.Q_ZA = CalcZonalAverage(self.Q,self.xlength)
+        self.Q_AA = CalcAreaAverage(self.Q_ZA,self.ylength)
         self.Q_ZE = self.Q - self.Q_ZA
         self.Q_AE = self.Q_ZA - self.Q_AA
         

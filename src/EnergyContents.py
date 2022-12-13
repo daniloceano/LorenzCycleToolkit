@@ -27,7 +27,7 @@ Source for formulas used here:
         https://journals.ametsoc.org/view/journals/mwre/108/7/1520-0493_1980_108_0954_zaecot_2_0_co_2.xml
 """
 
-from Math import (VerticalTrazpezoidalIntegration, CalcAreaAverage)
+from Math import CalcAreaAverage
 from metpy.constants import g
 from BoxData import BoxData
 import pandas as pd
@@ -54,9 +54,8 @@ class EnergyContents:
         
     def calc_az(self):
         print('\nComputing Zonal Available Potential Energy (Az)...')
-        _AA = ((self.tair_AE**2)*self.tair_AE["coslats"]).integrate(
-                            "rlats")/self.ylength
-        function = _AA/(2*self.sigma_AA)
+        _ = CalcAreaAverage(self.tair_AE**2, self.ylength)
+        function = _/(2*self.sigma_AA)
         Az = function.integrate(self.VerticalCoordIndexer
                             ) * function[self.VerticalCoordIndexer].metpy.units
         try: 
@@ -79,9 +78,9 @@ class EnergyContents:
     
     def calc_ae(self): 
         print('\nComputing Eddy Available Potential Energy (Ae)...')
-        _ZA = (self.tair_ZE**2).integrate("rlons")/self.xlength
-        _AA = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
-        function = _AA/(2*self.sigma_AA)
+        _ = CalcAreaAverage(self.tair_ZE**2,self.ylength,
+                              xlength=self.xlength)
+        function = _/(2*self.sigma_AA)
         Ae = function.integrate(self.VerticalCoordIndexer
                             ) * function[self.VerticalCoordIndexer].metpy.units
         try: 
@@ -105,8 +104,7 @@ class EnergyContents:
     
     def calc_kz(self):
         print('\nComputing Zonal Kinetic Energy (Kz)...')
-        _ = (self.u_ZA**2)+(self.v_ZA**2)
-        function = (_*_["coslats"]).integrate("rlats")/self.ylength
+        function = CalcAreaAverage((self.u_ZA**2+self.v_ZA**2),self.ylength)
         Kz = function.integrate(self.VerticalCoordIndexer
                     ) * function[self.VerticalCoordIndexer].metpy.units/(2*g)
         print(Kz.values*Kz.metpy.units)
@@ -130,10 +128,8 @@ class EnergyContents:
     
     def calc_ke(self):
         print('\nComputing Eddy Kinetic Energy (Ke)...')
-        _ = (self.u_ZE**2)+(self.v_ZE**2)
-        _ZA = _.integrate("rlons")/self.xlength
-        function = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
-
+        function = CalcAreaAverage((self.u_ZE**2)+(self.v_ZE**2),self.ylength,
+                              xlength=self.xlength)
         Ke = function.integrate(self.VerticalCoordIndexer
                     ) * function[self.VerticalCoordIndexer].metpy.units/(2*g)
         try: 
@@ -154,4 +150,14 @@ class EnergyContents:
                 mode="a", header=None)
         print('Done!')
         return Ke
-        
+
+# import matplotlib.pyplot as plt
+# (Az/1e5).plot(marker='s',c='gray'),
+# (Ae/1e5).plot(marker='s',c='k'),
+# (Ke/1e5).plot(marker='o',c='k'),
+# (Kz/1e5).plot(marker='o',c='grey'),
+# plt.ylim([0,24]),
+# plt.xlim([Az.time[0],Az.time[-8]]),
+# plt.yticks(range(0,25,4)),
+# plt.grid(linestyle='dashed')    
+     
