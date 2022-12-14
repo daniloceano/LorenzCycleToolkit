@@ -70,7 +70,6 @@ def CalcAreaAverage(VariableData, ylength, xlength=False):
         ZA = CalcZonalAverage(VariableData,xlength)
     else:
         ZA = VariableData
-    # Take the area avearge
     ylength = np.sin(
         VariableData['rlats'][-1]) - np.sin(VariableData['rlats'][0])
     return (ZA*ZA["coslats"]).integrate("rlats")/ylength
