@@ -27,7 +27,7 @@ Source for formulas used here:
         https://journals.ametsoc.org/view/journals/mwre/115/1/1520-0493_1987_115_0013_laeogc_2_0_co_2.xml
 
 """
-
+from Math import (CalcZonalAverage, CalcAreaAverage)
 import numpy as np
 from metpy.constants import g
 from metpy.constants import Re
@@ -65,14 +65,9 @@ class BoundaryTerms:
         self.northern_limit = box_obj.northern_limit
         self.xlength = box_obj.xlength
         self.ylength = box_obj.ylength        
-        
         # Using the notation from Michaelides (1987)
-        self.c1 = -1/((Re*(
-                np.deg2rad(box_obj.eastern_limit)-np.deg2rad(box_obj.western_limit))*
-                (np.sin(np.deg2rad(box_obj.northern_limit))-
-                np.sin(np.deg2rad(box_obj.southern_limit))))/units.radian)
-        self.c2 = -1/(Re*(np.sin(np.deg2rad(box_obj.northern_limit))-
-            np.sin(np.deg2rad(box_obj.southern_limit))))
+        self.c1 = -1/(Re*self.xlength*self.ylength)
+        self.c2 = -1/(Re*self.ylength)
         
     def calc_baz(self):
         if self.method == 'eulerian':
@@ -91,31 +86,28 @@ class BoundaryTerms:
                     ) * _[self.VerticalCoordIndexer].metpy.units * self.c1
 
         ## Second Integral ##
-        
-        _ZA = ((self.u_ZE*self.tair_ZE).integrate("rlons")/self.xlength)
-        _AA = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
-        _ = ((2*_AA*self.tair_AE) + (self.tair_AE**2*self.v_ZA)
-             * self.tair_AE["coslats"])/(2*self.sigma_AA)
+        _ = self.v_ZE*self.tair_ZE
+        _ZA = CalcZonalAverage(_,self.xlength)*2*self.tair_AE
+        _ = (_ZA + (self.tair_AE**2*self.v_ZA)) * self.tair_AE["coslats"]
         # Data at northern boundary minus data at southern boundary
-        _ = _.sel(**{self.LatIndexer: self.northern_limit}) - _.sel(
-            **{self.LatIndexer: self.southern_limit})
+        _ = (_.sel(**{self.LatIndexer: self.northern_limit}) - _.sel(
+            **{self.LatIndexer: self.southern_limit}))/(2*self.sigma_AA)
         # Integrate through pressure levels
-        function += _.sortby(self.VerticalCoordIndexer,ascending=True
-                             ).integrate(self.VerticalCoordIndexer
+        function += _.integrate(self.VerticalCoordIndexer
                     )* _[self.VerticalCoordIndexer].metpy.units*self.c2
         
         ## Third Term ##
         # First part
-        _ZA = ((2*self.omega_ZE*self.tair_ZE).integrate("rlons")/self.xlength)
-        _AA = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
-        _ = _AA*self.tair_AE
-        # Second part
-        _ZA = ((2*self.omega_AA*self.tair_ZE**2).integrate("rlons")/self.xlength)
-        _AA = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
-        _ += _AA
+        _ = 2*self.omega_ZE*self.tair_ZE
+        _ZA = CalcZonalAverage(_,self.xlength)*self.tair_AE
+        _ = _ZA + (self.omega_ZA*self.tair_ZE**2)
+        # Sum second part
+        _ += self.omega_ZA*self.tair_ZE**2
         # Accordingly to Muench (1965), it is required to do an area average
-        # of this term
-        _AA = (_.integrate("rlats")/self.ylength)/(2*self.sigma_AA)
+        # of this term and sigma is divided before subtracting the data 
+        # (see next staep)
+        _AA = CalcAreaAverage(_, self.ylength,
+                            xlength=self.xlength)/(2*self.sigma_AA)
         # Data at the bottom minus data at top level
         function -= (_AA.isel(**{self.VerticalCoordIndexer: -1}) - 
                      _AA.isel(**{self.VerticalCoordIndexer: 0}))
@@ -144,8 +136,9 @@ class BoundaryTerms:
                     )* _[self.VerticalCoordIndexer].metpy.units*self.c1
         
         ## Second Integral ##
-        _ZA = ((self.v*self.tair_ZE**2).integrate("rlons")/self.xlength
-               *self.tair_ZE["coslats"])/(2*self.sigma_AA)
+        _ZA = (CalcZonalAverage(self.v*self.tair_ZE**2
+                             ,self.xlength)*self.tair_ZE["coslats"]
+             )/(2*self.sigma_AA)
         # Data at northern boundary minus data at southern boundary
         _ = _ZA.sel(**{self.LatIndexer: self.northern_limit}) - _ZA.sel(
             **{self.LatIndexer: self.southern_limit})
@@ -154,12 +147,11 @@ class BoundaryTerms:
                     ) * _[self.VerticalCoordIndexer].metpy.units*self.c2
         
         ## Third Term ##
-        _ZA = (self.omega*self.tair_ZE**2).integrate("rlons")/self.xlength
-        _AA = (-(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength 
-               /(2*self.sigma_AA))
-        _ = _AA.sortby(self.VerticalCoordIndexer)
+        _ = self.omega*self.tair_ZE**2
+        _ = CalcAreaAverage(_, self.ylength,
+                            xlength=self.xlength)/(2*self.sigma_AA)
         # Data at the bottom minus data at top level
-        function -= (_.isel(**{self.VerticalCoordIndexer: -1}) - _AA.isel(
+        function -= (_.isel(**{self.VerticalCoordIndexer: -1}) - _.isel(
             **{self.VerticalCoordIndexer: 0}))
         try: 
             Bae = function.metpy.convert_units('W/ m **2')
@@ -186,8 +178,8 @@ class BoundaryTerms:
         
         ## Second Integral ##
         _ = ((self.u**2+self.v**2-self.u_ZE**2-self.v_ZE**2)
-            *self.v*self.v["coslats"]).integrate(
-                "rlons")/self.xlength
+            *self.v*self.v["coslats"])
+        _ = CalcZonalAverage(_, self.xlength)
         # Data at northern boundary minus data at southern boundary
         _ = _.sel(**{self.LatIndexer: self.northern_limit}) - _.sel(
             **{self.LatIndexer: self.southern_limit})
@@ -196,10 +188,9 @@ class BoundaryTerms:
                     ) * _[self.VerticalCoordIndexer].metpy.units*self.c2
         
         ## Third Term ##
-        _ZA  = (((self.u**2+self.v**2-self.u_ZE**2-self.v_ZE**2)
-            *self.omega).integrate("rlons")/self.xlength)
-        _AA = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
-        _ = _AA/(2*g)
+        _ = ((self.u**2+self.v**2-self.u_ZE**2-self.v_ZE**2)
+            *self.omega)
+        _ = (CalcAreaAverage(_, self.ylength,xlength=self.xlength))/(2*g)
         # Data at the bottom minus data at top level
         function -= (_.isel(**{self.VerticalCoordIndexer: -1}) - _.isel(
             **{self.VerticalCoordIndexer: 0}))
@@ -216,18 +207,18 @@ class BoundaryTerms:
         if self.method == 'eulerian':
             print('\nComputing Eddy Kinetic Energy (Ke) transport across boundaries (BKe)...')
         ## First Integral ##
-        _ = self.u*(self.u_ZE**2+self.v_ZE**2)/(2*g)
+        _ = self.u*(self.u_ZE**2+self.v_ZE**2)
          # Data at eastern boundary minus data at western boundary 
         _ = _.sel(**{self.LonIndexer: self.eastern_limit}) - _.sel(
             **{self.LonIndexer: self.western_limit}) 
         # Integrate through latitude
-        _ = _.integrate("rlats")
+        _ = (_/(2*g)).integrate("rlats")
         function = _.integrate(self.VerticalCoordIndexer
                     )* _[self.VerticalCoordIndexer].metpy.units*self.c1
         
         ## Second Integral ##
-        _ = ((self.u_ZE**2+self.v_ZE**2)*self.v
-               *self.v["coslats"]).integrate("rlons")/self.xlength
+        _ = (self.u_ZE**2+self.v_ZE**2)*self.v *self.v["coslats"]
+        _ = CalcZonalAverage(_, self.xlength)
         # Data at northern boundary minus data at southern boundary
         _ = _.sel(**{self.LatIndexer: self.northern_limit}) - _.sel(
             **{self.LatIndexer: self.southern_limit})
@@ -236,10 +227,8 @@ class BoundaryTerms:
                     ) * _[self.VerticalCoordIndexer].metpy.units*self.c2
         
         ## Third Term ##
-        _ZA = (((self.u_ZE**2+self.v_ZE**2)*self.omega
-               ).integrate("rlons")/self.xlength)
-        _AA = -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
-        _ = _AA/(2*g)
+        _ = (self.u_ZE**2+self.v_ZE**2)*self.omega
+        _ = CalcAreaAverage(_, self.ylength,xlength=self.xlength)/(2*g)
         function -= (_.isel(**{self.VerticalCoordIndexer: -1}) - _.isel(
                                    **{self.VerticalCoordIndexer: 0}))
         try: 

@@ -32,13 +32,14 @@ Terms calculated using finite differences derivatives:
         is converted from degrees to radians. It is necessary to organize the
         coordinate indexers from the smaller to the greater for the differentition
         process. For example, latitude from S to N and pressure from top to
-        base. Then, it is used the Xarray's method for computating finite 
-        differences derivatives using the central difference formula. Afterwards,
-        the original lat/lon coords. are restaured, when needed. Lastly, the
-        corresponding units are assigned, when applicable.
+        base (this was done in the lorenz-cycle function, when opening data, 
+        because other functions need this). Then, it is used the Xarray's 
+        method for computating finite differences derivatives using the central
+        difference formula. Lastly, the corresponding units are assigned, 
+        when applicable.
 
 """
-from Math import (CalcZonalAverage, CalcAreaAverage)
+from Math import CalcAreaAverage
 import numpy as np
 from metpy.constants import g
 from metpy.constants import Rd
