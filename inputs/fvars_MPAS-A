@@ -1,0 +1,10 @@
+;standard_name;Variable;Units
+Air Temperature;air_temperature;tempk;K
+Geopotential;geopotential;geop;meter ** 2 / second ** 2
+Omega Velocity;omega;omega;Pa/s
+Eastward Wind Component;eastward_wind;uwnd;m/s
+Northward Wind Component;northward_wind;vwnd;m/s
+Longitude;;longitude
+Latitude;;latitude
+Time;;Time
+Vertical Level;;level
