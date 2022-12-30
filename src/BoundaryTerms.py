@@ -241,23 +241,18 @@ class BoundaryTerms:
         return Bke 
     
     def calc_boz(self):
-        """
-        Used Brennan (1980) here.
-        """
         if self.method == 'eulerian':
             print('\nComputing Zonal Kinetic Energy (Kz) production by fluxes at the boundaries (BΦZ)...')
         ## First Integral ##
         _ = (self.v_ZA*self.geopt_AE)/g
-         # Data at eastern boundary minus data at western boundary 
+        # Data at eastern boundary minus data at western boundary 
+        # UNABLE TO DO THAT!!!!
         # _ = _.sel(**{self.LonIndexer: self.eastern_limit}) - _.sel(
         #     **{self.LonIndexer: self.western_limit}) 
         # Integrate through latitude
-        # _ = HorizontalTrazpezoidalIntegration(_,self.LatIndexer)
         _ = _.integrate("rlats")
         # Integrate through pressure levels
-        # function = VerticalTrazpezoidalIntegration(_,self.PressureData,
-        #                             self.VerticalCoordIndexer)*self.c1
-        function  = -_.integrate(self.VerticalCoordIndexer
+        function  = _.integrate(self.VerticalCoordIndexer
                     )* _[self.VerticalCoordIndexer].metpy.units*self.c1
         
         ## Second Integral ##
@@ -266,19 +261,13 @@ class BoundaryTerms:
         _ = _.sel(**{self.LatIndexer: self.northern_limit}) - _.sel(
             **{self.LatIndexer: self.southern_limit})
         # Integrate through pressure levels
-        # function += VerticalTrazpezoidalIntegration(_,self.PressureData,
-        #                             self.VerticalCoordIndexer)*self.c2
-        function += -_.integrate(self.VerticalCoordIndexer
+        function += _.integrate(self.VerticalCoordIndexer
                     )* _[self.VerticalCoordIndexer].metpy.units*self.c2
         
         ## Third Term ##
-        # _ = CalcAreaAverage(self.omega_AE*self.geopt_AE, self.LatIndexer)/g
-        _AA = (-(self.omega_AE*self.geopt_AE*self.geopt_AE["coslats"]
-                 ).integrate("rlats")/self.ylength)/g  
-        _ = _AA.sortby(self.VerticalCoordIndexer,ascending=False)        
-        function -= _.sortby(self.VerticalCoordIndexer,ascending=False
-        ).isel(**{self.VerticalCoordIndexer:-1}) - _.isel(
-            **{self.VerticalCoordIndexer: 0})
+        _ = CalcAreaAverage(self.omega_AE*self.geopt_AE, self.ylength)/g
+        function -= (_.isel(**{self.VerticalCoordIndexer:-1}) - _.isel(
+            **{self.VerticalCoordIndexer: 0}))
         try: 
             Boz = function.metpy.convert_units('W/ m **2')
         except ValueError:
@@ -297,39 +286,26 @@ class BoundaryTerms:
         _ = _.sel(**{self.LonIndexer: self.eastern_limit}) - _.sel(
             **{self.LonIndexer: self.western_limit}) 
         # Integrate through latitude
-        # _ = HorizontalTrazpezoidalIntegration(_,self.LatIndexer)
         _ = _.integrate("rlats")
         # Integrate through pressure levels
-        # function = VerticalTrazpezoidalIntegration(_,self.PressureData,
-        #                             self.VerticalCoordIndexer)*self.c1
-        function = -_.integrate(self.VerticalCoordIndexer
+        function = _.integrate(self.VerticalCoordIndexer
                     )* _[self.VerticalCoordIndexer].metpy.units*self.c1
         
         ## Second Integral ##
-        # _ = CalcZonalAverage((self.v_ZE*self.geopt_ZE),
-        #                      self.LonIndexer)*self.cos_lats/g
-        _ = ((((self.v_ZE*self.geopt_ZE)).integrate("rlons")/self.xlength
-               )*self.v_ZE["coslats"])/g
+        _ = CalcZonalAverage((self.v_ZE*self.geopt_ZE),
+                              self.ylength)*self.v_ZE["coslats"]/g
         # Data at northern boundary minus data at southern boundary
         _ = _.sel(**{self.LatIndexer: self.northern_limit}) - _.sel(
             **{self.LatIndexer: self.southern_limit})
         # Integrate through pressure levels
-        # function += VerticalTrazpezoidalIntegration(_,self.PressureData,
-        #                             self.VerticalCoordIndexer)*self.c2
-        function += -_.integrate(self.VerticalCoordIndexer
+        function += _.integrate(self.VerticalCoordIndexer
                     )* _[self.VerticalCoordIndexer].metpy.units*self.c2
         
         ## Third Term ##
-        # _ = CalcAreaAverage(self.omega_ZE*self.geopt_ZE, self.LatIndexer,
-        #                     LonIndexer=self.LonIndexer)/g
-        _ZA = ((self.omega_ZE*self.geopt_ZE).integrate("rlons")/self.xlength)/g
-        _AA = -(_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
-        _ = _AA.sortby(self.VerticalCoordIndexer,ascending=False)  
-        function -= _.isel(**{self.VerticalCoordIndexer: -1}) - _.isel(
-            **{self.VerticalCoordIndexer: 0})
-        # function -= _.sortby(self.VerticalCoordIndexer,ascending=False
-        # ).isel(**{self.VerticalCoordIndexer: -1}) - _.isel(
-        #     **{self.VerticalCoordIndexer: 0})
+        _ = CalcAreaAverage(self.omega_ZE*self.geopt_ZE, self.ylength,
+                            xlength=self.xlength)/g
+        function -= (_.isel(**{self.VerticalCoordIndexer: -1}) - _.isel(
+            **{self.VerticalCoordIndexer: 0}))
         try: 
             Boz = function.metpy.convert_units('W/ m **2')
         except ValueError:
