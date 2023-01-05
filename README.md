@@ -89,6 +89,9 @@ Compute the LEC using a domain that follows the system (see [unstationary framew
 
 - geopotential
 
-Use this flag when instead of Geopotential Height, Geopotential data is provided (it is required that the FVars file is adjusted accordingly.
+Use this flag when instead of Geopotential Height, Geopotential data is provided. It is required that the FVars file is adjusted accordingly, for example:
+
+![image](https://user-images.githubusercontent.com/56005607/210860807-0f31c38d-6a20-40b8-9d0d-715ab58ace08.png)
+
 
 
