@@ -10,7 +10,7 @@ Where:
 
 ![image](https://user-images.githubusercontent.com/56005607/210859000-07af27c1-0295-4c48-bf7c-1432100bdf60.png)
 
-The complete cycle can be ilustred as follows:
+The complete cycle for a given period of time can be ilustred as follows:
 
 
 ![LEC_example](https://user-images.githubusercontent.com/56005607/210855570-d3272989-8871-4a20-996f-e373f73934c5.png)
