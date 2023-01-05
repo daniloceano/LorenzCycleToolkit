@@ -10,7 +10,7 @@ Where:
 
 ![image](https://user-images.githubusercontent.com/56005607/210859000-07af27c1-0295-4c48-bf7c-1432100bdf60.png)
 
-The complete cycle for a given period of time can be ilustred as follows:
+Where ε represents errors numeric errors. The complete cycle for a given period of time can be ilustred as follows:
 
 
 ![LEC_example](https://user-images.githubusercontent.com/56005607/210855570-d3272989-8871-4a20-996f-e373f73934c5.png)
@@ -20,15 +20,15 @@ The complete cycle for a given period of time can be ilustred as follows:
 
 The Lorenz-Cycle program is designed for computing the LEC for a specific region on the atmosphere. It requires a netCDF file containing wind (zonal, meridional and vertical components), air temperature and geopotential data and can be run using two distinct frameworks:
 
-1. Eulerian framewrok, where the domain is fixed in time by the file: inputs/box_limits; 
+1. Stationary framewrok, where the domain is fixed in time by the file: inputs/box_limits; 
 
-2. Lagrangian framework, where the domain can follow a pertubation on the atmosphere, which track is defined in the file: inputs/track. 
+2. Unstationary framework, where the domain can follow a pertubation on the atmosphere, which track is defined in the file: inputs/track. 
 
 More details on running the program are provided bellow.
 
 # Usage
 
-## Eulerian framework
+## Stationary framework
 
 **Important!** Before running the program be sure to check the [Flags](#Flags) section.
 
@@ -50,17 +50,17 @@ Then, from the [source code folder](src) you can run, for example:
 python lorenz-cycle.py path/to/infile.nc -e
 ```
 
-## Lagrangian freamework
+## Unstationary freamework
 
 **Important!** Before running the program be sure to check the [Flags](#Flags) section.
 
-As in the Eulerian framework, the first step is to have a NetCDF file containing the following variables: zonal (u) and meridional (v) wind components, vertical wind speed (omega), air temperature and geopotential or geopotential height. The data is required to follow a pressure-level vertical levels.
+As in the stationary framework, the first step is to have a NetCDF file containing the following variables: zonal (u) and meridional (v) wind components, vertical wind speed (omega), air temperature and geopotential or geopotential height. The data is required to follow a pressure-level vertical levels.
 
 Now, instead of delimiting the computational domain, it is required a [track file](inputs/track) containing the central position of the system of interest in different time steps. The program will then create, for each time step, a box with 15°x15° around this central point to compute the energetics terms. The track file should look like this:
 
 ![image](https://user-images.githubusercontent.com/56005607/206721056-61fa32ce-aa5d-4f16-af28-c46ac2a9bf88.png)
 
-As in the Eulerian framework, it is required to specify in the [fvars](inputs/fvars) file the how the variables are named in the NetCDF file and which units are being used. See above. 
+As in the stationary framework, it is required to specify in the [fvars](inputs/fvars) file the how the variables are named in the NetCDF file and which units are being used. See above. 
 
 Then, from the [source code folder](src) you can run, for example:
 
@@ -77,14 +77,6 @@ Alhtough it is not necessary to, it is advisible to use a file naming convenctio
 
 - residuals
 
-The default behaviour for computing the energetics, and the one intended by the works of Lorenz, was to compute the dissipation terms directly by using wind stress fields. However, for many of the reanalysis data, those variables are not available for all levels of the atmosphere. Therefore, the dissipation terms might be estimated as residuals from:
-
-![image](https://user-images.githubusercontent.com/56005607/206728409-b95deaae-50c8-49e4-bce1-b27e8aed628a.png)
-
-and:
-
-![image](https://user-images.githubusercontent.com/56005607/206728023-615c5d3b-6065-47b6-b15c-fffbfabb356e.png)
-
-Where ε represents errors numeric errors.
+The default behaviour for computing the energetics, and the one intended by the works of Lorenz, was to compute the dissipation terms directly by using wind stress fields. However, for many of the reanalysis data, those variables are not available for all levels of the atmosphere. Therefore, the dissipation terms might be estimated as residuals from the budget equations.
 
 
