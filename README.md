@@ -34,7 +34,7 @@ More details on running the program are provided bellow.
 
 First of all, you'll need a NetCDF file containing the following variables: zonal (u) and meridional (v) wind components, vertical wind speed (omega), air temperature and geopotential or geopotential height. The data is required to follow a pressure-level vertical levels.
 
-Then, it is to necessary to delimite the computational domain using the csv text file [boxlimits](inputs/box_limits), that should look like this:
+Then, it is to necessary to delimite the computational domain using the csv text file [box_limits](inputs/box_limits), that should look like this:
 
 ![image](https://user-images.githubusercontent.com/56005607/206709581-34ebe0a7-ff45-4bd4-86e0-8cce8dde91ea.png)
 
@@ -77,6 +77,18 @@ Alhtough it is not necessary to, it is advisible to use a file naming convenctio
 
 - residuals
 
-The default behaviour for computing the energetics, and the one intended by the works of Lorenz, was to compute the dissipation terms directly by using wind stress fields. However, for many of the reanalysis data, those variables are not available for all levels of the atmosphere. Therefore, the dissipation terms might be estimated as residuals from the budget equations.
+The default behaviour for computing the energetics, and the one intended by the works of Lorenz, was to compute the dissipation terms directly by using wind stress fields. However, for many of the reanalysis data, those variables are not available for all levels of the atmosphere. Therefore, the dissipation terms might be estimated as residuals from the budget equations (see the [first section](## What is the Lorenz Energy Cycle?)).
+
+- stationary
+
+Compute the LEC using a fixed domain (see [stationary framework](## Stationary framework))
+
+- unstationary
+
+Compute the LEC using a domain that follows the system (see [unstationary framework](## Untationary framework))
+
+- geopotential
+
+Use this flag when instead of Geopotential Height, Geopotential data is provided (it is required that the FVars file is adjusted accordingly.
 
 
