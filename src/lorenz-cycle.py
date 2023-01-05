@@ -92,12 +92,12 @@ def get_data(infile, varlist):
     return data
 
 #---------------------------------------------------------------------------
-# Computes the Lorenz Energy Cycle using an eulerian framework.
+# Computes the Lorenz Energy Cycle using an stationary framework.
 # It requires the box_lims file with the limits for the box used for the
 # computations, which is fixed in time. IN this framework we can analyse how
 # the eddies contribute for the local energy cycle.
-def LEC_eulerian():
-    print('Computing energetics using eulerian framework')
+def LEC_stationary():
+    print('Computing energetics using stationary framework')
     # Box limits used for compuations
     dfbox = pd.read_csv('../inputs/box_limits',header=None,delimiter=';',index_col=0)
     min_lon = float(dfbox.loc['min_lon'].values)
@@ -174,7 +174,7 @@ def LEC_eulerian():
     print('\n------------------------------------------------------------------------')
     print('Computing zonal and eddy kinectic and available potential energy terms')
     try:
-        ec_obj = EnergyContents(box_obj,method='eulerian')
+        ec_obj = EnergyContents(box_obj,method='stationary')
         EnergyList = [ec_obj.calc_az(), ec_obj.calc_ae(),
                       ec_obj.calc_kz(),ec_obj.calc_ke()]
     except:
@@ -184,7 +184,7 @@ def LEC_eulerian():
     print('\n------------------------------------------------------------------------')
     print('Computing the conversion terms between energy contents') 
     try:
-        ct_obj = ConversionTerms(box_obj,method='eulerian')
+        ct_obj = ConversionTerms(box_obj,method='stationary')
         ConversionList = [ct_obj.calc_cz(),ct_obj.calc_ca(),
                           ct_obj.calc_ck(),ct_obj.calc_ce()]
     except:
@@ -194,7 +194,7 @@ def LEC_eulerian():
     print('\n------------------------------------------------------------------------')
     print('Computing the boundary terms') 
     try:
-        bt_obj = BoundaryTerms(box_obj,method='eulerian')
+        bt_obj = BoundaryTerms(box_obj,method='stationary')
         BoundaryList = [bt_obj.calc_baz(),bt_obj.calc_bae(),
                         bt_obj.calc_bkz(),bt_obj.calc_bke(),
                         bt_obj.calc_boz(),bt_obj.calc_boe()]
@@ -205,7 +205,7 @@ def LEC_eulerian():
     print('\n------------------------------------------------------------------------')
     print('Computing generation and disspiation terms') 
     try:
-        gdt_obj = GenerationDissipationTerms(box_obj,method='eulerian')
+        gdt_obj = GenerationDissipationTerms(box_obj,method='stationary')
         if args.residuals:
             GenDissList = [gdt_obj.calc_gz(),gdt_obj.calc_ge()]
         else:
@@ -269,12 +269,12 @@ def LEC_eulerian():
     os.system(cmd)
     
 #---------------------------------------------------------------------------
-# Computes the Lorenz Energy Cycle using an eulerian framework.
+# Computes the Lorenz Energy Cycle using an stationary framework.
 # It requires the box_lims file with the limits for the box used for the
 # computations, which is fixed in time. IN this framework we can analyse how
 # the eddies contribute for the local energy cycle.
-def LEC_lagrangian():
-    print('Computing energetics using lagrangian framework')
+def LEC_unstationary():
+    print('Computing energetics using unstationary framework')
     # 2) Open the data
     data = get_data(infile, varlist)  
     # Indexers
@@ -298,7 +298,7 @@ def LEC_lagrangian():
     # Directory where results will be stored
     ResultsMainDirectory = '../LEC_Results'
     # Append data limits to outfile name
-    outfile_name = ''.join(infile.split('/')[-1].split('.nc'))+'_lagranigan'
+    outfile_name = ''.join(infile.split('/')[-1].split('.nc'))+'_unstationary'
     # Each dataset of results have its own directory, allowing to store results
     # from more than one experiment at each time
     ResultsSubDirectory = ResultsMainDirectory+'/'+outfile_name+'/'
@@ -364,7 +364,7 @@ def LEC_lagrangian():
             raise SystemExit('Error on creating the box for the computations')
         # Compute energy terms
         try:
-            ec_obj = EnergyContents(box_obj,method='lagrangian')
+            ec_obj = EnergyContents(box_obj,method='unstationary')
             TermsDict['Az'].append(ec_obj.calc_az())
             TermsDict['Ae'].append(ec_obj.calc_ae())
             TermsDict['Kz'].append(ec_obj.calc_kz())
@@ -374,7 +374,7 @@ def LEC_lagrangian():
             raise SystemExit('Error on computing Energy Contents')
         # Compute conversion terms
         try:
-            ct_obj = ConversionTerms(box_obj,method='lagrangian')
+            ct_obj = ConversionTerms(box_obj,method='unstationary')
             TermsDict['Ca'].append(ct_obj.calc_ca())
             TermsDict['Ce'].append(ct_obj.calc_ce())
             TermsDict['Ck'].append(ct_obj.calc_ck())
@@ -384,7 +384,7 @@ def LEC_lagrangian():
             raise SystemExit('Error on computing Conversion Terms')
         # Compute boundary terms
         try:
-            bt_obj = BoundaryTerms(box_obj,method='lagrangian')
+            bt_obj = BoundaryTerms(box_obj,method='unstationary')
             TermsDict['BAe'].append(bt_obj.calc_bae().values)
             TermsDict['BAz'].append(bt_obj.calc_baz())
             TermsDict['BKe'].append(bt_obj.calc_bke())
@@ -396,7 +396,7 @@ def LEC_lagrangian():
             raise SystemExit('Error on computing Boundary Terms')
         # Compute generation/dissipation terms
         try:
-            gdt_obj = GenerationDissipationTerms(box_obj,method='lagrangian')
+            gdt_obj = GenerationDissipationTerms(box_obj,method='unstationary')
             TermsDict['Ge'].append(gdt_obj.calc_ge())
             TermsDict['Gz'].append(gdt_obj.calc_gz())
             if not args.residuals:
@@ -451,7 +451,7 @@ Lorenz Energy Cycle (LEC) program. \n \
 The program can compute the LEC using two distinct frameworks:\
     1) Lagragian framework. A box is definid in the box_lims' file and then the \
        energetics are computed for a fixed domain.\
-    2) Eulerian framework. The domain is not fixed and follows the system using \
+    2) stationary framework. The domain is not fixed and follows the system using \
        the track file.\
  Both frameworks can be applied at the same time, given the required files are\
  provided. An auxilliary 'fvars' file is also needed for both frameworks: it\
@@ -470,10 +470,10 @@ The program can compute the LEC using two distinct frameworks:\
     parser.add_argument("-g", "--geopotential", default = False,
     action='store_true', help = "use the geopotential data instead of\
  geopotential height. The file fvars must be adjusted for doing so.")
-    parser.add_argument("-e", "--eulerian", default = False,
+    parser.add_argument("-e", "--stationary", default = False,
     action='store_true', help = "compute the energetics for a fixed domain\
  specified by the box_lims file.")
-    parser.add_argument("-l", "--lagrangian", default = False,
+    parser.add_argument("-l", "--unstationary", default = False,
     action='store_true', help = "compute the energetics for a mobile domain\
  specified by the track file.")
     args = parser.parse_args()
@@ -481,11 +481,11 @@ The program can compute the LEC using two distinct frameworks:\
     varlist = '../inputs/fvars'
     # Run the program
     start_time = time.time()
-    if args.eulerian:
-        LEC_eulerian()
-        print("--- %s seconds running eulerian framework ---" % (time.time() - start_time))
+    if args.stationary:
+        LEC_stationary()
+        print("--- %s seconds running stationary framework ---" % (time.time() - start_time))
     start_time = time.time()
-    if args.lagrangian:
-        LEC_lagrangian()
-        print("--- %s seconds for running lagrangian framework ---" % (time.time() - start_time))
+    if args.unstationary:
+        LEC_unstationary()
+        print("--- %s seconds for running unstationary framework ---" % (time.time() - start_time))
     

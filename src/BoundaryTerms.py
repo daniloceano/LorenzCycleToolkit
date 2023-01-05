@@ -70,7 +70,7 @@ class BoundaryTerms:
         self.c2 = -1/(Re*self.ylength)
         
     def calc_baz(self):
-        if self.method == 'eulerian':
+        if self.method == 'stationary':
             print('\nComputing Zonal Available Potential Energy (Az) transport across boundaries (BAZ)...')
 
         ## First Integral ##
@@ -116,12 +116,12 @@ class BoundaryTerms:
         except ValueError:
             print('Unit error in BAZ')
             raise
-        if self.method == 'eulerian':
+        if self.method == 'stationary':
             print(Baz.values*Baz.metpy.units)
         return Baz
     
     def calc_bae(self):
-        if self.method == 'eulerian':
+        if self.method == 'stationary':
             print('\nComputing Eddy Available Potential Energy (Ae) transport across boundaries (BAE)...')
         ## First Integral ##
         _ = self.u*self.tair_ZE**2
@@ -158,12 +158,12 @@ class BoundaryTerms:
         except ValueError:
             print('Unit error in BAe')
             raise
-        if self.method == 'eulerian':
+        if self.method == 'stationary':
             print(Bae.values*Bae.metpy.units)
         return Bae
     
     def calc_bkz(self):
-        if self.method == 'eulerian':
+        if self.method == 'stationary':
             print('\nComputing Zonal Kinetic Energy (Kz) transport across boundaries (BKz)...')
         ## First Integral ##
         _ = self.u*(self.u**2+self.v**2-self.u_ZE**2-self.v_ZE**2)
@@ -199,12 +199,12 @@ class BoundaryTerms:
         except ValueError:
             print('Unit error in BKz')
             raise
-        if self.method == 'eulerian':
+        if self.method == 'stationary':
             print(Bkz.values*Bkz.metpy.units)
         return Bkz
     
     def calc_bke(self):
-        if self.method == 'eulerian':
+        if self.method == 'stationary':
             print('\nComputing Eddy Kinetic Energy (Ke) transport across boundaries (BKe)...')
         ## First Integral ##
         _ = self.u*(self.u_ZE**2+self.v_ZE**2)
@@ -236,12 +236,12 @@ class BoundaryTerms:
         except ValueError:
             print('Unit error in BKe')
             raise
-        if self.method == 'eulerian':
+        if self.method == 'stationary':
             print(Bke.values*Bke.metpy.units)
         return Bke 
     
     def calc_boz(self):
-        if self.method == 'eulerian':
+        if self.method == 'stationary':
             print('\nComputing Zonal Kinetic Energy (Kz) production by fluxes at the boundaries (BΦZ)...')
         ## First Integral ##
         _ = (self.v_ZA*self.geopt_AE)/g
@@ -273,12 +273,12 @@ class BoundaryTerms:
         except ValueError:
             print('Unit error in BΦZ')
             raise
-        if self.method == 'eulerian':
+        if self.method == 'stationary':
             print(Boz.values*Boz.metpy.units)
         return Boz 
     
     def calc_boe(self):
-        if self.method == 'eulerian':
+        if self.method == 'stationary':
             print('\nComputing Eddy Kinetic Energy (Kz) production by fluxes at the boundaries (BΦE)...')
         ## First Integral ##
         _ = (self.u_ZE*self.geopt_ZE)/g
@@ -311,7 +311,7 @@ class BoundaryTerms:
         except ValueError:
             print('Unit error in BΦZ')
             raise
-        if self.method == 'eulerian':
+        if self.method == 'stationary':
             print(Boz.values*Boz.metpy.units)
         return Boz 
                  

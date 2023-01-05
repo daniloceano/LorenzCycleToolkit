@@ -11,6 +11,7 @@ from metpy.constants import Cp_d
 from metpy.constants import g
 from BoxData import BoxData
 import pandas as pd
+from Math import CalcAreaAverage
 
 class GenerationDissipationTerms:
     
@@ -49,8 +50,7 @@ class GenerationDissipationTerms:
     def calc_gz(self):
         print('\nComputing generation of Zonal Potential Energy (Gz)...')
         _ = self.Q_AE*self.tair_AE
-        _AA = (_*_["coslats"]).integrate("rlats")/self.ylength
-        function = _AA/(Cp_d*self.sigma_AA)
+        function = CalcAreaAverage(_,self.ylength)/(Cp_d*self.sigma_AA)
         Gz = function.integrate(self.VerticalCoordIndexer
                     )* function[self.VerticalCoordIndexer].metpy.units
         try: 
@@ -58,12 +58,12 @@ class GenerationDissipationTerms:
         except ValueError:
             print('Unit error in Gz')
             raise
-        if self.method == 'eulerian':
+        if self.method == 'stationary':
             print(Gz.values*Gz.metpy.units)
         # Save Gz before vertical integration
         print(Gz.values*Gz.metpy.units)
         print('Saving Gz for each vertical level...')
-        if self.method == 'eulerian':
+        if self.method == 'stationary':
             df = function.to_dataframe(name='Ce',dim_order=[
                     self.TimeName,self.VerticalCoordIndexer]).unstack()
         else:
@@ -78,9 +78,8 @@ class GenerationDissipationTerms:
     def calc_ge(self):
         print('\nComputing generation of Eddy Potential Energy (Ge)...')
         _ = self.Q_ZE*self.tair_ZE
-        _ZA = _.integrate("rlons")/self.xlength
-        _AA = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
-        function = _AA/(Cp_d*self.sigma_AA)
+        function = CalcAreaAverage(_,self.ylength, 
+                                   xlength=self.xlength)/(Cp_d*self.sigma_AA)
         Ge = function.integrate(self.VerticalCoordIndexer
                     )* function[self.VerticalCoordIndexer].metpy.units
         try: 
@@ -91,7 +90,7 @@ class GenerationDissipationTerms:
         # Save Gz before vertical integration
         print(Ge.values*Ge.metpy.units)
         print('Saving Ge for each vertical level...')
-        if self.method == 'eulerian':
+        if self.method == 'stationary':
             df = function.to_dataframe(name='Ce',dim_order=[
                     self.TimeName,self.VerticalCoordIndexer]).unstack()
         else:
@@ -107,16 +106,14 @@ class GenerationDissipationTerms:
         # Here we will use only the lowest vertical level
         _ = (self.u_ZA.isel({self.VerticalCoordIndexer:0})*self.ust_ZA) + (
             self.v_ZA.isel({self.VerticalCoordIndexer:0})*self.vst_ZA)
-        _ZA = _.integrate("rlons")/self.xlength
-        _AA = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
-        Dz = units.Pa *  _AA/g   
+        function = CalcAreaAverage(_,self.ylength)/g
+        Dz = units.Pa * function   
         return Dz
     
     def calc_de(self):
         # Here we will use only the lowest vertical level
         _ = (self.u_ZE.isel({self.VerticalCoordIndexer:0})*self.ust_ZE) + (
             self.v_ZE.isel({self.VerticalCoordIndexer:0})*self.vst_ZE)
-        _ZA = _.integrate("rlons")/self.xlength
-        _AA = (_ZA*_ZA["coslats"]).integrate("rlats")/self.ylength
-        De = units.Pa * _AA/g   
+        function = CalcAreaAverage(_,self.ylength)/g
+        De = units.Pa * function  
         return De
