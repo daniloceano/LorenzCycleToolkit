@@ -2,7 +2,19 @@
 
 ## What is the Lorenz Energy Cycle?
 
-The Lorenz Energy Cycle (LEC) is a methodology for estimating the energy in the Atmosphere designed by the mathematician and meteorologist Edward Lorenz, in 1965. On it, the energy is partitioned into zonal and eddy components of Kinectic Energy and  Available Potential Energy. It is also computed the terms related to the conversion between each form of energy and the terms related to generation/dissipation of the energy contents. Lorenz initial work computed the energetics for the whole globe, but later developments adapted the methodology for computing the energetics of a limited area in the atmosphere, then requiring the computation of terms related to the transport of energy thorugh the boundaries of the limited area.
+The Lorenz Energy Cycle (LEC) is a methodology for estimating the energy in the Atmosphere designed by the mathematician and meteorologist Edward Lorenz, in 1965. On it, the energy is partitioned into zonal and eddy components of Kinectic Energy (Kz and Ke, respectively) and Available Potential Energy (Az and Ae, respectively). It is also computed the terms related to the conversion between each form of energy (Ca, Ce, Cz and Ck) and the terms related to generation/dissipation of the energy contents (Gz, Ge, Dz and De). Lorenz initial work computed the energetics for the whole globe, but later developments adapted the methodology for computing the energetics of a limited area in the atmosphere, thus requiring the computation of terms related to the transport of energy thorugh the boundaries of the limited area (BAe, BAz, BKe and BKz). Due to difficulties in accessing the frictions terms required for computing the dissipation terms, both disspiation and generation terms are often computed as residuals from the budgets equations:
+
+![image](https://user-images.githubusercontent.com/56005607/210858922-1d29f3b9-2446-422e-87c4-2dc5c4ced361.png)
+
+Where:
+
+![image](https://user-images.githubusercontent.com/56005607/210859000-07af27c1-0295-4c48-bf7c-1432100bdf60.png)
+
+The complete cycle can be ilustred as follows:
+
+
+![LEC_example](https://user-images.githubusercontent.com/56005607/210855570-d3272989-8871-4a20-996f-e373f73934c5.png)
+
 
 ## What does the program do?
 
