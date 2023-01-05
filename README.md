@@ -40,7 +40,7 @@ Then, it is to necessary to delimite the computational domain using the csv text
 
 Afterwrds, it is required to specify in the [fvars](inputs/fvars) file the how the variables are named in the NetCDF file and which units are being used. It will look like this:  
 
-![image](https://user-images.githubusercontent.com/56005607/206711679-7882169f-6c67-44ec-ba2d-a846d8cbeb76.png)
+![image](https://user-images.githubusercontent.com/56005607/210861069-1c899cc8-860a-4212-bd44-118e308db9bd.png)
 
 Note that you should only change the colums corresponding to "Variable" and "Units". Modying the first column will make the program unable to look for the variables in the NetCDF file.
 
@@ -91,7 +91,8 @@ Compute the LEC using a domain that follows the system (see [unstationary framew
 
 Use this flag when instead of Geopotential Height, Geopotential data is provided. It is required that the FVars file is adjusted accordingly, for example:
 
-![image](https://user-images.githubusercontent.com/56005607/210860807-0f31c38d-6a20-40b8-9d0d-715ab58ace08.png)
+![image](https://user-images.githubusercontent.com/56005607/210860966-713243c8-7447-4661-a33d-a988ab1055cf.png)
+
 
 
 
