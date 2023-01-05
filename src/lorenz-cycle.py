@@ -470,10 +470,10 @@ The program can compute the LEC using two distinct frameworks:\
     parser.add_argument("-g", "--geopotential", default = False,
     action='store_true', help = "use the geopotential data instead of\
  geopotential height. The file fvars must be adjusted for doing so.")
-    parser.add_argument("-e", "--stationary", default = False,
+    parser.add_argument("-s", "--stationary", default = False,
     action='store_true', help = "compute the energetics for a fixed domain\
  specified by the box_lims file.")
-    parser.add_argument("-l", "--unstationary", default = False,
+    parser.add_argument("-u", "--unstationary", default = False,
     action='store_true', help = "compute the energetics for a mobile domain\
  specified by the track file.")
     args = parser.parse_args()
