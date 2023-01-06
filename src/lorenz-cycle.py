@@ -449,7 +449,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = "\
 Lorenz Energy Cycle (LEC) program. \n \
 The program can compute the LEC using two distinct frameworks:\
-    1) Lagragian framework. A box is definid in the box_lims' file and then the \
+    1) unstationary framework. A box is definid in the box_lims' file and then the \
        energetics are computed for a fixed domain.\
     2) stationary framework. The domain is not fixed and follows the system using \
        the track file.\

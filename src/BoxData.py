@@ -82,8 +82,13 @@ class BoxData:
               * units(dfVars.loc['Air Temperature']['Units']).to('K')).sel(
                   **{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                   self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
-        self.tair_ZA = CalcZonalAverage(self.tair,self.xlength)
-        self.tair_AA = CalcAreaAverage(self.tair_ZA,self.ylength)
+        self.tair_ZA = CalcZonalAverage((
+            data[dfVars.loc['Air Temperature']['Variable']] \
+              * units(dfVars.loc['Air Temperature']['Units']).to('K')).sel(
+                  **{self.LonIndexer: slice(
+                      self.western_limit, self.eastern_limit)}),self.xlength)
+        self.tair_AA = CalcAreaAverage(self.tair_ZA,self.ylength
+                                       ).reset_coords('coslats', drop=True)
         self.tair_ZE = self.tair - self.tair_ZA
         self.tair_AE = self.tair_ZA - self.tair_AA 
         
@@ -92,8 +97,13 @@ class BoxData:
              * units(dfVars.loc['Eastward Wind Component']['Units']).to('m/s')
              ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
-        self.u_ZA = CalcZonalAverage(self.u,self.xlength)
-        self.u_AA = CalcAreaAverage(self.u_ZA,self.ylength)
+        self.u_ZA = CalcZonalAverage((
+            data[dfVars.loc['Eastward Wind Component']['Variable']] \
+              * units(dfVars.loc['Eastward Wind Component']['Units']
+                      ).to('m/s')).sel(**{self.LonIndexer: slice(
+                      self.western_limit, self.eastern_limit)}),self.xlength)
+        self.u_AA = CalcAreaAverage(self.u_ZA,self.ylength
+                                       ).reset_coords('coslats', drop=True)
         self.u_ZE = self.u - self.u_ZA
         self.u_AE = self.u_ZA - self.u_AA
         
@@ -102,8 +112,13 @@ class BoxData:
              * units(dfVars.loc['Northward Wind Component']['Units']).to('m/s')
              ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
-        self.v_ZA = CalcZonalAverage(self.v,self.xlength)
-        self.v_AA = CalcAreaAverage(self.v_ZA,self.ylength)
+        self.v_ZA = CalcZonalAverage((
+            data[dfVars.loc['Northward Wind Component']['Variable']] \
+              * units(dfVars.loc['Northward Wind Component']['Units']
+                      ).to('m/s')).sel(**{self.LonIndexer: slice(
+                      self.western_limit, self.eastern_limit)}),self.xlength)
+        self.v_AA = CalcAreaAverage(self.v_ZA,self.ylength
+                                       ).reset_coords('coslats', drop=True)
         self.v_ZE = self.v - self.v_ZA
         self.v_AE = self.v_ZA - self.v_AA
         
@@ -136,8 +151,13 @@ class BoxData:
              * units(dfVars.loc['Omega Velocity']['Units']).to('Pa/s')
              ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
-        self.omega_ZA = CalcZonalAverage(self.omega,self.xlength)
-        self.omega_AA = CalcAreaAverage(self.omega_ZA,self.ylength)
+        self.omega_ZA = CalcZonalAverage(
+            (data[dfVars.loc['Omega Velocity']['Variable']] \
+                 * units(dfVars.loc['Omega Velocity']['Units']).to('Pa/s')
+                 ).sel(**{self.LonIndexer: slice(
+                     self.western_limit, self.eastern_limit)}),self.xlength)
+        self.omega_AA = CalcAreaAverage(self.omega_ZA,self.ylength
+                                        ).reset_coords('coslats', drop=True)
         self.omega_ZE = self.omega - self.omega_ZA
         self.omega_AE = self.omega_ZA - self.omega_AA
         
@@ -148,6 +168,11 @@ class BoxData:
                  * units(dfVars.loc['Geopotential']['Units']).to('m**2/s**2')
                  ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                      self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
+            self.geopt_ZA = CalcZonalAverage(
+                (data[dfVars.loc['Geopotential']['Variable']] \
+                     * units(dfVars.loc['Geopotential']['Units']).to('m**2/s**2')
+                     ).sel(**{self.LonIndexer: slice(
+                         self.western_limit, self.eastern_limit)}),self.xlength)
         else:
             self.geopt = (data[dfVars.loc['Geopotential Height']['Variable']]*g\
              * units(dfVars.loc['Geopotential Height']['Units'])
@@ -155,8 +180,14 @@ class BoxData:
                                             self.northern_limit),
              self.LonIndexer: slice(self.western_limit, self.eastern_limit)}
                       ).metpy.convert_units('m**2/s**2')        
-        self.geopt_ZA = CalcZonalAverage(self.geopt,self.xlength)
-        self.geopt_AA = CalcAreaAverage(self.geopt_ZA,self.ylength)
+            self.geopt_ZA = CalcZonalAverage(
+                (data[dfVars.loc['Geopotential Height']['Variable']]*g\
+                 * units(dfVars.loc['Geopotential Height']['Units'])
+                 ).sel(**{self.LonIndexer: slice(self.western_limit,
+                                                 self.eastern_limit)}
+                          ).metpy.convert_units('m**2/s**2'),self.xlength)
+        self.geopt_AA = CalcAreaAverage(self.geopt_ZA,self.ylength
+                                        ).reset_coords('coslats', drop=True)
         self.geopt_ZE = self.geopt - self.geopt_ZA
         self.geopt_AE = self.geopt_ZA - self.geopt_AA
         
@@ -172,7 +203,12 @@ class BoxData:
         else:
             print("could not compute Q. Check flags!")
         
-        self.Q_ZA = CalcZonalAverage(self.Q,self.xlength)
+        self.Q_ZA = CalcZonalAverage(
+            AdiabaticHEating(self.tair,self.tair[self.VerticalCoordIndexer],
+                self.omega, self.u,self.v,self.VerticalCoordIndexer,
+                self.LatIndexer,self.LonIndexer,self.TimeName).sel(
+                    **{self.LonIndexer: slice(
+                        self.western_limit, self.eastern_limit)}),self.xlength)
         self.Q_AA = CalcAreaAverage(self.Q_ZA,self.ylength)
         self.Q_ZE = self.Q - self.Q_ZA
         self.Q_AE = self.Q_ZA - self.Q_AA
