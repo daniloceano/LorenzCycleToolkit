@@ -58,12 +58,12 @@ class GenerationDissipationTerms:
         except ValueError:
             print('Unit error in Gz')
             raise
-        if self.method == 'stationary':
+        if self.method == 'fixed':
             print(Gz.values*Gz.metpy.units)
         # Save Gz before vertical integration
         print(Gz.values*Gz.metpy.units)
         print('Saving Gz for each vertical level...')
-        if self.method == 'stationary':
+        if self.method == 'fixed':
             df = function.to_dataframe(name='Ce',dim_order=[
                     self.TimeName,self.VerticalCoordIndexer]).unstack()
         else:
@@ -90,7 +90,7 @@ class GenerationDissipationTerms:
         # Save Gz before vertical integration
         print(Ge.values*Ge.metpy.units)
         print('Saving Ge for each vertical level...')
-        if self.method == 'stationary':
+        if self.method == 'fixed':
             df = function.to_dataframe(name='Ce',dim_order=[
                     self.TimeName,self.VerticalCoordIndexer]).unstack()
         else:

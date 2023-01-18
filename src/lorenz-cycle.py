@@ -24,8 +24,16 @@ from BoundaryTerms import BoundaryTerms
 from GenerationDissipationTerms import GenerationDissipationTerms
 from BoxData import BoxData
 from BudgetResidual import calc_budget_diff,calc_residuals
-from metpy.units import units
 from thermodynamics import AdiabaticHEating
+
+from metpy.units import units
+from metpy.calc import vorticity
+from metpy.calc import wind_speed
+
+from select_area import slice_domain
+from select_area import draw_box_map
+
+from scipy.signal import savgol_filter    
 import pandas as pd
 import xarray as xr
 import os
@@ -92,12 +100,12 @@ def get_data(infile, varlist):
     return data
 
 #---------------------------------------------------------------------------
-# Computes the Lorenz Energy Cycle using an stationary framework.
+# Computes the Lorenz Energy Cycle using an fixed framework.
 # It requires the box_lims file with the limits for the box used for the
 # computations, which is fixed in time. IN this framework we can analyse how
 # the eddies contribute for the local energy cycle.
-def LEC_stationary():
-    print('Computing energetics using stationary framework')
+def LEC_fixed():
+    print('Computing energetics using fixed framework')
     # Box limits used for compuations
     dfbox = pd.read_csv('../inputs/box_limits',header=None,delimiter=';',index_col=0)
     min_lon = float(dfbox.loc['min_lon'].values)
@@ -112,7 +120,7 @@ def LEC_stationary():
         raise ValueError('Error in box_limits: min_lat > max_lat')
         quit()
     # 2) Open the data
-    data = get_data(infile, varlist)  
+    # data = get_data(infile, varlist)  
     # Indexers
     dfVars = pd.read_csv(varlist,sep= ';',index_col=0,header=0)
     LonIndexer,LatIndexer,TimeName,VerticalCoordIndexer = \
@@ -141,17 +149,7 @@ def LEC_stationary():
         else:
             j = i+'N'
         lims += j
-    # Directory where results will be stored
-    ResultsMainDirectory = '../LEC_Results'
-    # Append data limits to outfile name
-    outfile_name = ''.join(infile.split('/')[-1].split('.nc'))+'_'+lims
-    # Each dataset of results have its own directory, allowing to store results
-    # from more than one experiment at each time
-    ResultsSubDirectory = ResultsMainDirectory+'/'+outfile_name+'/'
-    # Check if the LEC_Figures directory exists. If not, creates it
-    check_create_folder(ResultsMainDirectory)
-    # Check if a directory for current data exists. If not, creates it
-    check_create_folder(ResultsSubDirectory)
+    
     # Create csv files for storing vertical results.
     # When those terms are computed data is simply appended to csv
     for term in ['Az','Ae','Kz','Ke','Cz','Ca','Ck','Ce','Ge','Gz']:
@@ -174,7 +172,7 @@ def LEC_stationary():
     print('\n------------------------------------------------------------------------')
     print('Computing zonal and eddy kinectic and available potential energy terms')
     try:
-        ec_obj = EnergyContents(box_obj,method='stationary')
+        ec_obj = EnergyContents(box_obj,method='fixed')
         EnergyList = [ec_obj.calc_az(), ec_obj.calc_ae(),
                       ec_obj.calc_kz(),ec_obj.calc_ke()]
     except:
@@ -184,7 +182,7 @@ def LEC_stationary():
     print('\n------------------------------------------------------------------------')
     print('Computing the conversion terms between energy contents') 
     try:
-        ct_obj = ConversionTerms(box_obj,method='stationary')
+        ct_obj = ConversionTerms(box_obj,method='fixed')
         ConversionList = [ct_obj.calc_cz(),ct_obj.calc_ca(),
                           ct_obj.calc_ck(),ct_obj.calc_ce()]
     except:
@@ -194,7 +192,7 @@ def LEC_stationary():
     print('\n------------------------------------------------------------------------')
     print('Computing the boundary terms') 
     try:
-        bt_obj = BoundaryTerms(box_obj,method='stationary')
+        bt_obj = BoundaryTerms(box_obj,method='fixed')
         BoundaryList = [bt_obj.calc_baz(),bt_obj.calc_bae(),
                         bt_obj.calc_bkz(),bt_obj.calc_bke(),
                         bt_obj.calc_boz(),bt_obj.calc_boe()]
@@ -205,7 +203,7 @@ def LEC_stationary():
     print('\n------------------------------------------------------------------------')
     print('Computing generation and disspiation terms') 
     try:
-        gdt_obj = GenerationDissipationTerms(box_obj,method='stationary')
+        gdt_obj = GenerationDissipationTerms(box_obj,method='fixed')
         if args.residuals:
             GenDissList = [gdt_obj.calc_gz(),gdt_obj.calc_ge()]
         else:
@@ -269,14 +267,14 @@ def LEC_stationary():
     os.system(cmd)
     
 #---------------------------------------------------------------------------
-# Computes the Lorenz Energy Cycle using an stationary framework.
+# Computes the Lorenz Energy Cycle using an fixed framework.
 # It requires the box_lims file with the limits for the box used for the
 # computations, which is fixed in time. IN this framework we can analyse how
 # the eddies contribute for the local energy cycle.
-def LEC_unstationary():
-    print('Computing energetics using unstationary framework')
+def LEC_moving(data):
+    print('Computing energetics using moving framework')
     # 2) Open the data
-    data = get_data(infile, varlist)  
+    # data = get_data(infile, varlist)  
     # Indexers
     dfVars = pd.read_csv(varlist,sep= ';',index_col=0,header=0)
     LonIndexer,LatIndexer,TimeName,VerticalCoordIndexer = \
@@ -293,19 +291,11 @@ def LEC_unstationary():
          units(dfVars.loc['Eastward Wind Component']['Units']).to('m/s'))
     v = (data[dfVars.loc['Northward Wind Component']['Variable']] *
          units(dfVars.loc['Northward Wind Component']['Units']).to('m/s'))
+    hgt = (data[dfVars.loc['Geopotential Height']['Variable']] *
+         units(dfVars.loc['Geopotential Height']['Units']).to('gpm'))
     Q = AdiabaticHEating(tair, pres, omega ,u, v,
             VerticalCoordIndexer,LatIndexer,LonIndexer,TimeName)
-    # Directory where results will be stored
-    ResultsMainDirectory = '../LEC_Results'
-    # Append data limits to outfile name
-    outfile_name = ''.join(infile.split('/')[-1].split('.nc'))+'_unstationary'
-    # Each dataset of results have its own directory, allowing to store results
-    # from more than one experiment at each time
-    ResultsSubDirectory = ResultsMainDirectory+'/'+outfile_name+'/'
-    # Check if the LEC_Figures directory exists. If not, creates it
-    check_create_folder(ResultsMainDirectory)
-    # Check if a directory for current data exists. If not, creates it
-    check_create_folder(ResultsSubDirectory)
+    
     # Create csv files for storing vertical results.
     # When those terms are computed data is simply appended to csv
     for term in ['Az','Ae','Kz','Ke','Cz','Ca','Ck','Ce','Ge','Gz']:
@@ -314,8 +304,18 @@ def LEC_unstationary():
         tmp.to_csv(ResultsSubDirectory+term+'_'+VerticalCoordIndexer+'.csv',
                    index=None)  
     # Track file
-    trackfile = '../inputs/track'
-    track = pd.read_csv(trackfile,parse_dates=[0],delimiter=';',index_col='time')
+    if args.track:
+        trackfile = '../inputs/track'
+        track = pd.read_csv(trackfile,parse_dates=[0],
+                            delimiter=';',index_col='time')
+
+    # Dictionary for saving system position and attributes
+    position = {}
+    results_keys = ['time', 'central_lat', 'central_lon', 'length', 'width',
+            'min_zeta_850','min_hgt_850','max_wind_850']
+    for key in results_keys:
+        position[key] =  []
+    
     # Create dict for store results
     TermsDict = {}
     energy = ['Az','Ae','Kz','Ke']
@@ -326,33 +326,85 @@ def LEC_unstationary():
         gendiss = ['Gz','Ge','Dz','De']
     for term in [*energy,*conversion,*boundary,*gendiss]:
         TermsDict[term] = []
-        
+    
+    times = pd.to_datetime(data[TimeName].values)
     # Slice the time array so the first and the last timestep will be the same
     # as in the track file
-    times = pd.to_datetime(data[TimeName].values)
-    times = times[(times>=track.index[0]) & (times<=track.index[-1])]
-    if len(times) == 0:
-        print("Mismatch between trackfile and data! Check that and try again!")
-        sys.exit(1)
+    if args.track:
+        times = times[(times>=track.index[0]) & (times<=track.index[-1])]
+        if len(times) == 0:
+            print("Mismatch between trackfile and data! Check that and try again!")
+            sys.exit(1)
+        
     # Loop for each time step:
     for t in times:
-        print(t)
+        
         idata = data.sel({TimeName:t})
         iQ = Q.sel({TimeName:t})
         # Get current time and box limits
         itime = str(t)
         datestr = pd.to_datetime(itime).strftime('%Y-%m-%d %HZ')
-        # Track timestep closest to the model timestep, just in case
-        # the track file has a poorer temporal resolution
-        track_itime = track.index[track.index.get_loc(
-            datestr, method='nearest')].strftime('%Y-%m-%d %HZ')
-        min_lon = track.loc[track_itime]['Lon']-7.5
-        max_lon = track.loc[track_itime]['Lon']+7.5
-        min_lat = track.loc[track_itime]['Lat']-7.5
-        max_lat = track.loc[track_itime]['Lat']+7.5
-        print('\nComputing terms for '+datestr+'...')
-        print('Box limits (lon/lat): '+str(max_lon)+'/'+str(max_lat),
-              ' '+str(min_lon)+'/'+str(min_lat))
+        
+        # Open those variables for saving 
+        iu_850 = u.sel({TimeName:t}).sel({VerticalCoordIndexer:850})
+        iv_850 = v.sel({TimeName:t}).sel({VerticalCoordIndexer:850})
+        ight_850 = hgt.sel({TimeName:t}).sel({VerticalCoordIndexer:850})
+        zeta = vorticity(iu_850, iv_850).metpy.dequantify()
+        # Apply filter when using high resolution gridded data
+        dx = float(iv_850[LonIndexer][1]-iv_850[LonIndexer][0])
+        if dx < 1:
+            zeta = zeta.to_dataset(name='vorticity'
+                ).apply(savgol_filter,window_length=31, polyorder=2).vorticity
+            
+        lat, lon = iu_850[LatIndexer], iu_850[LonIndexer]
+        
+        if args.track:
+            # Get current time and box limits
+            if 'width'in track.columns:
+                width, length = track.loc[itime]['width'],track.loc[itime]['length']
+            else:
+                width, length = 15, 15
+                
+            # Track timestep closest to the model timestep, just in case
+            # the track file has a poorer temporal resolution
+            track_itime = track.index[track.index.get_loc(
+                datestr, method='nearest')].strftime('%Y-%m-%d %HZ')
+            min_lon = track.loc[track_itime]['Lon']-(width/2)
+            max_lon = track.loc[track_itime]['Lon']+(width/2)
+            min_lat = track.loc[track_itime]['Lat']-(length/2)
+            max_lat = track.loc[track_itime]['Lat']+(length/2)
+            limits = {'min_lon':min_lon,'max_lon':max_lon,
+                      'min_lat':min_lat,'max_lat':max_lat}
+        
+        elif args.choose:
+            # Draw maps and ask user to specify corners for specifying the box
+            limits = draw_box_map(iu_850, iv_850, zeta, ight_850,
+                                  lat, lon, itime)
+            min_lon, max_lon = limits['min_lon'],  limits['max_lon']
+            min_lat, max_lat = limits['min_lat'],  limits['max_lat']
+        
+        # Store system position and attributes
+        central_lat = (limits['max_lat'] + limits['min_lat'])/2
+        central_lon = (limits['max_lon'] + limits['min_lon'])/2
+        length = limits['max_lat'] - limits['min_lat']
+        width = limits['max_lon'] - limits['min_lon']
+        min_zeta = float(zeta.min())
+        min_hgt = float(ight_850.min())
+        max_wind = float(wind_speed(iu_850, iv_850).max())
+        
+        values = [datestr, central_lat, central_lon, length, width,
+                  min_zeta, min_hgt, max_wind]
+        for key,val in zip(results_keys,values):
+            position[key].append(val)
+        
+        print('\nTime: ',datestr)
+        print('Box min_lon, max_lon: '+str(min_lon)+'/'+str(max_lon))
+        print('Box min_lat, max_lat: '+str(min_lat)+'/'+str(max_lat))
+        print('Box size (longitude): '+str(width))
+        print('Box size (latitude): '+str(length))
+        print('Minimum vorticity at 850 hPa:',min_zeta)
+        print('Minimum geopotential height at 850 hPa:',min_hgt)
+        print('Maximum wind speed at 850 hPa:',max_wind)
     
         # Create box object
         try:
@@ -364,7 +416,7 @@ def LEC_unstationary():
             raise SystemExit('Error on creating the box for the computations')
         # Compute energy terms
         try:
-            ec_obj = EnergyContents(box_obj,method='unstationary')
+            ec_obj = EnergyContents(box_obj,method='moving')
             TermsDict['Az'].append(ec_obj.calc_az())
             TermsDict['Ae'].append(ec_obj.calc_ae())
             TermsDict['Kz'].append(ec_obj.calc_kz())
@@ -374,7 +426,7 @@ def LEC_unstationary():
             raise SystemExit('Error on computing Energy Contents')
         # Compute conversion terms
         try:
-            ct_obj = ConversionTerms(box_obj,method='unstationary')
+            ct_obj = ConversionTerms(box_obj,method='moving')
             TermsDict['Ca'].append(ct_obj.calc_ca())
             TermsDict['Ce'].append(ct_obj.calc_ce())
             TermsDict['Ck'].append(ct_obj.calc_ck())
@@ -384,7 +436,7 @@ def LEC_unstationary():
             raise SystemExit('Error on computing Conversion Terms')
         # Compute boundary terms
         try:
-            bt_obj = BoundaryTerms(box_obj,method='unstationary')
+            bt_obj = BoundaryTerms(box_obj,method='moving')
             TermsDict['BAe'].append(bt_obj.calc_bae().values)
             TermsDict['BAz'].append(bt_obj.calc_baz())
             TermsDict['BKe'].append(bt_obj.calc_bke())
@@ -396,7 +448,7 @@ def LEC_unstationary():
             raise SystemExit('Error on computing Boundary Terms')
         # Compute generation/dissipation terms
         try:
-            gdt_obj = GenerationDissipationTerms(box_obj,method='unstationary')
+            gdt_obj = GenerationDissipationTerms(box_obj,method='moving')
             TermsDict['Ge'].append(gdt_obj.calc_ge())
             TermsDict['Gz'].append(gdt_obj.calc_gz())
             if not args.residuals:
@@ -431,9 +483,18 @@ def LEC_unstationary():
     df.to_csv(outfile)
     print(outfile+' created') 
     print('All done!')
+    
+    # Save system position as a csv file for replicability
+    track = pd.DataFrame.from_dict(position)
+    track = track.rename(columns={'central_lat':'Lat','central_lon':'Lon'})
+    track.to_csv(ResultsSubDirectory+outfile_name+'_track',
+                 index=False, sep=";")
+    
     # 13) Make figures
     FigsDirectory = ResultsSubDirectory+'/Figures'
     check_create_folder(FigsDirectory)
+    
+    
     if args.residuals:
         flag = ' -r'
     else:
@@ -449,9 +510,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = "\
 Lorenz Energy Cycle (LEC) program. \n \
 The program can compute the LEC using two distinct frameworks:\
-    1) Unstationary framework. A box is definid in the box_lims' file and then the \
+    1) moving framework. A box is definid in the box_lims' file and then the \
        energetics are computed for a fixed domain.\
-    2) Stationary framework. The domain is not fixed and follows the system using \
+    2) fixed framework. The domain is not fixed and follows the system using \
        the track file.\
  Both frameworks can be applied at the same time, given the required files are\
  provided. An auxilliary 'fvars' file is also needed for both frameworks: it\
@@ -470,22 +531,48 @@ The program can compute the LEC using two distinct frameworks:\
     parser.add_argument("-g", "--geopotential", default = False,
     action='store_true', help = "use the geopotential data instead of\
  geopotential height. The file fvars must be adjusted for doing so.")
-    parser.add_argument("-s", "--stationary", default = False,
-    action='store_true', help = "compute the energetics for a fixed domain\
- specified by the box_lims file.")
-    parser.add_argument("-u", "--unstationary", default = False,
-    action='store_true', help = "compute the energetics for a mobile domain\
- specified by the track file.")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("-f", "--fixed", default = False,
+    action='store_true', help = "compute the energetics for a Fixed domain\
+ specified by the 'inputs/box_lims' file.")
+    group.add_argument("-t", "--track", default = False,
+    action='store_true', help = "define the box using a track file specified \
+by the 'inputs/track' file. The track indicate the central point of the system\
+and a arbitraty box of 15°x15° is constructed.")
+    group.add_argument("-c", "--choose", default = False,
+    action='store_true', help = "For each time step, the user can choose the\
+domain by clicking on the screen.")
+ 
     args = parser.parse_args()
+    
     infile  = args.infile
     varlist = '../inputs/fvars'
+    
+    # Open data
+    data = get_data(infile, varlist) 
+    
+    # Slice data so the code runs faster
+    data, method = slice_domain(data, args, varlist)
+    
+    # Directory where results will be stored
+    ResultsMainDirectory = '../LEC_Results'
+    # Append data limits to outfile name
+    outfile_name = ''.join(infile.split('/')[-1].split('.nc'))+'_'+method
+    # Each dataset of results have its own directory, allowing to store results
+    # from more than one experiment at each time
+    ResultsSubDirectory = ResultsMainDirectory+'/'+outfile_name+'/'
+    # Check if the LEC_Figures directory exists. If not, creates it
+    check_create_folder(ResultsMainDirectory)
+    # Check if a directory for current data exists. If not, creates it
+    check_create_folder(ResultsSubDirectory)
+    
     # Run the program
     start_time = time.time()
-    if args.stationary:
-        LEC_stationary()
-        print("--- %s seconds running stationary framework ---" % (time.time() - start_time))
+    if args.fixed:
+        LEC_fixed(data)
+        print("--- %s seconds running fixed framework ---" % (time.time() - start_time))
     start_time = time.time()
-    if args.unstationary:
-        LEC_unstationary()
-        print("--- %s seconds for running unstationary framework ---" % (time.time() - start_time))
+    if args.track or args.choose:
+        LEC_moving(data)
+        print("--- %s seconds for running moving framework ---" % (time.time() - start_time))
     

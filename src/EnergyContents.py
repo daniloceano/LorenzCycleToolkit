@@ -65,7 +65,7 @@ class EnergyContents:
         print(Az.values*Az.metpy.units)
         print('Saving Az for each vertical level...')
         # Save Az before vertical integration          
-        if self.method == 'stationary':
+        if self.method == 'fixed':
             df = function.to_dataframe(name='Az').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
@@ -91,7 +91,7 @@ class EnergyContents:
         print(Ae.values*Ae.metpy.units)
         print('Saving Ae for each vertical level...')
         # Save Ae before vertical integration
-        if self.method == 'stationary':    
+        if self.method == 'fixed':    
             df = function.to_dataframe(name='Ae').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
@@ -115,7 +115,7 @@ class EnergyContents:
             print('Unit error in Kz')
             raise
         # Save Kz before vertical integration
-        if self.method == 'stationary':
+        if self.method == 'fixed':
             df = function.to_dataframe(name='Kz').unstack()   
         else:
             time = pd.to_datetime(function[self.TimeName].data)
@@ -140,7 +140,7 @@ class EnergyContents:
         print(Ke.values*Ke.metpy.units)
         print('Saving Ke for each vertical level...')
         # Save Ke before vertical integration
-        if self.method == 'stationary':
+        if self.method == 'fixed':
             df = function.to_dataframe(name='Ke').unstack() 
         else:
             time = pd.to_datetime(function[self.TimeName].data)

@@ -161,13 +161,13 @@ class BoxData:
         self.geopt_AE = self.geopt_ZA - self.geopt_AA
         
         # Adiaatic heating
-        if args.stationary:
+        if args.fixed:
             self.Q = AdiabaticHEating(self.tair,self.tair[self.VerticalCoordIndexer],
                 self.omega, self.u,self.v,self.VerticalCoordIndexer,
                 self.LatIndexer,self.LonIndexer,self.TimeName).sel(
                     **{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                 self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
-        elif args.unstationary:
+        elif args.track or args.choose:
             self.Q = Q
         else:
             print("could not compute Q. Check flags!")

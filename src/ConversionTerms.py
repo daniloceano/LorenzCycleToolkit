@@ -89,7 +89,7 @@ class ConversionTerms:
         print(Ce.values*Ce.metpy.units)
         print('Saving Ce for each vertical level...')
         # Save Ce before vertical integration
-        if self.method == 'stationary':
+        if self.method == 'fixed':
             df = function.to_dataframe(name='Ce').unstack().transpose()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
@@ -116,7 +116,7 @@ class ConversionTerms:
         print(Cz.values*Cz.metpy.units)
         print('Saving Cz for each vertical level...')
         # Save Cz before vertical integration
-        if self.method == 'stationary':
+        if self.method == 'fixed':
             df = function.to_dataframe(name='Cz').unstack().transpose()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
@@ -155,7 +155,7 @@ class ConversionTerms:
             raise
         print(Ca.values*Ca.metpy.units)
         print('Saving Ca for each vertical level...')
-        if self.method == 'stationary':
+        if self.method == 'fixed':
             df = function.to_dataframe(name='Ca',dim_order=[
                     self.TimeName,self.VerticalCoordIndexer]).unstack()
         else:
@@ -216,7 +216,7 @@ class ConversionTerms:
         print(Ck.values*Ck.metpy.units)
         print('Saving Ck for each vertical level...')
         # Save Ck before vertical integration            
-        if self.method == 'stationary':
+        if self.method == 'fixed':
             df = function.to_dataframe(name='Ck').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
