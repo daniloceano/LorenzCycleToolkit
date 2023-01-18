@@ -11,11 +11,8 @@ import argparse
 import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 import numpy as np
-from mpl_toolkits import mplot3d
-from mpl_toolkits.mplot3d.art3d import Line3DCollection
 import cmocean
-import glob
-
+from plot_timeseries import check_create_folder
 
 def MarkerSizeKe(df):
     
@@ -405,6 +402,7 @@ results from the main.py program.")
     args = parser.parse_args()
     outfile = args.outfile
     ResultsSubDirectory = '/'.join(outfile.split('/')[:-1])
-    FigsDir = ResultsSubDirectory+'/Figures/'
+    FigsDir = ResultsSubDirectory+'/Figures/LPS/'
+    check_create_folder(FigsDir)
     
     main()

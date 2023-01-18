@@ -23,8 +23,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import argparse
-
-
+from plot_timeseries import check_create_folder
 
 def Cz(ax,value,i,width,head_width):
     if isinstance(value, str) or (isinstance(value, float) and value > 0):
@@ -273,7 +272,8 @@ results from the main.py program.")
     args = parser.parse_args()
     outfile = args.outfile
     ResultsSubDirectory = '/'.join(outfile.split('/')[:-1])
-    FigsDir = ResultsSubDirectory+'/Figures/'
+    FigsDir = ResultsSubDirectory+'/Figures/LEC/'
+    check_create_folder(FigsDir)
 
     # Specs for plotting
     fs = 30

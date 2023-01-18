@@ -25,6 +25,7 @@ import matplotlib.gridspec as gridspec
 import matplotlib.colors as colors
 import os
 import cmocean as cmo
+from plot_timeseries import check_create_folder
 import glob
 from datetime import datetime
 import argparse
@@ -147,7 +148,7 @@ def plot_hovmoller(list_terms):
             cbar.ax.get_yaxis().labelpad = 20
         for t in cbar.ax.get_yticklabels():
              t.set_fontsize(14)
-    outfile = Directory+'/Figures/hovmoller_'+fname+'.png'
+    outfile = FigsSubDir+'/hovmoller_'+fname+'.png'
     plt.savefig(outfile,bbox_inches='tight')
     print('Created '+outfile)
     
@@ -176,6 +177,11 @@ time step. The user needs to specify the file where the CSV are located")
   needed for most of uses")
     args = parser.parse_args()
     Directory = args.Directory
+    
+    # Diectory for saving figures
+    FigsDir = Directory+'/Figures/'
+    FigsSubDir = FigsDir+'/vertical/'
+    check_create_folder(FigsSubDir)
         
     # Specs for plotting
     linecolors = ['#3B95BF','#87BF4B','#BFAB37','#BF3D3B']

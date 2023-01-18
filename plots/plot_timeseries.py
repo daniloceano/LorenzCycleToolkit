@@ -20,6 +20,14 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
 import argparse
+import os
+
+def check_create_folder(DirName):
+    if not os.path.exists(DirName):
+                os.makedirs(DirName)
+                print(DirName+' created')
+    else:
+        print(DirName+' directory exists')
 
 def plot_timeseries(df,term_list,linecolor,fname,label,outdir):
     # Guarantee no plots are open
@@ -67,28 +75,34 @@ def plot_timeseries(df,term_list,linecolor,fname,label,outdir):
     plt.savefig(outdir+'timeseires_'+fname+'.png')
     print('timeseires_'+fname+'.png created')
 
-            
-def plot_boxplot(df,term_list,linecolor,fname,label,outdir):
-    # Guarantee no plots are open
+    
+def plot_min_zeta_hgt(outfile,FigsDir):
+    
+    trackfile = ''.join(outfile.split('.csv'))+'_track'
+    track = pd.read_csv(trackfile,parse_dates=[0],delimiter=';',index_col='time')
+    
     plt.close('all')
-    plt.figure(figsize=(8,8))
-    for term,i in zip(term_list,range(len(term_list))):
-        bplot = plt.boxplot(df[term],positions=[i/3],vert=True,
-                            patch_artist=True,notch=True,labels=[term])
-        bplot['boxes'][-1].set_facecolor(linecolor[i])
-        bplot['boxes'][-1].set_alpha(0.7)
-    # Horizontal line for 0
-    if term not in energy_labels:
-        plt.axhline(y = 0, color = 'k', linestyle = '-',
-                    linewidth=1, zorder=1,alpha=0.8)
-        plt.ylabel(label+r' $(J\,m^{-2})$',fontsize=14)
-    else:
-        plt.ylabel(label+r' $(W\,m^{-2})$',fontsize=14)   
-    if term in budget_diff_labels:
-        plt.xticks(rotation=25)
-    # Saving figure
-    plt.savefig(outdir+'boxplot_'+fname+'.png')
-    print('boxplot_'+fname+'.png created')
+    fig, ax1 = plt.subplots(figsize=(15,10))
+    
+    lns1 = ax1.plot(track.index, track['min_zeta_850'],c='#554348', marker='o',
+             label= '850 hPa minimum vorticity')
+    ax2 = ax1.twinx()
+    lns2 = ax2.plot(track.index, track['min_hgt_850'],c='#6610F2', marker='s',
+             label= '850 hPa minimum geopotential height')
+    # added these three lines
+    lns = lns1+lns2
+    labs = [l.get_label() for l in lns]
+    ax2.legend(lns, labs, loc='best',prop={'size': 18})
+    ax1.grid(c='gray',linewidth=0.25,linestyle='dashdot', axis='x')
+    ax1.tick_params(axis='x', labelrotation=20)
+    ax1.xaxis.set_tick_params(labelsize=16)
+    ax1.yaxis.set_tick_params(labelsize=16)
+    ax2.yaxis.set_tick_params(labelsize=16)
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d %HZ'))
+    
+    # plt.title('System track and boxes defined for compuations \n', fontsize = 22)
+    plt.savefig(FigsDir+'timeseries-min_zeta_hgt.png',bbox_inches='tight')
+    print('\nCreated:',FigsDir+'track_boxes.png')
 
 
 def main():
@@ -99,11 +113,13 @@ def main():
     # Diectory for saving figures
     ResultsSubDirectory = '/'.join(data.split('/')[:-1])
     FigsDir = ResultsSubDirectory+'/Figures/'
+    FigsSubDir = FigsDir+'/timeseries/'
+    check_create_folder(FigsSubDir)
     # Make plot for timeseries
+    plot_min_zeta_hgt(data,FigsDir)
     for term_list,cols,fname,label in zip(terms_list,cols_list,
                                       fnames,labels_list):
-        plot_timeseries(df,term_list,cols,fname,label,FigsDir)
-        plot_boxplot(df,term_list,cols,fname,label,FigsDir)
+        plot_timeseries(df,term_list,cols,fname,label,FigsSubDir)
         
     print('All done!')
 
