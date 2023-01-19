@@ -104,7 +104,7 @@ def get_data(infile, varlist):
 # It requires the box_lims file with the limits for the box used for the
 # computations, which is fixed in time. IN this framework we can analyse how
 # the eddies contribute for the local energy cycle.
-def LEC_fixed():
+def LEC_fixed(data):
     print('Computing energetics using fixed framework')
     # Box limits used for compuations
     dfbox = pd.read_csv('../inputs/box_limits',header=None,delimiter=';',index_col=0)
@@ -119,9 +119,6 @@ def LEC_fixed():
     if min_lat > max_lat:
         raise ValueError('Error in box_limits: min_lat > max_lat')
         quit()
-    # 2) Open the data
-    # data = get_data(infile, varlist)  
-    # Indexers
     dfVars = pd.read_csv(varlist,sep= ';',index_col=0,header=0)
     LonIndexer,LatIndexer,TimeName,VerticalCoordIndexer = \
       dfVars.loc['Longitude']['Variable'],dfVars.loc['Latitude']['Variable'],\
@@ -343,7 +340,7 @@ def LEC_moving(data):
         iQ = Q.sel({TimeName:t})
         # Get current time and box limits
         itime = str(t)
-        datestr = pd.to_datetime(itime).strftime('%Y-%m-%d %HZ')
+        datestr = pd.to_datetime(itime).strftime('%Y-%m-%d-%H%M')
         
         # Open those variables for saving 
         iu_850 = u.sel({TimeName:t}).sel({VerticalCoordIndexer:850})
@@ -368,7 +365,7 @@ def LEC_moving(data):
             # Track timestep closest to the model timestep, just in case
             # the track file has a poorer temporal resolution
             track_itime = track.index[track.index.get_loc(
-                datestr, method='nearest')].strftime('%Y-%m-%d %HZ')
+                t, method='nearest')].strftime('%Y-%m-%d %HZ')
             min_lon = track.loc[track_itime]['Lon']-(width/2)
             max_lon = track.loc[track_itime]['Lon']+(width/2)
             min_lat = track.loc[track_itime]['Lat']-(length/2)
@@ -413,7 +410,7 @@ def LEC_moving(data):
             southern_limit=min_lat, northern_limit=max_lat,
             output_dir=ResultsSubDirectory, Q=iQ)
         except:
-            raise SystemExit('Error on creating the box for the computations')
+            raise SystemExit('Error ondatestr creating the box for the computations')
         # Compute energy terms
         try:
             ec_obj = EnergyContents(box_obj,method='moving')

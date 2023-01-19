@@ -63,8 +63,9 @@ def plot_zeta(ax, zeta, lat, lon, hgt=None):
                       transform=crs_longlat) 
     plt.colorbar(cf1, pad=0.07, orientation='vertical', shrink=0.5)
     if hgt is not None:
-        cs = ax.contour(lon, lat, hgt, levels=11, colors='#747578', 
-                        linestyles='dashed',linewidths=1,transform=crs_longlat)
+        cs = ax.contour(lon, lat, hgt, levels=11, colors='#344e41', 
+                        linestyles='dashed',linewidths=1.3,
+                        transform=crs_longlat)
         ax.clabel(cs, cs.levels, inline=True, fontsize=10)
     
 def map_decorators(ax):
