@@ -47,7 +47,7 @@ Note that you should only change the colums corresponding to "Variable" and "Uni
 Then, from the [source code folder](src) you can run, for example:
 
 ```
-python lorenz-cycle.py path/to/infile.nc -e
+python lorenz-cycle.py path/to/infile.nc -r -e
 ```
 
 ## Moving freamework
