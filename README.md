@@ -20,17 +20,17 @@ Where ε represents errors numeric errors. The complete cycle for a given period
 
 The Lorenz-Cycle program is designed for computing the LEC for a specific region on the atmosphere. It requires a netCDF file containing wind (zonal, meridional and vertical components), air temperature and geopotential data and can be run using two distinct frameworks:
 
-1. Stationary framewrok, where the domain is fixed in time by the file: inputs/box_limits; 
+1. Fixed framewrok, where the domain is fixed in time by the file: inputs/box_limits; 
 
-2. Unstationary framework, where the domain can follow a pertubation on the atmosphere, which track is defined in the file: inputs/track. 
+2. Moving framework, where the domain can follow a pertubation on the atmosphere. 
 
 More details on running the program are provided bellow.
 
 # Usage
 
-## Stationary framework
+## Fixed framework
 
-**Important!** Before running the program be sure to check the [Flags](#Flags) section.
+**Important!** Before running the program be sure to check the [Flags](#flags) section.
 
 First of all, you'll need a NetCDF file containing the following variables: zonal (u) and meridional (v) wind components, vertical wind speed (omega), air temperature and geopotential or geopotential height. The data is required to follow a pressure-level vertical levels.
 
@@ -50,23 +50,44 @@ Then, from the [source code folder](src) you can run, for example:
 python lorenz-cycle.py path/to/infile.nc -e
 ```
 
-## Unstationary freamework
+## Moving freamework
 
-**Important!** Before running the program be sure to check the [Flags](#Flags) section.
+**Important!** Before running the program be sure to check the [Flags](#flags) section.
 
-As in the stationary framework, the first step is to have a NetCDF file containing the following variables: zonal (u) and meridional (v) wind components, vertical wind speed (omega), air temperature and geopotential or geopotential height. The data is required to follow a pressure-level vertical levels.
+#### Using a pre-defined domain
 
-Now, instead of delimiting the computational domain, it is required a [track file](inputs/track) containing the central position of the system of interest in different time steps. The program will then create, for each time step, a box with 15°x15° around this central point to compute the energetics terms. The track file should look like this:
+As in the fixed framework, the first step is to have a NetCDF file containing the following variables: zonal (u) and meridional (v) wind components, vertical wind speed (omega), air temperature and geopotential or geopotential height. The data is required to follow a pressure-level vertical levels.
+
+Now, instead of delimiting the computational domain, it is required a [track file](inputs/track) containing the central position of the system of interest in different time steps. The program will then create, for each time step, a box with 15°x15° around this central point to compute the energetics terms. Optionally, the user can add the length and width columns to the track file, for using a distinct domain size than the default. The track file should look like this:
 
 ![image](https://user-images.githubusercontent.com/56005607/206721056-61fa32ce-aa5d-4f16-af28-c46ac2a9bf88.png)
 
-As in the stationary framework, it is required to specify in the [fvars](inputs/fvars) file the how the variables are named in the NetCDF file and which units are being used. See above. 
+As in the fixed framework, it is required to specify in the [fvars](inputs/fvars) file the how the variables are named in the NetCDF file and which units are being used. See above. 
 
 Then, from the [source code folder](src) you can run, for example:
 
 ```
-python lorenz-cycle.py path/to/infile.nc -l
+python lorenz-cycle.py path/to/infile.nc -r -t
 ```
+
+#### Interactively choosing the domain
+
+Instead of using a pre-defined domain, in this method a pop-up window will appear for the user displaying the world map and the vorticity field. For using such method, the user can run, for example:
+
+```
+python lorenz-cycle.py path/to/infile.nc -r -c
+```
+
+Firstly, the user must select an area for slicing the global data, which improves visualization and processing time. To select the area, the user needs to click twice on the screen. The first click selects the top-left corner of the area, and the second click selects the bottom-right corner. The order of these clicks does not matter.
+
+![image](https://user-images.githubusercontent.com/56005607/214921907-e19d0024-08dc-4475-ab65-c953e04e7859.png)
+
+
+After this, the pop-up window will display the vorticity data for the selected area only. For each time step, the user will be prompted to select a computational area by clicking on the screen.
+
+![image](https://user-images.githubusercontent.com/56005607/214922008-5b7c094f-c160-4415-a528-07cc58730827.png)
+
+After finishing the computations, it will be created a [track](#auxiliary files)  file containing the domain central latitude and longitude, its length and width and the minimum vorticity and maximum windspeed inside the domain.
 
 ## File naming system
 
@@ -75,19 +96,27 @@ Alhtough it is not necessary to, it is advisible to use a file naming convenctio
 
 ## Flags
 
-- residuals
+- -r, --residuals
 
 The default behaviour for computing the energetics, and the one intended by the works of Lorenz, was to compute the dissipation terms directly by using wind stress fields. However, for many of the reanalysis data, those variables are not available for all levels of the atmosphere. Therefore, the dissipation terms might be estimated as residuals from the budget equations (see the [first section](## What is the Lorenz Energy Cycle?)).
 
-- stationary
+- -m, --moving
 
-Compute the LEC using a fixed domain (see [stationary framework](## Stationary framework))
+Compute the LEC using a fixed domain (see [fixed framework](#fixed framework))
 
-- unstationary
+- -t, --track
 
-Compute the LEC using a domain that follows the system (see [unstationary framework](## Untationary framework))
+Compute the LEC using a domain that follows the system (see [moving framework](#moving framework))
 
-- geopotential
+- -c, --choose
+
+For each time step, interactively select the domain (see [Moving domain](#moving domain))
+
+- -o, --outname
+
+Choose a name for saving the results (optional)
+
+- -g, --geopotential
 
 Use this flag when instead of Geopotential Height, Geopotential data is provided. It is required that the FVars file is adjusted accordingly, for example:
 
