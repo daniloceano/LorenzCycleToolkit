@@ -539,6 +539,9 @@ and a arbitraty box of 15°x15° is constructed.")
     group.add_argument("-c", "--choose", default = False,
     action='store_true', help = "For each time step, the user can choose the\
 domain by clicking on the screen.")
+    parser.add_argument("-o", "--outname", default = False, type=str,
+    help = "choose a name for saving results (default is\
+ the same as infile)")
  
     args = parser.parse_args()
     
@@ -554,7 +557,10 @@ domain by clicking on the screen.")
     # Directory where results will be stored
     ResultsMainDirectory = '../LEC_Results'
     # Append data limits to outfile name
-    outfile_name = ''.join(infile.split('/')[-1].split('.nc'))+'_'+method
+    if args.outname:
+        outfile_name = args.outname
+    else:
+        outfile_name = ''.join(infile.split('/')[-1].split('.nc'))+'_'+method
     # Each dataset of results have its own directory, allowing to store results
     # from more than one experiment at each time
     ResultsSubDirectory = ResultsMainDirectory+'/'+outfile_name+'/'
