@@ -48,10 +48,13 @@ def take_closest(myList, myNumber):
 # Plot the area limited by the lons and lats values that will be used
 # for the computations
 def main():
-
-    track = pd.read_csv('../inputs/track',parse_dates=[0],
-                        delimiter=';',index_col='time')
+    
     outfile = sys.argv[1]
+    
+    trackfile = ''.join(outfile.split('.csv'))+'_track'
+    track = pd.read_csv(trackfile,parse_dates=[0],
+                        delimiter=';',index_col='time')
+    
     ResultsSubDirectory = '/'.join(outfile.split('/')[:-1])
     FigsDir = ResultsSubDirectory+'/Figures/'
         
