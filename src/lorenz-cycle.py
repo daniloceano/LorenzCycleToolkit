@@ -29,6 +29,7 @@ from thermodynamics import AdiabaticHEating
 from metpy.units import units
 from metpy.calc import vorticity
 from metpy.calc import wind_speed
+from metpy.constants import g
 
 from select_area import slice_domain
 from select_area import draw_box_map
@@ -288,7 +289,11 @@ def LEC_moving(data):
          units(dfVars.loc['Eastward Wind Component']['Units']).to('m/s'))
     v = (data[dfVars.loc['Northward Wind Component']['Variable']] *
          units(dfVars.loc['Northward Wind Component']['Units']).to('m/s'))
-    hgt = (data[dfVars.loc['Geopotential Height']['Variable']] *
+    if args.geopotential:
+        hgt = ((data[dfVars.loc['Geopotential']['Variable']] *
+         units(dfVars.loc['Geopotential']['Units']))/g).metpy.convert_units('gpm')
+    else:
+        hgt = (data[dfVars.loc['Geopotential Height']['Variable']] *
          units(dfVars.loc['Geopotential Height']['Units']).to('gpm'))
     Q = AdiabaticHEating(tair, pres, omega ,u, v,
             VerticalCoordIndexer,LatIndexer,LonIndexer,TimeName)
