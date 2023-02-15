@@ -1,6 +1,6 @@
 ;standard_name;Variable;Units
 Air Temperature;air_temperature;t;K
-Geopotential;geopotential_height;z;m
+Geopotential;geopotential_height;z;m**2/s**2
 Relative Humidity;relative_humidity;r;percent
 Omega Velocity;omega;w;Pa/s
 Eastward Wind Component;eastward_wind;u;m/s
