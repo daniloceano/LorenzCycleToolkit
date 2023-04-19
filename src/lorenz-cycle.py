@@ -526,8 +526,11 @@ def LEC_moving(data):
     # Save system position as a csv file for replicability
     track = pd.DataFrame.from_dict(position)
     track = track.rename(columns={'central_lat':'Lat','central_lon':'Lon'})
-    track.to_csv(ResultsSubDirectory+outfile_name+'_track',
-                 index=False, sep=";")
+    output_trackfile =  ResultsSubDirectory+outfile_name+'_track'
+    track.to_csv(output_trackfile, index=False, sep=";")
+    
+    # Determine periods
+    
     
     # 13) Make figures
     FigsDirectory = ResultsSubDirectory+'/Figures'
