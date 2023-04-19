@@ -57,7 +57,32 @@ def convert_lon(df,LonIndexer):
     return df
 
 # Function for opening the data
-def get_data(infile, varlist):   
+def get_data(infile: str, varlist: str) -> xr.Dataset:
+    """
+    Opens a NetCDF file and extracts the variables specified in a CSV file.
+
+    Args:
+        infile (str): The file path of the NetCDF file to be opened.
+        varlist (str): The file path of the CSV file containing the list of 
+                       variables to extract from the NetCDF file.
+
+    Returns:
+        xr.Dataset: A dataset containing the extracted variables.
+
+    Raises:
+        SystemExit: If the specified CSV file or NetCDF file is not found or if
+                    an error occurs while opening the NetCDF file.
+
+    The function opens a NetCDF file and extracts the variables specified in a 
+    CSV file. The CSV file should contain a list of variables in the first column 
+    and the corresponding variable names in the second column, separated by a 
+    semicolon (;). The NetCDF file should have dimensions for longitude, latitude, 
+    time and vertical level. The function converts the longitude and latitude 
+    values to radians, sorts the data by longitude, level and latitude, and fills 
+    missing values with zeros. Finally, it returns a dataset containing the 
+    extracted variables.
+    """
+    
     print('Variables specified by the user in: '+varlist)
     print('Attempting to read '+varlist+' file...')
     try:
@@ -100,26 +125,34 @@ def get_data(infile, varlist):
     
     return data
 
-#---------------------------------------------------------------------------
-# Computes the Lorenz Energy Cycle using an fixed framework.
-# It requires the box_lims file with the limits for the box used for the
-# computations, which is fixed in time. IN this framework we can analyse how
-# the eddies contribute for the local energy cycle.
 def LEC_fixed(data):
+    """
+    Computes the Lorenz Energy Cycle using a fixed framework.
+    
+    Args:
+    data: A Xarray Dataset containing the data to compute the energy cycle.
+    
+    Returns:
+    None
+    """
+    
     print('Computing energetics using fixed framework')
-    # Box limits used for compuations
+    
+    # Read the box limits from box_limits file
     dfbox = pd.read_csv('../inputs/box_limits',header=None,delimiter=';',index_col=0)
     min_lon = float(dfbox.loc['min_lon'].values)
     max_lon = float(dfbox.loc['max_lon'].values)
     min_lat = float(dfbox.loc['min_lat'].values)
     max_lat = float(dfbox.loc['max_lat'].values)
-    # Warns user if limits are wrong
+    
+    # Raise a ValueError if the box limits are invalid
     if min_lon > max_lon:
         raise ValueError('Error in box_limits: min_lon > max_lon')
         quit()
     if min_lat > max_lat:
         raise ValueError('Error in box_limits: min_lat > max_lat')
         quit()
+        
     dfVars = pd.read_csv(varlist,sep= ';',index_col=0,header=0)
     LonIndexer,LatIndexer,TimeName,VerticalCoordIndexer = \
       dfVars.loc['Longitude']['Variable'],dfVars.loc['Latitude']['Variable'],\
@@ -130,7 +163,6 @@ def LEC_fixed(data):
     print('\n Parameters spcified for the bounding box:')
     print('min_lon, max_lon, min_lat, max_lat: '+str([min_lon,
                                                      max_lon, min_lat, max_lat]))
-    # 3) Create folder to save results
     # Convert box limits to strings for apprending to file name
     lims = ''
     for i in [min_lon, max_lon]:
@@ -264,12 +296,17 @@ def LEC_fixed(data):
     cmd = "python ../plots/plot_area.py {0} {1} {2} {3} {4}".format(min_lon, max_lon,min_lat,max_lat, ResultsSubDirectory)
     os.system(cmd)
     
-#---------------------------------------------------------------------------
-# Computes the Lorenz Energy Cycle using an fixed framework.
-# It requires the box_lims file with the limits for the box used for the
-# computations, which is fixed in time. IN this framework we can analyse how
-# the eddies contribute for the local energy cycle.
+
 def LEC_moving(data):
+    """
+    Computes the Lorenz Energy Cycle using a moving framework.
+    
+    Args:
+    data: A Xarray Dataset containing the data to compute the energy cycle.
+    
+    Returns:
+    None
+    """
     print('Computing energetics using moving framework')
     # 2) Open the data
     # data = get_data(infile, varlist)  
