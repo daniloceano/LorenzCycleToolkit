@@ -8,4 +8,4 @@ Northward Wind Component;northward_wind;v;m/s
 Longitude;;longitude
 Latitude;;latitude
 Time;;time
-Vertical Level;;level
+Vertical Level;;isobaricInhPa
