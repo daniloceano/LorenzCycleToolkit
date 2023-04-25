@@ -327,7 +327,6 @@ def plot_periods(da, periods, fname):
 def get_periods(track_file, varlist, outfile_name):
     
     dfVars = pd.read_csv(varlist,sep= ';',index_col=0,header=0)
-    TimeIndexer = dfVars.loc['Time']['Variable']
     
     track = pd.read_csv(track_file, parse_dates=[0],delimiter=';',index_col=[0])
     
