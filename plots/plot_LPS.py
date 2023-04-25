@@ -284,8 +284,12 @@ def LorenzPhaseSpace_zoomed(df,outname):
               angles='xy', scale_units='xy', color='#383838',
               scale=1,zorder=3)
     
-    norm = colors.TwoSlopeNorm(vmin=min(Ge)+(min(Ge)*0.2),
+    if max(Ge) > 0:
+        norm = colors.TwoSlopeNorm(vmin=min(Ge)-(min(Ge)*0.2),
                                vcenter=0, vmax=max(Ge)+(max(Ge)*0.2))
+    else:
+        norm = colors.TwoSlopeNorm(vmin=min(Ge)-(min(Ge)*0.2),
+                               vcenter=0, vmax=1)
     
     # plot the moment of maximum intensity
     ax.scatter(Ck.loc[s.idxmax()],Ca.loc[s.idxmax()],
@@ -364,16 +368,17 @@ def main():
     smoothed['Datetime'] = pd.DataFrame(starts.astype(str)+' - '+\
                                         ends.astype(str)).values
     # Get data for cyclone life cycle periods
-    periods = pd.read_csv('../inputs/periods',sep= ';',header=0)
+    periods = pd.read_csv('/'.join(outfile.split('/')[:-1])+"/periods.csv",
+                          index_col=[0])
     for i in range(len(periods)):
         start,end = periods.iloc[i]['start'],periods.iloc[i]['end']
         selected_dates = df[(df['Datetime'] >= start) & (df['Datetime'] <= end)]
         if i == 0:
             period = selected_dates.drop(['Datetime','Date','Hour'],axis=1).mean()
-            period = period.to_frame(name=periods.iloc[i]['Period']).transpose()
+            period = period.to_frame(name=periods.iloc[i].name).transpose()
         else:
             tmp = selected_dates.drop(['Datetime','Date','Hour'],axis=1).mean()
-            tmp = tmp.to_frame(name=periods.iloc[i]['Period']).transpose()
+            tmp = tmp.to_frame(name=periods.iloc[i].name).transpose()
             period = pd.concat([period,tmp]) 
     # Set datetime to the period date range
     period['Datetime'] = (periods['start'].astype(str)+' - '+\
@@ -398,6 +403,7 @@ if __name__ == "__main__":
 Lorenz Phase Space.")
     parser.add_argument("outfile", help = "The .csv file containing the \
 results from the main.py program.")
+
 
     args = parser.parse_args()
     outfile = args.outfile

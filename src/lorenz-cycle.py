@@ -34,6 +34,8 @@ from metpy.constants import g
 from select_area import slice_domain
 from select_area import draw_box_map
 
+from determine_periods import get_periods
+
 from scipy.signal import savgol_filter    
 import pandas as pd
 import xarray as xr
@@ -530,7 +532,7 @@ def LEC_moving(data):
     track.to_csv(output_trackfile, index=False, sep=";")
     
     # Determine periods
-    
+    get_periods(output_trackfile, varlist, ResultsSubDirectory+'/periods')
     
     # 13) Make figures
     FigsDirectory = ResultsSubDirectory+'/Figures'

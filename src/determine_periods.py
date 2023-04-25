@@ -33,28 +33,7 @@ import cartopy
 def convert_lon(xr,LonIndexer):
     xr.coords[LonIndexer] = (xr.coords[LonIndexer] + 180) % 360 - 180
     xr = xr.sortby(xr[LonIndexer])
-    return xr
-
-def get_min_zeta(track, zeta850):
-    
-    min_zeta, times = [], []
-    lats, lons = [], []
-    for t in zeta850[TimeIndexer]:
-        datestr = pd.to_datetime(t.values)
-        
-        if datestr in track.index:
-            times.append(t.values)
-            lat,lon = track.loc[datestr]
-            lats.append(lat), lons.append(lon)
-            min_zeta.append(float(zeta850.sel({TimeIndexer:t}
-                    ).sel({LatIndexer:lat,LonIndexer:lon},method='nearest'))) 
-            
-    df = pd.DataFrame(min_zeta, index=times).rename(columns={0:'zeta'})
-    df['lat'] = lats 
-    df['lon'] = lons
-    df.index.names = [TimeIndexer]
-    
-    return df      
+    return xr 
 
 def filter_var(variable):
     window_lenght = round(len(variable)/2)
@@ -78,13 +57,13 @@ def array_vorticity(df):
     
     # derivatives of the double-filtered vorticity
     da = da.assign(variables={'dzfil2_dt':
-                da.zeta_fil2.differentiate(TimeIndexer,datetime_unit='h')})
+                da.zeta_fil2.differentiate('time',datetime_unit='h')})
         
     da = da.assign(variables={'dzfil2_dt2':
-                da.dzfil2_dt.differentiate(TimeIndexer,datetime_unit='h')})
+                da.dzfil2_dt.differentiate('time',datetime_unit='h')})
         
     da = da.assign(variables={'dzfil2_dt3':
-                da.dzfil2_dt2.differentiate(TimeIndexer,datetime_unit='h')})
+                da.dzfil2_dt2.differentiate('time',datetime_unit='h')})
         
     # filter derivatives
     da = da.assign(variables={'dz_dt_fil2':
@@ -263,7 +242,7 @@ def decaying_stage(mature, z, dz2):
             
     return decaying
 
-def get_phases(da):
+def get_phases(da, outfile_name):
     
     z = da.zeta_fil2
     dz2 = da.dz_dt2_fil2
@@ -291,6 +270,15 @@ def get_phases(da):
                     period[0]-six_hours, period[-1]+six_hours,
                               freq=f'{int(dt.total_seconds() / 3600)} H'))
         phases[key] = tmp
+        
+    # Extract the first and last elements from each list
+    df_dict = {k: [v[0][0], v[-1][-1]] for k, v in phases.items()}
+    # Convert the dictionary to a DataFrame
+    df = pd.DataFrame.from_dict(df_dict, orient='index',
+                                columns=['start', 'end'])
+    
+    df.to_csv(outfile_name+'.csv')
+    print(outfile_name+'.csv saved')
      
     return phases
     
@@ -330,25 +318,24 @@ def plot_periods(da, periods, fname):
     
     plt.tight_layout()
     
-    outname = '../vorticity_analysis/periods/'
-    outname+=fname+'.png'
-    # plt.savefig(outname,dpi=500)
-    # print(outname,'saved')
+    outname = fname+'.png'
+    plt.savefig(outname,dpi=500)
+    print(outname,'saved')
     
-
 
 
 def get_periods(track_file, varlist, outfile_name):
+    
     dfVars = pd.read_csv(varlist,sep= ';',index_col=0,header=0)
     TimeIndexer = dfVars.loc['Time']['Variable']
     
-    track = pd.read_csv(track_file, parse_dates=[0],delimiter=';',index_col=TimeIndexer)
+    track = pd.read_csv(track_file, parse_dates=[0],delimiter=';',index_col=[0])
     
-    df = pd.DataFrame(track['min_hgt_850'].rename('zeta'))
+    df_zeta = pd.DataFrame(track['min_hgt_850'].rename('zeta'))
         
-    da = array_vorticity(df)
+    da = array_vorticity(df_zeta)
     
-    periods  = get_phases(da)
-    
+    periods  = get_phases(da, outfile_name)
+        
     plot_periods(da, periods, outfile_name)
 
