@@ -545,13 +545,12 @@ def LEC_moving(data, varlist):
     output_trackfile =  ResultsSubDirectory+outfile_name+'_track'
     track.to_csv(output_trackfile, index=False, sep=";")
     
-    # Determine periods
-    get_periods(output_trackfile, varlist, ResultsSubDirectory+'/periods')
-    
-    # 13) Make figures
+    # 13) Make figures directory
     FigsDirectory = ResultsSubDirectory+'/Figures'
     check_create_folder(FigsDirectory)
     
+    # Determine periods
+    get_periods(output_trackfile, ResultsSubDirectory)
     
     if args.residuals:
         flag = ' -r'

@@ -370,6 +370,7 @@ def main():
     # Get data for cyclone life cycle periods
     periods = pd.read_csv('/'.join(outfile.split('/')[:-1])+"/periods.csv",
                           index_col=[0])
+    periods = periods.dropna()
     for i in range(len(periods)):
         start,end = periods.iloc[i]['start'],periods.iloc[i]['end']
         selected_dates = df[(df['Datetime'] >= start) & (df['Datetime'] <= end)]
