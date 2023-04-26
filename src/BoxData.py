@@ -178,5 +178,6 @@ class BoxData:
         self.Q_AE = self.Q_ZA - self.Q_AA
         
         # Static stability parameter
-        self.sigma_AA = StaticStability(self.tair, self.PressureData, self.VerticalCoordIndexer,
-                        self.xlength, self.ylength)
+        self.sigma_AA = StaticStability(self.tair, self.PressureData,
+                                        self.VerticalCoordIndexer,
+                                        self.xlength, self.ylength)

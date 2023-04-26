@@ -272,7 +272,12 @@ def get_phases(da, outfile_name):
         phases[key] = tmp
         
     # Extract the first and last elements from each list
-    df_dict = {k: [v[0][0], v[-1][-1]] for k, v in phases.items()}
+    df_dict = {}
+    for k, v in phases.items():
+        if len(v) == 0:
+            df_dict[k] = []
+        else:
+            df_dict[k] = [v[0][0], v[-1][-1]]
     # Convert the dictionary to a DataFrame
     df = pd.DataFrame.from_dict(df_dict, orient='index',
                                 columns=['start', 'end'])

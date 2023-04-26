@@ -24,8 +24,6 @@ from metpy.constants import Re
 from metpy.calc import potential_temperature
 
 
-# def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
-#                     LatIndexer,LonIndexer,BoxNorth,BoxSouth,BoxWest, BoxEast):
 def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
                     xlength,ylength):    
     
@@ -62,54 +60,38 @@ def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
     sigma_AA = (sigma_ZA*sigma_ZA["coslats"]).integrate("rlats")/ylength
     return sigma_AA
 
-def TairTendency(TemperatureData,TimeName,LatIndexer,LonIndexer,
-                 VerticalCoordIndexer):
-    delTdelt = TemperatureData.differentiate(
-            TimeName,datetime_unit='s') / units('seconds')
-
-    return delTdelt
-
-def HorizontalTemperatureAdvection(TemperatureData,LatIndexer,LonIndexer,
-                                   UWindComponentData,VWindComponentData,
-                                   VerticalCoordIndexer):
-    lons,lats = TemperatureData[LonIndexer],TemperatureData[LatIndexer]
-    cos_lats = np.cos(np.deg2rad(lats))
-    ## Horizontal advection of temperature ##
+def AdiabaticHEating(TemperatureData, PressureData, OmegaData,
+                      UWindComponentData,VWindComponentData,
+                      VerticalCoordIndexer,LatIndexer,LonIndexer,TimeName):
+    """
+    Compute the diabatic heating as a residual form the thermodynamic 
+    equation for all vertical levels and for the desired domain
+    """
+    
+    ## Horizontal temperature advection ##
+    lons,lats  = TemperatureData[LonIndexer], TemperatureData[LatIndexer]
+    cos_lats = TemperatureData["coslats"]
     # Differentiate temperature in respect to longitude and latitude
-    dTdlambda = TemperatureData.copy(deep=True).differentiate(LonIndexer)
-    dTdphi = TemperatureData.copy(deep=True).differentiate(LatIndexer)
-    # Get the values for dx and dy in meters
+    dTdlambda = TemperatureData.differentiate(LonIndexer)
+    dTdphi = TemperatureData.differentiate(LatIndexer)
+    # Get the values for width and length in meters
     dx = np.deg2rad(lons.differentiate(LonIndexer))*cos_lats*Re
     dy = np.deg2rad(lats.differentiate(LatIndexer))*Re
-    AdvHT = -1* ((UWindComponentData*dTdlambda/dx)+(
-                                VWindComponentData*dTdphi/dy))
+    AdvHTemp = -1* ((UWindComponentData*dTdlambda/dx)+(VWindComponentData*dTdphi/dy)) 
 
+    theta = potential_temperature(
+        PressureData,TemperatureData)
     
-    return AdvHT
+    dTdt = TemperatureData.differentiate(
+            TimeName,datetime_unit='h') / units('hour')
+    
+    sigma = -1 * (TemperatureData/theta) * theta.differentiate(
+        VerticalCoordIndexer) / units(str(PressureData.metpy.units))
+    
+    ResT =  dTdt - AdvHTemp - (sigma * OmegaData)
+    
+    AdiabaticHeating = ResT*Cp_d
+    
+    return AdiabaticHeating
+        
 
-def AdiabaticHEating(TemperatureData,PressureData, OmegaData,
-                     UWindComponentData,VWindComponentData,
-                     VerticalCoordIndexer,LatIndexer,LonIndexer,TimeName):
-        """
-        Compute the diabatic heating as a residual form the thermodynamic 
-        equation for all vertical levels and for the desired domain
-        """
-        # Temperature tendency as dT/dt
-        delTdelt = TairTendency(TemperatureData,TimeName,LatIndexer,LonIndexer,
-                 VerticalCoordIndexer)
-        
-        # Horizonal temperature advection
-        AdvHT = HorizontalTemperatureAdvection(TemperatureData,LatIndexer,
-                 LonIndexer,UWindComponentData,VWindComponentData,
-                                   VerticalCoordIndexer)
-        
-        # Static stability parameter (here we need a slight modified version
-        # from calc.py so the units can match)
-        theta = potential_temperature(PressureData,TemperatureData)
-        sigma = -(TemperatureData/theta) *theta.differentiate(
-            VerticalCoordIndexer)/units.hPa
-        
-        ## Diabatic reating as a residual ##
-        Q = delTdelt-AdvHT-(sigma*OmegaData)
-        J = Q*Cp_d
-        return J

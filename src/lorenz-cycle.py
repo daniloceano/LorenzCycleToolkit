@@ -44,6 +44,9 @@ import numpy as np
 import argparse
 import sys
 import time
+import logging
+
+logging.getLogger('dask').setLevel(logging.ERROR)
 
 def check_create_folder(DirName):
     if not os.path.exists(DirName):
@@ -102,13 +105,16 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
     print('Ok!')
     print('Opening input data...')
     try:
-        full_data = convert_lon(xr.open_dataset(infile),LonIndexer)
+        full_data = convert_lon(xr.open_dataset(infile,
+                                            chunks={'time': 1}),LonIndexer)
     except:
         raise SystemExit('ERROR!!!!!\n Could not open data. Check if path is\
  correct, fvars file and file format (should be .nc)')
-    print('Ok!')
+    print('Ok! Now assigning coordinates...')
     # load data into memory (code optmization)
-    data = full_data.load()
+    # data = full_data.chunk({'time': -1, LatIndexer: 'auto', LonIndexer: 'auto', 
+    #                         LevelIndexer: 'auto'}).compute()
+    data = full_data
     # Assign lat and lon as radians, for calculations
     data = data.assign_coords({"rlats": np.deg2rad(data[LatIndexer])})
     data = data.assign_coords({"coslats": np.cos(np.deg2rad(data[LatIndexer]))})
@@ -117,13 +123,14 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
     # arrangements, which could affect the results from the integrations
     data = data.sortby(LonIndexer).sortby(LevelIndexer,
                 ascending=True).sortby(LatIndexer,ascending=True)
+    print('Ok')
                         
-    # Fill missing values with 0
-    data = data.fillna(0)
-    try:
-        data = data.where(data.apply(np.isfinite)).fillna(0.0)
-    except:
-        data = data.fillna(0)
+    # # Fill missing values with 0
+    # data = data.fillna(0)
+    # try:
+    #     data = data.where(data.apply(np.isfinite)).fillna(0.0)
+    # except:
+    #     data = data.fillna(0)
     
     return data
 
@@ -299,7 +306,7 @@ def LEC_fixed(data):
     os.system(cmd)
     
 
-def LEC_moving(data):
+def LEC_moving(data, varlist):
     """
     Computes the Lorenz Energy Cycle using a moving framework.
     
@@ -310,8 +317,6 @@ def LEC_moving(data):
     None
     """
     print('Computing energetics using moving framework')
-    # 2) Open the data
-    # data = get_data(infile, varlist)  
     # Indexers
     dfVars = pd.read_csv(varlist,sep= ';',index_col=0,header=0)
     LonIndexer,LatIndexer,TimeName,VerticalCoordIndexer = \
@@ -320,22 +325,25 @@ def LEC_moving(data):
     pres = data[VerticalCoordIndexer]*units(
          data[VerticalCoordIndexer].units).to('Pa')
     # Get variables for computing Adiabatic Heating
-    tair =  (data[dfVars.loc['Air Temperature']['Variable']] * 
+    print('Extracting variables and assiging units..')
+    tair =  (data[dfVars.loc['Air Temperature']['Variable']].compute() * 
              units(dfVars.loc['Air Temperature']['Units']).to('K'))
-    omega = (data[dfVars.loc['Omega Velocity']['Variable']] *
+    omega = (data[dfVars.loc['Omega Velocity']['Variable']].compute() *
              units(dfVars.loc['Omega Velocity']['Units']).to('Pa/s'))
-    u = (data[dfVars.loc['Eastward Wind Component']['Variable']] *
+    u = (data[dfVars.loc['Eastward Wind Component']['Variable']].compute() *
          units(dfVars.loc['Eastward Wind Component']['Units']).to('m/s'))
-    v = (data[dfVars.loc['Northward Wind Component']['Variable']] *
+    v = (data[dfVars.loc['Northward Wind Component']['Variable']].compute() *
          units(dfVars.loc['Northward Wind Component']['Units']).to('m/s'))
     if args.geopotential:
-        hgt = ((data[dfVars.loc['Geopotential']['Variable']] *
+        hgt = ((data[dfVars.loc['Geopotential']['Variable']].compute() *
          units(dfVars.loc['Geopotential']['Units']))/g).metpy.convert_units('gpm')
     else:
-        hgt = (data[dfVars.loc['Geopotential Height']['Variable']] *
+        hgt = (data[dfVars.loc['Geopotential Height']['Variable']].compute() *
          units(dfVars.loc['Geopotential Height']['Units']).to('gpm'))
-    Q = AdiabaticHEating(tair, pres, omega ,u, v,
+    print('Ok. Computing diabatic heating term..')
+    Q = AdiabaticHEating(tair, pres, omega , u, v,
             VerticalCoordIndexer,LatIndexer,LonIndexer,TimeName)
+    print('Ok.')
     
     # Create csv files for storing vertical results.
     # When those terms are computed data is simply appended to csv
@@ -408,8 +416,14 @@ def LEC_moving(data):
                 
             # Track timestep closest to the model timestep, just in case
             # the track file has a poorer temporal resolution
-            track_itime = track.index[track.index.get_loc(
-                t, method='nearest')].strftime('%Y-%m-%d %HZ')
+            closest_index = np.searchsorted(track.index, t)
+            if closest_index > 0 and (closest_index == len(track.index
+                                ) or abs(t - track.index[closest_index-1]
+                                ) < abs(t - track.index[closest_index])):
+                closest_index -= 1
+            # track_itime = track.index[track.index.get_indexer(
+            #     t, method='nearest')].strftime('%Y-%m-%d %HZ')
+            track_itime = track.index[closest_index]
             min_lon = track.loc[track_itime]['Lon']-(width/2)
             max_lon = track.loc[track_itime]['Lon']+(width/2)
             min_lat = track.loc[track_itime]['Lat']-(length/2)
@@ -449,12 +463,12 @@ def LEC_moving(data):
     
         # Create box object
         try:
-            box_obj = BoxData(data=idata, dfVars=dfVars, args=args,
+            box_obj = BoxData(data=idata.compute(), dfVars=dfVars, args=args,
             western_limit=min_lon, eastern_limit=max_lon,
             southern_limit=min_lat, northern_limit=max_lat,
             output_dir=ResultsSubDirectory, Q=iQ)
         except:
-            raise SystemExit('Error ondatestr creating the box for the computations')
+            raise SystemExit('Error on creating the box for the computations')
         # Compute energy terms
         try:
             ec_obj = EnergyContents(box_obj,method='moving')
@@ -623,6 +637,6 @@ domain by clicking on the screen.")
         print("--- %s seconds running fixed framework ---" % (time.time() - start_time))
     start_time = time.time()
     if args.track or args.choose:
-        LEC_moving(data)
+        LEC_moving(data, varlist)
         print("--- %s seconds for running moving framework ---" % (time.time() - start_time))
     
