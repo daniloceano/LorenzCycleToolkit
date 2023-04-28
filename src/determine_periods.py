@@ -421,6 +421,7 @@ def intensification_incipient_stages(mature, dz2):
         intensification.append(pd.date_range(intensification_start,
                         intensification_end, 
                         freq=f'{int(dt.total_seconds() / 3600)} H'))   
+    
     return intensification, incipient
     
 def decaying_stage(mature, z, dz2):
@@ -475,6 +476,7 @@ def get_phases(da, ResultsSubDirectory):
     dt = z.time[1] - z.time[0]
     dt = pd.Timedelta(dt.values)
     
+    
     phases = {}
     for phase, key in zip([[incipient], intensification, mature, decaying],
                     ['incipient', 'intensification', 'mature', 'decay']):
@@ -485,7 +487,15 @@ def get_phases(da, ResultsSubDirectory):
                     period[0]-six_hours, period[-1]+six_hours,
                               freq=f'{int(dt.total_seconds() / 3600)} H'))
         phases[key] = tmp
-        
+    
+    for key in list(phases.keys()):
+        if len(phases[key]) > 1:
+            new_key = f"{key} 2"
+            phases[new_key] = [phases[key][0]]
+            phases[key] = [phases[key][-1]] 
+            
+
+    
     # Extract the first and last elements from each list
     df_dict = {}
     for k, v in phases.items():
@@ -501,7 +511,7 @@ def get_phases(da, ResultsSubDirectory):
     print(ResultsSubDirectory+'periods.csv created')
      
     return phases
-    
+
 def plot_periods(da, periods, outfile_name):
     
     z = da.zeta
@@ -509,20 +519,28 @@ def plot_periods(da, periods, outfile_name):
     plt.close('all')
     fig = plt.figure(figsize=(15, 10))
     ax = fig.add_subplot(111,frameon=True)
-    colors = ['k', '#134074', '#d62828', '#f7b538', '#5b8e7d',]
+    colors = {'incipient': '#134074', 'intensification': '#d62828',
+          'mature': '#f7b538', 'decay': '#283618'}
     
-    # Plot periods
-    for phase, c in zip(periods.keys(),
-                          ['#65a1e6','#d62828','#f7b538','#9aa981']):
+    six_hours = pd.Timedelta('5h 30 min')
+    
+    # Iterate over the periods and plot each phase
+    for phase in periods.keys():
+        # Remove any variation from the phase name
+        phase_name = phase.split()[0]
+        # Get the color for the phase from the color dictionary
+        color = colors.get(phase_name, '#000000')
         for series in periods[phase]:
             if len(series) > 0:
                 ax.fill_betweenx((z.min(),z.max()+1e-5),
-                            series[0],series[-1], label=phase,
-                            facecolor=c, alpha=0.4)
-    
+                                series[0]+six_hours,
+                                series[-1]-six_hours, label=phase,
+                                facecolor=color, alpha=0.4)
+                print(phase,phase_name)
+        
     ax.plot(da.zeta.time, da.zeta,c='#6b675b',
             linewidth=4,label=r'$ζ$', alpha=0.8)
-    ax.plot(da.zeta_fil2.time, da.zeta_fil2,c=colors[0],
+    ax.plot(da.zeta_fil2.time, da.zeta_fil2,c='k',
             linewidth=6,label=r'$ζ_f$')
     
     y = np.arange(z.min(),z.max()+5e-6,1e-5)
@@ -550,14 +568,14 @@ def get_periods(output_trackfile, ResultsSubDirectory):
     # derivatives and filtered series
     track = pd.read_csv(output_trackfile, parse_dates=[0],delimiter=';',index_col=[0])
     df_zeta = pd.DataFrame(track['min_zeta_850'].rename('zeta'))        
-    ds_zeta = array_vorticity(df_zeta)
+    da = array_vorticity(df_zeta)
     
     # Determine periods
-    periods = get_phases(ds_zeta, ResultsSubDirectory)
+    periods = get_phases(da, ResultsSubDirectory)
     
     # Make plots: the second plot explain the process for detemrining the phases
-    plot_periods(ds_zeta, periods, outfile_name)
-    plot_didatic(ds_zeta, outfile_name_didatic)
+    plot_periods(da, periods, outfile_name)
+    plot_didatic(da, outfile_name_didatic)
     
 
     

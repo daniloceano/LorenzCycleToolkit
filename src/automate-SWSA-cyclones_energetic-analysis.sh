@@ -7,7 +7,10 @@ do
 
     filename=$(basename "$file")
     id=$(echo "$filename" | sed 's/track_//')
-    
+   
+    echo "$file"
+    echo "$id"
+
     echo "File ID: $id"
     cp $file ../inputs/track
     
