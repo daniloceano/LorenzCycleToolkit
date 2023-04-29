@@ -7,14 +7,13 @@ do
 
     filename=$(basename "$file")
     id=$(echo "$filename" | sed 's/track_//')
-   
-    echo "$file"
-    echo "$id"
-
-    echo "File ID: $id"
+    era5_file="${era5_dir}${id}_ERA5.nc"
+    
+    echo "\nFile ID: $id"
+    echo "ERA5 data: $era5_file"
+    
     cp $file ../inputs/track
     
-    era5_file="${era5_dir}${id}_ERA5.nc"
-    python lorenz-cycle.py $era5_file -t -r -g    
+    python lorenz-cycle.py $era5_file -t -r -g
 
 done
