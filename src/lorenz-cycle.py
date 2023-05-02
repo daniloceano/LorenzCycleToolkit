@@ -147,6 +147,10 @@ def LEC_fixed(data):
     
     print('Computing energetics using fixed framework')
     
+    print('Opening data into memory..')
+    data = data.compute()
+    print('done.')
+    
     # Read the box limits from box_limits file
     dfbox = pd.read_csv('../inputs/box_limits',header=None,delimiter=';',index_col=0)
     min_lon = float(dfbox.loc['min_lon'].values)
