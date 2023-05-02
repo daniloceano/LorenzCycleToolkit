@@ -36,9 +36,10 @@ def get_data_dict(list_terms):
     for term in list_terms:
         file = glob.glob(Directory+'/'+term+'_*')[0]
         data[term] = pd.read_csv(file)
-        print('\nOpening '+term)
-        print(data[term][::data[term].shape[0]-1])
-        print('Ok!')
+        if args.verbosity:
+            print('Opening '+term)
+            print(data[term][::data[term].shape[0]-1])
+            print('Ok!')
     return data
 
 def create_dir():
@@ -156,10 +157,10 @@ def plot_hovmoller(list_terms):
 def main():
     for term_list in [energy_labels,conversion_labels,generation_labels]: 
         if args.vertical:
-            print('\n-------------------------------------------------------------')
+            print('-------------------------------------------------------------')
             print('Creating figures with vertical profiles for each model time')
             plot_vertical(term_list)
-        print('\n-------------------------------------------------------------')
+        print('-------------------------------------------------------------')
         print('Creating hovmoller diagrams')
         plot_hovmoller(term_list)
 
@@ -175,6 +176,9 @@ time step. The user needs to specify the file where the CSV are located")
     help = "If this flag is used, it will create figures containing vertical\
   profiles for each model time. This will procude a lot of figures and is not \
   needed for most of uses")
+    parser.add_argument("--verbosity", default = False,
+                        action='store_true')
+    
     args = parser.parse_args()
     Directory = args.Directory
     

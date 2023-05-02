@@ -367,9 +367,24 @@ def main():
                      pd.Timedelta(hours=12)).dt.strftime('%Y-%m-%d %H:%M')
     smoothed['Datetime'] = pd.DataFrame(starts.astype(str)+' - '+\
                                         ends.astype(str)).values
+        
+    # Make LPS for all timesteps and 12h and 24h means
+    LorenzPhaseSpace(df,'example',example=True)
+    LorenzPhaseSpace(df,'all')
+    LorenzPhaseSpace(smoothed,'12H')
+    LorenzPhaseSpace(smoothed,'24H')
+    #Make LPS zoomed
+    LorenzPhaseSpace_zoomed(df,'all')
+    LorenzPhaseSpace_zoomed(smoothed,'12H')
+    LorenzPhaseSpace_zoomed(smoothed,'24H')
+        
     # Get data for cyclone life cycle periods
-    periods = pd.read_csv('/'.join(outfile.split('/')[:-1])+"/periods.csv",
+    try:
+        periods = pd.read_csv('/'.join(outfile.split('/')[:-1])+"/periods.csv",
                           index_col=[0])
+    except:
+        print('Warning: periods file not found')
+        return
     periods = periods.dropna()
     for i in range(len(periods)):
         start,end = periods.iloc[i]['start'],periods.iloc[i]['end']
@@ -385,17 +400,8 @@ def main():
     period['Datetime'] = (periods['start'].astype(str)+' - '+\
                                         periods['end'].astype(str)).values
 
-    # Make LPS for all timesteps, 12h means and periods
-    LorenzPhaseSpace(df,'example',example=True)
-    LorenzPhaseSpace(df,'all')
-    LorenzPhaseSpace(smoothed,'12H')
-    LorenzPhaseSpace(smoothed,'24H')
+    # Make LPS for periods, if periods file found
     LorenzPhaseSpace(period,'periods')
-    
-    # # Make LPS zoomed
-    LorenzPhaseSpace_zoomed(df,'all')
-    LorenzPhaseSpace_zoomed(smoothed,'12H')
-    LorenzPhaseSpace_zoomed(smoothed,'24H')
     LorenzPhaseSpace_zoomed(period,'periods')
     
 if __name__ == "__main__":

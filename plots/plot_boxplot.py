@@ -32,9 +32,10 @@ def get_data_dict(term_list):
     for term in term_list:
         file = glob.glob(Directory+'/'+term+'_*')[0]
         data[term] = pd.read_csv(file)
-        print('\nOpening '+term)
-        print(data[term][::data[term].shape[0]-1])
-        print('Ok!')
+        if args.verbosity:
+            print('\nOpening '+term)
+            print(data[term][::data[term].shape[0]-1])
+            print('Ok!')
     return data
 
 def boxplot_time(FigsSubDir):
@@ -154,10 +155,10 @@ def main():
     check_create_folder(FigsSubDir)
     
     print()
-    print('\n-------------------------------------------------------------')
+    print('-------------------------------------------------------------')
     print('Creating boxplot for the temporal evolution of each term')
     boxplot_time(FigsSubDir)
-    print('\n-------------------------------------------------------------')
+    print('-------------------------------------------------------------')
     print('Creating boxplot for each vertical level')
     boxplot_vertical(FigsSubDir)
     print('All done')
@@ -177,6 +178,8 @@ Reads an .csv file with all terms from the Lorenz Energy Cycle and make boxplots
     parser.add_argument("-r", "--residuals", default = False, action='store_true',
     help = "If this flag is used, it will plot RGe, RGz, RKz and RKe\
  instead of Ge, Gz, Dz and De")
+    parser.add_argument("-v", "--verbosity", default = False,
+                        action='store_true')
  
     args = parser.parse_args()
     Directory = args.Directory

@@ -23,27 +23,29 @@ import argparse
 import os
 
 def check_create_folder(DirName):
+    
     if not os.path.exists(DirName):
                 os.makedirs(DirName)
                 print(DirName+' created')
     else:
         print(DirName+' directory exists')
 
-def plot_timeseries(df,term_list,linecolor,fname,label,outdir):
-    # Guarantee no plots are open
-    plt.close('all')
-    # Times for x axs
+def plot_timeseries(df, term_list, linecolor, fname, label, outdir):
+ 
     date = df['Date']
     times = pd.date_range(date[0],date.iloc[-1],periods=len(date))
-    # Loop through the distinct group of terms
-    print('Plotting '+str(term_list)+'...')
+    
     # Get values for setting plot range
-    maxval = np.amax(np.amax(df[term_list]))
-    minval = np.amin(np.amin(df[term_list]))
-    print('Data range: '+str(minval)+' to '+str(maxval))
-    # Create figure
+    maxval = df[term_list].to_numpy().max()
+    minval = df[term_list].to_numpy().min()
+    if args.verbosity == True:
+        print('Plotting '+str(term_list)+'...')
+        print('Data range: '+str(minval)+' to '+str(maxval))
+        
+    plt.close('all')    
     plt.figure(figsize=(8,8))
     ax = plt.gca()
+    
     # Loop trhough terms that are being plotted..
     for term,i in zip(term_list,range(len(term_list))):
         plt.plot(times,df[term],c=linecolor[i],label=term,
@@ -56,30 +58,22 @@ def plot_timeseries(df,term_list,linecolor,fname,label,outdir):
     ax.yaxis.set_tick_params(labelsize=16)
     plt.legend(prop={'size': 18})
     plt.xlim(times[0],times[-1])
-    # Set x labels as dates
+    
     ax = plt.gca()
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
-    # Horizontal line for 0
-    if term not in energy_labels:
-        plt.axhline(y = 0, color = 'k', linestyle = '-',
-                    linewidth=1, zorder=1,alpha=0.8)
         
-    # Horizontal line for 0
     if term not in energy_labels:
         plt.axhline(y = 0, color = 'k', linestyle = '-',
                     linewidth=1, zorder=1,alpha=0.8)
         plt.ylabel(label+r' $(J\,m^{-2})$',fontsize=18)
     else:
-        plt.ylabel(label+r' $(W\,m^{-2})$',fontsize=18)   
-    # Saving figure
+        plt.ylabel(label+r' $(W\,m^{-2})$',fontsize=18) 
+        
     plt.savefig(outdir+'timeseires_'+fname+'.png')
     print('timeseires_'+fname+'.png created')
 
     
-def plot_min_zeta_hgt(outfile,FigsDir):
-    
-    trackfile = ''.join(outfile.split('.csv'))+'_track'
-    track = pd.read_csv(trackfile,parse_dates=[0],delimiter=';',index_col='time')
+def plot_min_zeta_hgt(track,FigsDir):
     
     plt.close('all')
     fig, ax1 = plt.subplots(figsize=(15,10))
@@ -100,26 +94,35 @@ def plot_min_zeta_hgt(outfile,FigsDir):
     ax2.yaxis.set_tick_params(labelsize=16)
     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d %HZ'))
     
-    # plt.title('System track and boxes defined for compuations \n', fontsize = 22)
     plt.savefig(FigsDir+'timeseries-min_zeta_hgt.png',bbox_inches='tight')
-    print('\nCreated:',FigsDir+'track_boxes.png')
+    print('Created:',FigsDir+'track_boxes.png')
 
 
 def main():
-    print('Reading data from: '+data)
-    df = pd.read_csv(data)
-    print(df)
-    print(' ')
+    print('Reading data from: '+outfile)
+    df = pd.read_csv(outfile)
+    if args.verbosity:
+        print(df)
+        print(' ')
+        
     # Diectory for saving figures
-    ResultsSubDirectory = '/'.join(data.split('/')[:-1])
+    ResultsSubDirectory = '/'.join(outfile.split('/')[:-1])
     FigsDir = ResultsSubDirectory+'/Figures/'
     FigsSubDir = FigsDir+'/timeseries/'
     check_create_folder(FigsSubDir)
+    
+    # Plot track
+    trackfile = ''.join(outfile.split('.csv'))+'_track'
+    try:
+        track = pd.read_csv(trackfile,parse_dates=[0],delimiter=';',index_col='time')
+        plot_min_zeta_hgt(track,FigsDir)
+    except:
+        print('Error on tracking. Possibly, track file was not found')
+    
     # Make plot for timeseries
-    plot_min_zeta_hgt(data,FigsDir)
-    for term_list,cols,fname,label in zip(terms_list,cols_list,
-                                      fnames,labels_list):
-        plot_timeseries(df,term_list,cols,fname,label,FigsSubDir)
+    for term_list, linecolor, fname, label in zip(terms_list, cols_list,
+                                                          fnames,labels_list):
+        plot_timeseries(df, term_list, linecolor, fname, label, FigsSubDir)
         
     print('All done!')
 
@@ -133,9 +136,11 @@ results from the main.py program.")
     parser.add_argument("-r", "--residuals", default = False, action='store_true',
     help = "If this flag is used, it will plot RGe, RGz, RKz and RKe\
  instead of Ge, Gz, Dz and De")
+    parser.add_argument("-v", "--verbosity", default = False,
+                        action='store_true')
     
     args = parser.parse_args()
-    data = args.outfile
+    outfile = args.outfile
 
     ## Specs for plotting ##
     # Labels for plots

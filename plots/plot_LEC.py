@@ -25,6 +25,18 @@ import matplotlib.gridspec as gridspec
 import argparse
 from plot_timeseries import check_create_folder
 
+# Specs for plotting
+fs = 30
+energys = ['∂Az/∂t (finite diff.)','∂Kz/∂t (finite diff.)',
+           '∂Ae/∂t (finite diff.)', '∂Ke/∂t (finite diff.)']
+conversions = ['Ca', 'Cz', 'Ce', 'Ck']
+residuals = ['RGz', 'RKz', 'RGe', 'RKe']
+boundaries = ['BAz','BKz','BAe','BKe'] 
+cols_energy = ['#5EA4BD','#F7EF7C','#96DB6E','#F77B59'] 
+cols_conversion = ['#5C5850','#5C5850','#5C5850','#5C5850']
+cols_residual = ['#5C5850','#5C5850','#5C5850','#5C5850']
+cols_boundary =  ['#5C5850','#5C5850','#5C5850','#5C5850']
+
 def Cz(ax,value,i,width,head_width):
     if isinstance(value, str) or (isinstance(value, float) and value > 0):
         ax.arrow(-0.637, 0.5, 0.78, 0, head_width = head_width, width = width,
@@ -42,7 +54,7 @@ def Cz(ax,value,i,width,head_width):
 
 def Ck(ax,value,i,width,head_width):
     if isinstance(value, str) or (isinstance(value, float) and value > 0):
-        ax.arrow(0.5, 0.952, 0, 0.52, head_width = head_width,width = width,
+        ax.arrow(0.5, 0.952, 0, 0.52, head_width = head_width, width = width,
                  fc=cols_conversion[i],ec=cols_conversion[i],
                  clip_on=False,transform = ax.transAxes)
     else:
@@ -140,16 +152,14 @@ def BKz_BKe(ax,value,i,width,head_width):
     ax.text(1.18,0.5,value,fontdict={'fontsize':fs},transform=ax.transAxes,
             verticalalignment='center',horizontalalignment='left')
 
-def plot_LEC(idata,flag):
+def plot_LEC(idata,flag, FigsDir):
     
-    # Adjust box size proportionally to the energy budget
-    x = idata[energys]
-    energy_scaled=(x-x.min())/(x.max()-x.min())
-        
+
     # Adjust arrow size proportionally to the conversion rate, residual and 
     # boundary
     x = np.abs(idata[conversions+residuals+boundaries])
-    conversion_scaled=(x-x.min())/(x.max()-x.min())
+    conversion_scaled=(x-x.to_numpy().min()
+                   )/(x.to_numpy().max()-x.to_numpy().min())
     
     plt.close('all')
     fig = plt.figure(figsize=(14, 11))
@@ -164,7 +174,7 @@ def plot_LEC(idata,flag):
         plt.title(str(idata.name.date()),fontsize=fs, loc='center',y=0.5,
               fontdict={'fontweight':'bold'})
     elif flag == 'periods':
-        plt.title((idata['Period']),fontsize=fs, loc='center',y=0.5,
+        plt.title((str(idata.index[0])),fontsize=fs, loc='center',y=0.5,
                fontdict={'fontweight':'bold'})
     
     i = 0
@@ -186,13 +196,19 @@ def plot_LEC(idata,flag):
                 
             else:
                 energy = round(idata[energys[i]],1)
+                if flag == 'periods':
+                    energy = str(energy.values[0])
+                    conversion = round(idata[conversions[i]].values[0],1)
+                    residual = round(idata[residuals[i]].values[0],1)
+                    boundary = round(idata[boundaries[i]].values[0],1)
+                else:
+                    conversion = round(idata[conversions[i]],1)
+                    residual = round(idata[residuals[i]],1)
+                    boundary = round(idata[boundaries[i]],1)
                 plt.text(0.5, 0.5,energy,fontdict={'fontsize':fs},
                           transform = ax.transAxes,
                           verticalalignment='center',horizontalalignment='center')
-                conversion = round(idata[conversions[i]],1)
-                residual = round(idata[residuals[i]],1)
-                boundary = round(idata[boundaries[i]],1)
-                # alpha = 0.2+(0.8*energy_scaled[energys[i]].iloc[time])
+                
                 alpha = .9
                 width_conversion = 0.01+(0.05*conversion_scaled[conversions[i]])
                 width_boundary = 0.01+(0.05*conversion_scaled[boundaries[i]])
@@ -207,7 +223,11 @@ def plot_LEC(idata,flag):
             ax.add_patch(square)
             plt.axis("equal")
             plt.axis('off')
-                
+            
+            if flag == 'periods':
+                width_conversion = width_conversion.values[0]
+                head_conversion = head_conversion.values[0]
+            
             if row == 0 and col == 0: 
                 Ca(ax,conversion,i,width_conversion,head_conversion)
                 RGz_RKz(ax,residual,i,width_residual,head_residual)
@@ -234,30 +254,38 @@ def plot_LEC(idata,flag):
         print('Created LEC (daily mean) for: '+datestr)
         plt.savefig(FigsDir+'LEC_'+datestr+'.png')
     elif flag == 'periods':
-        print('Created LEC for period: '+idata['Period'])
-        plt.savefig(FigsDir+'LEC_'+idata['Period']+'.png')
+        print('Created LEC for period: '+idata.index[0])
+        plt.savefig(FigsDir+'LEC_'+idata.index[0]+'.png')
     
 
-def main():
+def main(outfile, FigsDir):
     
-    df = pd.read_csv(outfile)
+    df = pd.read_csv(outfile, index_col=[0])
     df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
     # Get mean daily values
     data = df.groupby(pd.Grouper(key="Datetime", freq="1D")).mean()
     # plot example figure
-    plot_LEC(data,'example')
+    plot_LEC(data,'example', FigsDir)
     # plot each deaily mean
     for t in range(len(data)):
         idata = data.iloc[t]
-        plot_LEC(idata,'daily_mean')
+        plot_LEC(idata,'daily_mean', FigsDir)
+        
     # plot means for each periods of the system
-    periods = pd.read_csv('../inputs/periods',sep= ';',header=0)
+    try:
+        periods = pd.read_csv('/'.join(outfile.split('/')[:-1])+"/periods.csv",
+                          index_col=[0])
+    except:
+        print('Warning: periods file not found')
+        return
+    periods = periods.dropna()
     for i in range(len(periods)):
         start,end = periods.iloc[i]['start'],periods.iloc[i]['end']
         selected_dates = df[(df['Datetime'] >= start) & (df['Datetime'] <= end)]
         period = selected_dates.drop(['Datetime','Date','Hour'],axis=1).mean()
-        period['Period'] = periods.iloc[i]['Period']
-        plot_LEC(period,'periods')
+        period = period.to_frame(name=periods.iloc[i].name).transpose()
+
+        plot_LEC(period,'periods', FigsDir)
 
 
 if __name__ == "__main__":
@@ -271,22 +299,10 @@ results from the main.py program.")
 
     args = parser.parse_args()
     outfile = args.outfile
+    
     ResultsSubDirectory = '/'.join(outfile.split('/')[:-1])
     FigsDir = ResultsSubDirectory+'/Figures/LEC/'
     check_create_folder(FigsDir)
-
-    # Specs for plotting
-    fs = 30
-    energys = ['∂Az/∂t (finite diff.)','∂Kz/∂t (finite diff.)',
-               '∂Ae/∂t (finite diff.)', '∂Ke/∂t (finite diff.)']
-    conversions = ['Ca', 'Cz', 'Ce', 'Ck']
-    residuals = ['RGz', 'RKz', 'RGe', 'RKe']
-    boundaries = ['BAz','BKz','BAe','BKe'] 
-    cols_energy = ['#5EA4BD','#F7EF7C','#96DB6E','#F77B59'] 
-    cols_conversion = ['#5C5850','#5C5850','#5C5850','#5C5850']
-    cols_residual = ['#5C5850','#5C5850','#5C5850','#5C5850']
-    cols_boundary =  ['#5C5850','#5C5850','#5C5850','#5C5850']
-
     
-    main()
+    main(outfile, FigsDir)
     
