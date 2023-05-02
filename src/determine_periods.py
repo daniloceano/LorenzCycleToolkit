@@ -268,8 +268,9 @@ def plot_didatic(da, outfile_name_didatic):
                         freq=f'{int(dt.total_seconds() / 3600)} H'))
 
     for series in intensification:
-        ax5.fill_betweenx((z.min(),z.max()), series[0],
-                      series[-1], facecolor=colors[2], alpha=0.6)
+        if len(series) > 0:
+            ax5.fill_betweenx((z.min(),z.max()), series[0],
+                          series[-1], facecolor=colors[2], alpha=0.6)
         
     ax5.scatter(z_dz3_peaks.time,z_dz3_peaks,facecolor=colors[3],
                 edgecolor='k', s=150)
@@ -458,6 +459,21 @@ def decaying_stage(mature, z, dz2):
             
     return decaying
 
+def get_formatted_phases(phases):
+    new_phases = {}
+   
+    for phase_key in phases:
+        phase_list = phases[phase_key]
+       
+        if len(phase_list) == 1:
+            new_phases[phase_key] = phase_list[0]
+        else:
+            for idx, phase in enumerate(phase_list):
+                new_key = f"{phase_key} {idx + 1}" if idx > 0 else phase_key
+                new_phases[new_key] = phase
+
+    return new_phases
+
 def get_phases(da, ResultsSubDirectory):
     
     z = da.zeta_fil2
@@ -475,8 +491,6 @@ def get_phases(da, ResultsSubDirectory):
     six_hours = pd.Timedelta('6H')
     dt = z.time[1] - z.time[0]
     dt = pd.Timedelta(dt.values)
-    
-    
     phases = {}
     for phase, key in zip([[incipient], intensification, mature, decaying],
                     ['incipient', 'intensification', 'mature', 'decay']):
@@ -488,13 +502,7 @@ def get_phases(da, ResultsSubDirectory):
                               freq=f'{int(dt.total_seconds() / 3600)} H'))
         phases[key] = tmp
     
-    for key in list(phases.keys()):
-        if len(phases[key]) > 1:
-            new_key = f"{key} 2"
-            phases[new_key] = [phases[key][0]]
-            phases[key] = [phases[key][-1]] 
-            
-
+    phases = get_formatted_phases(phases)
     
     # Extract the first and last elements from each list
     df_dict = {}
@@ -502,7 +510,8 @@ def get_phases(da, ResultsSubDirectory):
         if len(v) == 0:
             df_dict[k] = []
         else:
-            df_dict[k] = [v[0][0], v[-1][-1]]
+            df_dict[k] = [v[0], v[-1]]
+            
     # Convert the dictionary to a DataFrame
     df = pd.DataFrame.from_dict(df_dict, orient='index',
                                 columns=['start', 'end'])
@@ -510,7 +519,7 @@ def get_phases(da, ResultsSubDirectory):
     df.to_csv(ResultsSubDirectory+'periods.csv')
     print(ResultsSubDirectory+'periods.csv created')
      
-    return phases
+    return df
 
 def plot_periods(da, periods, outfile_name):
     
@@ -524,19 +533,18 @@ def plot_periods(da, periods, outfile_name):
     
     six_hours = pd.Timedelta('5h 30 min')
     
+    periods = periods.dropna()
     # Iterate over the periods and plot each phase
-    for phase in periods.keys():
+    for i in range(len(periods)):
+        phase = periods.iloc[i].name
         # Remove any variation from the phase name
         phase_name = phase.split()[0]
         # Get the color for the phase from the color dictionary
         color = colors.get(phase_name, '#000000')
-        for series in periods[phase]:
-            if len(series) > 0:
-                ax.fill_betweenx((z.min(),z.max()+1e-5),
-                                series[0]+six_hours,
-                                series[-1]-six_hours, label=phase,
-                                facecolor=color, alpha=0.4)
-                print(phase,phase_name)
+        ax.fill_betweenx((z.min(),z.max()+1e-5),
+                        periods.loc[phase].start+six_hours,
+                        periods.loc[phase].end-six_hours,
+                        label=phase, facecolor=color, alpha=0.4)
         
     ax.plot(da.zeta.time, da.zeta,c='#6b675b',
             linewidth=4,label=r'$ζ$', alpha=0.8)
