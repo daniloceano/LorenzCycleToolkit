@@ -281,12 +281,12 @@ def LEC_fixed(data):
     # 10) 
     print('\n------------------------------------------------------------------------')
     print('Estimating budget terms (∂X/∂t) using finite differences ')
-    df = calc_budget_diff(df,dates) 
+    df = calc_budget_diff(df,dates, args) 
     print('Ok!')
     # 11) 
     print('\n------------------------------------------------------------------------')
     print('Computing residuals RGz, RKz, RGe and RKe')
-    df = calc_residuals(df)
+    df = calc_residuals(df, args)
     print('Ok!')
     # 12) save file
     print('\nCreating a csv to store results...')
@@ -529,12 +529,12 @@ def LEC_moving(data, varlist):
     
     print('\n------------------------------------------------------------------------')
     print('Estimating budget terms (∂X/∂t) using finite differences ')
-    df = calc_budget_diff(df,times) 
+    df = calc_budget_diff(df,times, args) 
     print('Ok!')
     
     print('\n------------------------------------------------------------------------')
     print('Computing residuals RGz, RKz, RGe and RKe')
-    df = calc_residuals(df)
+    df = calc_residuals(df, args)
     print('Ok!')
     
     print('\nCreating a csv to store results...')
@@ -606,6 +606,8 @@ domain by clicking on the screen.")
     parser.add_argument("-o", "--outname", default = False, type=str,
     help = "choose a name for saving results (default is\
  the same as infile)")
+    parser.add_argument("-v", "--verbosity", default = False,
+                        action='store_true')
  
     args = parser.parse_args()
     

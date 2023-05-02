@@ -38,6 +38,7 @@ class BoundaryTerms:
     
     def __init__(self, box_obj: BoxData, method: str):
         self.method = method
+        self.box_obj = box_obj
         self.PressureData = box_obj.PressureData
         self.LonIndexer = box_obj.LonIndexer
         self.LatIndexer = box_obj.LatIndexer
@@ -116,7 +117,7 @@ class BoundaryTerms:
         except ValueError:
             print('Unit error in BAZ')
             raise
-        if self.method == 'fixed':
+        if self.method == 'fixed' and self.box_obj.args.verbosity == True:
             print(Baz.values*Baz.metpy.units)
         return Baz
     
@@ -158,7 +159,7 @@ class BoundaryTerms:
         except ValueError:
             print('Unit error in BAe')
             raise
-        if self.method == 'fixed':
+        if self.method == 'fixed' and self.box_obj.args.verbosity == True:
             print(Bae.values*Bae.metpy.units)
         return Bae
     
@@ -199,7 +200,7 @@ class BoundaryTerms:
         except ValueError:
             print('Unit error in BKz')
             raise
-        if self.method == 'fixed':
+        if self.method == 'fixed' and self.box_obj.args.verbosity == True:
             print(Bkz.values*Bkz.metpy.units)
         return Bkz
     
@@ -236,7 +237,7 @@ class BoundaryTerms:
         except ValueError:
             print('Unit error in BKe')
             raise
-        if self.method == 'fixed':
+        if self.method == 'fixed' and self.box_obj.args.verbosity == True:
             print(Bke.values*Bke.metpy.units)
         return Bke 
     
@@ -273,7 +274,7 @@ class BoundaryTerms:
         except ValueError:
             print('Unit error in BΦZ')
             raise
-        if self.method == 'fixed':
+        if self.method == 'fixed' and self.box_obj.args.verbosity == True:
             print(Boz.values*Boz.metpy.units)
         return Boz 
     
@@ -311,7 +312,7 @@ class BoundaryTerms:
         except ValueError:
             print('Unit error in BΦZ')
             raise
-        if self.method == 'fixed':
+        if self.method == 'fixed' and self.box_obj.args.verbosity == True:
             print(Boz.values*Boz.metpy.units)
         return Boz 
                  
