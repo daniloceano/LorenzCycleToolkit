@@ -52,6 +52,7 @@ class ConversionTerms:
     
     def __init__(self, box_obj: BoxData, method: str):
         self.method = method
+        self.box_obj = box_obj
         self.PressureData = box_obj.PressureData
         self.LonIndexer = box_obj.LonIndexer
         self.LatIndexer = box_obj.LatIndexer
@@ -73,7 +74,7 @@ class ConversionTerms:
         self.ylength = box_obj.ylength
         
     def calc_ce(self):
-        print('\nComputing conversion between eddy energy terms (Ce)...')
+        print('Computing conversion between eddy energy terms (Ce)...')
         FirstTerm = Rd/(self.PressureData*g)
         _ = self.omega_ZE*self.tair_ZE
         SecondTerm = -CalcAreaAverage(_,self.ylength,xlength=self.xlength)
@@ -86,7 +87,8 @@ class ConversionTerms:
         except ValueError:
             print('Unit error in Ce')
             raise
-        print(Ce.values*Ce.metpy.units)
+        if self.box_obj.args.verbosity == True:
+            print(Ce.values*Ce.metpy.units)
         print('Saving Ce for each vertical level...')
         # Save Ce before vertical integration
         if self.method == 'fixed':
@@ -101,7 +103,7 @@ class ConversionTerms:
         return Ce
     
     def calc_cz(self):
-        print('\nComputing conversion between zonal energy terms (Cz)...')
+        print('Computing conversion between zonal energy terms (Cz)...')
         FirstTerm = Rd/(self.PressureData*g)        
         _ = self.omega_AE*self.tair_AE
         SecondTerm = -CalcAreaAverage(_,self.ylength)
@@ -113,7 +115,8 @@ class ConversionTerms:
         except ValueError:
             print('Unit error in Cz')
             raise
-        print(Cz.values*Cz.metpy.units)
+        if self.box_obj.args.verbosity == True:
+            print(Cz.values*Cz.metpy.units)
         print('Saving Cz for each vertical level...')
         # Save Cz before vertical integration
         if self.method == 'fixed':
@@ -128,7 +131,7 @@ class ConversionTerms:
         return Cz
     
     def calc_ca(self):
-        print('\nComputing conversion between available potential energy terms (Ca)...')
+        print('Computing conversion between available potential energy terms (Ca)...')
         ## First term of the integral ##
         # Derivate tair_AE in respect to latitude
         DelPhi_tairAE = (self.tair_AE*self.tair_AE["coslats"]
@@ -153,7 +156,8 @@ class ConversionTerms:
         except ValueError:
             print('Unit error in Ca')
             raise
-        print(Ca.values*Ca.metpy.units)
+        if self.box_obj.args.verbosity == True:
+            print(Ca.values*Ca.metpy.units)
         print('Saving Ca for each vertical level...')
         if self.method == 'fixed':
             df = function.to_dataframe(name='Ca',dim_order=[
@@ -168,7 +172,7 @@ class ConversionTerms:
         return Ca
         
     def calc_ck(self):
-        print('\nComputing conversion between kinetic energy terms (Ck)...')
+        print('Computing conversion between kinetic energy terms (Ck)...')
         ## First term ##
         # Divide the zonal mean of the zonal wind component (u) by the cosine
         # of the latitude (in radians) and then differentiate it in regard to
@@ -213,7 +217,8 @@ class ConversionTerms:
         except ValueError:
             print('Unit error in Ck')
             raise
-        print(Ck.values*Ck.metpy.units)
+        if self.box_obj.args.verbosity == True:
+            print(Ck.values*Ck.metpy.units)
         print('Saving Ck for each vertical level...')
         # Save Ck before vertical integration            
         if self.method == 'fixed':
@@ -226,16 +231,3 @@ class ConversionTerms:
                     mode="a", header=None)
         print('Done!')
         return Ck
-    
-
-# import matplotlib.pyplot as plt
-# plt.close('all')
-# Ce.plot(marker='o',c='k'),
-# Cz.plot(marker='s',c='k'),
-# # (Ke/1e5).plot(marker='o',c='k'),
-# # (Kz/1e5).plot(marker='o',c='grey'),
-# plt.ylim([-8,16]),
-# plt.xlim([Ce.time[0],Ce.time[-8]]),
-# plt.yticks(range(-8,16,4)),
-# plt.grid(linestyle='dashed')  
-# plt.axhline(0)

@@ -72,7 +72,7 @@ class BoundaryTerms:
         
     def calc_baz(self):
         if self.method == 'fixed':
-            print('\nComputing Zonal Available Potential Energy (Az) transport across boundaries (BAZ)...')
+            print('Computing Zonal Available Potential Energy (Az) transport across boundaries (BAZ)...')
 
         ## First Integral ##
         _ = ((2*self.tair_AE*self.tair_ZE*self.u)
@@ -123,7 +123,7 @@ class BoundaryTerms:
     
     def calc_bae(self):
         if self.method == 'fixed':
-            print('\nComputing Eddy Available Potential Energy (Ae) transport across boundaries (BAE)...')
+            print('Computing Eddy Available Potential Energy (Ae) transport across boundaries (BAE)...')
         ## First Integral ##
         _ = self.u*self.tair_ZE**2
          # Data at eastern boundary minus data at western boundary 
@@ -165,7 +165,7 @@ class BoundaryTerms:
     
     def calc_bkz(self):
         if self.method == 'fixed':
-            print('\nComputing Zonal Kinetic Energy (Kz) transport across boundaries (BKz)...')
+            print('Computing Zonal Kinetic Energy (Kz) transport across boundaries (BKz)...')
         ## First Integral ##
         _ = self.u*(self.u**2+self.v**2-self.u_ZE**2-self.v_ZE**2)
          # Data at eastern boundary minus data at western boundary 
@@ -206,7 +206,7 @@ class BoundaryTerms:
     
     def calc_bke(self):
         if self.method == 'fixed':
-            print('\nComputing Eddy Kinetic Energy (Ke) transport across boundaries (BKe)...')
+            print('Computing Eddy Kinetic Energy (Ke) transport across boundaries (BKe)...')
         ## First Integral ##
         _ = self.u*(self.u_ZE**2+self.v_ZE**2)
          # Data at eastern boundary minus data at western boundary 
@@ -243,7 +243,7 @@ class BoundaryTerms:
     
     def calc_boz(self):
         if self.method == 'fixed':
-            print('\nComputing Zonal Kinetic Energy (Kz) production by fluxes at the boundaries (BΦZ)...')
+            print('Computing Zonal Kinetic Energy (Kz) production by fluxes at the boundaries (BΦZ)...')
         ## First Integral ##
         _ = (self.v_ZA*self.geopt_AE)/g
         # Data at eastern boundary minus data at western boundary 
@@ -280,7 +280,7 @@ class BoundaryTerms:
     
     def calc_boe(self):
         if self.method == 'fixed':
-            print('\nComputing Eddy Kinetic Energy (Kz) production by fluxes at the boundaries (BΦE)...')
+            print('Computing Eddy Kinetic Energy (Kz) production by fluxes at the boundaries (BΦE)...')
         ## First Integral ##
         _ = (self.u_ZE*self.geopt_ZE)/g
          # Data at eastern boundary minus data at western boundary 

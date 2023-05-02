@@ -36,6 +36,7 @@ class EnergyContents:
     
     def __init__(self, box_obj: BoxData, method: str):
         self.method = method
+        self.box_obj = box_obj
         self.PressureData = box_obj.PressureData
         self.LonIndexer = box_obj.LonIndexer
         self.LatIndexer = box_obj.LatIndexer
@@ -53,7 +54,7 @@ class EnergyContents:
         self.ylength = box_obj.ylength
         
     def calc_az(self):
-        print('\nComputing Zonal Available Potential Energy (Az)...')
+        print('Computing Zonal Available Potential Energy (Az)...')
         _ = CalcAreaAverage(self.tair_AE**2, self.ylength)
         function = _/(2*self.sigma_AA)
         Az = function.integrate(self.VerticalCoordIndexer
@@ -62,7 +63,8 @@ class EnergyContents:
             Az = Az.metpy.convert_units('J/ m **2')
         except ValueError:
             raise ValueError('Unit error in Az')
-        print(Az.values*Az.metpy.units)
+        if self.box_obj.args.verbosity == True:
+            print(Az.values*Az.metpy.units)
         print('Saving Az for each vertical level...')
         # Save Az before vertical integration          
         if self.method == 'fixed':
@@ -77,7 +79,7 @@ class EnergyContents:
         return Az
     
     def calc_ae(self): 
-        print('\nComputing Eddy Available Potential Energy (Ae)...')
+        print('Computing Eddy Available Potential Energy (Ae)...')
         _ = CalcAreaAverage(self.tair_ZE**2,self.ylength,
                               xlength=self.xlength)
         function = _/(2*self.sigma_AA)
@@ -88,7 +90,8 @@ class EnergyContents:
         except ValueError:
             print('Unit error in Ae')
             raise
-        print(Ae.values*Ae.metpy.units)
+        if self.box_obj.args.verbosity == True:
+            print(Ae.values*Ae.metpy.units)
         print('Saving Ae for each vertical level...')
         # Save Ae before vertical integration
         if self.method == 'fixed':    
@@ -103,11 +106,12 @@ class EnergyContents:
         return Ae
     
     def calc_kz(self):
-        print('\nComputing Zonal Kinetic Energy (Kz)...')
+        print('Computing Zonal Kinetic Energy (Kz)...')
         function = CalcAreaAverage((self.u_ZA**2+self.v_ZA**2),self.ylength)
         Kz = function.integrate(self.VerticalCoordIndexer
                     ) * function[self.VerticalCoordIndexer].metpy.units/(2*g)
-        print(Kz.values*Kz.metpy.units)
+        if self.box_obj.args.verbosity == True:
+            print(Kz.values*Kz.metpy.units)
         print('Saving Kz for each vertical level...')
         try: 
             Kz = Kz.metpy.convert_units('J/ m **2')
@@ -127,7 +131,7 @@ class EnergyContents:
         return Kz
     
     def calc_ke(self):
-        print('\nComputing Eddy Kinetic Energy (Ke)...')
+        print('Computing Eddy Kinetic Energy (Ke)...')
         function = CalcAreaAverage((self.u_ZE**2)+(self.v_ZE**2),self.ylength,
                               xlength=self.xlength)
         Ke = function.integrate(self.VerticalCoordIndexer
@@ -137,7 +141,8 @@ class EnergyContents:
         except ValueError:
             print('Unit error in Ke')
             raise
-        print(Ke.values*Ke.metpy.units)
+        if self.box_obj.args.verbosity == True:
+            print(Ke.values*Ke.metpy.units)
         print('Saving Ke for each vertical level...')
         # Save Ke before vertical integration
         if self.method == 'fixed':
@@ -150,14 +155,3 @@ class EnergyContents:
                 mode="a", header=None)
         print('Done!')
         return Ke
-
-# import matplotlib.pyplot as plt
-# (Az/1e5).plot(marker='s',c='gray'),
-# (Ae/1e5).plot(marker='s',c='k'),
-# (Ke/1e5).plot(marker='o',c='k'),
-# (Kz/1e5).plot(marker='o',c='grey'),
-# plt.ylim([0,24]),
-# plt.xlim([Az.time[0],Az.time[-8]]),
-# plt.yticks(range(0,25,4)),
-# plt.grid(linestyle='dashed')    
-     

@@ -17,6 +17,7 @@ class GenerationDissipationTerms:
     
     def __init__(self, box_obj: BoxData, method: str):
         self.method = method
+        self.box_obj = box_obj
         self.PressureData = box_obj.PressureData
         self.LonIndexer = box_obj.LonIndexer
         self.LatIndexer = box_obj.LatIndexer
@@ -48,7 +49,7 @@ class GenerationDissipationTerms:
         self.ylength = box_obj.ylength
     
     def calc_gz(self):
-        print('\nComputing generation of Zonal Potential Energy (Gz)...')
+        print('Computing generation of Zonal Potential Energy (Gz)...')
         _ = self.Q_AE*self.tair_AE
         function = CalcAreaAverage(_,self.ylength)/(Cp_d*self.sigma_AA)
         Gz = function.integrate(self.VerticalCoordIndexer
@@ -58,10 +59,11 @@ class GenerationDissipationTerms:
         except ValueError:
             print('Unit error in Gz')
             raise
-        if self.method == 'fixed':
+        if self.method == 'fixed' and self.box_obj.args.verbosity == True:
             print(Gz.values*Gz.metpy.units)
         # Save Gz before vertical integration
-        print(Gz.values*Gz.metpy.units)
+        if self.box_obj.args.verbosity == True:
+            print(Gz.values*Gz.metpy.units)
         print('Saving Gz for each vertical level...')
         if self.method == 'fixed':
             df = function.to_dataframe(name='Ce',dim_order=[
@@ -76,7 +78,7 @@ class GenerationDissipationTerms:
         return Gz
     
     def calc_ge(self):
-        print('\nComputing generation of Eddy Potential Energy (Ge)...')
+        print('Computing generation of Eddy Potential Energy (Ge)...')
         _ = self.Q_ZE*self.tair_ZE
         function = CalcAreaAverage(_,self.ylength, 
                                    xlength=self.xlength)/(Cp_d*self.sigma_AA)
@@ -88,7 +90,8 @@ class GenerationDissipationTerms:
             print('Unit error in Ge')
             raise
         # Save Gz before vertical integration
-        print(Ge.values*Ge.metpy.units)
+        if self.box_obj.args.verbosity == True and self.box_obj.args.verbosity == True:
+            print(Ge.values*Ge.metpy.units)
         print('Saving Ge for each vertical level...')
         if self.method == 'fixed':
             df = function.to_dataframe(name='Ce',dim_order=[

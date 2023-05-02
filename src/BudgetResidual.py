@@ -27,7 +27,7 @@ def calc_budget_diff(df,dates, args):
     # Estimate budget values for all energy terms
     for term in ['Az','Ae','Kz','Ke']:
         name = '∂'+term+'/∂t (finite diff.)'
-        print('\nEstimating '+name)
+        print('Estimating '+name)
         df[name] = np.gradient(df[term],dt)
         if args.verbosity == True:
             print(df[name].values*units('W/ m **2'))
@@ -39,7 +39,7 @@ def calc_budget_diff_4th(df,time, args):
     # Estimate budget values for all energy terms
     for term in ['Az','Ae','Kz','Ke']:
         name = '∂'+term+'/∂t (finite diff.)'
-        print('\nEstimating '+name)
+        print('Estimating '+name)
         # forward finite difference for the first value
         forward = (df[term].iloc[1]-df[term].iloc[0])/dt
         # central finite differentes for the second and the penultimate values
@@ -63,7 +63,7 @@ def calc_budget_diff_4th(df,time, args):
 # Compute the residuals RGz, RKz, RGe and RKe using the budget terms estimated
 # via finite differences
 def calc_residuals(df, args):
-    print('\nResiduals ('+str((1*units('W/ m **2')).units)+'):')
+    print('Residuals ('+str((1*units('W/ m **2')).units)+'):')
     df['RGz'] = df['∂Az/∂t (finite diff.)'] + df['Cz'] + df['Ca'] - df['BAz']
     df['RGe'] = df['∂Ae/∂t (finite diff.)'] - df['Ca'] + df['Ce'] - df['BAe']
     df['RKz'] = -df['∂Kz/∂t (finite diff.)'] + df['Cz'] + df['Ck'] + df['BKz']
