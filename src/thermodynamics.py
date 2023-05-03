@@ -83,7 +83,7 @@ def AdiabaticHEating(TemperatureData, PressureData, OmegaData,
         PressureData,TemperatureData)
     
     dTdt = TemperatureData.differentiate(
-            TimeName,datetime_unit='h') / units('hour')
+            TimeName,datetime_unit='s') / units('s')
     
     sigma = -1 * (TemperatureData/theta) * theta.differentiate(
         VerticalCoordIndexer) / units(str(PressureData.metpy.units))
