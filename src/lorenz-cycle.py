@@ -523,9 +523,10 @@ def LEC_moving(data, varlist):
     df['Date'],df['Hour'] = days, hours
     
     # Print results for user
-    for term in TermsDict.keys():
-        print('\n'+term)
-        print(df[term].tolist())
+    if args.verbosity:
+        for term in TermsDict.keys():
+            print('\n'+term)
+            print(df[term].tolist())
     
     print('\n------------------------------------------------------------------------')
     print('Estimating budget terms (∂X/∂t) using finite differences ')
