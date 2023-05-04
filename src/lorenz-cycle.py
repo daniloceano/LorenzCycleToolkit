@@ -108,6 +108,7 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
         full_data = convert_lon(xr.open_dataset(infile,
                                             chunks={'time': 1}),LonIndexer)
     except:
+        raise
         raise SystemExit('ERROR!!!!!\n Could not open data. Check if path is\
  correct, fvars file and file format (should be .nc)')
     print('Ok! Now assigning coordinates...')
