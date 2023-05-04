@@ -46,6 +46,8 @@ import sys
 import time
 import logging
 
+from numpy.linalg import LinAlgError
+
 logging.getLogger('dask').setLevel(logging.ERROR)
 
 def check_create_folder(DirName):
@@ -407,9 +409,15 @@ def LEC_moving(data, varlist):
         # Apply filter when using high resolution gridded data
         dx = float(iv_850[LonIndexer][1]-iv_850[LonIndexer][0])
         if dx < 1:
-            zeta = zeta.to_dataset(name='vorticity'
+            try:
+                zeta = zeta.to_dataset(name='vorticity'
                 ).apply(savgol_filter,window_length=31, polyorder=2).vorticity
-            
+            except LinAlgError:
+                zeta = zeta.fillna(0).to_dataset(name='vorticity'
+                ).apply(savgol_filter,window_length=31, polyorder=2).vorticity
+                pass
+            except Exception as e:
+                raise e
         lat, lon = iu_850[LatIndexer], iu_850[LonIndexer]
         
         if args.track:
@@ -611,8 +619,7 @@ domain by clicking on the screen.")
     parser.add_argument("-v", "--verbosity", default = False,
                         action='store_true')
  
-    args = parser.parse_args()
-    
+    args = parser.parse_args()    
     infile  = args.infile
     varlist = '../inputs/fvars'
     
