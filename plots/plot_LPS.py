@@ -55,9 +55,9 @@ def MarkerSizeKe(df):
     leg._legend_box.align = "center"
     plt.setp(leg.get_title(), color='#383838')
     plt.setp(leg.get_title(),fontsize=15)
-    for i in range(len(leg.legendHandles)):
-        leg.legendHandles[i].set_color('#383838')
-        leg.legendHandles[i].set_edgecolor('gray')
+    for i in range(len(leg.legend_handles)):
+        leg.legend_handles[i].set_color('#383838')
+        leg.legend_handles[i].set_edgecolor('gray')
     
     return df
 
@@ -100,7 +100,7 @@ def LorenzPhaseSpace(df,outname,example=False):
     # plot the moment of maximum intensity
     m = ax.scatter(Ck.loc[s.idxmax()],Ca.loc[s.idxmax()],
                c='None',s=s.loc[s.idxmax()]*1.1,
-               zorder=100,edgecolors='k', norm=norm, linewidth=3)
+               zorder=100,edgecolors='k', linewidth=3)
     
     # plot dots as Ge
     dots = ax.scatter(Ck,Ca,c=Ge,cmap=cmocean.cm.curl,s=s,zorder=100,
@@ -294,7 +294,7 @@ def LorenzPhaseSpace_zoomed(df,outname):
     # plot the moment of maximum intensity
     ax.scatter(Ck.loc[s.idxmax()],Ca.loc[s.idxmax()],
                c='None',s=s.loc[s.idxmax()]*1.1,
-               zorder=100,edgecolors='k', norm=norm, linewidth=3)
+               zorder=100,edgecolors='k', linewidth=3)
     
     # plot dots as Ge
     dots = ax.scatter(Ck,Ca,c=Ge,cmap=cmocean.cm.curl,s=s,zorder=100,
@@ -360,7 +360,8 @@ def main():
     df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
     
     # Get 12H means
-    smoothed = df.groupby(pd.Grouper(key="Datetime", freq="12H")).mean()
+    smoothed = df.groupby(pd.Grouper(key="Datetime", freq="12H")).mean(
+                                                            numeric_only=True)
     # Set datetime to the date range
     starts = pd.Series(smoothed.index).dt.strftime('%Y-%m-%d %H:%M')
     ends = pd.Series(pd.DatetimeIndex(starts) + \

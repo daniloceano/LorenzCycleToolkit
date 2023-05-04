@@ -17,6 +17,16 @@ Contact:
     danilo.oceano@gmail.com
 """
 
+# Specs for plotting
+linecolors = ['#3B95BF','#87BF4B','#BFAB37','#BF3D3B']
+markerfacecolors = ['#59c0f0','#b0fa61','#f0d643','#f75452']   
+energy_labels = ['Az','Ae','Kz','Ke']
+conversion_labels = ['Cz','Ca','Ck','Ce']
+generation_labels = ['Gz','Ge']
+markers = ['s','s','o','o']         
+linestyles = ['-','-','-','-']
+linewidth = 4    
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -186,16 +196,6 @@ time step. The user needs to specify the file where the CSV are located")
     FigsDir = Directory+'/Figures/'
     FigsSubDir = FigsDir+'/vertical/'
     check_create_folder(FigsSubDir)
-        
-    # Specs for plotting
-    linecolors = ['#3B95BF','#87BF4B','#BFAB37','#BF3D3B']
-    markerfacecolors = ['#59c0f0','#b0fa61','#f0d643','#f75452']   
-    energy_labels = ['Az','Ae','Kz','Ke']
-    conversion_labels = ['Cz','Ca','Ck','Ce']
-    generation_labels = ['Gz','Ge']
-    markers = ['s','s','o','o']         
-    linestyles = ['-','-','-','-']
-    linewidth = 4        
     
     main()
 

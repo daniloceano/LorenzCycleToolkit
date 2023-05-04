@@ -196,15 +196,9 @@ def plot_LEC(idata,flag, FigsDir):
                 
             else:
                 energy = round(idata[energys[i]],1)
-                if flag == 'periods':
-                    energy = str(energy.values[0])
-                    conversion = round(idata[conversions[i]].values[0],1)
-                    residual = round(idata[residuals[i]].values[0],1)
-                    boundary = round(idata[boundaries[i]].values[0],1)
-                else:
-                    conversion = round(idata[conversions[i]],1)
-                    residual = round(idata[residuals[i]],1)
-                    boundary = round(idata[boundaries[i]],1)
+                conversion = round(idata[conversions[i]],1)
+                residual = round(idata[residuals[i]],1)
+                boundary = round(idata[boundaries[i]],1)
                 plt.text(0.5, 0.5,energy,fontdict={'fontsize':fs},
                           transform = ax.transAxes,
                           verticalalignment='center',horizontalalignment='center')
@@ -223,10 +217,6 @@ def plot_LEC(idata,flag, FigsDir):
             ax.add_patch(square)
             plt.axis("equal")
             plt.axis('off')
-            
-            if flag == 'periods':
-                width_conversion = width_conversion.values[0]
-                head_conversion = head_conversion.values[0]
             
             if row == 0 and col == 0: 
                 Ca(ax,conversion,i,width_conversion,head_conversion)
@@ -254,7 +244,7 @@ def plot_LEC(idata,flag, FigsDir):
         print('Created LEC (daily mean) for: '+datestr)
         plt.savefig(FigsDir+'LEC_'+datestr+'.png')
     elif flag == 'periods':
-        print('Created LEC for period: '+idata.index[0])
+        print('Created LEC for period: '+idata.name)
         plt.savefig(FigsDir+'LEC_'+idata.index[0]+'.png')
     
 
@@ -263,7 +253,8 @@ def main(outfile, FigsDir):
     df = pd.read_csv(outfile, index_col=[0])
     df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
     # Get mean daily values
-    data = df.groupby(pd.Grouper(key="Datetime", freq="1D")).mean()
+    data = df.groupby(pd.Grouper(key="Datetime", freq="1D")).mean(
+                                                            numeric_only=True)
     # plot example figure
     plot_LEC(data,'example', FigsDir)
     # plot each deaily mean
@@ -284,7 +275,7 @@ def main(outfile, FigsDir):
         selected_dates = df[(df['Datetime'] >= start) & (df['Datetime'] <= end)]
         period = selected_dates.drop(['Datetime','Date','Hour'],axis=1).mean()
         period = period.to_frame(name=periods.iloc[i].name).transpose()
-
+        period = period.T.squeeze()
         plot_LEC(period,'periods', FigsDir)
 
 
@@ -305,4 +296,3 @@ results from the main.py program.")
     check_create_folder(FigsDir)
     
     main(outfile, FigsDir)
-    
