@@ -4,6 +4,9 @@ LEC_Results/
 # Mac stuff
 .DS_Store
 
+# data wit nc files
+netCDF_data/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
