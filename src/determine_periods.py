@@ -261,7 +261,10 @@ def plot_didatic(da, outfile_name_didatic):
             if dz2_valleys.index[0] < mature[0][0]:
                 intensification_start = dz2_valleys.index[i]
             else:
-                intensification_start = dz2_valleys.index[i-1]
+                if len(dz2_valleys) <= 1:
+                    intensification = []
+                else:
+                    intensification_start = dz2_valleys.index[i-1]
         intensification_end = mature_start-dt
         intensification.append(pd.date_range(intensification_start,
                         intensification_end, 
@@ -417,7 +420,12 @@ def intensification_incipient_stages(mature, dz2):
             if dz2_valleys.index[0] < mature[0][0]:
                 intensification_start = dz2_valleys.index[i]
             else:
-                intensification_start = dz2_valleys.index[i-1]
+                # If there's only one valley for dz2, there's no intensification
+                if len(dz2_valleys) <= 1:
+                    intensification = []
+                    return intensification, incipient
+                else:
+                    intensification_start = dz2_valleys.index[i-1]
         intensification_end = mature_start-dt
         intensification.append(pd.date_range(intensification_start,
                         intensification_end, 
@@ -584,7 +592,3 @@ def get_periods(output_trackfile, ResultsSubDirectory):
     # Make plots: the second plot explain the process for detemrining the phases
     plot_periods(da, periods, outfile_name)
     plot_didatic(da, outfile_name_didatic)
-    
-
-    
-
