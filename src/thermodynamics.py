@@ -77,8 +77,7 @@ def AdiabaticHEating(TemperatureData, PressureData, OmegaData,
     # Get the values for width and length in meters
     dx = np.deg2rad(lons.differentiate(LonIndexer))*cos_lats*Re
     dy = np.deg2rad(lats.differentiate(LatIndexer))*Re
-    AdvHTemp = -1* ((UWindComponentData*
-                     /dx)+(VWindComponentData*dTdphi/dy)) 
+    AdvHTemp = -1* ((UWindComponentData*dTdlambda/dx)+(VWindComponentData*dTdphi/dy)) 
 
     theta = potential_temperature(
         PressureData,TemperatureData)
