@@ -106,9 +106,9 @@ class ConversionTerms:
         print('Computing conversion between zonal energy terms (Cz)...')
         FirstTerm = Rd/(self.PressureData*g)        
         _ = self.omega_AE*self.tair_AE
-        SecondTerm = -CalcAreaAverage(_,self.ylength)
+        SecondTerm = CalcAreaAverage(_,self.ylength)
         function = (FirstTerm*SecondTerm)
-        Cz = function.integrate(self.VerticalCoordIndexer
+        Cz = - function.integrate(self.VerticalCoordIndexer
                             ) * function[self.VerticalCoordIndexer].metpy.units
         try: 
             Cz = Cz.metpy.convert_units('W/ m **2')
@@ -136,9 +136,8 @@ class ConversionTerms:
         # Derivate tair_AE in respect to latitude
         DelPhi_tairAE = (self.tair_AE*self.tair_AE["coslats"]
                          ).differentiate("rlats")
-        _ = (self.v_ZE*self.tair_ZE) * DelPhi_tairAE
-        function = CalcAreaAverage(_,self.ylength, xlength=self.xlength
-                                   )/(2*Re*self.sigma_AA)
+        _ = (self.v_ZE*self.tair_ZE * DelPhi_tairAE) / (2*Re*self.sigma_AA)
+        function = CalcAreaAverage(_,self.ylength, xlength=self.xlength)
         
         ## Second term of the integral ##
         # Derivate tair_AE in respect to pressure and divide it by sigma
@@ -146,10 +145,10 @@ class ConversionTerms:
             self.VerticalCoordIndexer) / units.hPa
         _ =  (self.omega_ZE*self.tair_ZE) * DelPres_tairAE
         function += CalcAreaAverage(_,self.ylength, xlength=self.xlength
-                                     )/self.sigma_AA
+                                     ) / self.sigma_AA
 
         ## Integrate in pressure ##
-        Ca = function.integrate(self.VerticalCoordIndexer
+        Ca = - function.integrate(self.VerticalCoordIndexer
                             ) * function[self.VerticalCoordIndexer].metpy.units
         try: 
             Ca = Ca.metpy.convert_units('W/ m **2')

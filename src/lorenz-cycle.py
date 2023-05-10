@@ -619,7 +619,7 @@ domain by clicking on the screen.")
     parser.add_argument("-v", "--verbosity", default = False,
                         action='store_true')
  
-    args = parser.parse_args()    
+    args = parser.parse_args()   
     infile  = args.infile
     varlist = '../inputs/fvars'
     
