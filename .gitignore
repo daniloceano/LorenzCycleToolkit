@@ -7,6 +7,11 @@ LEC_Results/
 # data wit nc files
 netCDF_data/
 
+# inputs
+inputs/box_lims
+inputs/fvars
+inputs/track
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

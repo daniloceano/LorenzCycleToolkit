@@ -1,5 +1,4 @@
-min_lon;-60
-max_lon;-30
-min_lat;-42.5
-max_lat;-17.5
-
+min_lon;-82.5
+max_lon;-15
+min_lat;-60
+max_lat;-30
