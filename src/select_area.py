@@ -14,22 +14,50 @@ Contact:
 """
 
 import time
+import os
+
 import matplotlib.colors as colors
 import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
+
 import cmocean.cm as cmo
 import numpy as np
 import pandas as pd
+
 from shapely.geometry.polygon import Polygon
 from scipy.signal import savgol_filter    
 from metpy.calc import vorticity
 
+import cartopy.crs as ccrs
+from cartopy.feature import NaturalEarthFeature, COASTLINE
+from cartopy.feature import BORDERS
+import cartopy.feature as cfeature
 
 nclicks = 2
 
 # define all CRS
 crs_longlat = ccrs.PlateCarree() 
-# crs_3857 = ccrs.epsg(3857)
+
+def check_create_folder(DirName, verbose=True):
+    """
+
+    Check if directory exists and if not, creates it.
+    
+    Parameters
+    ----------
+    DirName : str
+        directory name.
+
+    Returns
+    -------
+    None. 
+
+    """
+    if not os.path.exists(DirName):
+                os.makedirs(DirName)
+                print(DirName+' created')
+    else:
+        if verbose:
+            print(DirName+' directory exists')
 
 # Transformation function
 def coordXform(orig_crs, target_crs, x, y):
@@ -146,8 +174,6 @@ def draw_box_map(u, v, zeta, hgt, lat, lon, timestr):
     fig = plt.figure(figsize=(10, 8))
     ax = plt.axes(projection=crs_longlat)
     fig.add_axes(ax)
-    # ax.set_extent([domain_limits['min_lon'], domain_limits['max_lon'],
-    #               domain_limits['min_lat'],domain_limits['max_lat']]) 
     
     plot_zeta(ax, zeta, lat, lon, hgt)
     ax.streamplot(lon.values, lat.values, u.values, v.values, color='#2A1D21',
@@ -256,7 +282,13 @@ def slice_domain(NetCDF_data, args, varlist):
     
     return NetCDF_data, method
 
-def plot_domain_attributes(values):
+def plot_domain_attributes(data850, extremes, values, FigsDirectory):
+
+    central_lon, central_lat = values[1], values[2]
+    min_lon = central_lon-values[4]
+    max_lon = central_lon+values[4]
+    min_lat = central_lat-values[3]
+    max_lat = central_lat+values[3]
 
     # Create figure
     plt.close('all')
@@ -264,8 +296,6 @@ def plot_domain_attributes(values):
 
     # Set map extent and features
     ax.set_extent([min_lon-20, max_lon+20, max_lat+20, min_lat-20], crs=ccrs.PlateCarree())
-    map_features(ax)
-    Brazil_states(ax, facecolor='None')
     
     # Plot selected domain
     # Create a sample polygon, `pgon`
@@ -277,6 +307,15 @@ def plot_domain_attributes(values):
     ax.add_geometries([pgon], crs=ccrs.PlateCarree(), 
                       facecolor='None', edgecolor='#BF3D3B', linewidth=3,
                       alpha=1, zorder=3)
+    
+    # Plot central point, mininum vorticity, minimum hgt and maximum wind
+    ax.scatter(central_lon, central_lat,  marker='o', c='#31332e', s=100, zorder=4)
+    ax.scatter(extremes['min_zeta']['longitude'], extremes['min_zeta']['latitude'],
+                marker='s', c='#31332e', s=100, zorder=4, label='min zeta')
+    ax.scatter(extremes['min_hgt']['longitude'], extremes['min_hgt']['latitude'],
+                 marker='x', c='#31332e', s=100, zorder=4, label='min hgt')
+    ax.scatter(extremes['max_wind']['longitude'], extremes['max_wind']['latitude'],
+                 marker='^', c='#31332e', s=100, zorder=4, label='max wind')
 
     # Add gridlines
     gl = ax.gridlines(draw_labels=True,zorder=2)    
@@ -286,30 +325,26 @@ def plot_domain_attributes(values):
     # Add title
     plt.title('Box defined for computations\n', fontsize=22)
 
-    # Plot zeta data if requested
-    if zeta is not None and lat is not None and lon is not None:
-        plot_zeta(ax, zeta, lat, lon, hgt)
-        ax.add_feature(COASTLINE,edgecolor='#283618',linewidth=1)
-        ax.add_feature(BORDERS,edgecolor='#283618',linewidth=1)
-        _ = ax.add_feature(cfeature.NaturalEarthFeature('physical',
-                        'land', '50m', edgecolor='face', facecolor=facecolor))
+    plot_zeta(ax, data850['zeta'], data850['lat'], data850['lon'], data850['hgt'])
+    ax.add_feature(COASTLINE,edgecolor='#283618',linewidth=1)
+    ax.add_feature(BORDERS,edgecolor='#283618',linewidth=1)
+    _ = ax.add_feature(cfeature.NaturalEarthFeature('physical',
+                    'land', '50m', edgecolor='face', facecolor='None'))
+
+    states = NaturalEarthFeature(category='cultural', scale='50m', 
+                                facecolor='none',
+                                name='admin_1_states_provinces_lines')
+    _ = ax.add_feature(states, edgecolor='#283618',linewidth=1)
     
-        states = NaturalEarthFeature(category='cultural', scale='50m', 
-                                    facecolor='none',
-                                    name='admin_1_states_provinces_lines')
-        _ = ax.add_feature(states, edgecolor='#283618',linewidth=1)
-        
-        cities = NaturalEarthFeature(category='cultural', scale='50m',
-                                    facecolor='none',
-                                    name='populated_places')
-        _ = ax.add_feature(cities, edgecolor='#283618',linewidth=1)
+    cities = NaturalEarthFeature(category='cultural', scale='50m',
+                                facecolor='none',
+                                name='populated_places')
+    _ = ax.add_feature(cities, edgecolor='#283618',linewidth=1)
 
     # Save figure
     if time:
-        boxes_directory = os.path.join(outdir, 'Figures', 'boxes')
+        boxes_directory = os.path.join(FigsDirectory, 'boxes')
         check_create_folder(boxes_directory, verbose=False)
         filename = os.path.join(boxes_directory, f'box_{time}.png')
-    else:
-        filename = os.path.join(outdir, 'Figures', 'box.png')
     plt.savefig(filename)
     print(f'\nCreated figure with box defined for computations at {filename}') 

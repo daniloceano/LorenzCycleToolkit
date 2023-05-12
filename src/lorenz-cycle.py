@@ -33,6 +33,7 @@ from metpy.constants import g
 
 from select_area import slice_domain
 from select_area import draw_box_map
+from select_area import plot_domain_attributes
 
 from determine_periods import get_periods
 
@@ -136,6 +137,40 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
     #     data = data.fillna(0)
     
     return data
+
+def find_extremum_coordinates(data, lat, lon, variable):
+    """
+    Finds the indices of the extremum values for a given variable.
+
+    Args:
+    data: An xarray DataArray containing the data to compute the energy cycle.
+    lat: An xarray DataArray containing the latitudes of the data.
+    lon: An xarray DataArray containing the longitudes of the data.
+    variable: A string containing the name of the variable to find the indices for.
+
+    Returns:
+    A tuple containing the indices of the extremum values for the specified variable.
+    """
+    
+    lat_values = lat.values
+    lon_values = lon.values
+
+    if variable == 'min_zeta':
+        index = np.unravel_index(data.argmin(), data.shape)
+    elif variable == 'min_hgt':
+        index = np.unravel_index(data.argmin(), data.shape)
+    elif variable == 'max_wind':
+        index = np.unravel_index(data.argmax(), data.shape)
+    else:
+        raise ValueError("Invalid variable specified.")
+
+    lat_index = index[0]
+    lon_index = index[1]
+
+    lat_value = lat_values[lat_index]
+    lon_value = lon_values[lon_index]
+
+    return lat_value, lon_value
 
 def LEC_fixed(data):
     """
@@ -298,8 +333,6 @@ def LEC_fixed(data):
     print(outfile+' created') 
     print('All done!')
     # 13) Make figures
-    FigsDirectory = ResultsSubDirectory+'/Figures'
-    check_create_folder(FigsDirectory)
     if args.residuals:
         flag = ' -r'
     else:
@@ -313,7 +346,7 @@ def LEC_fixed(data):
     os.system(cmd)
     
 
-def LEC_moving(data, varlist):
+def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
     """
     Computes the Lorenz Energy Cycle using a moving framework.
     
@@ -352,13 +385,15 @@ def LEC_moving(data, varlist):
             VerticalCoordIndexer,LatIndexer,LonIndexer,TimeName)
     print('Ok.')
     
-    # Create csv files for storing vertical results.
-    # When those terms are computed data is simply appended to csv
-    for term in ['Az','Ae','Kz','Ke','Cz','Ca','Ck','Ce','Ge','Gz']:
-        tmp = pd.DataFrame(columns=[TimeName,
-        *[float(i)/100 for i in pres.values]])
-        tmp.to_csv(ResultsSubDirectory+term+'_'+VerticalCoordIndexer+'.csv',
-                   index=None)  
+    # Create csv files for storing vertical results
+    for term in ['Az', 'Ae', 'Kz', 'Ke', 'Cz', 'Ca', 'Ck', 'Ce', 'Ge', 'Gz']:
+        columns = [TimeName] + [float(i) / 100 for i in pres.values]
+        df = pd.DataFrame(columns=columns)
+        file_name = term + '_' + VerticalCoordIndexer + '.csv'
+        file_path = os.path.join(ResultsSubDirectory, file_name)
+        df.to_csv(file_path, index=None) 
+        print(file_path+' created')
+
     # Track file
     if args.track:
         trackfile = '../inputs/track'
@@ -366,11 +401,9 @@ def LEC_moving(data, varlist):
                             delimiter=';',index_col='time')
 
     # Dictionary for saving system position and attributes
-    position = {}
     results_keys = ['time', 'central_lat', 'central_lon', 'length', 'width',
-            'min_zeta_850','min_hgt_850','max_wind_850']
-    for key in results_keys:
-        position[key] =  []
+                'min_zeta_850', 'min_hgt_850', 'max_wind_850']
+    position = {key: [] for key in results_keys}
     
     # Create dict for store results
     TermsDict = {}
@@ -389,35 +422,33 @@ def LEC_moving(data, varlist):
     if args.track:
         times = times[(times>=track.index[0]) & (times<=track.index[-1])]
         if len(times) == 0:
-            print("Mismatch between trackfile and data! Check that and try again!")
-            sys.exit(1)
+            raise ValueError("Mismatch between trackfile and data! Check that and try again!")
         
-    # Loop for each time step:
     for t in times:
+        idata, iQ, iu_850, iv_850, iwspd850, zeta, ight_850 = (
+            data.sel({TimeName: t}),
+            Q.sel({TimeName: t}),
+            u.sel({TimeName: t}).sel({VerticalCoordIndexer: 850}),
+            v.sel({TimeName: t}).sel({VerticalCoordIndexer: 850}),
+            wind_speed(u.sel({TimeName: t}).sel({VerticalCoordIndexer: 850}), v.sel({TimeName: t}).sel({VerticalCoordIndexer: 850})),
+            vorticity(u.sel({TimeName: t}).sel({VerticalCoordIndexer: 850}), v.sel({TimeName: t}).sel({VerticalCoordIndexer: 850})).metpy.dequantify(),
+            hgt.sel({TimeName: t}).sel({VerticalCoordIndexer: 850})
+        )
         
-        idata = data.sel({TimeName:t})
-        iQ = Q.sel({TimeName:t})
         # Get current time and box limits
         itime = str(t)
         datestr = pd.to_datetime(itime).strftime('%Y-%m-%d-%H%M')
-        
-        # Open those variables for saving 
-        iu_850 = u.sel({TimeName:t}).sel({VerticalCoordIndexer:850})
-        iv_850 = v.sel({TimeName:t}).sel({VerticalCoordIndexer:850})
-        ight_850 = hgt.sel({TimeName:t}).sel({VerticalCoordIndexer:850})
-        zeta = vorticity(iu_850, iv_850).metpy.dequantify()
+
         # Apply filter when using high resolution gridded data
-        dx = float(iv_850[LonIndexer][1]-iv_850[LonIndexer][0])
+        dx = float(iv_850[LonIndexer][1] - iv_850[LonIndexer][0])
         if dx < 1:
             try:
-                zeta = zeta.to_dataset(name='vorticity'
-                ).apply(savgol_filter,window_length=31, polyorder=2).vorticity
+                zeta = zeta.to_dataset(name='vorticity').apply(savgol_filter, window_length=31, polyorder=2).vorticity
             except LinAlgError:
-                zeta = zeta.fillna(0).to_dataset(name='vorticity'
-                ).apply(savgol_filter,window_length=31, polyorder=2).vorticity
-                pass
+                zeta = zeta.fillna(0).to_dataset(name='vorticity').apply(savgol_filter, window_length=31, polyorder=2).vorticity
             except Exception as e:
                 raise e
+
         lat, lon = iu_850[LatIndexer], iu_850[LonIndexer]
         
         if args.track:
@@ -471,17 +502,43 @@ def LEC_moving(data, varlist):
             central_lon = (limits['max_lon'] + limits['min_lon'])/2
             min_zeta = float(zeta.min())
             min_hgt = float(ight_850.min())
-            max_wind = float(wind_speed(iu_850, iv_850).max())
+            max_wind = float(iwspd850.max())
         
-        # Get locations
-        zeta_min_loc = zeta.where(zeta==min_zeta, drop=True).squeeze()
-        hgt_min_loc = ight_850.where(ight_850==min_hgt, drop=True).squeeze
-        wind_max_loc = max_wind.where(max_wind==max_wind, drop=True).squeeze()
+        min_zeta_lat, min_zeta_lon = find_extremum_coordinates(zeta, lat, lon, 'min_zeta')
+        min_hgt_lat, min_hgt_lon = find_extremum_coordinates(ight_850, lat, lon, 'min_hgt')
+        max_wind_lat, max_wind_lon = find_extremum_coordinates(wind_speed(iu_850, iv_850), lat, lon, 'max_wind')
+        # Store the results in a dictionary for plotting purposes
+        extremes = {
+            'min_zeta': {
+                'latitude': min_zeta_lat,
+                'longitude': min_zeta_lon,
+                'value': min_zeta
+            },
+            'min_hgt': {
+                'latitude': min_hgt_lat,
+                'longitude': min_hgt_lon,
+                'value': min_hgt
+            },
+            'max_wind': {
+                'latitude': max_wind_lat,
+                'longitude': max_wind_lon,
+                'value': max_wind
+            }
+        }
+
+        data850 = {
+            'zeta': zeta,
+            'hgt': ight_850,
+            'lat': lat,
+            'lon': lon,
+        }
         
         values = [datestr, central_lat, central_lon, length, width,
                   min_zeta, min_hgt, max_wind]
         for key,val in zip(results_keys,values):
             position[key].append(val)
+
+        plot_domain_attributes(data850, extremes, values, FigsDirectory)
         
         print('\nTime: ',datestr)
         print('Box min_lon, max_lon: '+str(min_lon)+'/'+str(max_lon))
@@ -498,8 +555,9 @@ def LEC_moving(data, varlist):
             western_limit=min_lon, eastern_limit=max_lon,
             southern_limit=min_lat, northern_limit=max_lat,
             output_dir=ResultsSubDirectory, Q=iQ)
-        except:
-            raise SystemExit('Error on creating the box for the computations')
+        except Exception as e:
+            print('An exception occurred: {}'.format(e))
+            raise SystemExit('Error creating the box for computations')
         # Compute energy terms
         try:
             ec_obj = EnergyContents(box_obj,method='moving')
@@ -637,7 +695,9 @@ domain by clicking on the screen.")
     parser.add_argument("-v", "--verbosity", default = False,
                         action='store_true')
  
-    args = parser.parse_args()   
+    # args = parser.parse_args()  
+    args = parser.parse_args(['../../SWSA-cyclones_energetic-analysis/met_data/ERA5/DATA/19820684_ERA5.nc',
+                              '-r', '-g', '-t']) 
     infile  = args.infile
     varlist = '../inputs/fvars'
     
@@ -647,20 +707,21 @@ domain by clicking on the screen.")
     # Slice data so the code runs faster
     data, method = slice_domain(data, args, varlist)
     
-    # Directory where results will be stored
-    ResultsMainDirectory = '../LEC_Results'
     # Append data limits to outfile name
     if args.outname:
         outfile_name = args.outname
     else:
         outfile_name = ''.join(infile.split('/')[-1].split('.nc'))+'_'+method
+
+    # Directory where results will be stored
+    ResultsMainDirectory = '../LEC_Results'
     # Each dataset of results have its own directory, allowing to store results
     # from more than one experiment at each time
     ResultsSubDirectory = ResultsMainDirectory+'/'+outfile_name+'/'
-    # Check if the LEC_Figures directory exists. If not, creates it
+    FigsDirectory = ResultsSubDirectory+'/Figures'
     check_create_folder(ResultsMainDirectory)
-    # Check if a directory for current data exists. If not, creates it
     check_create_folder(ResultsSubDirectory)
+    check_create_folder(FigsDirectory)
     
     # Run the program
     start_time = time.time()
@@ -669,6 +730,6 @@ domain by clicking on the screen.")
         print("--- %s seconds running fixed framework ---" % (time.time() - start_time))
     start_time = time.time()
     if args.track or args.choose:
-        LEC_moving(data, varlist)
+        LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory)
         print("--- %s seconds for running moving framework ---" % (time.time() - start_time))
     
