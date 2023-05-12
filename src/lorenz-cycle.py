@@ -434,31 +434,49 @@ def LEC_moving(data, varlist):
                                 ) or abs(t - track.index[closest_index-1]
                                 ) < abs(t - track.index[closest_index])):
                 closest_index -= 1
-            # track_itime = track.index[track.index.get_indexer(
-            #     t, method='nearest')].strftime('%Y-%m-%d %HZ')
             track_itime = track.index[closest_index]
-            min_lon = track.loc[track_itime]['Lon']-(width/2)
-            max_lon = track.loc[track_itime]['Lon']+(width/2)
-            min_lat = track.loc[track_itime]['Lat']-(length/2)
-            max_lat = track.loc[track_itime]['Lat']+(length/2)
+             # Store system position and attributes
+            central_lon, central_lat = track.loc[track_itime]['Lon'], track.loc[track_itime]['Lat']
+            min_lon = central_lon-(width/2)
+            max_lon = central_lon+(width/2)
+            min_lat = central_lat-(length/2)
+            max_lat = central_lat+(length/2)
             limits = {'min_lon':min_lon,'max_lon':max_lon,
                       'min_lat':min_lat,'max_lat':max_lat}
+             # Check if 'min_zeta_850', 'min_hgt_850' and 'max_wind_850' columns exists in the track file.
+             # If they exist, then retrieve and convert the value from the track file.
+             # If they do not exist, calculate them from variable values.
+            try:
+                min_zeta = float(track.loc[track_itime]['min_zeta_850'])
+            except KeyError:
+                min_zeta = float(zeta.min())
+            try:
+                min_hgt = float(track.loc[track_itime]['min_hgt_850'])
+            except KeyError:
+                min_hgt = float(ight_850.min())
+            try:
+                max_wind = float(track.loc[track_itime]['max_wind_850'])
+            except KeyError:
+                max_wind = float(wind_speed(iu_850, iv_850).max())
         
         elif args.choose:
             # Draw maps and ask user to specify corners for specifying the box
             limits = draw_box_map(iu_850, iv_850, zeta, ight_850,
                                   lat, lon, itime)
+             # Store system position and attributes
             min_lon, max_lon = limits['min_lon'],  limits['max_lon']
             min_lat, max_lat = limits['min_lat'],  limits['max_lat']
+            width, length = limits['max_lon'] - limits['min_lon'], limits['max_lat'] - limits['min_lat']
+            central_lat = (limits['max_lat'] + limits['min_lat'])/2
+            central_lon = (limits['max_lon'] + limits['min_lon'])/2
+            min_zeta = float(zeta.min())
+            min_hgt = float(ight_850.min())
+            max_wind = float(wind_speed(iu_850, iv_850).max())
         
-        # Store system position and attributes
-        central_lat = (limits['max_lat'] + limits['min_lat'])/2
-        central_lon = (limits['max_lon'] + limits['min_lon'])/2
-        length = limits['max_lat'] - limits['min_lat']
-        width = limits['max_lon'] - limits['min_lon']
-        min_zeta = float(zeta.min())
-        min_hgt = float(ight_850.min())
-        max_wind = float(wind_speed(iu_850, iv_850).max())
+        # Get locations
+        zeta_min_loc = zeta.where(zeta==min_zeta, drop=True).squeeze()
+        hgt_min_loc = ight_850.where(ight_850==min_hgt, drop=True).squeeze
+        wind_max_loc = max_wind.where(max_wind==max_wind, drop=True).squeeze()
         
         values = [datestr, central_lat, central_lon, length, width,
                   min_zeta, min_hgt, max_wind]

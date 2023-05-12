@@ -255,3 +255,61 @@ def slice_domain(NetCDF_data, args, varlist):
            LonIndexer: slice(WesternLimit,EasternLimit)})
     
     return NetCDF_data, method
+
+def plot_domain_attributes(values):
+
+    # Create figure
+    plt.close('all')
+    fig, ax = plt.subplots(figsize=(8, 8.5), subplot_kw=dict(projection=ccrs.PlateCarree()))
+
+    # Set map extent and features
+    ax.set_extent([min_lon-20, max_lon+20, max_lat+20, min_lat-20], crs=ccrs.PlateCarree())
+    map_features(ax)
+    Brazil_states(ax, facecolor='None')
+    
+    # Plot selected domain
+    # Create a sample polygon, `pgon`
+    pgon = Polygon(((min_lon, min_lat),
+                    (min_lon, max_lat),
+                    (max_lon, max_lat),
+                    (max_lon, min_lat),
+                    (min_lon, min_lat)))
+    ax.add_geometries([pgon], crs=ccrs.PlateCarree(), 
+                      facecolor='None', edgecolor='#BF3D3B', linewidth=3,
+                      alpha=1, zorder=3)
+
+    # Add gridlines
+    gl = ax.gridlines(draw_labels=True,zorder=2)    
+    gl.xlabel_style = {'size': 16}
+    gl.ylabel_style = {'size': 16}
+
+    # Add title
+    plt.title('Box defined for computations\n', fontsize=22)
+
+    # Plot zeta data if requested
+    if zeta is not None and lat is not None and lon is not None:
+        plot_zeta(ax, zeta, lat, lon, hgt)
+        ax.add_feature(COASTLINE,edgecolor='#283618',linewidth=1)
+        ax.add_feature(BORDERS,edgecolor='#283618',linewidth=1)
+        _ = ax.add_feature(cfeature.NaturalEarthFeature('physical',
+                        'land', '50m', edgecolor='face', facecolor=facecolor))
+    
+        states = NaturalEarthFeature(category='cultural', scale='50m', 
+                                    facecolor='none',
+                                    name='admin_1_states_provinces_lines')
+        _ = ax.add_feature(states, edgecolor='#283618',linewidth=1)
+        
+        cities = NaturalEarthFeature(category='cultural', scale='50m',
+                                    facecolor='none',
+                                    name='populated_places')
+        _ = ax.add_feature(cities, edgecolor='#283618',linewidth=1)
+
+    # Save figure
+    if time:
+        boxes_directory = os.path.join(outdir, 'Figures', 'boxes')
+        check_create_folder(boxes_directory, verbose=False)
+        filename = os.path.join(boxes_directory, f'box_{time}.png')
+    else:
+        filename = os.path.join(outdir, 'Figures', 'box.png')
+    plt.savefig(filename)
+    print(f'\nCreated figure with box defined for computations at {filename}') 
