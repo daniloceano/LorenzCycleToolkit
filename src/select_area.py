@@ -89,7 +89,7 @@ def plot_zeta(ax, zeta, lat, lon, hgt=None):
     # plot contours
     cf1 = ax.contourf(lon, lat, zeta, cmap=cmap,norm=norm,levels=51,
                       transform=crs_longlat) 
-    plt.colorbar(cf1, pad=0.07, orientation='vertical', shrink=0.5)
+    plt.colorbar(cf1, pad=0.12, orientation='vertical', shrink=0.5)
     if hgt is not None:
         cs = ax.contour(lon, lat, hgt, levels=11, colors='#344e41', 
                         linestyles='dashed',linewidths=1.3,
@@ -282,13 +282,15 @@ def slice_domain(NetCDF_data, args, varlist):
     
     return NetCDF_data, method
 
-def plot_domain_attributes(data850, extremes, values, FigsDirectory):
+def plot_domain_attributes(data850, position, FigsDirectory):
 
-    central_lon, central_lat = values[1], values[2]
-    min_lon = central_lon-values[4]
-    max_lon = central_lon+values[4]
-    min_lat = central_lat-values[3]
-    max_lat = central_lat+values[3]
+    time = position['datestr']
+    central_lon, central_lat = position['central_lon'], position['central_lat']
+    width, length = position['width'], position['length']
+    min_lon = central_lon-(width/2)
+    max_lon = central_lon+(width/2)
+    min_lat = central_lat-(length/2)
+    max_lat = central_lat+(length/2)
 
     # Create figure
     plt.close('all')
@@ -305,17 +307,19 @@ def plot_domain_attributes(data850, extremes, values, FigsDirectory):
                     (max_lon, min_lat),
                     (min_lon, min_lat)))
     ax.add_geometries([pgon], crs=ccrs.PlateCarree(), 
-                      facecolor='None', edgecolor='#BF3D3B', linewidth=3,
+                      facecolor='None', edgecolor='gray', linewidth=3,
                       alpha=1, zorder=3)
     
     # Plot central point, mininum vorticity, minimum hgt and maximum wind
     ax.scatter(central_lon, central_lat,  marker='o', c='#31332e', s=100, zorder=4)
-    ax.scatter(extremes['min_zeta']['longitude'], extremes['min_zeta']['latitude'],
+    ax.scatter(data850['min_zeta']['longitude'], data850['min_zeta']['latitude'],
                 marker='s', c='#31332e', s=100, zorder=4, label='min zeta')
-    ax.scatter(extremes['min_hgt']['longitude'], extremes['min_hgt']['latitude'],
+    ax.scatter(data850['min_hgt']['longitude'], data850['min_hgt']['latitude'],
                  marker='x', c='#31332e', s=100, zorder=4, label='min hgt')
-    ax.scatter(extremes['max_wind']['longitude'], extremes['max_wind']['latitude'],
+    ax.scatter(data850['max_wind']['longitude'], data850['max_wind']['latitude'],
                  marker='^', c='#31332e', s=100, zorder=4, label='max wind')
+    
+    plt.legend(loc='upper left', frameon=True, fontsize=14, bbox_to_anchor=(1.1,1.2))
 
     # Add gridlines
     gl = ax.gridlines(draw_labels=True,zorder=2)    
@@ -325,7 +329,7 @@ def plot_domain_attributes(data850, extremes, values, FigsDirectory):
     # Add title
     plt.title('Box defined for computations\n', fontsize=22)
 
-    plot_zeta(ax, data850['zeta'], data850['lat'], data850['lon'], data850['hgt'])
+    plot_zeta(ax, data850['min_zeta']['data'], data850['lat'], data850['lon'], data850['min_hgt']['data'])
     ax.add_feature(COASTLINE,edgecolor='#283618',linewidth=1)
     ax.add_feature(BORDERS,edgecolor='#283618',linewidth=1)
     _ = ax.add_feature(cfeature.NaturalEarthFeature('physical',
@@ -342,9 +346,8 @@ def plot_domain_attributes(data850, extremes, values, FigsDirectory):
     _ = ax.add_feature(cities, edgecolor='#283618',linewidth=1)
 
     # Save figure
-    if time:
-        boxes_directory = os.path.join(FigsDirectory, 'boxes')
-        check_create_folder(boxes_directory, verbose=False)
-        filename = os.path.join(boxes_directory, f'box_{time}.png')
+    boxes_directory = os.path.join(FigsDirectory, 'boxes')
+    check_create_folder(boxes_directory, verbose=False)
+    filename = os.path.join(boxes_directory, f'box_{time}.png')
     plt.savefig(filename)
     print(f'\nCreated figure with box defined for computations at {filename}') 

@@ -392,7 +392,7 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
         file_name = term + '_' + VerticalCoordIndexer + '.csv'
         file_path = os.path.join(ResultsSubDirectory, file_name)
         df.to_csv(file_path, index=None) 
-        print(file_path+' created')
+        print(file_path+' created (but still empty)')
 
     # Track file
     if args.track:
@@ -425,14 +425,17 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
             raise ValueError("Mismatch between trackfile and data! Check that and try again!")
         
     for t in times:
-        idata, iQ, iu_850, iv_850, iwspd850, zeta, ight_850 = (
-            data.sel({TimeName: t}),
+
+        idata = data.sel({TimeName: t})
+        iQ, iu_850, iv_850, ight_850 = (
             Q.sel({TimeName: t}),
             u.sel({TimeName: t}).sel({VerticalCoordIndexer: 850}),
             v.sel({TimeName: t}).sel({VerticalCoordIndexer: 850}),
-            wind_speed(u.sel({TimeName: t}).sel({VerticalCoordIndexer: 850}), v.sel({TimeName: t}).sel({VerticalCoordIndexer: 850})),
-            vorticity(u.sel({TimeName: t}).sel({VerticalCoordIndexer: 850}), v.sel({TimeName: t}).sel({VerticalCoordIndexer: 850})).metpy.dequantify(),
             hgt.sel({TimeName: t}).sel({VerticalCoordIndexer: 850})
+        )
+        iwspd_850, izeta_850 = (
+            wind_speed(iu_850, iv_850),
+            vorticity(iu_850, iv_850).metpy.dequantify(),
         )
         
         # Get current time and box limits
@@ -440,7 +443,7 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
         datestr = pd.to_datetime(itime).strftime('%Y-%m-%d-%H%M')
 
         # Apply filter when using high resolution gridded data
-        dx = float(iv_850[LonIndexer][1] - iv_850[LonIndexer][0])
+        dx = float(idata[LonIndexer][1] - idata[LonIndexer][0])
         if dx < 1:
             try:
                 zeta = zeta.to_dataset(name='vorticity').apply(savgol_filter, window_length=31, polyorder=2).vorticity
@@ -448,8 +451,6 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
                 zeta = zeta.fillna(0).to_dataset(name='vorticity').apply(savgol_filter, window_length=31, polyorder=2).vorticity
             except Exception as e:
                 raise e
-
-        lat, lon = iu_850[LatIndexer], iu_850[LonIndexer]
         
         if args.track:
             # Get current time and box limits
@@ -474,80 +475,99 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
             max_lat = central_lat+(length/2)
             limits = {'min_lon':min_lon,'max_lon':max_lon,
                       'min_lat':min_lat,'max_lat':max_lat}
+            
+            # Slice data for defined box
+            izeta_850_slice = izeta_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
+            ight_850_slice = ight_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
+            iwspd_850_slice = iwspd_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
+
              # Check if 'min_zeta_850', 'min_hgt_850' and 'max_wind_850' columns exists in the track file.
-             # If they exist, then retrieve and convert the value from the track file.
-             # If they do not exist, calculate them from variable values.
+             # If they exist, then retrieve and convert the value from the track file.  If they do not exist, calculate them
             try:
                 min_zeta = float(track.loc[track_itime]['min_zeta_850'])
             except KeyError:
-                min_zeta = float(zeta.min())
+                min_zeta = float(izeta_850_slice.min())
             try:
                 min_hgt = float(track.loc[track_itime]['min_hgt_850'])
             except KeyError:
-                min_hgt = float(ight_850.min())
+                min_hgt = float(ight_850_slice.min())
             try:
                 max_wind = float(track.loc[track_itime]['max_wind_850'])
             except KeyError:
-                max_wind = float(wind_speed(iu_850, iv_850).max())
+                max_wind = float(iwspd_850_slice.max())
         
         elif args.choose:
+
             # Draw maps and ask user to specify corners for specifying the box
-            limits = draw_box_map(iu_850, iv_850, zeta, ight_850,
+            limits = draw_box_map(iu_850, iv_850, izeta_850, ight_850,
                                   lat, lon, itime)
+            
              # Store system position and attributes
             min_lon, max_lon = limits['min_lon'],  limits['max_lon']
             min_lat, max_lat = limits['min_lat'],  limits['max_lat']
             width, length = limits['max_lon'] - limits['min_lon'], limits['max_lat'] - limits['min_lat']
             central_lat = (limits['max_lat'] + limits['min_lat'])/2
             central_lon = (limits['max_lon'] + limits['min_lon'])/2
-            min_zeta = float(zeta.min())
-            min_hgt = float(ight_850.min())
-            max_wind = float(iwspd850.max())
+
+            # Slice data for defined box and find extremes
+            izeta_850_slice = izeta_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
+            ight_850_slice = ight_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
+            iwspd_850_slice = iwspd_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
+            min_zeta = float(izeta_850_slice.min())
+            min_hgt = float(ight_850_slice.min())
+            max_wind = float(iwspd_850_slice.max())
         
-        min_zeta_lat, min_zeta_lon = find_extremum_coordinates(zeta, lat, lon, 'min_zeta')
-        min_hgt_lat, min_hgt_lon = find_extremum_coordinates(ight_850, lat, lon, 'min_hgt')
-        max_wind_lat, max_wind_lon = find_extremum_coordinates(wind_speed(iu_850, iv_850), lat, lon, 'max_wind')
-        # Store the results in a dictionary for plotting purposes
-        extremes = {
+        lat, lon = izeta_850[LatIndexer], izeta_850[LonIndexer]
+
+        # Find position of the extremes
+        lat_slice, lon_slice = izeta_850_slice[LatIndexer], izeta_850_slice[LonIndexer]
+        min_zeta_lat, min_zeta_lon = find_extremum_coordinates(izeta_850_slice, lat_slice, lon_slice, 'min_zeta')
+        min_hgt_lat, min_hgt_lon = find_extremum_coordinates(ight_850_slice, lat_slice, lon_slice, 'min_hgt')
+        max_wind_lat, max_wind_lon = find_extremum_coordinates(iwspd_850_slice, lat_slice, lon_slice, 'max_wind')
+       
+       # Store the results in a dictionary for plotting purposes
+        data850 = {
             'min_zeta': {
                 'latitude': min_zeta_lat,
                 'longitude': min_zeta_lon,
-                'value': min_zeta
+                'data': izeta_850
             },
             'min_hgt': {
                 'latitude': min_hgt_lat,
                 'longitude': min_hgt_lon,
-                'value': min_hgt
+                'data': ight_850
             },
             'max_wind': {
                 'latitude': max_wind_lat,
                 'longitude': max_wind_lon,
-                'value': max_wind
-            }
-        }
-
-        data850 = {
-            'zeta': zeta,
-            'hgt': ight_850,
+                'data': iwspd_850
+            },
             'lat': lat,
             'lon': lon,
         }
         
-        values = [datestr, central_lat, central_lon, length, width,
-                  min_zeta, min_hgt, max_wind]
-        for key,val in zip(results_keys,values):
-            position[key].append(val)
+        position = {
+        'datestr': datestr,
+        'central_lat': central_lat,
+        'central_lon': central_lon,
+        'length': length,
+        'width': width,
+        'min_zeta_850': min_zeta,
+        'min_hgt_850': min_hgt,
+        'max_wind_850': max_wind
+        }
 
-        plot_domain_attributes(data850, extremes, values, FigsDirectory)
+        plot_domain_attributes(data850, position, FigsDirectory)
         
-        print('\nTime: ',datestr)
-        print('Box min_lon, max_lon: '+str(min_lon)+'/'+str(max_lon))
-        print('Box min_lat, max_lat: '+str(min_lat)+'/'+str(max_lat))
-        print('Box size (longitude): '+str(width))
-        print('Box size (latitude): '+str(length))
-        print('Minimum vorticity at 850 hPa:',min_zeta)
-        print('Minimum geopotential height at 850 hPa:',min_hgt)
-        print('Maximum wind speed at 850 hPa:',max_wind)
+        print(f'\nTime: {datestr}')
+        print(f'central lat/lon: {central_lon}, {central_lat}')
+        print(f'Box min_lon, max_lon: {min_lon}/{max_lon}')
+        print(f'Box min_lat, max_lat: {min_lat}/{max_lat}')
+        print(f'Box size (longitude): {width}')
+        print(f'Box size (latitude): {length}')
+        print(f'Minimum vorticity at 850 hPa: {min_zeta}')
+        print(f'Minimum geopotential height at 850 hPa: {min_hgt}')
+        print(f'Maximum wind speed at 850 hPa: {max_wind}')
     
         # Create box object
         try:
@@ -630,7 +650,7 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
     print('All done!')
     
     # Save system position as a csv file for replicability
-    track = pd.DataFrame.from_dict(position)
+    track = pd.DataFrame.from_dict(position, orient='index').T
     track = track.rename(columns={'central_lat':'Lat','central_lon':'Lon'})
     output_trackfile =  ResultsSubDirectory+outfile_name+'_track'
     track.to_csv(output_trackfile, index=False, sep=";")
@@ -695,9 +715,8 @@ domain by clicking on the screen.")
     parser.add_argument("-v", "--verbosity", default = False,
                         action='store_true')
  
-    # args = parser.parse_args()  
-    args = parser.parse_args(['../../SWSA-cyclones_energetic-analysis/met_data/ERA5/DATA/19820684_ERA5.nc',
-                              '-r', '-g', '-t']) 
+    args = parser.parse_args()
+    
     infile  = args.infile
     varlist = '../inputs/fvars'
     
