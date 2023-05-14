@@ -401,9 +401,11 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
                             delimiter=';',index_col='time')
 
     # Dictionary for saving system position and attributes
-    results_keys = ['time', 'central_lat', 'central_lon', 'length', 'width',
+    results_keys = ['datestr', 'central_lat', 'central_lon', 'length', 'width',
                 'min_zeta_850', 'min_hgt_850', 'max_wind_850']
-    position = {key: [] for key in results_keys}
+    # position = {key: [] for key in results_keys}
+    out_track = pd.DataFrame(columns=results_keys)
+
     
     # Create dict for store results
     TermsDict = {}
@@ -557,6 +559,8 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
         'max_wind_850': max_wind
         }
 
+        out_track = out_track.append(position, ignore_index=True)
+
         plot_domain_attributes(data850, position, FigsDirectory)
         
         print(f'\nTime: {datestr}')
@@ -650,10 +654,10 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
     print('All done!')
     
     # Save system position as a csv file for replicability
-    track = pd.DataFrame.from_dict(position, orient='index').T
-    track = track.rename(columns={'central_lat':'Lat','central_lon':'Lon'})
+    # df = pd.DataFrame.from_dict(position, orient='index').T
+    out_track = out_track.rename(columns={'datestr':'time','central_lat':'Lat','central_lon':'Lon'})
     output_trackfile =  ResultsSubDirectory+outfile_name+'_track'
-    track.to_csv(output_trackfile, index=False, sep=";")
+    out_track.to_csv(output_trackfile, index=False, sep=";")
     
     # 13) Make figures directory
     FigsDirectory = ResultsSubDirectory+'/Figures'
