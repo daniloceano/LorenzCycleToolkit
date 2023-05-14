@@ -406,7 +406,6 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
     # position = {key: [] for key in results_keys}
     out_track = pd.DataFrame(columns=results_keys)
 
-    
     # Create dict for store results
     TermsDict = {}
     energy = ['Az','Ae','Kz','Ke']
@@ -448,9 +447,9 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
         dx = float(idata[LonIndexer][1] - idata[LonIndexer][0])
         if dx < 1:
             try:
-                zeta = zeta.to_dataset(name='vorticity').apply(savgol_filter, window_length=31, polyorder=2).vorticity
+                izeta_850 = izeta_850.to_dataset(name='vorticity').apply(savgol_filter, window_length=31, polyorder=2).vorticity
             except LinAlgError:
-                zeta = zeta.fillna(0).to_dataset(name='vorticity').apply(savgol_filter, window_length=31, polyorder=2).vorticity
+                izeta_850 = izeta_850.fillna(0).to_dataset(name='vorticity').apply(savgol_filter, window_length=31, polyorder=2).vorticity
             except Exception as e:
                 raise e
         
