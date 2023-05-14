@@ -8,402 +8,56 @@ Created on Tue Jun 14 16:32:27 2022
 
 import pandas as pd
 import argparse
+import glob
 import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 import numpy as np
 import cmocean
 from plot_timeseries import check_create_folder
+from LPS import LorenzPhaseSpace
 
-def MarkerSizeKe(df):
-    
-    msizes = [200,400,600,800,1000]
-    intervals = [3e5,4e5,5e5,6e5]
-    data = df['Ke']
-    title = 'Eddy Kinect\n    Energy\n(Ke - '+r' $J\,m^{-2})$'
+def create_LPS_plots(fig_title, zoom=False, **kwargs):
+        plt.close('all')
+        plt.figure(figsize=(10,10))
+        ax = plt.gca()
+        LorenzPhaseSpace(ax, zoom=zoom, **kwargs)
+        zoom_suffix = "_zoom" if zoom else ""
+        fname = f"{ResultsSubDirectory}/Figures/LPS/LPS_{fig_title}{zoom_suffix}.png"
+        with plt.rc_context({'savefig.dpi': 500}):
+                plt.savefig(fname)
+        print(f"{fname} created!")
 
-    sizes = []
-    for val in data:
-        if val <= intervals[0]:
-            sizes.append(msizes[0])
-        elif val > intervals[0] and val <= intervals[1]:
-            sizes.append(msizes[1])
-        elif val > intervals[1] and val <= intervals[2]:
-            sizes.append(msizes[2])
-        elif val > intervals[2] and val <= intervals[3]:
-            sizes.append(msizes[3])
-        else:
-            sizes.append(msizes[4])
-    df['sizes'] = sizes
-    
-    # Plot legend
-    labels = ['< '+str(intervals[0]),
-              '< '+str(intervals[1]),
-              '< '+str(intervals[2]),
-              '< '+str(intervals[3]),
-              '> '+str(intervals[3])]
-    l1 = plt.scatter([],[],c='k', s=msizes[0],label=labels[0])
-    l2 = plt.scatter([],[], c='k', s=msizes[1],label=labels[1])
-    l3 = plt.scatter([],[],c='k', s=msizes[2],label=labels[2])
-    l4 = plt.scatter([],[],c='k', s=msizes[3],label=labels[3])
-    l5 = plt.scatter([],[],c='k', s=msizes[4],label=labels[4])
-    leg = plt.legend([l1, l2, l3, l4, l5], labels, ncol=1, frameon=False,
-                     fontsize=12, handlelength = 0.3, handleheight = 4,
-                     borderpad = 1.5, scatteryoffsets = [0.1], framealpha = 1,
-                handletextpad=1.5, title=title,
-                scatterpoints = 1, loc = 1,
-                bbox_to_anchor=(0.77, -0.62, 0.5, 1),labelcolor = '#383838')
-    leg._legend_box.align = "center"
-    plt.setp(leg.get_title(), color='#383838')
-    plt.setp(leg.get_title(),fontsize=15)
-    for i in range(len(leg.legend_handles)):
-        leg.legend_handles[i].set_color('#383838')
-        leg.legend_handles[i].set_edgecolor('gray')
-    
-    return df
-
-def LorenzPhaseSpace(df,outname,example=False):
-    
-    '''
-    '''
-    
-    Ca = df['Ca']
-    Ce = df['Ce']
-    Ck = df['Ck']
-    Ge = df['Ge']
-    RAe = df['Ge']+df['BAe']
-    Re = df['RKe']+df['BKe']
-    df['Rae'], df['Re'] = RAe, Re
-    
-    plt.close('all')
-    fig = plt.figure(figsize=(12,10))
-    plt.gcf().subplots_adjust(bottom=0.15)
-    plt.gcf().subplots_adjust(left=0.14)
-    plt.gcf().subplots_adjust(right=0.82)
-    ax = plt.gca()
-    
-    # Scatter plot
-    s = MarkerSizeKe(df)['sizes']
-
-    # Plot limits
-    ax.set_xlim(-30,30)
-    ax.set_ylim(-3,12)
-    
-    # arrows connecting dots
-    Q = ax.quiver(Ck[:-1], Ca[:-1],
-              (Ck[1:].values-Ck[:-1].values),
-              (Ca[1:].values-Ca[:-1].values),
-              angles='xy', scale_units='xy', color='#383838',
-              scale=1,zorder=3)
-    
-    norm = colors.TwoSlopeNorm(vmin=-7, vcenter=0, vmax=15)
-    
-    # plot the moment of maximum intensity
-    m = ax.scatter(Ck.loc[s.idxmax()],Ca.loc[s.idxmax()],
-               c='None',s=s.loc[s.idxmax()]*1.1,
-               zorder=100,edgecolors='k', linewidth=3)
-    
-    # plot dots as Ge
-    dots = ax.scatter(Ck,Ca,c=Ge,cmap=cmocean.cm.curl,s=s,zorder=100,
-                  edgecolors='grey', norm=norm)
-    
-      # Labels
-    ax.set_xlabel(
-      'Conversion from zonal to eddy Kinetic Energy (Ck - '+r' $W\,m^{-2})$',
-                    fontsize=15,labelpad=45,c='#383838')
-    ax.set_ylabel(
-    'Conversion from zonal to eddy Potential Energy (Ca - '+r' $W\,m^{-2})$',
-                    fontsize=15,labelpad=45,c='#383838')
-
-        
-    if example == True:
-        dots.set_visible(False)
-        Q.remove()
-        m.remove()
-        
-    # Gradient lines in the center of the plot
-    alpha, offsetalpha = 0.3, 20
-    lw, c = 2.5, '#383838'
-    offsetx, offsety = 16, 4.3
-    for i in range(7):
-        ax.axhline(y=0+(i/offsetx),zorder=0+(i/5),linewidth=lw,
-                   alpha=alpha-(i/offsetalpha),c=c)
-        ax.axhline(y=0-(i/offsetx),zorder=0+(i/5),linewidth=lw,
-                   alpha=alpha-(i/offsetalpha),c=c)
-        ax.axvline(x=0+(i/offsety),zorder=0+(i/5),linewidth=lw,
-               alpha=alpha-(i/offsetalpha),c=c)
-        ax.axvline(x=0-(i/offsety),zorder=0+(i/5),linewidth=lw,
-               alpha=alpha-(i/offsetalpha),c=c)
-        # Vertical line showing when Ca is more important than Ck
-        ax.plot(np.arange(0-(i/offsety),-40-(i/offsety),-1),
-                 np.arange(0,40), c=c,zorder=1, 
-                 alpha=0.2-(i/offsetalpha*.5))
-        ax.plot(np.arange(0+(i/offsety),-40+(i/offsety),-1),
-                 np.arange(0,40), c=c,zorder=1, linewidth=lw,
-                 alpha=0.2-(i/offsetalpha*.5))
-        
-    # Colorbar
-    cax = fig.add_axes([ax.get_position().x1+0.01,
-                    ax.get_position().y0+0.34,0.02,ax.get_position().height/1.74])
-    cbar = plt.colorbar(dots, extend='both',cax=cax)
-    cbar.ax.set_ylabel('Generation of eddy Potential Energy (Ge - '+r' $W\,m^{-2})$',
-                   rotation=270,fontsize=15,verticalalignment='bottom',
-                   c='#383838',labelpad=50)
-    for t in cbar.ax.get_yticklabels():
-         t.set_fontsize(13)
-         
-    # Annotate plot
-    ax.xaxis.set_tick_params(labelsize=13)
-    ax.yaxis.set_tick_params(labelsize=13)
-    
-    # Annotate plot
-    if example == True:
-        system = ''
-        datasource = ''
-        start, end = '',''
-    else:
-        system = outfile.split('/')[-1].split('_')[0]
-        datasource = outfile.split('/')[-1].split('_')[1]
-        start, end = str(df['Datetime'][0]),str(df['Datetime'].iloc[-1]) 
-    ax.text(0,1.1,'System: '+system+' - Data from: '+datasource,
-            fontsize=16,c='#242424',horizontalalignment='left',
-            transform=ax.transAxes)
-    ax.text(0,1.06,'Start (A):',fontsize=14,c='#242424',
-            horizontalalignment='left',transform=ax.transAxes)
-    ax.text(0,1.025,'End (Z):',fontsize=14,c='#242424',
-            horizontalalignment='left',transform=ax.transAxes)
-    ax.text(0.14,1.06,start,fontsize=14,c='#242424',
-            horizontalalignment='left',transform=ax.transAxes)
-    ax.text(0.14,1.025,end,fontsize=14,c='#242424',
-            horizontalalignment='left',transform=ax.transAxes)
-    annotate_fs = 15
-    y_upper = 'Eddy is gaining potential energy \n from the mean flow'
-    y_lower = 'Eddy is providing potential energy \n to the mean flow'
-    x_left = 'Eddy is gaining kinetic energy \n from the mean flow'
-    x_right = 'Eddy is providing kinetic energy \n to the mean flow'
-    col_lower = 'Subisidence decreases\neddy potential energy'
-    col_upper = 'Latent heat release feeds\neddy potential energy'
-    lower_left = 'Barotropic instability'
-    upper_left = 'Eddy growth by barotropic\nand baroclinic processes'
-    lower_right = 'Eddy is feeding the\nlocal atmospheric circulation'
-    upper_right = 'Gain of eddy potential energy\n via baroclinic processes'
-                
-        
-    ax.text(-0.09,0.01,y_lower,
-            rotation=90,fontsize=annotate_fs,horizontalalignment='center',c='#19616C',
-            transform=ax.transAxes)
-    ax.text(-0.09,0.55,y_upper,
-            rotation=90,fontsize=annotate_fs,horizontalalignment='center',c='#CF6D66',
-            transform=ax.transAxes)
-    ax.text(0.25,-0.1,x_left,
-            fontsize=annotate_fs,horizontalalignment='center',c='#CF6D66',
-            transform=ax.transAxes)
-    ax.text(0.75,-0.1,x_right,
-            fontsize=annotate_fs,horizontalalignment='center',c='#19616C',
-            transform=ax.transAxes)
-    ax.text(1.15,0.40,col_lower,
-            rotation=270,fontsize=annotate_fs,horizontalalignment='center',c='#19616C'
-            ,transform=ax.transAxes)
-    ax.text(1.15,0.75,col_upper,
-            rotation=270,fontsize=annotate_fs,horizontalalignment='center',c='#CF6D66',
-            transform=ax.transAxes)
-    ax.text(0.22,0.05,lower_left,
-            fontsize=annotate_fs,horizontalalignment='center',c='#660066',
-            verticalalignment='center', transform=ax.transAxes)
-    ax.text(0.24,0.95,upper_left,
-            fontsize=annotate_fs,horizontalalignment='center',c='#800000',
-            verticalalignment='center', transform=ax.transAxes)
-    ax.text(0.75,0.05,lower_right,
-            fontsize=annotate_fs,horizontalalignment='center',c='#000066',
-            verticalalignment='center', transform=ax.transAxes)
-    ax.text(0.75,0.95,upper_right,
-            fontsize=annotate_fs,horizontalalignment='center',c='#660066',
-            verticalalignment='center', transform=ax.transAxes)
-    
-    # Marking start and end of the system
-    if example == False:
-        ax.text(Ck[0], Ca[0],'A',
-                zorder=101,fontsize=22,horizontalalignment='center',
-                verticalalignment='center')
-        ax.text(Ck.iloc[-1], Ca.iloc[-1], 'Z',
-                zorder=101,fontsize=22,horizontalalignment='center',
-                verticalalignment='center')
-        
-    fname = FigsDir+'LPS'+'_'+outname+'.png'
-    plt.savefig(fname,dpi=500)
-    print(fname+' created!')
-    
-def LorenzPhaseSpace_zoomed(df,outname):
-    
-    Ca = df['Ca']
-    Ck = df['Ck']
-    Ge = df['Ge']
-    
-    plt.close('all')
-    fig = plt.figure(figsize=(10,10))
-    # plt.gcf().subplots_adjust(bottom=0.15)
-    plt.gcf().subplots_adjust(right=0.85)
-    # plt.gcf().subplots_adjust(left=0.135)
-    ax = plt.gca()
-    
-    # # Line plot
-    # ax.plot(Ck,Ca,'-',c='gray',zorder=2,linewidth=3)
-    
-    # Scatter plot
-    s = MarkerSizeKe(df)['sizes']
-
-    # Get limits
-    minCk, maxCk =  min(Ck), max(Ck)
-    minCa, maxCa = min(Ca), max(Ca)
-    minGe, maxGe = min(Ge), max(Ge)
-    # Plot limits for Ck
-    if minCk < -1:
-        minLimitCk = min(Ck)+(min(Ck)*0.3)
-    else:
-        minLimitCk = -1
-    if maxCk > 3:
-        maxLimitCk = max(Ck)+(max(Ck)*0.2)
-    else:
-        maxLimitCk = 3
-    ax.set_xlim(minLimitCk,maxLimitCk)
-    # Plot limits for Ca
-    if minCa < -0.5:
-        minLimitCa = min(Ca)+(min(Ca)*0.3)
-    else:
-        minLimitCa = -0.5
-    if maxCa > 1:
-        maxLimitCa = max(Ca)+(max(Ca)*0.2)
-    else:
-        maxLimitCa = 1
-    ax.set_ylim(minLimitCa,maxLimitCa)
-    
-    
-    # arrows connecting dots
-    ax.quiver(Ck[:-1], Ca[:-1],
-              (Ck[1:].values-Ck[:-1].values),
-              (Ca[1:].values-Ca[:-1].values),
-              angles='xy', scale_units='xy', color='#383838',
-              scale=1,zorder=3)
-    
-    if max(Ge) > 0:
-        norm = colors.TwoSlopeNorm(vmin=min(Ge)-(min(Ge)*0.2),
-                               vcenter=0, vmax=max(Ge)+(max(Ge)*0.2))
-    else:
-        norm = colors.TwoSlopeNorm(vmin=min(Ge)-(min(Ge)*0.2),
-                               vcenter=0, vmax=1)
-    
-    # plot the moment of maximum intensity
-    ax.scatter(Ck.loc[s.idxmax()],Ca.loc[s.idxmax()],
-               c='None',s=s.loc[s.idxmax()]*1.1,
-               zorder=100,edgecolors='k', linewidth=3)
-    
-    # plot dots as Ge
-    dots = ax.scatter(Ck,Ca,c=Ge,cmap=cmocean.cm.curl,s=s,zorder=100,
-                        edgecolors='grey', norm=norm)
-    
-    # Lines in the center of the plot
-    c,lw,alpha = '#383838',20,0.2
-    ax.axhline(y=0,linewidth=lw,c=c,alpha=alpha,zorder=1)
-    ax.axvline(x=0,linewidth=lw,c=c,alpha=alpha,zorder=1)
-    ax.plot(range(0,-40,-1),range(0,40,1),
-            linewidth=lw/3,c=c,alpha=alpha,zorder=1)
-        
-    # Labels
-    ax.set_xlabel('Conversion from zonal to eddy Kinetic Energy (Ck - '+r' $W\,m^{-2})$',
-                  fontsize=12,labelpad=10,c='#383838')
-    ax.set_ylabel('Conversion from zonal to eddy Potential Energy (Ca - '+r' $W\,m^{-2})$',
-                  fontsize=12,labelpad=10,c='#383838')
-    ax.xaxis.set_tick_params(labelsize=13)
-    ax.yaxis.set_tick_params(labelsize=13)
-    
-    # Colorbar
-    cax = fig.add_axes([ax.get_position().x1+0.01,
-                        ax.get_position().y0+0.32,0.02,ax.get_position().height/1.74])
-    cbar = plt.colorbar(dots, extend='both',cax=cax)
-    cbar.ax.set_ylabel('Generation of eddy Potential Energy (Ge - '+r' $W\,m^{-2})$',
-                       rotation=270,fontsize=12,verticalalignment='bottom',
-                       c='#383838',labelpad=10)
-    for t in cbar.ax.get_yticklabels():
-         t.set_fontsize(13)
-
-
-    system = outfile.split('/')[-1].split('_')[0]
-    datasource = outfile.split('/')[-1].split('_')[1]
-    start, end = str(df['Datetime'][0]),str(df['Datetime'].iloc[-1]) 
-    ax.text(0,1.1,'System: '+system+' - Data from: '+datasource,
-            fontsize=16,c='#242424',horizontalalignment='left',
-            transform=ax.transAxes)
-    ax.text(0,1.06,'Start (A):',fontsize=14,c='#242424',
-            horizontalalignment='left',transform=ax.transAxes)
-    ax.text(0,1.025,'End (Z):',fontsize=14,c='#242424',
-            horizontalalignment='left',transform=ax.transAxes)
-    ax.text(0.14,1.06,start,fontsize=14,c='#242424',
-            horizontalalignment='left',transform=ax.transAxes)
-    ax.text(0.14,1.025,end,fontsize=14,c='#242424',
-            horizontalalignment='left',transform=ax.transAxes)
-    
-    # Marking start and end of the system
-    ax.text(Ck[0], Ca[0],'A',
-            zorder=101,fontsize=22,horizontalalignment='center',
-            verticalalignment='center')
-    ax.text(Ck.iloc[-1], Ca.iloc[-1], 'Z',
-            zorder=101,fontsize=22,horizontalalignment='center',
-            verticalalignment='center')
-    
-    fname = FigsDir+'LPS_'+outname+'_zoom.png'
-    plt.savefig(fname,dpi=500)
-    print(fname+' created!')
-    
-def main():
-    
-    # Open data
-    df = pd.read_csv(outfile)
-    df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
-    
-    # Get 12H means
-    smoothed = df.groupby(pd.Grouper(key="Datetime", freq="12H")).mean(
-                                                            numeric_only=True)
-    # Set datetime to the date range
-    starts = pd.Series(smoothed.index).dt.strftime('%Y-%m-%d %H:%M')
-    ends = pd.Series(pd.DatetimeIndex(starts) + \
-                     pd.Timedelta(hours=12)).dt.strftime('%Y-%m-%d %H:%M')
-    smoothed['Datetime'] = pd.DataFrame(starts.astype(str)+' - '+\
+def smooth_data(df, period):
+        smoothed = df.groupby(pd.Grouper(key="Datetime", freq=period)).mean(numeric_only=True)
+        # Set datetime to the date range
+        starts = pd.Series(smoothed.index).dt.strftime('%Y-%m-%d %H:%M')
+        ends = pd.Series(pd.DatetimeIndex(starts) + \
+                        pd.Timedelta(hours=12)).dt.strftime('%Y-%m-%d %H:%M')
+        smoothed['Datetime'] = pd.DataFrame(starts.astype(str)+' - '+\
                                         ends.astype(str)).values
-        
-    # Make LPS for all timesteps and 12h and 24h means
-    LorenzPhaseSpace(df,'example',example=True)
-    LorenzPhaseSpace(df,'all')
-    LorenzPhaseSpace(smoothed,'12H')
-    LorenzPhaseSpace(smoothed,'24H')
-    #Make LPS zoomed
-    LorenzPhaseSpace_zoomed(df,'all')
-    LorenzPhaseSpace_zoomed(smoothed,'12H')
-    LorenzPhaseSpace_zoomed(smoothed,'24H')
-        
-    # Get data for cyclone life cycle periods
-    try:
-        periods = pd.read_csv('/'.join(outfile.split('/')[:-1])+"/periods.csv",
-                          index_col=[0])
-    except:
-        print('Warning: periods file not found')
-        return
-    periods = periods.dropna()
-    for i in range(len(periods)):
-        start,end = periods.iloc[i]['start'],periods.iloc[i]['end']
-        selected_dates = df[(df['Datetime'] >= start) & (df['Datetime'] <= end)]
-        if i == 0:
-            period = selected_dates.drop(['Datetime','Date','Hour'],axis=1).mean()
-            period = period.to_frame(name=periods.iloc[i].name).transpose()
-        else:
-            tmp = selected_dates.drop(['Datetime','Date','Hour'],axis=1).mean()
-            tmp = tmp.to_frame(name=periods.iloc[i].name).transpose()
-            period = pd.concat([period,tmp]) 
-    # Set datetime to the period date range
-    period['Datetime'] = (periods['start'].astype(str)+' - '+\
-                                        periods['end'].astype(str)).values
+        return smoothed
 
-    # Make LPS for periods, if periods file found
-    LorenzPhaseSpace(period,'periods')
-    LorenzPhaseSpace_zoomed(period,'periods')
+def period_data(df):
+        periods_file = glob.glob(f"{ResultsSubDirectory}/periods.csv")[0]
+        if not periods_file:
+            raise FileNotFoundError("Periods file not found.")
+        periods = pd.read_csv(periods_file, index_col=[0])
+        periods = periods.dropna()
+        for i in range(len(periods)):
+                start,end = periods.iloc[i]['start'],periods.iloc[i]['end']
+                selected_dates = df[(df['Datetime'] >= start) & (df['Datetime'] <= end)]
+                if i == 0:
+                        period = selected_dates.drop(['Datetime','Date','Hour'],axis=1).mean()
+                        period = period.to_frame(name=periods.iloc[i].name).transpose()
+                else:
+                        tmp = selected_dates.drop(['Datetime','Date','Hour'],axis=1).mean()
+                        tmp = tmp.to_frame(name=periods.iloc[i].name).transpose()
+                        period = pd.concat([period,tmp]) 
+        # Set datetime to the period date range
+        period['Datetime'] = (periods['start'].astype(str)+' - '+\
+                                                periods['end'].astype(str)).values
+        return period 
+
     
 if __name__ == "__main__":
  
@@ -412,11 +66,48 @@ Lorenz Phase Space.")
     parser.add_argument("outfile", help = "The .csv file containing the \
 results from the main.py program.")
 
-
     args = parser.parse_args()
+    
     outfile = args.outfile
+
     ResultsSubDirectory = '/'.join(outfile.split('/')[:-1])
     FigsDir = ResultsSubDirectory+'/Figures/LPS/'
     check_create_folder(FigsDir)
-    
-    main()
+
+    system = outfile.split('/')[-1].split('_')[0]
+    datasource = outfile.split('/')[-1].split('_')[1]
+
+    df = pd.read_csv(outfile, index_col=[0])
+    df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
+
+    # Set datetime to the date range
+    start = pd.to_datetime(df['Datetime'].iloc[0]).strftime('%Y-%m-%d %H:%M')
+    end = pd.to_datetime(df['Datetime'].iloc[-1]).strftime('%Y-%m-%d %H:%M')
+
+
+    # Plot example
+    kwargs = {'terms':[], 'title':system, 'datasource': datasource, 'start': start, 'end': end}
+    terms = {'Ca': df['Ca']*0, 'Ck': df['Ck']*0,  'Ge': df['Ge']*0, 'Ke': df['Ke']*0}
+    kwargs['terms'].append(terms)      
+    create_LPS_plots("example", zoom=False, **kwargs)
+
+    for period in ['1H', '6H', '12H', '24H', '48H']:
+                kwargs = {'terms':[], 'title':system, 'datasource': datasource, 'start': start, 'end': end}
+                smoothed = smooth_data(df, period)
+                terms = {'Ca': smoothed['Ca'], 'Ck': smoothed['Ck'],  'Ge': smoothed['Ge'], 'Ke': smoothed['Ke']}
+                kwargs['terms'].append(terms)                      
+
+                create_LPS_plots(f"{period}", zoom=False, **kwargs)
+                create_LPS_plots(f"{period}", zoom=True, **kwargs)
+
+    try:
+        df_periods = period_data(df)
+        kwargs = {'terms':[], 'title':system, 'datasource': datasource, 'start': start, 'end': end}
+        terms = {'Ca': df_periods['Ca'], 'Ck': df_periods['Ck'],  'Ge': df_periods['Ge'], 'Ke': df_periods['Ke']}
+        kwargs['terms'].append(terms) 
+        create_LPS_plots("periods", zoom=False, **kwargs)
+        create_LPS_plots("periods", zoom=True, **kwargs)
+    except FileNotFoundError as e:
+        print(e)
+    except Exception as e:
+        print("An error occurred:", str(e))
