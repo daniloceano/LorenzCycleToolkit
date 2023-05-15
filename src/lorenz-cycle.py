@@ -489,7 +489,10 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
             try:
                 min_zeta = float(track.loc[track_itime]['min_zeta_850'])
             except KeyError:
-                min_zeta = float(izeta_850_slice.min())
+                if args.zeta:
+                    min_zeta = float(zeta.sel(latitude=central_lat, longitude=central_lon, method='nearest'))
+                else:
+                    min_zeta = float(izeta_850_slice.min())
             try:
                 min_hgt = float(track.loc[track_itime]['min_hgt_850'])
             except KeyError:
@@ -712,6 +715,9 @@ and a arbitraty box of 15°x15° is constructed.")
     group.add_argument("-c", "--choose", default = False,
     action='store_true', help = "For each time step, the user can choose the\
 domain by clicking on the screen.")
+    parser.add_argument("-z", "--zeta", default = False,
+                        action='store_true', help = 'Use this flag if the track was created using votictiy. It will\
+ make program to use the central longitude and latitude as the points of the minimum vorticity.')
     parser.add_argument("-o", "--outname", default = False, type=str,
     help = "choose a name for saving results (default is\
  the same as infile)")
