@@ -128,14 +128,7 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
     data = data.sortby(LonIndexer).sortby(LevelIndexer,
                 ascending=True).sortby(LatIndexer,ascending=True)
     print('Ok')
-                        
-    # # Fill missing values with 0
-    # data = data.fillna(0)
-    # try:
-    #     data = data.where(data.apply(np.isfinite)).fillna(0.0)
-    # except:
-    #     data = data.fillna(0)
-    
+
     return data
 
 def find_extremum_coordinates(data, lat, lon, variable):
@@ -429,6 +422,7 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
     for t in times:
 
         idata = data.sel({TimeName: t})
+
         iQ, iu_850, iv_850, ight_850 = (
             Q.sel({TimeName: t}),
             u.sel({TimeName: t}).sel({VerticalCoordIndexer: 850}),
@@ -436,8 +430,7 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
             hgt.sel({TimeName: t}).sel({VerticalCoordIndexer: 850})
         )
 
-        iwspd_850 = wind_speed(iu_850, iv_850)
-        izeta_850 = vorticity(iu_850, iv_850).metpy.dequantify()
+        iwspd_850, izeta_850 = wind_speed(iu_850, iv_850), vorticity(iu_850, iv_850).metpy.dequantify()
 
         lat, lon = idata[LatIndexer], idata[LonIndexer]
         
@@ -680,50 +673,18 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
     os.system("python ../plots/plot_track.py "+outfile)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description = "\
-Lorenz Energy Cycle (LEC) program. \n \
-The program can compute the LEC using two distinct frameworks:\
-    1) moving framework. A box is definid in the box_lims' file and then the \
-       energetics are computed for a fixed domain.\
-    2) fixed framework. The domain is not fixed and follows the system using \
-       the track file.\
- Both frameworks can be applied at the same time, given the required files are\
- provided. An auxilliary 'fvars' file is also needed for both frameworks: it\
- contains the specified names used for each variable. The program computes \
- the energy, conversion, boundary, generation and dissipation terms. The results \
- are stored as csv files in the 'LEC_results' directory on ../ and it also \
- creates figures for visualising the results. \
- The use of -r flag is required while the computation of friction parameters \
- is not implemented")
-    parser.add_argument("infile", help = "input .nc file with temperature,\
- geopotential and meridional, zonal and vertical components of the wind,\
- in pressure levels")
-    parser.add_argument("-r", "--residuals", default = False, action='store_true',
-    help = "compute the Dissipation and Generation terms as\
- residuals (needs to provide the 3D friction terms in the infile)")
-    parser.add_argument("-g", "--geopotential", default = False,
-    action='store_true', help = "use the geopotential data instead of\
- geopotential height. The file fvars must be adjusted for doing so.")
+    parser = argparse.ArgumentParser(description="Lorenz Energy Cycle (LEC) program.")
+    parser.add_argument("infile", help="Input .nc file with temperature, geopotential, and wind components.")
+    parser.add_argument("-r", "--residuals", action='store_true', help="Compute the Dissipation and Generation terms as residuals.")
+    parser.add_argument("-g", "--geopotential", action='store_true', help="Use geopotential data instead of geopotential height.")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("-f", "--fixed", default = False,
-    action='store_true', help = "compute the energetics for a Fixed domain\
- specified by the 'inputs/box_lims' file.")
-    group.add_argument("-t", "--track", default = False,
-    action='store_true', help = "define the box using a track file specified \
-by the 'inputs/track' file. The track indicate the central point of the system\
-and a arbitraty box of 15°x15° is constructed.")
-    group.add_argument("-c", "--choose", default = False,
-    action='store_true', help = "For each time step, the user can choose the\
-domain by clicking on the screen.")
-    parser.add_argument("-z", "--zeta", default = False,
-                        action='store_true', help = 'Use this flag if the track was created using votictiy. It will\
- make program to use the central longitude and latitude as the points of the minimum vorticity.')
-    parser.add_argument("-o", "--outname", default = False, type=str,
-    help = "choose a name for saving results (default is\
- the same as infile)")
-    parser.add_argument("-v", "--verbosity", default = False,
-                        action='store_true')
- 
+    group.add_argument("-f", "--fixed", action='store_true', help="Compute the energetics for a fixed domain specified by the 'box_lims' file.")
+    group.add_argument("-t", "--track", action='store_true', help="Define the box using a track file specified by the 'track' file.")
+    group.add_argument("-c", "--choose", action='store_true', help="Choose the domain for each time step by clicking on the screen.")
+    parser.add_argument("-z", "--zeta", action='store_true', help="Use this flag if the track file was created using vorticity.")
+    parser.add_argument("-o", "--outname", type=str, help="Choose a name for saving results.")
+    parser.add_argument("-v", "--verbosity", action='store_true', help="Increase output verbosity.")
+
     args = parser.parse_args()
     
     infile  = args.infile
@@ -734,6 +695,7 @@ domain by clicking on the screen.")
     
     # Slice data so the code runs faster
     data, method = slice_domain(data, args, varlist)
+    print(f'Data sliced: \n{data.coords}')
     
     # Append data limits to outfile name
     if args.outname:
