@@ -357,6 +357,7 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
     None
     """
     print('Computing energetics using moving framework')
+
     # Indexers
     dfVars = pd.read_csv(varlist,sep= ';',index_col=0,header=0)
     LonIndexer,LatIndexer,TimeName,VerticalCoordIndexer = \
@@ -364,6 +365,7 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
       dfVars.loc['Time']['Variable'],dfVars.loc['Vertical Level']['Variable']
     pres = data[VerticalCoordIndexer]*units(
          data[VerticalCoordIndexer].units).to('Pa')
+    
     # Get variables for computing Adiabatic Heating
     print('Extracting variables and assiging units..')
     tair =  (data[dfVars.loc['Air Temperature']['Variable']].compute() * 
@@ -403,7 +405,6 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
     # Dictionary for saving system position and attributes
     results_keys = ['datestr', 'central_lat', 'central_lon', 'length', 'width',
                 'min_zeta_850', 'min_hgt_850', 'max_wind_850']
-    # position = {key: [] for key in results_keys}
     out_track = pd.DataFrame(columns=results_keys)
 
     # Create dict for store results
@@ -417,9 +418,9 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
     for term in [*energy,*conversion,*boundary,*gendiss]:
         TermsDict[term] = []
     
-    times = pd.to_datetime(data[TimeName].values)
     # Slice the time array so the first and the last timestep will be the same
     # as in the track file
+    times = pd.to_datetime(data[TimeName].values)
     if args.track:
         times = times[(times>=track.index[0]) & (times<=track.index[-1])]
         if len(times) == 0:
@@ -434,10 +435,9 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
             v.sel({TimeName: t}).sel({VerticalCoordIndexer: 850}),
             hgt.sel({TimeName: t}).sel({VerticalCoordIndexer: 850})
         )
-        iwspd_850, izeta_850 = (
-            wind_speed(iu_850, iv_850),
-            vorticity(iu_850, iv_850).metpy.dequantify(),
-        )
+
+        iwspd_850 = wind_speed(iu_850, iv_850)
+        izeta_850 = vorticity(iu_850, iv_850).metpy.dequantify()
 
         lat, lon = idata[LatIndexer], idata[LonIndexer]
         
@@ -531,7 +531,7 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
             'min_zeta': {
                 'latitude': min_zeta_lat,
                 'longitude': min_zeta_lon,
-                'data': izeta_850
+                'data': vorticity(iu_850, iv_850).metpy.dequantify()
             },
             'min_hgt': {
                 'latitude': min_hgt_lat,
