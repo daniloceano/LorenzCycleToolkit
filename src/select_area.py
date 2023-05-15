@@ -285,10 +285,10 @@ def plot_domain_attributes(data850, position, FigsDirectory):
     time = position['datestr']
     central_lon, central_lat = position['central_lon'], position['central_lat']
     width, length = position['width'], position['length']
-    min_lon = central_lon-(width/2)
-    max_lon = central_lon+(width/2)
-    min_lat = central_lat-(length/2)
-    max_lat = central_lat+(length/2)
+    min_lon = central_lon - (width / 2)
+    max_lon = central_lon + (width / 2)
+    min_lat = central_lat - (length / 2)
+    max_lat = central_lat + (length / 2)
 
     # Create figure
     plt.close('all')
