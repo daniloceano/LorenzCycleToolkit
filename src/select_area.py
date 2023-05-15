@@ -183,7 +183,7 @@ def draw_box_map(u, v, zeta, hgt, lat, lon, timestr):
     while True:
         pts = []
         while len(pts) < nclicks:
-            tellme('Select box corners \nModel time step: '+timestr[:-13])
+            tellme(f"Select box corners \nModel time step: {timestr[:-6]}Z")
             pts = np.asarray(plt.ginput(nclicks, timeout=15,
                                         mouse_stop='MouseButton.MIDDLE'))
             if len(pts) < nclicks:

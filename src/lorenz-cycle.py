@@ -438,6 +438,8 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
             wind_speed(iu_850, iv_850),
             vorticity(iu_850, iv_850).metpy.dequantify(),
         )
+
+        lat, lon = idata[LatIndexer], idata[LonIndexer]
         
         # Get current time and box limits
         itime = str(t)
@@ -518,8 +520,6 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
             min_hgt = float(ight_850_slice.min())
             max_wind = float(iwspd_850_slice.max())
         
-        lat, lon = izeta_850[LatIndexer], izeta_850[LonIndexer]
-
         # Find position of the extremes
         lat_slice, lon_slice = izeta_850_slice[LatIndexer], izeta_850_slice[LonIndexer]
         min_zeta_lat, min_zeta_lon = find_extremum_coordinates(izeta_850_slice, lat_slice, lon_slice, 'min_zeta')
