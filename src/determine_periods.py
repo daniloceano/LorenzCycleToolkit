@@ -482,7 +482,7 @@ def get_formatted_phases(phases):
 
     return new_phases
 
-def get_phases(da, ResultsSubDirectory):
+def get_phases(da, output_directory):
     
     z = da.zeta_fil2
     dz2 = da.dz_dt2_fil2
@@ -524,8 +524,8 @@ def get_phases(da, ResultsSubDirectory):
     df = pd.DataFrame.from_dict(df_dict, orient='index',
                                 columns=['start', 'end'])
     
-    df.to_csv(ResultsSubDirectory+'periods.csv')
-    print(ResultsSubDirectory+'periods.csv created')
+    df.to_csv(output_directory+'periods.csv')
+    print(output_directory+'periods.csv created')
      
     return df
 
@@ -574,21 +574,27 @@ def plot_periods(da, periods, outfile_name):
     plt.savefig(outname,dpi=500)
     print(outname,'saved')
 
-def get_periods(output_trackfile, ResultsSubDirectory):
+def get_periods(track_file, output_directory):
     
     # Create directory for figures and set their names
-    outfile_name = ResultsSubDirectory+'periods'
-    outfile_name_didatic = ResultsSubDirectory+'periods_didatic'
+    outfile_name = output_directory+'periods'
+    outfile_name_didatic = output_directory+'periods_didatic'
         
     # From trackfile, construct a DataSet object with vorticity, its
     # derivatives and filtered series
-    track = pd.read_csv(output_trackfile, parse_dates=[0],delimiter=';',index_col=[0])
+    track = pd.read_csv(track_file, parse_dates=[0],delimiter=';',index_col=[0])
     df_zeta = pd.DataFrame(track['min_zeta_850'].rename('zeta'))        
     da = array_vorticity(df_zeta)
     
     # Determine periods
-    periods = get_phases(da, ResultsSubDirectory)
+    periods = get_phases(da, output_directory)
     
     # Make plots: the second plot explain the process for detemrining the phases
     plot_periods(da, periods, outfile_name)
     plot_didatic(da, outfile_name_didatic)
+
+if __name__ == '__main__':
+
+    track_file = '../LEC_Results/19820684_ERA5_track-15x15/19820684_ERA5_track-15x15_track'
+    output_directory = '../LEC_Results/19820684_ERA5_track-15x15'
+    get_periods(track_file, output_directory)
