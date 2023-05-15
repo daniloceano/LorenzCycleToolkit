@@ -490,7 +490,7 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
                 min_zeta = float(track.loc[track_itime]['min_zeta_850'])
             except KeyError:
                 if args.zeta:
-                    min_zeta = float(zeta.sel(latitude=central_lat, longitude=central_lon, method='nearest'))
+                    min_zeta = float(izeta_850.sel(latitude=central_lat, longitude=central_lon, method='nearest'))
                 else:
                     min_zeta = float(izeta_850_slice.min())
             try:
@@ -534,7 +534,7 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
             'min_zeta': {
                 'latitude': min_zeta_lat,
                 'longitude': min_zeta_lon,
-                'data': vorticity(iu_850, iv_850).metpy.dequantify()
+                'data': izeta_850
             },
             'min_hgt': {
                 'latitude': min_hgt_lat,

@@ -248,10 +248,10 @@ def slice_domain(NetCDF_data, args, varlist):
             method = 'track-15x15'
             max_width, max_length = 15, 15
         
-        WesternLimit = track['Lon'].min() - max_width
-        EasternLimit = track['Lon'].max() + max_width
-        SouthernLimit = track['Lat'].min() - max_length
-        NorthernLimit = track['Lat'].max() + max_length
+        WesternLimit = track['Lon'].min() - (max_width * 2)
+        EasternLimit = track['Lon'].max() + (max_width * 2)
+        SouthernLimit = track['Lat'].min() - (max_length * 2)
+        NorthernLimit = track['Lat'].max() + (max_length * 2)
         
     elif args.choose:
         method = 'choose'
