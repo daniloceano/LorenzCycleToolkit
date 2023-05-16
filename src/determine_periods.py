@@ -492,9 +492,7 @@ def plot_periods(da, periods, outfile_name):
     plt.gca().xaxis.set_major_locator(mdates.DayLocator())
     plt.gcf().autofmt_xdate()
     
-    plt.tight_layout()
-    
-    plt.show()    
+    plt.tight_layout()    
 
     outname = outfile_name+'.png'
     plt.savefig(outname,dpi=500)
