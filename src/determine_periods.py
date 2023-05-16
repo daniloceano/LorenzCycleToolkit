@@ -556,12 +556,12 @@ def plot_periods(da, periods, outfile_name):
         
     ax.plot(da.zeta.time, da.zeta,c='#6b675b',
             linewidth=4,label=r'$ζ$', alpha=0.8)
-    ax.plot(da.zeta_fil2.time, da.zeta_fil2,c='k',
+    ax.plot(da.zeta_filt2.time, da.zeta_filt2,c='k',
             linewidth=6,label=r'$ζ_f$')
     
     y = np.arange(z.min(),z.max()+5e-6,1e-5)
     plt.ylim(y[0],y[-1]+5e-6)
-    plt.xlim(da.zeta_fil.time[0].values, da.zeta_fil.time[-1].values)
+    plt.xlim(da.zeta_filt.time[0].values, da.zeta_filt.time[-1].values)
     ax.legend(loc='center left', bbox_to_anchor=(1.05, 0.5))
     plt.grid(linewidth=0.5, alpha=0.5)
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b-%d'))
