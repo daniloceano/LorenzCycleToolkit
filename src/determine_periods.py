@@ -129,12 +129,13 @@ def plot_didactic(vorticity: xr.Dataset, periods, outfile_name_didactic: str) ->
         outfile_name_didactic: The name (full path) of the file where the plot will be saved
     """
 
-    def plot_subplot(ax: plt.Axes, z: pd.Series, dz: pd.Series, dz2: pd.Series,
-                     dz3: pd.Series, c: list[str]) -> None:
+    def plot_subplot(ax: plt.Axes, z: pd.Series, z_filt: pd.Series, dz: pd.Series,
+                      dz2: pd.Series, dz3: pd.Series) -> None:
         ax.plot(vorticity.time, dz3, c=colors["mature"], linewidth=0.75, label=r"$\frac{∂^{3}ζ}{∂t^{3}}$")
         ax.plot(vorticity.time, dz2, c=colors["intensification"], linewidth=0.75, label=r"$\frac{∂^{2}ζ}{∂t^{2}}$")
         ax.plot(vorticity.time, dz, c=colors["incipient"], linewidth=0.75, label=r"$\frac{∂ζ}{∂t}$")
-        ax.plot(vorticity.time, z, c="k", linewidth=2, label="ζ")
+        ax.plot(vorticity.time, z, c="gray", linewidth=0.75, label=r"$ζ_{filt}$")
+        ax.plot(vorticity.time, z_filt, c="k", linewidth=2, label="ζ")
         ax.set_title("Plot ζ and its derivatives")
         ax.legend(loc="upper center", bbox_to_anchor=(1.67, 1.45), ncol=4, fontsize=16)
 
@@ -199,12 +200,11 @@ def plot_didactic(vorticity: xr.Dataset, periods, outfile_name_didactic: str) ->
         for j in range(3):
             ax_list.append(fig.add_subplot(gs[i, j], frameon=True))
 
-    plot_subplot(ax_list[0], z, dz, dz2, dz3, colors)
+    plot_subplot(ax_list[0], vorticity.zeta, z, dz, dz2, dz3)
 
     # 2) Plot dz peaks and valleys
 
     ax2 = fig.add_subplot(gs[0, 1], frameon=True)
-    plot_stage(ax2, dz3_peaks, dz3_valleys, colors["mature"], colors["mature"], "mature")
 
     col = list(colors.keys())
 
@@ -279,7 +279,6 @@ def plot_didactic(vorticity: xr.Dataset, periods, outfile_name_didactic: str) ->
 
     ax8.plot(vorticity.time, z, c="k", linewidth=2)
     
-    ax8.plot(vorticity.time,z,c="k", linewidth=2)
     ax8.set_title('Add overlaps for six hours between periods as confidence interval')
     
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b-%d'))
