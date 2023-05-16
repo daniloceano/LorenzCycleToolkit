@@ -286,8 +286,6 @@ def plot_didactic(vorticity: xr.Dataset, periods, outfile_name_didactic: str) ->
     plt.gca().xaxis.set_major_locator(mdates.DayLocator())
     plt.gcf().autofmt_xdate()
 
-    plt.show()
-
     outfile_name_didactic+='.png'
     plt.savefig(outfile_name_didactic,dpi=500)
     print(outfile_name_didactic,'saved')
