@@ -112,13 +112,22 @@ def get_peaks_valleys(function):
     return df_peaks, df_valleys
 
 def filter_peaks_valleys(series):
-    # Remove peaks and valleys that occured very close to each other
-    min_time_diff = pd.Timedelta(days=1)
-    valid_indices = [series.index[0]]
-    for i in range(1, len(series)):
-        if series.index[i] - series.index[i-1] > min_time_diff:
-            valid_indices.append(series.index[i])
-    return series.loc[valid_indices]
+    filtered_series = series.copy()
+
+    # Find the indices of peaks or valleys
+    indices = filtered_series.index
+
+    # Iterate through the indices
+    for i in range(len(indices) - 1):
+        # Check if the time difference between consecutive indices is less than 24 hours
+        if indices[i + 1] - indices[i] < pd.Timedelta(hours=24):
+            # Remove the peak or valley that occurs later
+            if filtered_series[indices[i + 1]] > filtered_series[indices[i]]:
+                filtered_series = filtered_series.drop(indices[i + 1])
+            else:
+                filtered_series = filtered_series.drop(indices[i])
+
+    return filtered_series
 
 def plot_didactic(vorticity: xr.Dataset, periods, outfile_name_didactic: str) -> None:
     """
@@ -131,40 +140,67 @@ def plot_didactic(vorticity: xr.Dataset, periods, outfile_name_didactic: str) ->
 
     def plot_subplot(ax: plt.Axes, z: pd.Series, z_filt: pd.Series, dz: pd.Series,
                       dz2: pd.Series, dz3: pd.Series) -> None:
-        ax.plot(vorticity.time, dz3, c=colors["mature"], linewidth=0.75, label=r"$\frac{∂^{3}ζ}{∂t^{3}}$")
-        ax.plot(vorticity.time, dz2, c=colors["intensification"], linewidth=0.75, label=r"$\frac{∂^{2}ζ}{∂t^{2}}$")
-        ax.plot(vorticity.time, dz, c=colors["incipient"], linewidth=0.75, label=r"$\frac{∂ζ}{∂t}$")
+        ax.plot(vorticity.time, dz3, c=colors_phases["incipient"],
+                 linewidth=0.75, label=r"$\frac{∂^{3}ζ}{∂t^{3}}$")
+        ax.plot(vorticity.time, dz2, c=colors_phases["intensification"],
+                 linewidth=0.75, label=r"$\frac{∂^{2}ζ}{∂t^{2}}$")
+        ax.plot(vorticity.time, dz, c=colors_phases["mature"], 
+                linewidth=0.75, label=r"$\frac{∂ζ}{∂t}$")
         ax.plot(vorticity.time, z, c="gray", linewidth=0.75, label=r"$ζ_{filt}$")
         ax.plot(vorticity.time, z_filt, c="k", linewidth=2, label="ζ")
         ax.set_title("Plot ζ and its derivatives")
-        ax.legend(loc="upper center", bbox_to_anchor=(1.67, 1.45), ncol=4, fontsize=16)
+        ax.legend(loc="upper center", bbox_to_anchor=(1.67, 1.45), ncol=5, fontsize=16)
 
-    def plot_stage(ax, peaks, valleys, peaks_color, valleys_color, stage_name):
+    def plot_peaks_valleys(ax, peaks, valleys, peaks_color, valleys_color):
+        # Plot peaks
+        if peaks is not None:
+            if isinstance(peaks, list):
+                s = 0
+                for i, peak in enumerate(peaks):
+                    peaks_time, peaks_z = find_matching_z_values(peak, z)
+                    peak_color = peaks_color[i] if i < len(peaks_color) else None
+                    peak_size = sizes[s] if s < len(sizes) else 150
+                    ax.scatter(peaks_time, peaks_z, facecolor=peak_color, edgecolor='k', s=peak_size)
+                    s += 1
+            else:
+                peaks_time, peaks_z = find_matching_z_values(peaks, z)
+                ax.scatter(peaks_time, peaks_z, facecolor=peaks_color, edgecolor='k', s=150)
+
+        # Plot valleys
+        if valleys is not None:
+            if isinstance(valleys, list):
+                s = 0
+                for i, valley in enumerate(valleys):
+                    valleys_time, valleys_z = find_matching_z_values(valley, z)
+                    valley_color = valleys_color[i] if i < len(valleys_color) else None
+                    valley_size = sizes[s] if s < len(sizes) else 150
+                    ax.scatter(valleys_time, valleys_z, facecolor=valley_color, s=valley_size)
+                    s += 1
+            else:
+                valleys_time, valleys_z = find_matching_z_values(valleys, z)
+                ax.scatter(valleys_time, valleys_z, facecolor=valleys_color, s=150)
+
+
+    def plot_stage(ax, stage_name=None):
         # Plot vorticity data
         ax.plot(vorticity.time, z, c="k", linewidth=2)
 
-        # Compute stage periods
-        stage_periods = periods[periods.index.str.contains(stage_name)]
+        if stage_name is not None:
+            # Compute stage periods
+            stage_periods = periods[periods.index.str.contains(stage_name)]
 
-        # Plot stage data
-        for _, row in stage_periods.iterrows():
-            stage_start = row['start']
-            stage_end = row['end']
-            stage_data = z.sel(time=slice(stage_start, stage_end))
+            # Plot stage data
+            for _, row in stage_periods.iterrows():
+                stage_start = row['start']
+                stage_end = row['end']
+                stage_data = z.sel(time=slice(stage_start, stage_end))
 
-            ax.fill_betweenx((z.min(), z.max()), stage_data.time.min(), stage_data.time.max(),
-                            facecolor=colors[stage_name], alpha=0.6)
-
-        # Find matching z values for peaks and valleys
-        peaks_time, peaks_z = find_matching_z_values(peaks, z)
-        valleys_time, valleys_z = find_matching_z_values(valleys, z)
-
-        # Plot peaks and valleys
-        ax.scatter(peaks_time, peaks_z, facecolor=peaks_color, edgecolor='k', s=150)
-        ax.scatter(valleys_time, valleys_z, facecolor=valleys_color, s=150)
+                ax.fill_betweenx((z.min(), z.max()), stage_data.time.min(), stage_data.time.max(),
+                                facecolor=colors_phases[stage_name], alpha=0.6)
 
         # Set plot title
-        ax.set_title(stage_name.capitalize() + ' stage')
+        if stage_name is not None:
+            ax.set_title(stage_name.capitalize() + ' stage')
 
 
     def find_matching_z_values(dz2_valleys, z):
@@ -178,8 +214,10 @@ def plot_didactic(vorticity: xr.Dataset, periods, outfile_name_didactic: str) ->
 
         return matching_times, matching_z_values
 
-    colors = {'incipient': '#65a1e6', 'intensification': '#f7b538',
+    colors_phases = {'incipient': '#65a1e6', 'intensification': '#f7b538',
           'mature': '#d62828', 'decay': '#9aa981'}
+    
+    colors_derivatives = {'dz':'#d62828', 'dz2':'#f7b538', 'dz3':'#65a1e6'}
 
     z = vorticity.zeta_filt2
     dz = vorticity.dz_dt_filt2 * 50
@@ -199,71 +237,66 @@ def plot_didactic(vorticity: xr.Dataset, periods, outfile_name_didactic: str) ->
     for i in range(3):
         for j in range(3):
             ax_list.append(fig.add_subplot(gs[i, j], frameon=True))
-
     plot_subplot(ax_list[0], vorticity.zeta, z, dz, dz2, dz3)
 
     # 2) Plot dz peaks and valleys
-
     ax2 = fig.add_subplot(gs[0, 1], frameon=True)
-
-    col = list(colors.keys())
-
+    col = list(colors_derivatives.keys()) 
+    sizes = [350, 250, 150]
+    s = 0
     for function, color_key in zip([dz, dz2, dz3], col):
         peaks, valleys = get_peaks_valleys(function)
-        
-        ax2.scatter(peaks.index, peaks, facecolor=colors[color_key], edgecolor='k', linewidth=2, s=150)
-        ax2.scatter(valleys.index, valleys, facecolor=colors[color_key], linewidth=2, s=150)
-        ax2.plot(function.time, function, c=colors[color_key], linewidth=1, linestyle='-')
-
+        ax2.scatter(peaks.index, peaks, facecolor=colors_derivatives[color_key],
+                     edgecolor='k', linewidth=2, s=sizes[s])
+        ax2.scatter(valleys.index, valleys, facecolor=colors_derivatives[color_key],
+                     linewidth=2, s=sizes[s])
+        ax2.plot(function.time, function, c=colors_derivatives[color_key],
+                  linewidth=1, linestyle='-')
+        s += 1
     ax2.plot(vorticity.time, z, c="k", linewidth=2)
     ax2.set_title('Get peaks and valleys in derivatives')
     
     # 3) Filter peaks and valeys closer than 1 day
     ax3 = fig.add_subplot(gs[0, 2], frameon=True)
-
-    i = 0
-    for function, color_key in zip([dz, dz2, dz3], col):
-        peaks, valleys = get_peaks_valleys(function)
-        peaks_filtered = filter_peaks_valleys(peaks)
-        valleys_filtered = filter_peaks_valleys(valleys)
-
-        for tpeak in peaks_filtered.index:
-            ax3.scatter(tpeak, z.where(z.time == tpeak).dropna(dim='time'),
-                        c=colors[color_key], edgecolor='k', s=150)
-        for tvalley in valleys_filtered.index:
-            ax3.scatter(tvalley, z.where(z.time == tvalley).dropna(dim='time'),
-                        c=colors[color_key], s=150)
-        i += 1
-
+    dz_peaks_filtered, dz_valleys_filtered = filter_peaks_valleys(dz_peaks), filter_peaks_valleys(dz_valleys)
+    dz2_peaks_filtered, dz2_valleys_filtered = filter_peaks_valleys(dz2_peaks), filter_peaks_valleys(dz2_valleys)
+    dz3_peaks_filtered, dz3_valleys_filtered = filter_peaks_valleys(dz3_peaks), filter_peaks_valleys(dz3_valleys)
+    plot_peaks_valleys(ax3, [dz_peaks_filtered, dz2_peaks_filtered, dz3_peaks_filtered],
+                       [dz_valleys_filtered, dz2_valleys_filtered, dz3_valleys_filtered],
+                       [colors_derivatives["dz"], colors_derivatives["dz2"],colors_derivatives["dz3"]],
+                       [colors_derivatives["dz"], colors_derivatives["dz2"],colors_derivatives["dz3"]])
     ax3.plot(vorticity.time, z, c="k", linewidth=2)
     ax3.set_title('Filter peaks closer than 1 day\n and transpose to ζ series')
-        
-    # 4) Plot mature stages
 
-    ax4 = fig.add_subplot(gs[1, 0],frameon=True)    
-    plot_stage(ax4, dz3_peaks, dz3_valleys, colors["mature"], colors["mature"], "mature")
+    # 4) Plot mature stages
+    ax4 = fig.add_subplot(gs[1, 0],frameon=True)  
+    plot_stage(ax4, "mature")
+    plot_peaks_valleys(ax4, dz_peaks, dz_valleys,
+                       colors_phases["mature"], colors_phases["mature"])
 
     # Plot intensification stages
-
     ax5 = fig.add_subplot(gs[1, 1],frameon=True)
-    plot_stage(ax5, dz3_peaks, dz2_valleys, colors["mature"], colors["intensification"], "intensification")
+    plot_stage(ax5, "intensification")
+    plot_peaks_valleys(ax5, peaks=[], valleys=[dz_valleys, dz2_valleys], peaks_color=[],
+                         valleys_color=[colors_derivatives["dz"], colors_derivatives["dz2"]])
+    
+    # Plot decaying stages
+    ax6 = fig.add_subplot(gs[1, 2],frameon=True)
+    plot_stage(ax6, "decay")    
+    plot_peaks_valleys(ax6, dz_peaks, dz2_valleys,
+                        colors_derivatives["dz"], colors_derivatives["dz2"])
 
     # Plot incipient stage, if there's any
-
-    ax6 = fig.add_subplot(gs[1, 2], frameon=True)
+    ax7 = fig.add_subplot(gs[2, 0], frameon=True)
     if 'incipient' in periods.index:
-        plot_stage(ax6, dz2_peaks, dz2_valleys, colors["incipient"], colors["incipient"], "incipient")
+        plot_stage(ax7, "incipient")
+        plot_peaks_valleys(ax7, dz2_peaks, dz2_valleys,
+                        colors_derivatives["dz2"], colors_derivatives["dz2"])
     else:
-        ax6.plot(vorticity.time, z, c="k", linewidth=2)
-        ax6.set_title("Incipient stage not found")
-        
-    # Plot decaying stages
-
-    ax7 = fig.add_subplot(gs[2, 0],frameon=True)
-    plot_stage(ax7, dz2_valleys, dz3_valleys, colors["intensification"], colors["mature"], "decay")    
+        ax7.plot(vorticity.time, z, c="k", linewidth=2)
+        ax7.set_title("Incipient stage not found")
     
     # Plot everything together
-
     ax8 = fig.add_subplot(gs[2, 1:3],frameon=True)
     
     for _, row in periods.iterrows():
@@ -275,7 +308,7 @@ def plot_didactic(vorticity: xr.Dataset, periods, outfile_name_didactic: str) ->
         phase_name = re.search(r'^(\w+)', row.name).group(1)
 
         ax8.fill_betweenx((z.min(), z.max()), period_data.time.min(), period_data.time.max(),
-                        facecolor=colors[phase_name], alpha=0.6)
+                        facecolor=colors_phases[phase_name], alpha=0.6)
 
     ax8.plot(vorticity.time, z, c="k", linewidth=2)
     
@@ -289,28 +322,30 @@ def plot_didactic(vorticity: xr.Dataset, periods, outfile_name_didactic: str) ->
     plt.savefig(outfile_name_didactic,dpi=500)
     print(outfile_name_didactic,'saved')
 
-def mature_stage(dz3):
+def mature_stage(dz):
+
     # Mature stage will be defined as all points between a consecutive
-    # maximum and minimum of the third vorticity!
-    dz3_peaks, dz3_valleys = get_peaks_valleys(dz3)
-    dz3_peaks_filtered = filter_peaks_valleys(dz3_peaks)
-    dz3_valleys_filtered = filter_peaks_valleys(dz3_valleys)
+    # minimum and maximum of the derivative of the vorticity.
+
+    dz_peaks, dz_valleys = get_peaks_valleys(dz)
+    dz_peaks_filtered = filter_peaks_valleys(dz_peaks)
+    dz_valleys_filtered = filter_peaks_valleys(dz_valleys)
     
-    peaks = dz3_peaks_filtered.replace(dz3_peaks_filtered.values,
+    peaks = dz_peaks_filtered.replace(dz_peaks_filtered.values,
                                        'peak')
-    valleys = dz3_valleys_filtered.replace(dz3_valleys_filtered.values,
+    valleys = dz_valleys_filtered.replace(dz_valleys_filtered.values,
                                            'valley')
-    dz3_peaks_valleys = pd.concat([peaks,valleys]).sort_index()
+    dz_peaks_valleys = pd.concat([peaks,valleys]).sort_index()
     
-    dt = dz3.time[1] - dz3.time[0]
+    dt = dz.time[1] - dz.time[0]
     dt = pd.Timedelta(dt.values)
         
     mature = []
-    for i in range(len(dz3_peaks_valleys[:-1])):
-        if (dz3_peaks_valleys[i] == 'peak') and \
-            (dz3_peaks_valleys[i+1] == 'valley') :
-            mature.append(pd.date_range(dz3_peaks_valleys.index[i],
-                        dz3_peaks_valleys.index[i+1],
+    for i in range(len(dz_peaks_valleys[:-1])):
+        if (dz_peaks_valleys[i] == 'valley') and \
+            (dz_peaks_valleys[i+1] == 'peak') :
+            mature.append(pd.date_range(dz_peaks_valleys.index[i],
+                        dz_peaks_valleys.index[i+1],
                         freq=f'{int(dt.total_seconds() / 3600)} H'))
     return mature
 
@@ -353,40 +388,35 @@ def intensification_incipient_stages(mature, dz2):
                         freq=f'{int(dt.total_seconds() / 3600)} H'))   
     
     return intensification, incipient
-    
-def decaying_stage(mature, z, dz2):
-    
-    dz2_peaks, dz2_valleys = get_peaks_valleys(dz2)
-    dt = z.time[1] - z.time[0]
+
+def decaying_stage(dz, dz2):
+    # Decaying stage will be defined as all points between a consecutive peak of dz and a valley of dz2.
+
+    dz_peaks, _ = get_peaks_valleys(dz)
+    _, dz2_valleys = get_peaks_valleys(dz2)
+    dz_peaks_filtered = filter_peaks_valleys(dz_peaks)
+    dz2_valleys_filtered = filter_peaks_valleys(dz2_valleys)
+
+    peaks = dz_peaks_filtered.replace(dz_peaks_filtered.values, 'peak')
+    valleys = dz2_valleys_filtered.replace(dz2_valleys_filtered.values, 'valley')
+    dz_peaks_valleys = pd.concat([peaks, valleys]).sort_index()
+
+    dt = dz.time[1] - dz.time[0]
     dt = pd.Timedelta(dt.values)
-    
+
     decaying = []
-    
-    # If there's only one mature stage, all time steps after it are considered
-    # as decaying stage
-    if len(mature) == 1:
-        decaying_start = mature[0][-1] + dt
-        decaying_end = z.time[-1].values
-        decaying.append(pd.date_range(decaying_start, decaying_end, 
-                        freq=f'{int(dt.total_seconds() / 3600)} H'))
-    
-    # Else, decaying is defined as the period between the end of the mature
-    # stage and the minimum of the second  derivative of the vorticity 
-    else:
-        for series, i in zip(mature, range(len(mature))):
-            mature_end = series[-1]
-            sliced_z = z.sel(time=slice(mature_end, z.time.max()))
-            decaying_end = dz2_valleys[
-                dz2_valleys.index >= sliced_z.time.min().values].index.min()
-            # If there isn't a peak of dz_dt2 after the end of the mature
-            # period, the decaying period goest until the end of the system
-            if pd.isnull(decaying_end):
-                decaying_end = z.time[-1].values            
-            decaying_start = mature_end+dt
-            decaying.append(pd.date_range(decaying_start, decaying_end, 
-                            freq=f'{int(dt.total_seconds() / 3600)} H'))
-            
+    i = 0
+    while i < len(dz_peaks_valleys) - 1:
+        if dz_peaks_valleys[i] == 'peak':
+            j = i + 1
+            while j < len(dz_peaks_valleys) and dz_peaks_valleys[j] == 'valley':
+                decaying.append(pd.date_range(dz_peaks_valleys.index[i], dz_peaks_valleys.index[j], freq=f'{int(dt.total_seconds() / 3600)} H'))
+                j += 1
+            i = j - 1
+        i += 1
+
     return decaying
+
 
 def get_formatted_phases(phases):
     new_phases = {}
@@ -406,14 +436,15 @@ def get_formatted_phases(phases):
 def get_phases(vorticity, output_directory):
     
     z = vorticity.zeta_filt2
+    dz = vorticity.dz_dt_filt2
     dz2 = vorticity.dz_dt2_filt2
     dz3 = vorticity.dz_dt3_filt2
     
-    mature = mature_stage(dz3)
+    mature = mature_stage(dz)
 
     intensification, incipient = intensification_incipient_stages(mature, dz2)
     
-    decaying = decaying_stage(mature, z, dz2)
+    decaying = decaying_stage(dz, dz2)
     
     # Add six hours in the end and beggining of each period, so there is an
     # overlap between each period, acting as a confidence interval
