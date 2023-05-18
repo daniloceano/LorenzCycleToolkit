@@ -33,7 +33,7 @@ Contact:
 @author: daniloceano
 """
 
-import xarray
+import xarray as xr
 from Math import (CalcZonalAverage, CalcAreaAverage)
 import argparse
 from thermodynamics import StaticStability, AdiabaticHEating
@@ -46,17 +46,16 @@ class BoxData:
     '''
     Object containing all meteorological data required for the LEC computation
     '''
-    def __init__(self, data: xarray.Dataset, dfVars: pd.DataFrame,
+    def __init__(self, data: xr.Dataset, dfVars: pd.DataFrame,
                  western_limit: float, eastern_limit: float,
                  southern_limit: float, northern_limit: float,
                  args: argparse.Namespace, output_dir: str,
-                 Q=None):
+                 dTdt : xr.DataArray = None):
         self.LonIndexer = dfVars.loc['Longitude']['Variable']
         self.LatIndexer = dfVars.loc['Latitude']['Variable']
         self.TimeName = dfVars.loc['Time']['Variable']
         self.VerticalCoordIndexer = dfVars.loc['Vertical Level']['Variable']
-        self.PressureData = data[self.VerticalCoordIndexer]*units(
-             data[self.VerticalCoordIndexer].units).to('Pa')
+        self.PressureData = data[self.VerticalCoordIndexer] * units('Pa')
         self.args = args
         self.output_dir = output_dir
         
@@ -162,15 +161,20 @@ class BoxData:
         
         # Adiaatic heating
         if args.fixed:
-            self.Q = AdiabaticHEating(self.tair,self.tair[self.VerticalCoordIndexer],
-                self.omega, self.u,self.v,self.VerticalCoordIndexer,
-                self.LatIndexer,self.LonIndexer,self.TimeName).sel(
+            self.Q = AdiabaticHEating(self.tair,self.PressureData,
+                                      self.omega, self.u,self.v,self.VerticalCoordIndexer,
+                                      self.LatIndexer,self.LonIndexer,self.TimeName).sel(
                     **{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                 self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         elif args.track or args.choose:
-            self.Q = Q
-        else:
-            print("could not compute Q. Check flags!")
+            self.dTdt = dTdt
+            self.Q = AdiabaticHEating(self.tair,self.PressureData,
+                                      self.omega, self.u,self.v,self.VerticalCoordIndexer,
+                                      self.LatIndexer,self.LonIndexer,self.TimeName, self.dTdt).sel(
+                    **{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
+                self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
+        # else:
+        #     print("could not compute Q. Check flags!")
         
         self.Q_ZA = CalcZonalAverage(self.Q,self.xlength)
         self.Q_AA = CalcAreaAverage(self.Q_ZA,self.ylength)

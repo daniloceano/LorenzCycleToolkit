@@ -75,158 +75,160 @@ class ConversionTerms:
         
     def calc_ce(self):
         print('Computing conversion between eddy energy terms (Ce)...')
-        FirstTerm = Rd/(self.PressureData*g)
-        _ = self.omega_ZE*self.tair_ZE
-        SecondTerm = -CalcAreaAverage(_,self.ylength,xlength=self.xlength)
-        function = (FirstTerm*SecondTerm)
-        Ce = function.integrate(self.VerticalCoordIndexer
-                           ) * function[self.VerticalCoordIndexer].metpy.units
-        # Check if units are in accordance with expected and convert
+
+        FirstTerm = Rd / (self.PressureData * g)
+        _ = self.omega_ZE * self.tair_ZE
+        SecondTerm = -CalcAreaAverage(_, self.ylength, xlength=self.xlength)
+        function = (FirstTerm * SecondTerm)
+        Ce = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
+
         try: 
-            Ce = Ce.metpy.convert_units('W/ m **2')
+            Ce = Ce.metpy.convert_units('W / m ** 2')
         except ValueError:
             print('Unit error in Ce')
             raise
+
         if self.box_obj.args.verbosity == True:
             print(Ce.values*Ce.metpy.units)
+
         print('Saving Ce for each vertical level...')
-        # Save Ce before vertical integration
         if self.method == 'fixed':
             df = function.to_dataframe(name='Ce').unstack().transpose()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.TimeName]).to_dataframe(name=time
-                                                             ).transpose()
-        df.to_csv(self.output_dir+'/Ce_'+self.VerticalCoordIndexer+'.csv',
-                    mode="a", header=None)
+            df = function.drop([self.TimeName]).to_dataframe(name=time).transpose()
+
+        df.to_csv(self.output_dir+'/Ce_'+self.VerticalCoordIndexer+'.csv', mode="a", header=None)
         print('Done!')
+
         return Ce
     
     def calc_cz(self):
         print('Computing conversion between zonal energy terms (Cz)...')
-        FirstTerm = Rd/(self.PressureData*g)        
-        _ = self.omega_AE*self.tair_AE
-        SecondTerm = CalcAreaAverage(_,self.ylength)
-        function = (FirstTerm*SecondTerm)
-        Cz = - function.integrate(self.VerticalCoordIndexer
-                            ) * function[self.VerticalCoordIndexer].metpy.units
+
+        FirstTerm = Rd / (self.PressureData * g)        
+        _ = self.omega_AE * self.tair_AE
+        SecondTerm = CalcAreaAverage(_, self.ylength)
+        function = (FirstTerm * SecondTerm)
+        Cz = - function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
+        
         try: 
             Cz = Cz.metpy.convert_units('W/ m **2')
         except ValueError:
             print('Unit error in Cz')
             raise
+
         if self.box_obj.args.verbosity == True:
             print(Cz.values*Cz.metpy.units)
+
         print('Saving Cz for each vertical level...')
-        # Save Cz before vertical integration
         if self.method == 'fixed':
             df = function.to_dataframe(name='Cz').unstack().transpose()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.TimeName]).to_dataframe(name=time
-                                                             ).transpose()
-        df.to_csv(self.output_dir+'/Cz_'+self.VerticalCoordIndexer+'.csv',
-                    mode="a", header=None)
+            df = function.drop([self.TimeName]).to_dataframe(name=time).transpose()
+
+        df.to_csv(self.output_dir+'/Cz_'+self.VerticalCoordIndexer+'.csv', mode="a", header=None)
         print('Done!')
+
         return Cz
     
     def calc_ca(self):
         print('Computing conversion between available potential energy terms (Ca)...')
+
         ## First term of the integral ##
-        # Derivate tair_AE in respect to latitude
-        DelPhi_tairAE = (self.tair_AE*self.tair_AE["coslats"]
-                         ).differentiate("rlats")
-        _ = (self.v_ZE*self.tair_ZE * DelPhi_tairAE) / (2*Re*self.sigma_AA)
-        function = CalcAreaAverage(_,self.ylength, xlength=self.xlength)
+        DelPhi_tairAE = (self.tair_AE * self.tair_AE["coslats"]).differentiate("rlats")
+        _ = (self.v_ZE * self.tair_ZE * DelPhi_tairAE) / (2 * Re * self.sigma_AA)
+        function = CalcAreaAverage(_, self.ylength, xlength=self.xlength)
         
         ## Second term of the integral ##
-        # Derivate tair_AE in respect to pressure and divide it by sigma
-        DelPres_tairAE = (self.tair_AE).differentiate(
-            self.VerticalCoordIndexer) / units.hPa
-        _ =  (self.omega_ZE*self.tair_ZE) * DelPres_tairAE
-        function += CalcAreaAverage(_,self.ylength, xlength=self.xlength
-                                     ) / self.sigma_AA
+        DelPres_tairAE = (self.tair_AE).differentiate(self.VerticalCoordIndexer
+                                                      ) / self.PressureData.metpy.units
+        _ =  (self.omega_ZE * self.tair_ZE) * DelPres_tairAE
+        function += CalcAreaAverage(_, self.ylength, xlength=self.xlength) / self.sigma_AA
 
         ## Integrate in pressure ##
-        Ca = - function.integrate(self.VerticalCoordIndexer
-                            ) * function[self.VerticalCoordIndexer].metpy.units
+        Ca = - function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
         try: 
             Ca = Ca.metpy.convert_units('W/ m **2')
         except ValueError:
             print('Unit error in Ca')
             raise
+
         if self.box_obj.args.verbosity == True:
             print(Ca.values*Ca.metpy.units)
+
         print('Saving Ca for each vertical level...')
         if self.method == 'fixed':
             df = function.to_dataframe(name='Ca',dim_order=[
                     self.TimeName,self.VerticalCoordIndexer]).unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.TimeName]).to_dataframe(name=time
-                                                             ).transpose()
-        df.to_csv(self.output_dir+'/Ca_'+self.VerticalCoordIndexer+'.csv',
-                    mode="a", header=None)
+            df = function.drop([self.TimeName]).to_dataframe(name=time).transpose()
+
+        df.to_csv(self.output_dir+'/Ca_'+self.VerticalCoordIndexer+'.csv', mode="a", header=None)
         print('Done!')
+
         return Ca
         
     def calc_ck(self):
         print('Computing conversion between kinetic energy terms (Ck)...')
+
         ## First term ##
         # Divide the zonal mean of the zonal wind component (u) by the cosine
         # of the latitude (in radians) and then differentiate it in regard to
         # the latitude (also in radians)
-        DelPhi_uZA_cosphi = (self.u_ZA/self.u_ZA["coslats"]
-                             ).differentiate("rlats")                     
-        _ = (self.u_ZE["coslats"]*self.u_ZE*self.v_ZE/Re) * DelPhi_uZA_cosphi
-        function = CalcAreaAverage(_,self.ylength, xlength=self.xlength)
+        DelPhi_uZA_cosphi = (self.u_ZA / self.u_ZA["coslats"]).differentiate("rlats")                     
+        _ = (self.u_ZE["coslats"] * self.u_ZE*self.v_ZE/Re) * DelPhi_uZA_cosphi
+        function = CalcAreaAverage(_, self.ylength, xlength=self.xlength)
         
         ## Second term ##
         # Differentiate the zonal mean of the meridional wind (v) in regard to
         # the latitude (in radians)
-        DelPhi_vZA = (self.v_ZA*self.v_ZA["coslats"]).differentiate("rlats")
+        DelPhi_vZA = (self.v_ZA * self.v_ZA["coslats"]).differentiate("rlats")
         _ = ((self.v_ZE**2)/Re) * DelPhi_vZA
-        function += CalcAreaAverage(_,self.ylength, xlength=self.xlength)
+        function += CalcAreaAverage(_, self.ylength, xlength=self.xlength)
         
         ## Third term ##
-        _ = (self.tan_lats*(self.u_ZE**2)*self.v_ZA)/Re
-        function += CalcAreaAverage(_,self.ylength, xlength=self.xlength)
+        _ = (self.tan_lats * (self.u_ZE**2) * self.v_ZA) / Re
+        function += CalcAreaAverage(_, self.ylength, xlength=self.xlength)
         
         ## Fourth term ##
         # Differentiate the zonal mean of the zonal wind (u) in regard to the
         # pressure and assign the units in hPa
-        DelPres_uZAp = self.u_ZA.differentiate(
-                self.VerticalCoordIndexer) / units.hPa
+        DelPres_uZAp = self.u_ZA.differentiate(self.VerticalCoordIndexer
+                                               ) / self.PressureData.metpy.units
         _ = self.omega_ZE * self.u_ZE * DelPres_uZAp
-        function += CalcAreaAverage(_,self.ylength, xlength=self.xlength)
+        function += CalcAreaAverage(_, self.ylength, xlength=self.xlength)
         
         ## Fifith term ##
         # Differentiate the zonal mean of the meridional wind (v) in regard to
         # the pressure and assign the units in hPa
-        DelPres_vZAp = self.u_ZA.differentiate(
-            self.VerticalCoordIndexer) / units.hPa
+        DelPres_vZAp = self.u_ZA.differentiate(self.VerticalCoordIndexer
+                                               ) / self.PressureData.metpy.units
         _ = self.omega_ZE * self.v_ZE * DelPres_vZAp
-        function += CalcAreaAverage(_,self.ylength, xlength=self.xlength)
+        function += CalcAreaAverage(_, self.ylength, xlength=self.xlength)
         
         ## Integrate in pressure ##
-        Ck = function.integrate(self.VerticalCoordIndexer
-                        ) * function[self.VerticalCoordIndexer].metpy.units/g
+        Ck = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units / g
+        
         try: 
             Ck = Ck.metpy.convert_units('W/ m **2')
         except ValueError:
             print('Unit error in Ck')
             raise
+
         if self.box_obj.args.verbosity == True:
             print(Ck.values*Ck.metpy.units)
+
         print('Saving Ck for each vertical level...')
-        # Save Ck before vertical integration            
         if self.method == 'fixed':
             df = function.to_dataframe(name='Ck').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.TimeName]).to_dataframe(name=time
-                                                             ).transpose()
-        df.to_csv(self.output_dir+'/Ck_'+self.VerticalCoordIndexer+'.csv',
-                    mode="a", header=None)
+            df = function.drop([self.TimeName]).to_dataframe(name=time).transpose()
+
+        df.to_csv(self.output_dir+'/Ck_'+self.VerticalCoordIndexer+'.csv', mode="a", header=None)
         print('Done!')
+
         return Ck

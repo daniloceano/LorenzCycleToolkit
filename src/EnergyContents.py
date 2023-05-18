@@ -55,103 +55,113 @@ class EnergyContents:
         
     def calc_az(self):
         print('Computing Zonal Available Potential Energy (Az)...')
+
         _ = CalcAreaAverage(self.tair_AE**2, self.ylength)
-        function = _/(2*self.sigma_AA)
-        Az = function.integrate(self.VerticalCoordIndexer
-                            ) * function[self.VerticalCoordIndexer].metpy.units
+        function = _ / (2 * self.sigma_AA)
+        Az = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
+        
         try: 
-            Az = Az.metpy.convert_units('J/ m **2')
+            Az = Az.metpy.convert_units('J / m ** 2')
         except ValueError:
             raise ValueError('Unit error in Az')
+        
         if self.box_obj.args.verbosity == True:
             print(Az.values*Az.metpy.units)
-        print('Saving Az for each vertical level...')
-        # Save Az before vertical integration          
+
+        if self.box_obj.args.verbosity == True:
+            print('Saving Az for each vertical level...')
+
         if self.method == 'fixed':
             df = function.to_dataframe(name='Az').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.TimeName]).to_dataframe(name=time
-                                                             ).transpose()
+            df = function.drop([self.TimeName]).to_dataframe(name=time).transpose()
+
         df.to_csv(self.output_dir+'/Az_'+self.VerticalCoordIndexer+'.csv',
             mode="a", header=None)
         print('Done!')
+
         return Az
     
     def calc_ae(self): 
         print('Computing Eddy Available Potential Energy (Ae)...')
-        _ = CalcAreaAverage(self.tair_ZE**2,self.ylength,
-                              xlength=self.xlength)
-        function = _/(2*self.sigma_AA)
-        Ae = function.integrate(self.VerticalCoordIndexer
-                            ) * function[self.VerticalCoordIndexer].metpy.units
+
+        _ = CalcAreaAverage(self.tair_ZE ** 2, self.ylength, xlength=self.xlength)
+        function = _ / ( 2 * self.sigma_AA)
+        Ae = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
+
         try: 
             Ae = Ae.metpy.convert_units('J/ m **2')
         except ValueError:
             print('Unit error in Ae')
             raise
+
         if self.box_obj.args.verbosity == True:
             print(Ae.values*Ae.metpy.units)
+
         print('Saving Ae for each vertical level...')
-        # Save Ae before vertical integration
         if self.method == 'fixed':    
             df = function.to_dataframe(name='Ae').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.TimeName]).to_dataframe(name=time
-                                                             ).transpose()
-        df.to_csv(self.output_dir+'/Ae_'+self.VerticalCoordIndexer+'.csv',
-                mode="a", header=None)
+            df = function.drop([self.TimeName]).to_dataframe(name=time).transpose()
+            
+        df.to_csv(self.output_dir+'/Ae_'+self.VerticalCoordIndexer+'.csv',mode="a", header=None)
         print('Done!')
+
         return Ae
     
     def calc_kz(self):
         print('Computing Zonal Kinetic Energy (Kz)...')
-        function = CalcAreaAverage((self.u_ZA**2+self.v_ZA**2),self.ylength)
-        Kz = function.integrate(self.VerticalCoordIndexer
-                    ) * function[self.VerticalCoordIndexer].metpy.units/(2*g)
+
+        function = CalcAreaAverage((self.u_ZA ** 2 + self.v_ZA ** 2),self.ylength)
+        Kz = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units / (2 * g)
+
         if self.box_obj.args.verbosity == True:
             print(Kz.values*Kz.metpy.units)
         print('Saving Kz for each vertical level...')
+
         try: 
             Kz = Kz.metpy.convert_units('J/ m **2')
         except ValueError:
             print('Unit error in Kz')
             raise
-        # Save Kz before vertical integration
+
         if self.method == 'fixed':
             df = function.to_dataframe(name='Kz').unstack()   
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.TimeName]).to_dataframe(name=time
-                                                             ).transpose()
-        df.to_csv(self.output_dir+'/Kz_'+self.VerticalCoordIndexer+'.csv',
-                mode="a", header=None)
+            df = function.drop([self.TimeName]).to_dataframe(name=time).transpose()
+
+        df.to_csv(self.output_dir+'/Kz_'+self.VerticalCoordIndexer+'.csv',mode="a", header=None)
         print('Done!')
+
         return Kz
     
     def calc_ke(self):
         print('Computing Eddy Kinetic Energy (Ke)...')
-        function = CalcAreaAverage((self.u_ZE**2)+(self.v_ZE**2),self.ylength,
+
+        function = CalcAreaAverage((self.u_ZE ** 2) + (self.v_ZE **2 ),self.ylength,
                               xlength=self.xlength)
-        Ke = function.integrate(self.VerticalCoordIndexer
-                    ) * function[self.VerticalCoordIndexer].metpy.units/(2*g)
+        Ke = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units / (2 * g)
+        
         try: 
             Ke = Ke.metpy.convert_units('J/ m **2')
         except ValueError:
             print('Unit error in Ke')
             raise
+
         if self.box_obj.args.verbosity == True:
             print(Ke.values*Ke.metpy.units)
         print('Saving Ke for each vertical level...')
-        # Save Ke before vertical integration
+
         if self.method == 'fixed':
             df = function.to_dataframe(name='Ke').unstack() 
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.TimeName]).to_dataframe(name=time
-                                                             ).transpose()
-        df.to_csv(self.output_dir+'/Ke_'+self.VerticalCoordIndexer+'.csv',
-                mode="a", header=None)
+            df = function.drop([self.TimeName]).to_dataframe(name=time).transpose()
+
+        df.to_csv(self.output_dir+'/Ke_'+self.VerticalCoordIndexer+'.csv',mode="a", header=None)
         print('Done!')
+
         return Ke

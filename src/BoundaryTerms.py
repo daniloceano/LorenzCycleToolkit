@@ -71,151 +71,147 @@ class BoundaryTerms:
         self.c2 = -1/(Re*self.ylength)
         
     def calc_baz(self):
-        if self.method == 'fixed':
-            print('Computing Zonal Available Potential Energy (Az) transport across boundaries (BAZ)...')
+        print('Computing Zonal Available Potential Energy (Az) transport across boundaries (BAZ)...')
 
         ## First Integral ##
-        _ = ((2*self.tair_AE*self.tair_ZE*self.u)
-              + (self.tair_AE**2*self.u))/(2*self.sigma_AA)
+        _ = ((2 * self.tair_AE * self.tair_ZE * self.u)
+              + (self.tair_AE ** 2 * self.u)) / (2 * self.sigma_AA)
         # Data at eastern boundary minus data at western boundary 
-        _ = _.sel(**{self.LonIndexer: self.eastern_limit}) - _.sel(
-            **{self.LonIndexer: self.western_limit})
+        _ = _.sel(**{self.LonIndexer: self.eastern_limit}) - _.sel(**{self.LonIndexer: self.western_limit})
         # Integrate through latitude
         _ = _.integrate("rlats")
         # Integrate through pressure levels
-        function = _.integrate(self.VerticalCoordIndexer
-                    ) * _[self.VerticalCoordIndexer].metpy.units * self.c1
+        function = _.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units * self.c1
 
         ## Second Integral ##
-        _ = self.v_ZE*self.tair_ZE
-        _ZA = CalcZonalAverage(_,self.xlength)*2*self.tair_AE
-        _ = (_ZA + (self.tair_AE**2*self.v_ZA)) * self.tair_AE["coslats"]
+        _ = self.v_ZE * self.tair_ZE
+        _ZA = CalcZonalAverage(_, self.xlength) * 2 * self.tair_AE
+        _ = (_ZA + (self.tair_AE ** 2 * self.v_ZA)) * self.tair_AE["coslats"]
         # Data at northern boundary minus data at southern boundary
-        _ = (_.sel(**{self.LatIndexer: self.northern_limit}) - _.sel(
-            **{self.LatIndexer: self.southern_limit}))/(2*self.sigma_AA)
+        _ = (_.sel(**{self.LatIndexer: self.northern_limit}) - _.sel(**{
+            self.LatIndexer: self.southern_limit})) / (2 * self.sigma_AA)
         # Integrate through pressure levels
-        function += _.integrate(self.VerticalCoordIndexer
-                    )* _[self.VerticalCoordIndexer].metpy.units*self.c2
+        function += _.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units * self.c2
         
         ## Third Term ##
         # First part
-        _ = 2*self.omega_ZE*self.tair_ZE
-        _ZA = CalcZonalAverage(_,self.xlength)*self.tair_AE
-        _ = _ZA + (self.omega_ZA*self.tair_ZE**2)
+        _ = 2 * self.omega_ZE*self.tair_ZE
+        _ZA = CalcZonalAverage(_, self.xlength) * self.tair_AE
+        _ = _ZA + (self.omega_ZA * self.tair_ZE ** 2)
         # Sum second part
-        _ += self.omega_ZA*self.tair_ZE**2
+        _ += self.omega_ZA*self.tair_ZE ** 2
         # Accordingly to Muench (1965), it is required to do an area average
         # of this term and sigma is divided before subtracting the data 
         # (see next staep)
-        _AA = CalcAreaAverage(_, self.ylength,
-                            xlength=self.xlength)/(2*self.sigma_AA)
+        _AA = CalcAreaAverage(_, self.ylength, xlength=self.xlength) / (2 * self.sigma_AA)
         # Data at the bottom minus data at top level
         function -= (_AA.isel(**{self.VerticalCoordIndexer: -1}) - 
                      _AA.isel(**{self.VerticalCoordIndexer: 0}))
+        
         try: 
-            Baz = function.metpy.convert_units('W/ m **2')
+            Baz = function.metpy.convert_units('W / m ** 2')
         except ValueError:
             print('Unit error in BAZ')
             raise
-        if self.method == 'fixed' and self.box_obj.args.verbosity == True:
-            print(Baz.values*Baz.metpy.units)
+
+        if self.box_obj.args.verbosity == True:
+            print(Baz.values * Baz.metpy.units)
+
         return Baz
     
     def calc_bae(self):
-        if self.method == 'fixed':
-            print('Computing Eddy Available Potential Energy (Ae) transport across boundaries (BAE)...')
+        print('Computing Eddy Available Potential Energy (Ae) transport across boundaries (BAE)...')
+
         ## First Integral ##
-        _ = self.u*self.tair_ZE**2
+        _ = self.u*self.tair_ZE ** 2
          # Data at eastern boundary minus data at western boundary 
         _ = _.sel(**{self.LonIndexer: self.eastern_limit}) - _.sel(
             **{self.LonIndexer: self.western_limit}) 
         # Integrate through latitude
-        _ = (_/(2*self.sigma_AA)).integrate("rlats")
+        _ = (_ / (2 * self.sigma_AA)).integrate("rlats")
         
         # Integrate through pressure levels
-        function = _.integrate(self.VerticalCoordIndexer
-                    )* _[self.VerticalCoordIndexer].metpy.units*self.c1
+        function = _.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units * self.c1
         
         ## Second Integral ##
-        _ZA = (CalcZonalAverage(self.v*self.tair_ZE**2
-                             ,self.xlength)*self.tair_ZE["coslats"]
-             )/(2*self.sigma_AA)
+        _ZA = (CalcZonalAverage(self.v * self.tair_ZE ** 2, self.xlength) * self.tair_ZE["coslats"]
+             ) / (2 * self.sigma_AA)
         # Data at northern boundary minus data at southern boundary
         _ = _ZA.sel(**{self.LatIndexer: self.northern_limit}) - _ZA.sel(
             **{self.LatIndexer: self.southern_limit})
         # Integrate through pressure levels
-        function += _.integrate(self.VerticalCoordIndexer
-                    ) * _[self.VerticalCoordIndexer].metpy.units*self.c2
+        function += _.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units*self.c2
         
         ## Third Term ##
-        _ = self.omega*self.tair_ZE**2
-        _ = CalcAreaAverage(_, self.ylength,
-                            xlength=self.xlength)/(2*self.sigma_AA)
+        _ = self.omega*self.tair_ZE ** 2
+        _ = CalcAreaAverage(_, self.ylength, xlength=self.xlength) / (2 * self.sigma_AA)
         # Data at the bottom minus data at top level
         function -= (_.isel(**{self.VerticalCoordIndexer: -1}) - _.isel(
             **{self.VerticalCoordIndexer: 0}))
+        
         try: 
-            Bae = function.metpy.convert_units('W/ m **2')
+            Bae = function.metpy.convert_units('W / m ** 2')
         except ValueError:
             print('Unit error in BAe')
             raise
-        if self.method == 'fixed' and self.box_obj.args.verbosity == True:
-            print(Bae.values*Bae.metpy.units)
+
+        if self.box_obj.args.verbosity == True:
+            print(Bae.values * Bae.metpy.units)
+
         return Bae
     
     def calc_bkz(self):
-        if self.method == 'fixed':
-            print('Computing Zonal Kinetic Energy (Kz) transport across boundaries (BKz)...')
+        print('Computing Zonal Kinetic Energy (Kz) transport across boundaries (BKz)...')
+
         ## First Integral ##
-        _ = self.u*(self.u**2+self.v**2-self.u_ZE**2-self.v_ZE**2)
+        _ = self.u * (self.u ** 2 + self.v ** 2 - self.u_ZE ** 2 - self.v_ZE ** 2)
          # Data at eastern boundary minus data at western boundary 
         _ = _.sel(**{self.LonIndexer: self.eastern_limit}) - _.sel(
             **{self.LonIndexer: self.western_limit}) 
         # Integrate through latitude
-        _ = (_/(2*g)).integrate("rlats")
+        _ = (_ / (2 * g)).integrate("rlats")
         # Integrate through pressure levels
-        function = _.integrate(self.VerticalCoordIndexer
-                    )* _[self.VerticalCoordIndexer].metpy.units*self.c1
+        function = _.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units * self.c1
         
         ## Second Integral ##
-        _ = ((self.u**2+self.v**2-self.u_ZE**2-self.v_ZE**2)
-            *self.v*self.v["coslats"])
+        _ = (self.u ** 2 + self.v ** 2 - self.u_ZE ** 2 - self.v_ZE ** 2) * self.v * self.v["coslats"]
         _ = CalcZonalAverage(_, self.xlength)
         # Data at northern boundary minus data at southern boundary
         _ = _.sel(**{self.LatIndexer: self.northern_limit}) - _.sel(
             **{self.LatIndexer: self.southern_limit})
         # Integrate through pressure levels
-        function += (_/(2*g)).integrate(self.VerticalCoordIndexer
-                    ) * _[self.VerticalCoordIndexer].metpy.units*self.c2
+        function += (_ / ( 2 * g)).integrate(self.VerticalCoordIndexer
+                                             ) * self.PressureData.metpy.units * self.c2
         
         ## Third Term ##
-        _ = ((self.u**2+self.v**2-self.u_ZE**2-self.v_ZE**2)
-            *self.omega)
-        _ = (CalcAreaAverage(_, self.ylength,xlength=self.xlength))/(2*g)
+        _ = (self.u ** 2 + self.v ** 2 - self.u_ZE ** 2 - self.v_ZE ** 2) * self.omega
+        _ = (CalcAreaAverage(_, self.ylength, xlength=self.xlength)) / ( 2 * g)
         # Data at the bottom minus data at top level
         function -= (_.isel(**{self.VerticalCoordIndexer: -1}) - _.isel(
             **{self.VerticalCoordIndexer: 0}))
+        
         try: 
-            Bkz = function.metpy.convert_units('W/ m **2')
+            Bkz = function.metpy.convert_units('W / m ** 2')
         except ValueError:
             print('Unit error in BKz')
             raise
-        if self.method == 'fixed' and self.box_obj.args.verbosity == True:
-            print(Bkz.values*Bkz.metpy.units)
+
+        if self.box_obj.args.verbosity == True:
+            print(Bkz.values * Bkz.metpy.units)
+
         return Bkz
     
     def calc_bke(self):
-        if self.method == 'fixed':
-            print('Computing Eddy Kinetic Energy (Ke) transport across boundaries (BKe)...')
+        print('Computing Eddy Kinetic Energy (Ke) transport across boundaries (BKe)...')
+
         ## First Integral ##
-        _ = self.u*(self.u_ZE**2+self.v_ZE**2)
+        _ = self.u * (self.u_ZE ** 2 + self.v_ZE ** 2)
          # Data at eastern boundary minus data at western boundary 
         _ = _.sel(**{self.LonIndexer: self.eastern_limit}) - _.sel(
             **{self.LonIndexer: self.western_limit}) 
         # Integrate through latitude
-        _ = (_/(2*g)).integrate("rlats")
-        function = _.integrate(self.VerticalCoordIndexer
-                    )* _[self.VerticalCoordIndexer].metpy.units*self.c1
+        _ = (_ / ( 2 * g)).integrate("rlats")
+        function = _.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units * self.c1
         
         ## Second Integral ##
         _ = (self.u_ZE**2+self.v_ZE**2)*self.v *self.v["coslats"]
@@ -224,28 +220,31 @@ class BoundaryTerms:
         _ = _.sel(**{self.LatIndexer: self.northern_limit}) - _.sel(
             **{self.LatIndexer: self.southern_limit})
         # Integrate through pressure levels
-        function += (_/(2*g)).integrate(self.VerticalCoordIndexer
-                    ) * _[self.VerticalCoordIndexer].metpy.units*self.c2
+        function += ( _ / ( 2 * g)).integrate(self.VerticalCoordIndexer
+                                              ) * self.PressureData.metpy.units * self.c2
         
         ## Third Term ##
-        _ = (self.u_ZE**2+self.v_ZE**2)*self.omega
-        _ = CalcAreaAverage(_, self.ylength,xlength=self.xlength)/(2*g)
+        _ = (self.u_ZE ** 2 + self.v_ZE ** 2) * self.omega
+        _ = CalcAreaAverage(_, self.ylength, xlength=self.xlength) / ( 2 * g)
         function -= (_.isel(**{self.VerticalCoordIndexer: -1}) - _.isel(
                                    **{self.VerticalCoordIndexer: 0}))
+        
         try: 
-            Bke = function.metpy.convert_units('W/ m **2')
+            Bke = function.metpy.convert_units('W / m ** 2')
         except ValueError:
             print('Unit error in BKe')
             raise
-        if self.method == 'fixed' and self.box_obj.args.verbosity == True:
-            print(Bke.values*Bke.metpy.units)
+
+        if self.box_obj.args.verbosity == True:
+            print(Bke.values * Bke.metpy.units)
+
         return Bke 
     
     def calc_boz(self):
-        if self.method == 'fixed':
-            print('Computing Zonal Kinetic Energy (Kz) production by fluxes at the boundaries (BΦZ)...')
+        print('Computing Zonal Kinetic Energy (Kz) production by fluxes at the boundaries (BΦZ)...')
+
         ## First Integral ##
-        _ = (self.v_ZA*self.geopt_AE)/g
+        _ = (self.v_ZA * self.geopt_AE) / g
         # Data at eastern boundary minus data at western boundary 
         # UNABLE TO DO THAT!!!!
         # _ = _.sel(**{self.LonIndexer: self.eastern_limit}) - _.sel(
@@ -253,67 +252,65 @@ class BoundaryTerms:
         # Integrate through latitude
         _ = _.integrate("rlats")
         # Integrate through pressure levels
-        function  = _.integrate(self.VerticalCoordIndexer
-                    )* _[self.VerticalCoordIndexer].metpy.units*self.c1
+        function  = _.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units * self.c1
         
         ## Second Integral ##
-        _ = (self.v_ZA*self.geopt_AE)*self.v_ZA["coslats"]/g
+        _ = (self.v_ZA * self.geopt_AE) * self.v_ZA["coslats"] / g
         # Data at northern boundary minus data at southern boundary
         _ = _.sel(**{self.LatIndexer: self.northern_limit}) - _.sel(
             **{self.LatIndexer: self.southern_limit})
         # Integrate through pressure levels
-        function += _.integrate(self.VerticalCoordIndexer
-                    )* _[self.VerticalCoordIndexer].metpy.units*self.c2
+        function += _.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units * self.c2
         
         ## Third Term ##
-        _ = CalcAreaAverage(self.omega_AE*self.geopt_AE, self.ylength)/g
+        _ = CalcAreaAverage(self.omega_AE * self.geopt_AE, self.ylength) / g
         function -= (_.isel(**{self.VerticalCoordIndexer:-1}) - _.isel(
             **{self.VerticalCoordIndexer: 0}))
+        
         try: 
-            Boz = function.metpy.convert_units('W/ m **2')
+            Boz = function.metpy.convert_units('W / m ** 2')
         except ValueError:
             print('Unit error in BΦZ')
             raise
-        if self.method == 'fixed' and self.box_obj.args.verbosity == True:
-            print(Boz.values*Boz.metpy.units)
+
+        if self.box_obj.args.verbosity == True:
+            print(Boz.values * Boz.metpy.units)
+
         return Boz 
     
     def calc_boe(self):
-        if self.method == 'fixed':
-            print('Computing Eddy Kinetic Energy (Kz) production by fluxes at the boundaries (BΦE)...')
+        print('Computing Eddy Kinetic Energy (Kz) production by fluxes at the boundaries (BΦE)...')
         ## First Integral ##
-        _ = (self.u_ZE*self.geopt_ZE)/g
+        _ = (self.u_ZE * self.geopt_ZE) / g
          # Data at eastern boundary minus data at western boundary 
         _ = _.sel(**{self.LonIndexer: self.eastern_limit}) - _.sel(
             **{self.LonIndexer: self.western_limit}) 
         # Integrate through latitude
         _ = _.integrate("rlats")
         # Integrate through pressure levels
-        function = _.integrate(self.VerticalCoordIndexer
-                    )* _[self.VerticalCoordIndexer].metpy.units*self.c1
+        function = _.integrate(self.VerticalCoordIndexer)* self.PressureData.metpy.units * self.c1
         
         ## Second Integral ##
-        _ = CalcZonalAverage((self.v_ZE*self.geopt_ZE),
-                              self.ylength)*self.v_ZE["coslats"]/g
+        _ = CalcZonalAverage((self.v_ZE * self.geopt_ZE), self.ylength) * self.v_ZE["coslats"] / g
         # Data at northern boundary minus data at southern boundary
         _ = _.sel(**{self.LatIndexer: self.northern_limit}) - _.sel(
             **{self.LatIndexer: self.southern_limit})
         # Integrate through pressure levels
-        function += _.integrate(self.VerticalCoordIndexer
-                    )* _[self.VerticalCoordIndexer].metpy.units*self.c2
+        function += _.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units * self.c2
         
         ## Third Term ##
-        _ = CalcAreaAverage(self.omega_ZE*self.geopt_ZE, self.ylength,
-                            xlength=self.xlength)/g
+        _ = CalcAreaAverage(self.omega_ZE * self.geopt_ZE, self.ylength, xlength=self.xlength) / g
         function -= (_.isel(**{self.VerticalCoordIndexer: -1}) - _.isel(
             **{self.VerticalCoordIndexer: 0}))
         try: 
-            Boz = function.metpy.convert_units('W/ m **2')
+            Boz = function.metpy.convert_units('W / m ** 2')
         except ValueError:
             print('Unit error in BΦZ')
             raise
-        if self.method == 'fixed' and self.box_obj.args.verbosity == True:
+
+        if self.box_obj.args.verbosity == True:
             print(Boz.values*Boz.metpy.units)
+            
         return Boz 
                  
         

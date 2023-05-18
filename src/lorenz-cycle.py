@@ -43,7 +43,7 @@ import xarray as xr
 import os
 import numpy as np
 import argparse
-import sys
+import dask
 import time
 import logging
 
@@ -64,71 +64,55 @@ def convert_lon(df,LonIndexer):
     df = df.sortby(df[LonIndexer])
     return df
 
-# Function for opening the data
 def get_data(infile: str, varlist: str) -> xr.Dataset:
     """
     Opens a NetCDF file and extracts the variables specified in a CSV file.
 
     Args:
         infile (str): The file path of the NetCDF file to be opened.
-        varlist (str): The file path of the CSV file containing the list of 
-                       variables to extract from the NetCDF file.
+        varlist (str): The file path of the CSV file containing the list of variables to extract.
 
     Returns:
         xr.Dataset: A dataset containing the extracted variables.
 
     Raises:
-        SystemExit: If the specified CSV file or NetCDF file is not found or if
-                    an error occurs while opening the NetCDF file.
-
-    The function opens a NetCDF file and extracts the variables specified in a 
-    CSV file. The CSV file should contain a list of variables in the first column 
-    and the corresponding variable names in the second column, separated by a 
-    semicolon (;). The NetCDF file should have dimensions for longitude, latitude, 
-    time and vertical level. The function converts the longitude and latitude 
-    values to radians, sorts the data by longitude, level and latitude, and fills 
-    missing values with zeros. Finally, it returns a dataset containing the 
-    extracted variables.
+        SystemExit: If the specified CSV file or NetCDF file is not found or if an error occurs while opening the NetCDF file.
     """
-    
-    print('Variables specified by the user in: '+varlist)
-    print('Attempting to read '+varlist+' file...')
+    print(f"Variables specified by the user in: {varlist}")
+    print(f"Attempting to read {varlist} file...")
     try:
-        dfVars = pd.read_csv(varlist,sep= ';',index_col=0,header=0)
-    except:
-        raise SystemExit("Error: verify that there is a 'fvar' text file\
- located on your working directory")
-    # Print variables for the user
-    print('List of variables found:')
+        dfVars = pd.read_csv(varlist, sep=';', index_col=0, header=0)
+    except FileNotFoundError:
+        raise SystemExit("Error: The 'fvar' text file could not be found.")
+    except pd.errors.EmptyDataError:
+        raise SystemExit("Error: The 'fvar' text file is empty.")
+
+    print("List of variables found:")
     print(dfVars)
-    # Get data indexers
-    LonIndexer,LatIndexer,TimeIndexer,LevelIndexer = \
-      dfVars.loc['Longitude']['Variable'],dfVars.loc['Latitude']['Variable'],\
-      dfVars.loc['Time']['Variable'],dfVars.loc['Vertical Level']['Variable']
-    print('Ok!')
-    print('Opening input data...')
+
+    LonIndexer = dfVars.loc["Longitude"]["Variable"]
+    LatIndexer = dfVars.loc["Latitude"]["Variable"]
+    TimeIndexer = dfVars.loc["Time"]["Variable"]
+    LevelIndexer = dfVars.loc["Vertical Level"]["Variable"]
+
+    print("Opening input data...")
     try:
-        full_data = convert_lon(xr.open_dataset(infile,
-                                            chunks={'time': 1}),LonIndexer)
-    except:
-        raise
-        raise SystemExit('ERROR!!!!!\n Could not open data. Check if path is\
- correct, fvars file and file format (should be .nc)')
-    print('Ok! Now assigning coordinates...')
-    # load data into memory (code optmization)
-    # data = full_data.chunk({'time': -1, LatIndexer: 'auto', LonIndexer: 'auto', 
-    #                         LevelIndexer: 'auto'}).compute()
-    data = full_data
-    # Assign lat and lon as radians, for calculations
+        with dask.config.set(array={"slicing": {"split_large_chunks": True}}):
+            data = convert_lon(xr.open_dataset(infile, chunks={"time": 1}), LonIndexer)
+    except FileNotFoundError:
+        raise SystemExit("ERROR!!!!!\nCould not open data. Check if path, fvars file, and file format (.nc) are correct.")
+
+    print("Assigning geospatial coordinates in radians...")
     data = data.assign_coords({"rlats": np.deg2rad(data[LatIndexer])})
     data = data.assign_coords({"coslats": np.cos(np.deg2rad(data[LatIndexer]))})
     data = data.assign_coords({"rlons": np.deg2rad(data[LonIndexer])})
-    # Sort data coordinates as data from distinc sources might have different
-    # arrangements, which could affect the results from the integrations
-    data = data.sortby(LonIndexer).sortby(LevelIndexer,
-                ascending=True).sortby(LatIndexer,ascending=True)
-    print('Ok')
 
+    levels_Pa = (data[LevelIndexer] * units(str(data[LevelIndexer].units))).metpy.convert_units("Pa")
+    data = data.assign_coords({LevelIndexer: levels_Pa})
+    
+    data = data.sortby(LonIndexer).sortby(LevelIndexer, ascending=True).sortby(LatIndexer, ascending=True)
+
+    print("Data opened successfully.")
     return data
 
 def find_extremum_coordinates(data, lat, lon, variable):
@@ -198,11 +182,15 @@ def LEC_fixed(data):
         quit()
         
     dfVars = pd.read_csv(varlist,sep= ';',index_col=0,header=0)
-    LonIndexer,LatIndexer,TimeName,VerticalCoordIndexer = \
-      dfVars.loc['Longitude']['Variable'],dfVars.loc['Latitude']['Variable'],\
-      dfVars.loc['Time']['Variable'],dfVars.loc['Vertical Level']['Variable']
-    pres = data[VerticalCoordIndexer]*units(
-         data[VerticalCoordIndexer].units).to('Pa')
+
+    LonIndexer,LatIndexer,TimeName,VerticalCoordIndexer = (
+      dfVars.loc['Longitude']['Variable'],
+      dfVars.loc['Latitude']['Variable'],
+      dfVars.loc['Time']['Variable'],
+      dfVars.loc['Vertical Level']['Variable'])
+    
+    pres = data[VerticalCoordIndexer]
+    pres = pres * pres.metpy.units
     
     print('\n Parameters spcified for the bounding box:')
     print('min_lon, max_lon, min_lat, max_lat: '+str([min_lon,
@@ -339,7 +327,7 @@ def LEC_fixed(data):
     os.system(cmd)
     
 
-def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
+def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
     """
     Computes the Lorenz Energy Cycle using a moving framework.
     
@@ -352,37 +340,18 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
     print('Computing energetics using moving framework')
 
     # Indexers
-    dfVars = pd.read_csv(varlist,sep= ';',index_col=0,header=0)
-    LonIndexer,LatIndexer,TimeName,VerticalCoordIndexer = \
-      dfVars.loc['Longitude']['Variable'],dfVars.loc['Latitude']['Variable'],\
-      dfVars.loc['Time']['Variable'],dfVars.loc['Vertical Level']['Variable']
-    pres = data[VerticalCoordIndexer]*units(
-         data[VerticalCoordIndexer].units).to('Pa')
+    LonIndexer, LatIndexer, TimeName, VerticalCoordIndexer = (
+      dfVars.loc['Longitude']['Variable'],
+      dfVars.loc['Latitude']['Variable'],
+      dfVars.loc['Time']['Variable'],
+      dfVars.loc['Vertical Level']['Variable']
+      )
     
-    # Get variables for computing Adiabatic Heating
-    print('Extracting variables and assiging units..')
-    tair =  (data[dfVars.loc['Air Temperature']['Variable']].compute() * 
-             units(dfVars.loc['Air Temperature']['Units']).to('K'))
-    omega = (data[dfVars.loc['Omega Velocity']['Variable']].compute() *
-             units(dfVars.loc['Omega Velocity']['Units']).to('Pa/s'))
-    u = (data[dfVars.loc['Eastward Wind Component']['Variable']].compute() *
-         units(dfVars.loc['Eastward Wind Component']['Units']).to('m/s'))
-    v = (data[dfVars.loc['Northward Wind Component']['Variable']].compute() *
-         units(dfVars.loc['Northward Wind Component']['Units']).to('m/s'))
-    if args.geopotential:
-        hgt = ((data[dfVars.loc['Geopotential']['Variable']].compute() *
-         units(dfVars.loc['Geopotential']['Units']))/g).metpy.convert_units('gpm')
-    else:
-        hgt = (data[dfVars.loc['Geopotential Height']['Variable']].compute() *
-         units(dfVars.loc['Geopotential Height']['Units']).to('gpm'))
-    print('Ok. Computing diabatic heating term..')
-    Q = AdiabaticHEating(tair, pres, omega , u, v,
-            VerticalCoordIndexer,LatIndexer,LonIndexer,TimeName)
-    print('Ok.')
+    PressureData = data[VerticalCoordIndexer]
     
     # Create csv files for storing vertical results
     for term in ['Az', 'Ae', 'Kz', 'Ke', 'Cz', 'Ca', 'Ck', 'Ce', 'Ge', 'Gz']:
-        columns = [TimeName] + [float(i) / 100 for i in pres.values]
+        columns = [TimeName] + [float(i) for i in PressureData.values]
         df = pd.DataFrame(columns=columns)
         file_name = term + '_' + VerticalCoordIndexer + '.csv'
         file_path = os.path.join(ResultsSubDirectory, file_name)
@@ -422,12 +391,23 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
     for t in times:
 
         idata = data.sel({TimeName: t})
+        idTdt = dTdt.sel({TimeName: t})
 
-        iQ, iu_850, iv_850, ight_850 = (
-            Q.sel({TimeName: t}),
-            u.sel({TimeName: t}).sel({VerticalCoordIndexer: 850}),
-            v.sel({TimeName: t}).sel({VerticalCoordIndexer: 850}),
-            hgt.sel({TimeName: t}).sel({VerticalCoordIndexer: 850})
+        iu = (idata[dfVars.loc['Eastward Wind Component']['Variable']].compute() *
+            units(dfVars.loc['Eastward Wind Component']['Units']).to('m/s'))
+        iv = (idata[dfVars.loc['Northward Wind Component']['Variable']].compute() *
+            units(dfVars.loc['Northward Wind Component']['Units']).to('m/s'))
+        if args.geopotential:
+            ihgt = ((idata[dfVars.loc['Geopotential']['Variable']].compute() *
+            units(dfVars.loc['Geopotential']['Units']))/g).metpy.convert_units('gpm')
+        else:
+            ihgt = (idata[dfVars.loc['Geopotential Height']['Variable']].compute() *
+            units(dfVars.loc['Geopotential Height']['Units']).to('gpm'))
+
+        iu_850, iv_850, ight_850 = (
+            iu.sel({VerticalCoordIndexer: 85000}),
+            iv.sel({VerticalCoordIndexer: 85000}),
+            ihgt.sel({VerticalCoordIndexer: 85000})
         )
 
         iwspd_850, izeta_850 = wind_speed(iu_850, iv_850), vorticity(iu_850, iv_850).metpy.dequantify()
@@ -573,7 +553,7 @@ def LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory):
             box_obj = BoxData(data=idata.compute(), dfVars=dfVars, args=args,
             western_limit=min_lon, eastern_limit=max_lon,
             southern_limit=min_lat, northern_limit=max_lat,
-            output_dir=ResultsSubDirectory, Q=iQ)
+            output_dir=ResultsSubDirectory, dTdt=idTdt)
         except Exception as e:
             print('An exception occurred: {}'.format(e))
             raise SystemExit('Error creating the box for computations')
@@ -696,6 +676,13 @@ if __name__ == "__main__":
     # Slice data so the code runs faster
     data, method = slice_domain(data, args, varlist)
     print(f'Data sliced: \n{data.coords}')
+
+    # Compute terms with temporal dependencies
+    print('Computing terms with temporal dependencies..')
+    dfVars = pd.read_csv(varlist,sep= ';',index_col=0,header=0)
+    dTdt =  data[dfVars.loc['Air Temperature']['Variable']].differentiate(
+                dfVars.loc['Time']['Variable'],datetime_unit='s') * units('K/s')
+    print('ok')
     
     # Append data limits to outfile name
     if args.outname:
@@ -720,6 +707,6 @@ if __name__ == "__main__":
         print("--- %s seconds running fixed framework ---" % (time.time() - start_time))
     start_time = time.time()
     if args.track or args.choose:
-        LEC_moving(data, varlist, ResultsSubDirectory, FigsDirectory)
+        LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory)
         print("--- %s seconds for running moving framework ---" % (time.time() - start_time))
     

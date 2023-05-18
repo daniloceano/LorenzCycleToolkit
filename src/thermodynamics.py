@@ -54,7 +54,7 @@ def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
     FirstTerm = g*TemperatureData/Cp_d
     SecondTerm = (PressureData*g/Rd)
     ThirdTerm = TemperatureData.differentiate(VerticalCoordIndexer
-                            )/TemperatureData[VerticalCoordIndexer].metpy.units
+                            ) / units('Pa')
     function = (FirstTerm-(SecondTerm*ThirdTerm))
     sigma_ZA = function.integrate("rlons")/xlength
     sigma_AA = (sigma_ZA*sigma_ZA["coslats"]).integrate("rlats")/ylength
@@ -62,7 +62,7 @@ def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
 
 def AdiabaticHEating(TemperatureData, PressureData, OmegaData,
                       UWindComponentData,VWindComponentData,
-                      VerticalCoordIndexer,LatIndexer,LonIndexer,TimeName):
+                      VerticalCoordIndexer,LatIndexer,LonIndexer,TimeName, dTdt=None):
     """
     Compute the diabatic heating as a residual form the thermodynamic 
     equation for all vertical levels and for the desired domain
@@ -79,18 +79,16 @@ def AdiabaticHEating(TemperatureData, PressureData, OmegaData,
     dy = np.deg2rad(lats.differentiate(LatIndexer))*Re
     AdvHTemp = -1* ((UWindComponentData*dTdlambda/dx)+(VWindComponentData*dTdphi/dy)) 
 
-    theta = potential_temperature(
-        PressureData,TemperatureData)
+    theta = potential_temperature(PressureData,TemperatureData)
     
-    dTdt = TemperatureData.differentiate(
-            TimeName,datetime_unit='s') / units('s')
+    if dTdt is None:
+        dTdt = TemperatureData.differentiate(TimeName,datetime_unit='s') / units('s')
     
-    sigma = -1 * (TemperatureData/theta) * theta.differentiate(
-        VerticalCoordIndexer) / units(str(theta[VerticalCoordIndexer].metpy.units))
+    sigma = -1 * (TemperatureData/theta) * theta.differentiate(VerticalCoordIndexer) / units('Pa')
     
     ResT =  dTdt - AdvHTemp - (sigma * OmegaData)
     
-    AdiabaticHeating = ResT*Cp_d
+    AdiabaticHeating = ResT * Cp_d
     
     return AdiabaticHeating
         

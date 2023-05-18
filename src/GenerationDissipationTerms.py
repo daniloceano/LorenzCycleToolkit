@@ -50,73 +50,73 @@ class GenerationDissipationTerms:
     
     def calc_gz(self):
         print('Computing generation of Zonal Potential Energy (Gz)...')
-        _ = self.Q_AE*self.tair_AE
-        function = CalcAreaAverage(_,self.ylength)/(Cp_d*self.sigma_AA)
-        Gz = function.integrate(self.VerticalCoordIndexer
-                    )* function[self.VerticalCoordIndexer].metpy.units
+
+        _ = self.Q_AE * self.tair_AE
+        function = CalcAreaAverage(_,self.ylength) / (Cp_d * self.sigma_AA)
+        Gz = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
+        
         try: 
-            Gz = Gz.metpy.convert_units('W/ m **2')
+            Gz = Gz.metpy.convert_units('W / m ** 2')
         except ValueError:
             print('Unit error in Gz')
             raise
-        if self.method == 'fixed' and self.box_obj.args.verbosity == True:
-            print(Gz.values*Gz.metpy.units)
-        # Save Gz before vertical integration
+
         if self.box_obj.args.verbosity == True:
-            print(Gz.values*Gz.metpy.units)
+            print(Gz.values * Gz.metpy.units)
+
         print('Saving Gz for each vertical level...')
         if self.method == 'fixed':
             df = function.to_dataframe(name='Ce',dim_order=[
                     self.TimeName,self.VerticalCoordIndexer]).unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.TimeName]).to_dataframe(name=time
-                                                             ).transpose()
-        df.to_csv(self.output_dir+'/Gz_'+self.VerticalCoordIndexer+'.csv',
-                    mode="a", header=None)
+            df = function.drop([self.TimeName]).to_dataframe(name=time).transpose()
+
+        df.to_csv(self.output_dir+'/Gz_'+self.VerticalCoordIndexer+'.csv', mode="a", header=None)
         print('Done!')
+
         return Gz
     
     def calc_ge(self):
         print('Computing generation of Eddy Potential Energy (Ge)...')
-        _ = self.Q_ZE*self.tair_ZE
-        function = CalcAreaAverage(_,self.ylength, 
-                                   xlength=self.xlength)/(Cp_d*self.sigma_AA)
-        Ge = function.integrate(self.VerticalCoordIndexer
-                    )* function[self.VerticalCoordIndexer].metpy.units
+
+        _ = self.Q_ZE * self.tair_ZE
+        function = CalcAreaAverage(_,self.ylength, xlength=self.xlength) / (Cp_d * self.sigma_AA)
+        Ge = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
         try: 
-            Ge = Ge.metpy.convert_units('W/ m **2')
+            Ge = Ge.metpy.convert_units('W / m **2')
         except ValueError:
             print('Unit error in Ge')
             raise
-        # Save Gz before vertical integration
-        if self.box_obj.args.verbosity == True and self.box_obj.args.verbosity == True:
+
+        if self.box_obj.args.verbosity == True:
             print(Ge.values*Ge.metpy.units)
+
         print('Saving Ge for each vertical level...')
         if self.method == 'fixed':
             df = function.to_dataframe(name='Ce',dim_order=[
-                    self.TimeName,self.VerticalCoordIndexer]).unstack()
+                self.TimeName,self.VerticalCoordIndexer]).unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.TimeName]).to_dataframe(name=time
-                                                             ).transpose()
-        df.to_csv(self.output_dir+'/Ge_'+self.VerticalCoordIndexer+'.csv',
-                    mode="a", header=None)
+            df = function.drop([self.TimeName]).to_dataframe(name=time).transpose()
+
+        df.to_csv(self.output_dir+'/Ge_'+self.VerticalCoordIndexer+'.csv', mode="a", header=None)
         print('Done!')
+        
         return Ge
     
     def calc_dz(self):
         # Here we will use only the lowest vertical level
-        _ = (self.u_ZA.isel({self.VerticalCoordIndexer:0})*self.ust_ZA) + (
-            self.v_ZA.isel({self.VerticalCoordIndexer:0})*self.vst_ZA)
-        function = CalcAreaAverage(_,self.ylength)/g
+        _ = (self.u_ZA.isel({self.VerticalCoordIndexer:0}) * self.ust_ZA) + (
+            self.v_ZA.isel({self.VerticalCoordIndexer:0}) * self.vst_ZA)
+        function = CalcAreaAverage(_, self.ylength) / g
         Dz = units.Pa * function   
         return Dz
     
     def calc_de(self):
         # Here we will use only the lowest vertical level
-        _ = (self.u_ZE.isel({self.VerticalCoordIndexer:0})*self.ust_ZE) + (
-            self.v_ZE.isel({self.VerticalCoordIndexer:0})*self.vst_ZE)
-        function = CalcAreaAverage(_,self.ylength)/g
+        _ = (self.u_ZE.isel({self.VerticalCoordIndexer:0}) * self.ust_ZE) + (
+            self.v_ZE.isel({self.VerticalCoordIndexer:0}) * self.vst_ZE)
+        function = CalcAreaAverage(_, self.ylength) / g
         De = units.Pa * function  
         return De
