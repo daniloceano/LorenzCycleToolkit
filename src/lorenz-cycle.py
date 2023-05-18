@@ -108,7 +108,7 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
             print('ERROR: Chunk size error.')
             raise
     except FileNotFoundError:
-        raise SystemExit("ERROR!!!!!\nCould not open data. Check if path, fvars file, and file format (.nc) are correct.")
+        raise SystemExit("ERROR: COuld not open file. Check if path, fvars file, and file format (.nc) are correct.")
 
     print("Assigning geospatial coordinates in radians...")
     data = data.assign_coords({"rlats": np.deg2rad(data[LatIndexer])})
