@@ -103,7 +103,7 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
         print("Chunk size error. Trying with larger chunk size...")
         try:
             with dask.config.set(array={"chunk-size": "10MiB"}):
-                data = convert_lon(xr.open_dataset(infile, chunks={"time": 1}), LonIndexer)
+                data = convert_lon(xr.open_dataset(infile).chunk(), LonIndexer)
         except:
             print('ERROR: Chunk size error.')
             raise
