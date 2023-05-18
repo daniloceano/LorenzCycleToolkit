@@ -96,19 +96,20 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
     LevelIndexer = dfVars.loc["Vertical Level"]["Variable"]
 
     print("Opening input data...")
+    # try:
+    #     with dask.config.set(array={"slicing": {"split_large_chunks": True}}):
+    #         data = convert_lon(xr.open_dataset(infile, chunks={"time": 1}), LonIndexer)
+    # except ValueError:
+    #     print("Chunk size error. Trying with larger chunk size...")
     try:
-        with dask.config.set(array={"slicing": {"split_large_chunks": True}}):
-            data = convert_lon(xr.open_dataset(infile, chunks={"time": 1}), LonIndexer)
-    except ValueError:
-        print("Chunk size error. Trying with larger chunk size...")
-        try:
-            with dask.config.set(array={"chunk-size": "10MiB"}):
-                data = convert_lon(xr.open_dataset(infile).chunk(), LonIndexer)
-        except:
-            print('ERROR: Chunk size error.')
-            raise
+        with dask.config.set(array={"chunk-size": "10MiB"}):
+            data = convert_lon(xr.open_dataset(infile).chunk(), LonIndexer)
+            print("Chunk size: 10MiB")
     except FileNotFoundError:
         raise SystemExit("ERROR: COuld not open file. Check if path, fvars file, and file format (.nc) are correct.")
+    except:
+        print('ERROR: Chunk size error.')
+        raise
 
     print("Assigning geospatial coordinates in radians...")
     data = data.assign_coords({"rlats": np.deg2rad(data[LatIndexer])})
@@ -661,6 +662,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
     os.system("python ../plots/plot_track.py "+outfile)
 
 if __name__ == "__main__":
+    
     parser = argparse.ArgumentParser(description="Lorenz Energy Cycle (LEC) program.")
     parser.add_argument("infile", help="Input .nc file with temperature, geopotential, and wind components.")
     parser.add_argument("-r", "--residuals", action='store_true', help="Compute the Dissipation and Generation terms as residuals.")
