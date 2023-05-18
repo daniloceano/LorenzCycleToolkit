@@ -137,7 +137,7 @@ def initial_domain(zeta, lat, lon):
     ax = plt.axes(projection=crs_longlat)
     fig.add_axes(ax)
     ax.set_global()
-    plot_zeta(ax, zeta, lat, lon)
+    plot_zeta(ax, zeta.compute(), lat, lon)
     map_decorators(ax)
     plt.subplots_adjust(bottom=0, top=1.2)
     
@@ -255,10 +255,10 @@ def slice_domain(NetCDF_data, args, varlist):
         
     elif args.choose:
         method = 'choose'
-        iu_850 = NetCDF_data.isel({TimeIndexer:0}).sel({LevelIndexer:8500}
-                        )[dfVars.loc['Eastward Wind Component']['Variable']]
-        iv_850 = NetCDF_data.isel({TimeIndexer:0}).sel({LevelIndexer:8500}
-                        )[dfVars.loc['Northward Wind Component']['Variable']]
+        iu_850 = NetCDF_data.isel({TimeIndexer:0}).sel({LevelIndexer:8500}, method='nearest'
+                                                )[dfVars.loc['Eastward Wind Component']['Variable']]
+        iv_850 = NetCDF_data.isel({TimeIndexer:0}).sel({LevelIndexer:8500}, method='nearest'
+                                                )[dfVars.loc['Northward Wind Component']['Variable']]
         zeta = vorticity(iu_850, iv_850).metpy.dequantify()
         
         # Apply filter when using high resolution gridded data
