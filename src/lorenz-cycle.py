@@ -99,6 +99,14 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
     try:
         with dask.config.set(array={"slicing": {"split_large_chunks": True}}):
             data = convert_lon(xr.open_dataset(infile, chunks={"time": 1}), LonIndexer)
+    except ValueError:
+        print("Chunk size error. Trying with larger chunk size...")
+        try:
+            with dask.config.set(array={"chunk-size": "10MiB"}):
+                data = convert_lon(xr.open_dataset(infile, chunks={"time": 1}), LonIndexer)
+        except:
+            print('ERROR: Chunk size error.')
+            raise
     except FileNotFoundError:
         raise SystemExit("ERROR!!!!!\nCould not open data. Check if path, fvars file, and file format (.nc) are correct.")
 
