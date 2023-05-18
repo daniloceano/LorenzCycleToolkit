@@ -37,7 +37,9 @@ from select_area import plot_domain_attributes
 
 from determine_periods import get_periods
 
-from scipy.signal import savgol_filter    
+from scipy.signal import savgol_filter 
+from numpy.linalg import LinAlgError
+
 import pandas as pd
 import xarray as xr
 import os
@@ -47,9 +49,8 @@ import dask
 import time
 import logging
 
-from numpy.linalg import LinAlgError
-
 logging.getLogger('dask').setLevel(logging.ERROR)
+dask.config.set(scheduler="processes")
 
 def check_create_folder(DirName):
     if not os.path.exists(DirName):
@@ -99,8 +100,10 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
     # try:
     #     with dask.config.set(array={"slicing": {"split_large_chunks": True}}):
     #         data = convert_lon(xr.open_dataset(infile, chunks={"time": 1}), LonIndexer)
-    # except ValueError:
-    #     print("Chunk size error. Trying with larger chunk size...")
+    # except FileNotFoundError:
+    #     raise SystemExit("ERROR: Could not open file. Check if path, fvars file, and file format (.nc) are correct.")
+    # except:
+    #     raise
     try:
         with dask.config.set(array={"chunk-size": "10MiB"}):
             data = convert_lon(xr.open_dataset(infile).chunk(), LonIndexer)
