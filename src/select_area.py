@@ -255,9 +255,9 @@ def slice_domain(NetCDF_data, args, varlist):
         
     elif args.choose:
         method = 'choose'
-        iu_850 = NetCDF_data.isel({TimeIndexer:0}).sel({LevelIndexer:850}
+        iu_850 = NetCDF_data.isel({TimeIndexer:0}).sel({LevelIndexer:8500}
                         )[dfVars.loc['Eastward Wind Component']['Variable']]
-        iv_850 = NetCDF_data.isel({TimeIndexer:0}).sel({LevelIndexer:850}
+        iv_850 = NetCDF_data.isel({TimeIndexer:0}).sel({LevelIndexer:8500}
                         )[dfVars.loc['Northward Wind Component']['Variable']]
         zeta = vorticity(iu_850, iv_850).metpy.dequantify()
         
