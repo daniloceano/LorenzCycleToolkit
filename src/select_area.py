@@ -221,6 +221,7 @@ def slice_domain(NetCDF_data, args, varlist):
     LevelIndexer = dfVars.loc['Vertical Level']['Variable']
     
     if args.fixed:
+        
         method = 'fixed'
         dfbox = pd.read_csv('../inputs/box_limits',header=None,
                             delimiter=';',index_col=0)
@@ -238,6 +239,8 @@ def slice_domain(NetCDF_data, args, varlist):
             method='nearest'))
         
     elif args.track:
+
+        dx, dy  = NetCDF_data[LonIndexer], NetCDF_data[LatIndexer]
         trackfile = '../inputs/track'
         track = pd.read_csv(trackfile,parse_dates=[0],
                             delimiter=';',index_col='time')
@@ -248,12 +251,13 @@ def slice_domain(NetCDF_data, args, varlist):
             method = 'track-15x15'
             max_width, max_length = 15, 15
         
-        WesternLimit = track['Lon'].min() - (max_width * 2)
-        EasternLimit = track['Lon'].max() + (max_width * 2)
-        SouthernLimit = track['Lat'].min() - (max_length * 2)
-        NorthernLimit = track['Lat'].max() + (max_length * 2)
+        WesternLimit = track['Lon'].min() - (max_width / 2) - dx
+        EasternLimit = track['Lon'].max() + (max_width / 2) + dx
+        SouthernLimit = track['Lat'].min() - (max_length / 2) - dy
+        NorthernLimit = track['Lat'].max() + (max_length / 2) + dy
         
     elif args.choose:
+
         method = 'choose'
         iu_850 = NetCDF_data.isel({TimeIndexer:0}).sel({LevelIndexer:8500}, method='nearest'
                                                 )[dfVars.loc['Eastward Wind Component']['Variable']]
