@@ -178,6 +178,8 @@ src/nohup.out
 
 # from vscode
 src/.vscode/launch.json
+
+# testing periods
 src/periods.png
 src/periods.csv
 src/periods_didatic.png
