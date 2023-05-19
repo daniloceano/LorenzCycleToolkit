@@ -178,3 +178,5 @@ src/nohup.out
 
 # from vscode
 src/.vscode/launch.json
+src/periods.png
+.gitignore
