@@ -97,21 +97,15 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
     LevelIndexer = dfVars.loc["Vertical Level"]["Variable"]
 
     print("Opening input data...")
-    # try:
-    #     with dask.config.set(array={"slicing": {"split_large_chunks": True}}):
-    #         data = convert_lon(xr.open_dataset(infile, chunks={"time": 1}), LonIndexer)
-    # except FileNotFoundError:
-    #     raise SystemExit("ERROR: Could not open file. Check if path, fvars file, and file format (.nc) are correct.")
-    # except:
-    #     raise
     try:
-        with dask.config.set(array={"chunk-size": "10MiB"}):
-            data = convert_lon(xr.open_dataset(infile).chunk(), LonIndexer)
-            print("Chunk size: 10MiB")
+        with dask.config.set(array={'slicing': {'split_large_chunks': True}}):
+            data = convert_lon(
+                xr.open_dataset(infile),
+                dfVars.loc['Longitude']['Variable']
+            )
     except FileNotFoundError:
-        raise SystemExit("ERROR: COuld not open file. Check if path, fvars file, and file format (.nc) are correct.")
+        raise SystemExit("ERROR: Could not open file. Check if path, fvars file, and file format (.nc) are correct.")
     except:
-        print('ERROR: Chunk size error.')
         raise
 
     print("Assigning geospatial coordinates in radians...")

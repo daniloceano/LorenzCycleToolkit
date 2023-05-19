@@ -221,7 +221,7 @@ def slice_domain(NetCDF_data, args, varlist):
     LevelIndexer = dfVars.loc['Vertical Level']['Variable']
     
     if args.fixed:
-        
+
         method = 'fixed'
         dfbox = pd.read_csv('../inputs/box_limits',header=None,
                             delimiter=';',index_col=0)
@@ -240,7 +240,9 @@ def slice_domain(NetCDF_data, args, varlist):
         
     elif args.track:
 
-        dx, dy  = NetCDF_data[LonIndexer], NetCDF_data[LatIndexer]
+        dx, dy  = (NetCDF_data[LonIndexer][1] - NetCDF_data[LonIndexer][0],
+              NetCDF_data[LatIndexer][1] - NetCDF_data[LatIndexer][0])
+        
         trackfile = '../inputs/track'
         track = pd.read_csv(trackfile,parse_dates=[0],
                             delimiter=';',index_col='time')
