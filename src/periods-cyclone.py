@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Fri Feb  3 17:17:29 2023
 
-@author: daniloceano
-"""
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    periods-cyclone.py                                 :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: danilocs <danilocs@student.42.fr>          +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2023/05/19 19:06:47 by danilocs          #+#    #+#              #
+#    Updated: 2023/05/19 19:06:47 by danilocs         ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
+
 import os
 import re
 
@@ -18,8 +26,8 @@ import matplotlib.dates as mdates
 
 import cmocean.cm as cmo
 
+from scipy.signal import argrelextrema
 from scipy.signal import savgol_filter 
-from scipy.ndimage.measurements import label, find_objects
 
 
 def check_create_folder(DirName):
@@ -29,23 +37,15 @@ def check_create_folder(DirName):
     else:
         print(DirName+' directory exists')
 
-def convert_lon(xr,LonIndexer):
-    xr.coords[LonIndexer] = (xr.coords[LonIndexer] + 180) % 360 - 180
-    xr = xr.sortby(xr[LonIndexer])
-    return xr 
-
 def filter_var(variable):
     window_lenght = round(len(variable)/2)
     if (window_lenght % 2) == 0:
         window_lenght += 1
     return savgol_filter(variable, window_lenght, 3, mode="nearest")
 
-def normalise_var(variable):
-    return (variable - variable.min()) / (variable.max() - variable.min()) 
-
 def array_vorticity(df):
     """
-    Calculate vorticity of an input dataframe
+    Calculate derivatives of the vorticity and filter the resulting series
 
     Args:
     df: pandas DataFrame
@@ -71,6 +71,7 @@ def array_vorticity(df):
     dz_dt_filt2 = xr.DataArray(filter_var(dzfilt2_dt), coords={'time':df.index})
     dz_dt2_filt2 = xr.DataArray(filter_var(dzfilt2_dt2), coords={'time':df.index})
     dz_dt3_filt2 = xr.DataArray(filter_var(dzfilt2_dt3), coords={'time':df.index})
+    dz_dt3_filt2 = xr.DataArray(filter_var(dz_dt3_filt2), coords={'time':df.index})
 
     # Assign variables to xarray
     da = da.assign(variables={'dzfilt2_dt': dzfilt2_dt,
@@ -82,52 +83,56 @@ def array_vorticity(df):
 
     return da
     
-def get_peaks_valleys(function):
-    maxs = function.where(function > function.quantile(0.75))
-    mins = function.where(function < function.quantile(0.25))
-    # get indices of continuous data
-    labels_peak, num_features_peak = label(~np.isnan(maxs))
-    labels_valley, num_features_valley = label(~np.isnan(mins))
-    slices_peak = find_objects(labels_peak)
-    slices_valley = find_objects(labels_valley)
-    # Get continuous series for dz_dt3 values higher than the 0.85 quantile
-    # and lower than the 0.15 quantile
-    continuous_max_dz = [maxs[sl] for sl in slices_peak if sl is not None]
-    continuous_min_dz = [mins[sl] for sl in slices_valley if sl is not None]
-    # Now, get maximum and mininum values (peaks and valleys)
-    peaks, valleys = [], []
-    times_peaks, times_valleys = [], []
-    for data_peak in continuous_max_dz:
-        peaks.append(data_peak.max())
-        times_peaks.append(data_peak.idxmax())
-    for data_valley in continuous_min_dz:
-        valleys.append(data_valley.min())
-        times_valleys.append(data_valley.idxmin())
-    peaks = [float(p.values) for p in peaks]
-    times_peaks = [t.values for t in times_peaks]
-    df_peaks = pd.Series(peaks,index=times_peaks)
-    valleys = [float(v.values) for v in valleys]
-    times_valleys = [t.values for t in times_valleys]
-    df_valleys = pd.Series(valleys,index=times_valleys)
-    return df_peaks, df_valleys
 
-def filter_peaks_valleys(series):
-    filtered_series = series.copy()
+def find_peaks_valleys(series):
+    """
+    Find peaks and valleys in a pandas series
 
-    # Find the indices of peaks or valleys
-    indices = filtered_series.index
+    Args:
+    series: pandas Series
 
-    # Iterate through the indices
-    for i in range(len(indices) - 1):
-        # Check if the time difference between consecutive indices is less than 24 hours
-        if indices[i + 1] - indices[i] < pd.Timedelta(hours=24):
-            # Remove the peak or valley that occurs later
-            if filtered_series[indices[i + 1]] > filtered_series[indices[i]]:
-                filtered_series = filtered_series.drop(indices[i + 1])
-            else:
-                filtered_series = filtered_series.drop(indices[i])
+    Returns:
+    result: pandas Series with nans and "peaks" or "valley" in their respective positions
+    """
+    # Extract the values of the series
+    data = series.values
 
-    return filtered_series
+    # Find peaks and valleys
+    peaks = argrelextrema(data, np.greater_equal)[0]
+    valleys = argrelextrema(data, np.less_equal)[0]
+
+    # Create a series of NaNs
+    result = pd.Series(index=series.index, dtype=object)
+    result[:] = np.nan
+
+    # Label the peaks and valleys
+    result.iloc[peaks] = 'peak'
+    result.iloc[valleys] = 'valley'
+
+    # Don't assume that first and last data are either a peak or a valley
+    result.iloc[0] = np.nan
+    result.iloc[-1] = np.nan
+
+    return result
+
+def filter_peaks_valleys(result):
+
+    filtered_result = result.copy()
+    peaks = result[result == 'peak'].index
+    valleys = result[result == 'valley'].index
+
+    for peak_idx in peaks:
+        next_valley = valleys[valleys > peak_idx].min()
+        if next_valley is not pd.NaT and (next_valley - peak_idx) <= pd.Timedelta(days=1):
+            filtered_result[next_valley] = np.nan
+
+    for valley_idx in valleys:
+        previous_peak = peaks[peaks < valley_idx].max()
+        if previous_peak is not pd.NaT and (valley_idx - previous_peak) <= pd.Timedelta(days=1):
+            filtered_result[valley_idx] = np.nan
+
+    return filtered_result
+
 
 def plot_didactic(vorticity: xr.Dataset, periods, outfile_name_didactic: str) -> None:
     """
@@ -322,100 +327,82 @@ def plot_didactic(vorticity: xr.Dataset, periods, outfile_name_didactic: str) ->
     plt.savefig(outfile_name_didactic,dpi=500)
     print(outfile_name_didactic,'saved')
 
-def mature_stage(dz):
+def find_mature_stage(df):
 
-    # Mature stage will be defined as all points between a consecutive
-    # minimum and maximum of the derivative of the vorticity.
+    # Find valleys and peaks indices
+    valleys = df[df['dz_peaks_valleys'] == 'valley'].index
+    peaks = df[df['dz_peaks_valleys'] == 'peak'].index
 
-    dz_peaks, dz_valleys = get_peaks_valleys(dz)
-    dz_peaks_filtered = filter_peaks_valleys(dz_peaks)
-    dz_valleys_filtered = filter_peaks_valleys(dz_valleys)
-    
-    peaks = dz_peaks_filtered.replace(dz_peaks_filtered.values,
-                                       'peak')
-    valleys = dz_valleys_filtered.replace(dz_valleys_filtered.values,
-                                           'valley')
-    dz_peaks_valleys = pd.concat([peaks,valleys]).sort_index()
-    
-    dt = dz.time[1] - dz.time[0]
-    dt = pd.Timedelta(dt.values)
-        
-    mature = []
-    for i in range(len(dz_peaks_valleys[:-1])):
-        if (dz_peaks_valleys[i] == 'valley') and \
-            (dz_peaks_valleys[i+1] == 'peak') :
-            mature.append(pd.date_range(dz_peaks_valleys.index[i],
-                        dz_peaks_valleys.index[i+1],
-                        freq=f'{int(dt.total_seconds() / 3600)} H'))
-    return mature
+    # Fill periods between valleys and peaks with "mature"
+    for valley, peak in zip(valleys, peaks):
+        df.loc[valley:peak, 'periods'] = 'mature'
 
+    return df
 
-def intensification_incipient_stages(mature, dz2):
-    
-    dz2_peaks, dz2_valleys = get_peaks_valleys(dz2)
-    dt = dz2.time[1] - dz2.time[0]
-    dt = pd.Timedelta(dt.values)
-    
-    # intensification stage is defined as the period between a local minimum
-    # of dz_dt2 and the beginning of the mature stage~
-    intensification = []
-    for series, i in zip(mature, range(len(mature))):
-        mature_start = series[0] 
-        if i == 0:
-            # If thre is a minimum of the second derivative before the start of 
-            # mature phase, the intensification starts there. Else, there is an
-            # incipient stage
-            if dz2_valleys.index[i] < mature_start:
-                intensification_start = dz2_valleys.index[i]
-                incipient = pd.date_range(dz2.time[0].values,intensification_start-dt,
-                                freq=f'{int(dt.total_seconds() / 3600)} H')
-            else:
-                intensification_start = (dz2.time[0]).values
-                incipient = []
-        else:
-            if dz2_valleys.index[0] < mature[0][0]:
-                intensification_start = dz2_valleys.index[i]
-            else:
-                # If there's only one valley for dz2, there's no intensification
-                if len(dz2_valleys) <= 1:
-                    intensification = []
-                    return intensification, incipient
-                else:
-                    intensification_start = dz2_valleys.index[i-1]
-        intensification_end = mature_start-dt
-        intensification.append(pd.date_range(intensification_start,
-                        intensification_end, 
-                        freq=f'{int(dt.total_seconds() / 3600)} H'))   
-    
-    return intensification, incipient
+def find_intensification_period(df):
+    # Find dz and dz2 valleys indices
+    dz_valleys = df[df['dz_peaks_valleys'] == 'valley'].index
+    dz2_valleys = df[df['dz2_peaks_valleys'] == 'valley'].index
 
-def decaying_stage(dz, dz2):
-    # Decaying stage will be defined as all points between a consecutive peak of dz and a valley of dz2.
+    # Find the corresponding dz2 valley for each dz valley
+    dz2_valley_indices = []
+    for dz_valley in dz_valleys:
+        idx = np.argmin(np.abs(dz2_valleys - dz_valley))
+        dz2_valley_indices.append(idx)
 
-    dz_peaks, _ = get_peaks_valleys(dz)
-    _, dz2_valleys = get_peaks_valleys(dz2)
-    dz_peaks_filtered = filter_peaks_valleys(dz_peaks)
-    dz2_valleys_filtered = filter_peaks_valleys(dz2_valleys)
+    # Fill periods between dz2 and dz valleys with "intensification"
+    for dz2_valley_idx, dz_valley in zip(dz2_valley_indices, dz_valleys):
+        dz2_valley = dz2_valleys[dz2_valley_idx]
+        df.loc[dz2_valley:dz_valley, 'periods'] = 'intensification'
 
-    peaks = dz_peaks_filtered.replace(dz_peaks_filtered.values, 'peak')
-    valleys = dz2_valleys_filtered.replace(dz2_valleys_filtered.values, 'valley')
-    dz_peaks_valleys = pd.concat([peaks, valleys]).sort_index()
+    return df
 
-    dt = dz.time[1] - dz.time[0]
-    dt = pd.Timedelta(dt.values)
+def find_decay_period(df):
+    # Find dz peaks and dz2 valleys indices
+    dz_peaks = df[df['dz_peaks_valleys'] == 'peak'].index
+    dz2_valleys = df[df['dz2_peaks_valleys'] == 'valley'].index
 
-    decaying = []
-    i = 0
-    while i < len(dz_peaks_valleys) - 1:
-        if dz_peaks_valleys[i] == 'peak':
-            j = i + 1
-            while j < len(dz_peaks_valleys) and dz_peaks_valleys[j] == 'valley':
-                decaying.append(pd.date_range(dz_peaks_valleys.index[i], dz_peaks_valleys.index[j], freq=f'{int(dt.total_seconds() / 3600)} H'))
-                j += 1
-            i = j - 1
-        i += 1
+    # Find the corresponding dz2 valley for each dz peak
+    dz2_valley_indices = []
+    for dz_peak in dz_peaks:
+        idx = np.argmin(np.abs(dz2_valleys - dz_peak))
+        dz2_valley_indices.append(idx)
 
-    return decaying
+    # Fill periods between dz peak and dz2 valley with "decay"
+    for dz2_valley_idx, dz_peak in zip(dz2_valley_indices, dz_peaks):
+        dz2_valley = dz2_valleys[dz2_valley_idx]
+        df.loc[dz_peak:dz2_valley, 'periods'] = 'decay'
+
+    return df
+
+def plot_phase(df, phase):
+    # Create a copy of the DataFrame
+    df_copy = df.copy()
+
+    colors_phases = {'incipient': '#65a1e6', 'intensification': '#f7b538',
+          'mature': '#d62828', 'decay': '#9aa981'}
+
+    # Find the start and end indices of "mature" periods
+    mature_starts = df_copy[(df_copy['periods'] == phase) &
+                             (df_copy['periods'].shift(1) != phase)].index
+    mature_ends = df_copy[(df_copy['periods'] == phase) &
+                           (df_copy['periods'].shift(-1) != phase)].index
+
+    # Iterate over the "mature" periods and fill the area
+    for start, end in zip(mature_starts, mature_ends):
+        plt.fill_between(df_copy.index, df_copy['z'], where=(df_copy.index >= start) &
+                          (df_copy.index <= end), alpha=0.7, color=colors_phases[phase])
+
+    # Plot the "z" series
+    plt.plot(df_copy.index, df_copy['z'], c='k')
+
+    # Set labels and title
+    plt.xlabel('Time')
+    plt.ylabel('z')
+    plt.title(f'{phase} phase')
+
+    # Show the plot
+    plt.show()
 
 
 def get_formatted_phases(phases):
@@ -433,19 +420,108 @@ def get_formatted_phases(phases):
 
     return new_phases
 
+def plot_series_with_peaks_valleys(df):
+    # Create a figure and axes
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Plot the "z" series
+    ax.plot(df.index, df['z'], label='z', color='k')
+
+    # Define the series and colors for plotting
+    series_names = ['dz', 'dz2', 'dz3']
+    series_colors = ['#d62828', '#f7b538', '#65a1e6']
+    marker_sizes = [80, 60, 40]
+    peaks_valleys_columns = ['dz_peaks_valleys', 'dz2_peaks_valleys', 'dz3_peaks_valleys']
+    scaling_factors = [100, 1000, 10000]
+
+    # Plot the series and their peaks/valleys
+    for series_name, series_color, peaks_valleys_col, marker_size, scaling_factor in zip(series_names, series_colors,
+                                                                                         peaks_valleys_columns,
+                                                                                         marker_sizes,
+                                                                                         scaling_factors):
+        ax.plot(df.index, df[series_name] * scaling_factor, color=series_color, label=series_name)
+        ax.scatter(df.index[df[peaks_valleys_col] == 'peak'], df[series_name][df[peaks_valleys_col] == 'peak'] * scaling_factor,
+                   color=series_color, marker='o', s=marker_size)
+        ax.scatter(df.index[df[peaks_valleys_col] == 'valley'], df[series_name][df[peaks_valleys_col] == 'valley'] * scaling_factor,
+                   color=series_color, marker='o', facecolors='none', s=marker_size)
+
+    # Set labels and title
+    ax.set_xlabel('Time')
+    ax.set_ylabel('Series')
+    ax.set_title('Series with Peaks and Valleys')
+
+    # Move the legend outside the figure and to the top
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=4)
+
+    # Show the plot
+    plt.show()
+
+def plot_peaks_valleys_series(series, *peaks_valleys_series_list):
+    # Plot the series
+    plt.figure(figsize=(10, 6))
+    plt.plot(series, color='k')
+
+    # Plot peaks and valleys
+    colors = ['#d62828', '#f7b538', '#65a1e6']  # List of colors for differentiating multiple series
+    markers = ['o', 'o']  # List of markers for peaks and valleys
+    labels = ['Peaks', 'Valleys']  # List of labels for the legend
+
+    for i, peaks_valleys_series in enumerate(peaks_valleys_series_list):
+        mask_notna = peaks_valleys_series.notna()
+        mask_peaks = peaks_valleys_series == 'peak'
+
+        # Calculate decreasing marker size
+        marker_size = 300 - (i * 70)
+
+        # Plot peaks
+        plt.scatter(series.index[mask_notna & mask_peaks], series[mask_notna & mask_peaks],
+                    marker=markers[0], color=colors[i], s=marker_size)
+
+        # Plot valleys
+        plt.scatter(series.index[mask_notna & ~mask_peaks], series[mask_notna & ~mask_peaks],
+                    marker=markers[1], facecolors='none', edgecolors=colors[i], s=marker_size)
+
+    plt.title('Series with Peaks and Valleys')
+    plt.show()
+
+
 def get_phases(vorticity, output_directory):
     
     z = vorticity.zeta_filt2
     dz = vorticity.dz_dt_filt2
     dz2 = vorticity.dz_dt2_filt2
     dz3 = vorticity.dz_dt3_filt2
-    
-    mature = mature_stage(dz)
 
-    intensification, incipient = intensification_incipient_stages(mature, dz2)
+    df = z.to_dataframe().rename(columns={'zeta_filt2':'z'})
+    df['dz'] = dz.to_dataframe()
+    df['dz2'] = dz2.to_dataframe()
+    df['dz3'] = dz3.to_dataframe()
+
+    df['dz_peaks_valleys'] = find_peaks_valleys(df['dz'])
+    df['dz2_peaks_valleys'] = find_peaks_valleys(df['dz2'])
+    df['dz3_peaks_valleys'] = find_peaks_valleys(df['dz3'])
+
+    # Initialize periods column as NaN
+    df['periods'] = np.nan
+
+    # First step: identify peaks and valleys of vorticity
+    # plot_series_with_peaks_valleys(df)
+
+    # Second step: look for patterns
+    # plot_peaks_valleys_series(df['z'], df['dz_peaks_valleys'], df['dz2_peaks_valleys'], df['dz3_peaks_valleys'])
     
-    decaying = decaying_stage(dz, dz2)
-    
+    # Mature phase: between consecutive valley and peak of dz
+    df = find_mature_stage(df)
+    # plot_phase(df, "mature")
+
+    # Intensification phase: between consecutive valleys of dz2 and dz
+    df = find_intensification_period(df)
+    # plot_phase(df, "intensification")
+
+    # Decay phase: between consecutive peak of dz and valley of dz2
+    df = find_decay_period(df)
+    plot_phase(df, "decay")
+
     # Add six hours in the end and beggining of each period, so there is an
     # overlap between each period, acting as a confidence interval
     six_hours = pd.Timedelta('6H')
