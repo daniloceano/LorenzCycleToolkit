@@ -111,9 +111,9 @@ def find_peaks_valleys(series):
     result.iloc[peaks] = 'peak'
     result.iloc[valleys] = 'valley'
 
-    # Don't assume that first and last data are either a peak or a valley
-    result.iloc[0] = np.nan
-    result.iloc[-1] = np.nan
+    # # Don't assume that first and last data are either a peak or a valley
+    # result.iloc[0] = np.nan
+    # result.iloc[-1] = np.nan
 
     return result
 
@@ -135,25 +135,36 @@ def filter_peaks_valleys(result):
 
     return filtered_result
 
+import pandas as pd
+import numpy as np
+
 def find_mature_stage(df):
     # Find valleys and peaks indices
     valleys = df[df['dz_peaks_valleys'] == 'valley'].index
     peaks = df[df['dz_peaks_valleys'] == 'peak'].index
 
     # Iterate over valleys and find corresponding peaks
-    for valley in valleys:
-        # Find the first peak that occurs after the current valley
-        corresponding_peak = peaks[peaks > valley].min()
-        
-        # Check if there is a corresponding peak
-        if pd.notnull(corresponding_peak):
-            # Fill the period between valley and peak with "mature"
-            df.loc[valley:corresponding_peak, 'periods'] = 'mature'
-        else:
-            # Fill the period between valley and end of series with "mature"
-            df.loc[valley:, 'periods'] = 'mature'
+    for i in range(len(valleys)):
+        valley = valleys[i]
+
+        # Check if the valley index is not the first index
+        if valley != df.index[0]:
+            # Find the peaks that occur after the current valley
+            corresponding_peaks = peaks[peaks > valley]
+
+            if len(corresponding_peaks) > 0:
+                # Find the first peak that occurs after the current valley
+                corresponding_peak = corresponding_peaks[0]
+
+                duration = corresponding_peak - valley
+
+                # Mature stage needs to be at least 1.5 days long
+                if duration >= pd.Timedelta(hours=36):
+                    # Fill the period between valley and peak with "mature"
+                    df.loc[valley:corresponding_peak, 'periods'] = 'mature'
 
     return df
+
 
 def find_intensification_period(df):
     # Find dz and dz2 valleys indices
@@ -178,20 +189,25 @@ def find_decay_period(df):
     dz_peaks = df[df['dz_peaks_valleys'] == 'peak'].index
     dz2_valleys = df[df['dz2_peaks_valleys'] == 'valley'].index
 
-    # Find the corresponding dz2 valley for each dz peak
-    dz2_valley_indices = []
+    # Iterate over dz peaks
     for dz_peak in dz_peaks:
-        idx = np.argmin(np.abs(dz2_valleys - dz_peak))
-        dz2_valley_indices.append(idx)
+        # Find dz2 valleys with index greater than dz_peak
+        valid_dz2_valleys = dz2_valleys[dz2_valleys > dz_peak]
 
-    # Fill periods between dz peak and dz2 valley with "decay"
-    for dz2_valley_idx, dz_peak in zip(dz2_valley_indices, dz_peaks):
-        dz2_valley = dz2_valleys[dz2_valley_idx]
-        df.loc[dz_peak:dz2_valley, 'periods'] = 'decay'
+        if len(valid_dz2_valleys) > 0:
+            # Find dz2 valleys that occurs after dz_peaks
+            for valid_dz2_valley in valid_dz2_valleys:
 
+                # Check if there are no dz peaks between dz_peak and dz2_valley
+                # dz_peak needs to be positive (in the mean) to be considered decay period
+                if (not any(df['dz_peaks_valleys'].loc[dz_peak:valid_dz2_valley][1:] == 'peak')
+                    ) and (df.loc[dz_peak:valid_dz2_valley, 'dz'].mean() > 0):
+                    # Fill the period between dz_peak and valid_dz2_valley with 'decay'
+                    df.loc[dz_peak:valid_dz2_valley, 'periods'] = 'decay'
+            
     return df
 
-def plot_phase(df, phase, ax=None):
+def plot_phase(df, phase, ax=None, show_title=True):
     # Create a copy of the DataFrame
     df_copy = df.copy()
 
@@ -199,9 +215,9 @@ def plot_phase(df, phase, ax=None):
                      'mature': '#d62828', 'decay': '#9aa981'}
 
     # Find the start and end indices of the period
-    mature_starts = df_copy[(df_copy['periods'] == phase) &
+    phase_starts = df_copy[(df_copy['periods'] == phase) &
                             (df_copy['periods'].shift(1) != phase)].index
-    mature_ends = df_copy[(df_copy['periods'] == phase) &
+    phase_ends = df_copy[(df_copy['periods'] == phase) &
                           (df_copy['periods'].shift(-1) != phase)].index
 
     # Use the provided axes or create new ones
@@ -209,13 +225,16 @@ def plot_phase(df, phase, ax=None):
         fig, ax = plt.subplots(figsize=(10, 6))
 
     # Iterate over the periods and fill the area
-    for start, end in zip(mature_starts, mature_ends):
+    for start, end in zip(phase_starts, phase_ends):
         ax.fill_between(df_copy.index, df_copy['z'], where=(df_copy.index >= start) &
                         (df_copy.index <= end), alpha=0.7, color=colors_phases[phase])
 
     ax.plot(df_copy.index, df_copy['z'], c='k')
 
-    ax.set_title(f'{phase} phase')
+    if show_title:
+        title = ax.set_title(f'{phase} phase')
+        title.set_position([0.5, 1.05])  # Adjust the title position as needed
+
 
     if ax is None:
         plt.show()
@@ -378,8 +397,15 @@ def get_phases(vorticity, output_directory, i):
     plot_phase(df, "decay", ax6)
     plot_specific_peaks_valleys(df, "dz_peaks", "dz2_valleys", ax6)
 
+    # Put everything together
+    ax7 = fig.add_subplot(337)
+    plot_phase(df, "intensification", ax7, show_title=False)
+    plot_phase(df, "mature", ax7, show_title=False)
+    plot_phase(df, "decay", ax7, show_title=False)
+    ax7.set_title("Combine everythng")
+
     # Set y-axis labels in scientific notation (power notation) and change date format to "%m%d"
-    for ax in [ax1, ax2, ax3, ax4, ax5, ax6]:
+    for ax in [ax1, ax2, ax3, ax4, ax5, ax6, ax7]:
         ax.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3))
         date_format = mdates.DateFormatter("%m-%d")
         ax.xaxis.set_major_formatter(date_format)
@@ -424,9 +450,10 @@ if __name__ == "__main__":
 
         filename = os.path.basename(track_file)
         file_id = filename.split('_')[0]
-
-        # if file_id == '20180722':
+        
+        # if file_id == '19840620':
 
         output_directory = '../../SWSA-cyclones_energetic-analysis/figures/periods_test'
         get_periods(track_file, output_directory, file_id)
+        print(file_id)
 
