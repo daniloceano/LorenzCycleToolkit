@@ -9,12 +9,12 @@
 #    By: danilocs <danilocs@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/05/19 19:06:47 by danilocs          #+#    #+#              #
-#    Updated: 2023/05/19 19:06:47 by danilocs         ###   ########.fr        #
+#    Updated: 2023/05/22 13:26:04 by danilocs         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 import os
-import re
+import glob
 
 import xarray as xr
 import pandas as pd
@@ -23,6 +23,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.dates as mdates
+import matplotlib.ticker as ticker
+
 
 import cmocean.cm as cmo
 
@@ -134,14 +136,22 @@ def filter_peaks_valleys(result):
     return filtered_result
 
 def find_mature_stage(df):
-
     # Find valleys and peaks indices
     valleys = df[df['dz_peaks_valleys'] == 'valley'].index
     peaks = df[df['dz_peaks_valleys'] == 'peak'].index
 
-    # Fill periods between valleys and peaks with "mature"
-    for valley, peak in zip(valleys, peaks):
-        df.loc[valley:peak, 'periods'] = 'mature'
+    # Iterate over valleys and find corresponding peaks
+    for valley in valleys:
+        # Find the first peak that occurs after the current valley
+        corresponding_peak = peaks[peaks > valley].min()
+        
+        # Check if there is a corresponding peak
+        if pd.notnull(corresponding_peak):
+            # Fill the period between valley and peak with "mature"
+            df.loc[valley:corresponding_peak, 'periods'] = 'mature'
+        else:
+            # Fill the period between valley and end of series with "mature"
+            df.loc[valley:, 'periods'] = 'mature'
 
     return df
 
@@ -181,98 +191,126 @@ def find_decay_period(df):
 
     return df
 
-def plot_phase(df, phase):
+def plot_phase(df, phase, ax=None):
     # Create a copy of the DataFrame
     df_copy = df.copy()
 
     colors_phases = {'incipient': '#65a1e6', 'intensification': '#f7b538',
-          'mature': '#d62828', 'decay': '#9aa981'}
+                     'mature': '#d62828', 'decay': '#9aa981'}
 
-    # Find the start and end indices of "mature" periods
+    # Find the start and end indices of the period
     mature_starts = df_copy[(df_copy['periods'] == phase) &
-                             (df_copy['periods'].shift(1) != phase)].index
+                            (df_copy['periods'].shift(1) != phase)].index
     mature_ends = df_copy[(df_copy['periods'] == phase) &
-                           (df_copy['periods'].shift(-1) != phase)].index
+                          (df_copy['periods'].shift(-1) != phase)].index
 
-    # Iterate over the "mature" periods and fill the area
+    # Use the provided axes or create new ones
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Iterate over the periods and fill the area
     for start, end in zip(mature_starts, mature_ends):
-        plt.fill_between(df_copy.index, df_copy['z'], where=(df_copy.index >= start) &
-                          (df_copy.index <= end), alpha=0.7, color=colors_phases[phase])
+        ax.fill_between(df_copy.index, df_copy['z'], where=(df_copy.index >= start) &
+                        (df_copy.index <= end), alpha=0.7, color=colors_phases[phase])
 
-    # Plot the "z" series
-    plt.plot(df_copy.index, df_copy['z'], c='k')
+    ax.plot(df_copy.index, df_copy['z'], c='k')
 
-    # Set labels and title
-    plt.xlabel('Time')
-    plt.ylabel('z')
-    plt.title(f'{phase} phase')
+    ax.set_title(f'{phase} phase')
 
-    # Show the plot
-    plt.show()
+    if ax is None:
+        plt.show()
 
-def plot_series_with_peaks_valleys(df):
-    # Create a figure and axes
-    fig, ax = plt.subplots(figsize=(10, 6))
+def plot_specific_peaks_valleys(df, key1, key2, ax):
+    # Define the series and colors for plotting
+    series_colors = {'dz':'#d62828', 'dz2':'#f7b538', 'dz3':'#65a1e6'}
+    marker_sizes = {'dz': 250, 'dz2': 200, 'dz3': 150}
 
-    # Plot the "z" series
-    ax.plot(df.index, df['z'], label='z', color='k')
+    for key in [key1, key2]:
+
+        key_name =  key.split('_')[0]
+        peak_or_valley = key.split('_')[1][:-1]
+
+        peaks_valleys_series =  df[f"{key_name}_peaks_valleys"]
+
+        color  = series_colors[key_name]
+        marker_size = marker_sizes[key_name]
+
+        # Plot the specified peaks or valleys
+        if peak_or_valley == 'peak':
+            ax.scatter(df.index[peaks_valleys_series == peak_or_valley],
+                       df[peaks_valleys_series == 'peak'].z, color=color, marker='o', s=marker_size)
+        elif peak_or_valley == 'valley':
+            ax.scatter(df.index[peaks_valleys_series == peak_or_valley],
+                       df[peaks_valleys_series == 'valley'].z, color=color, marker='o', s=marker_size,
+                         facecolors='none', linewidth=2)
+
+def plot_vorticity(ax, vorticity):
+    
+    ax.plot(vorticity.time, vorticity.zeta, c='gray', linewidth=0.75, label='ζ')
+
+    ax.plot(vorticity.time, vorticity.zeta_filt2, c='k', linewidth=2, label=r"$ζ_{filt}$")
+
+    ax.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3))
+
+    ax.legend(loc='best')
+
+    ax.set_title("Filter ζ")
+
+def plot_series_with_peaks_valleys(df, ax):
+
+    ax.plot(df.index, df['z'], label='ζ', color='k')
 
     # Define the series and colors for plotting
     series_names = ['dz', 'dz2', 'dz3']
+    labels = [r"$\frac{∂ζ_{filt}}{∂t} \times 10^{3}$",
+               r"$\frac{∂^{2}ζ_{filt}}{∂t^{2}} \times 10^{4}$",
+                 r"$\frac{∂^{3}ζ_{filt}}{∂t^{3}} \times 10^{5}$"]
     series_colors = ['#d62828', '#f7b538', '#65a1e6']
     marker_sizes = [80, 60, 40]
     peaks_valleys_columns = ['dz_peaks_valleys', 'dz2_peaks_valleys', 'dz3_peaks_valleys']
     scaling_factors = [100, 1000, 10000]
 
     # Plot the series and their peaks/valleys
-    for series_name, series_color, peaks_valleys_col, marker_size, scaling_factor in zip(series_names, series_colors,
+    for series_name, label, series_color, peaks_valleys_col, marker_size, scaling_factor in zip(series_names,
+                                                                                         labels,
+                                                                                         series_colors,
                                                                                          peaks_valleys_columns,
                                                                                          marker_sizes,
                                                                                          scaling_factors):
-        ax.plot(df.index, df[series_name] * scaling_factor, color=series_color, label=series_name)
+        ax.plot(df.index, df[series_name] * scaling_factor, color=series_color, label=label)
         ax.scatter(df.index[df[peaks_valleys_col] == 'peak'], df[series_name][df[peaks_valleys_col] == 'peak'] * scaling_factor,
                    color=series_color, marker='o', s=marker_size)
         ax.scatter(df.index[df[peaks_valleys_col] == 'valley'], df[series_name][df[peaks_valleys_col] == 'valley'] * scaling_factor,
-                   color=series_color, marker='o', facecolors='none', s=marker_size)
+                   color=series_color, marker='o', facecolors='none', s=marker_size, linewidth=2)
 
-    # Set labels and title
-    ax.set_xlabel('Time')
-    ax.set_ylabel('Series')
-    ax.set_title('Series with Peaks and Valleys')
+    ax.set_title('Derivate ζ')
 
-    # Move the legend outside the figure and to the top
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=4)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.5), ncol=4)
 
-    # Show the plot
-    plt.show()
-
-def plot_peaks_valleys_series(series, *peaks_valleys_series_list):
+def plot_peaks_valleys_series(series, ax, *peaks_valleys_series_list):
     # Plot the series
-    plt.figure(figsize=(10, 6))
-    plt.plot(series, color='k')
+    ax.plot(series, color='k')
 
     # Plot peaks and valleys
     colors = ['#d62828', '#f7b538', '#65a1e6']  # List of colors for differentiating multiple series
     markers = ['o', 'o']  # List of markers for peaks and valleys
-    labels = ['Peaks', 'Valleys']  # List of labels for the legend
 
     for i, peaks_valleys_series in enumerate(peaks_valleys_series_list):
         mask_notna = peaks_valleys_series.notna()
         mask_peaks = peaks_valleys_series == 'peak'
 
         # Calculate decreasing marker size
-        marker_size = 300 - (i * 70)
+        marker_size = 250 - (i * 50)
 
         # Plot peaks
-        plt.scatter(series.index[mask_notna & mask_peaks], series[mask_notna & mask_peaks],
+        ax.scatter(series.index[mask_notna & mask_peaks], series[mask_notna & mask_peaks],
                     marker=markers[0], color=colors[i], s=marker_size)
 
         # Plot valleys
-        plt.scatter(series.index[mask_notna & ~mask_peaks], series[mask_notna & ~mask_peaks],
-                    marker=markers[1], facecolors='none', edgecolors=colors[i], s=marker_size)
+        ax.scatter(series.index[mask_notna & ~mask_peaks], series[mask_notna & ~mask_peaks],
+                    marker=markers[1], facecolors='none', edgecolors=colors[i], s=marker_size, linewidth=2)
 
-    plt.title('Series with Peaks and Valleys')
-    plt.show()
+    ax.set_title('Get Peaks and Valleys')
 
 def get_formatted_phases(phases):
     new_phases = {}
@@ -289,7 +327,7 @@ def get_formatted_phases(phases):
 
     return new_phases
 
-def get_phases(vorticity, output_directory):
+def get_phases(vorticity, output_directory, i):
     
     z = vorticity.zeta_filt2
     dz = vorticity.dz_dt_filt2
@@ -308,61 +346,55 @@ def get_phases(vorticity, output_directory):
     # Initialize periods column as NaN
     df['periods'] = np.nan
 
-    # First step: identify peaks and valleys of vorticity
-    # plot_series_with_peaks_valleys(df)
+    # First step: filter vorticity data
+    fig = plt.figure(figsize=(10, 8))
+    ax1 = fig.add_subplot(331)
+    plot_vorticity(ax1, vorticity)
 
-    # Second step: look for patterns
-    # plot_peaks_valleys_series(df['z'], df['dz_peaks_valleys'], df['dz2_peaks_valleys'], df['dz3_peaks_valleys'])
+    # Second step: identify peaks and valleys of vorticity
+    ax2 = fig.add_subplot(332)
+    plot_series_with_peaks_valleys(df, ax2)
+
+    # Third step: look for patterns
+    ax3 = fig.add_subplot(333)
+    plot_peaks_valleys_series(df['z'], ax3,
+                               df['dz_peaks_valleys'], df['dz2_peaks_valleys'], df['dz3_peaks_valleys'])
     
     # Mature phase: between consecutive valley and peak of dz
     df = find_mature_stage(df)
-    # plot_phase(df, "mature")
+    ax4 = fig.add_subplot(334)
+    plot_phase(df, "mature", ax4)
+    plot_specific_peaks_valleys(df, "dz_valleys", "dz_peaks", ax4)
 
     # Intensification phase: between consecutive valleys of dz2 and dz
     df = find_intensification_period(df)
-    # plot_phase(df, "intensification")
+    ax5 = fig.add_subplot(335)
+    plot_phase(df, "intensification", ax5)
+    plot_specific_peaks_valleys(df, "dz_valleys", "dz2_valleys", ax5)
 
     # Decay phase: between consecutive peak of dz and valley of dz2
     df = find_decay_period(df)
-    plot_phase(df, "decay")
+    ax6 = fig.add_subplot(336)
+    plot_phase(df, "decay", ax6)
+    plot_specific_peaks_valleys(df, "dz_peaks", "dz2_valleys", ax6)
 
-    # Add six hours in the end and beggining of each period, so there is an
-    # overlap between each period, acting as a confidence interval
-    six_hours = pd.Timedelta('6H')
-    dt = z.time[1] - z.time[0]
-    dt = pd.Timedelta(dt.values)
-    phases = {}
-    for phase, key in zip([[incipient], intensification, mature, decaying],
-                    ['incipient', 'intensification', 'mature', 'decay']):
-        tmp = []
-        for period in phase:
-            if len(period) > 0:
-                tmp.append(pd.date_range(
-                    period[0]-six_hours, period[-1]+six_hours,
-                              freq=f'{int(dt.total_seconds() / 3600)} H'))
-        phases[key] = tmp
+    # Set y-axis labels in scientific notation (power notation) and change date format to "%m%d"
+    for ax in [ax1, ax2, ax3, ax4, ax5, ax6]:
+        ax.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3))
+        date_format = mdates.DateFormatter("%m-%d")
+        ax.xaxis.set_major_formatter(date_format)
+        plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+    plt.subplots_adjust(hspace=0.6)
     
-    phases = get_formatted_phases(phases)
+    plt.savefig(f'{output_directory}/periods-test_{i}.png', dpi=500)
     
-    # Extract the first and last elements from each list
-    df_dict = {}
-    for k, v in phases.items():
-        if len(v) == 0:
-            df_dict[k] = []
-        else:
-            df_dict[k] = [v[0], v[-1]]
-            
-    # Convert the dictionary to a DataFrame
-    df = pd.DataFrame.from_dict(df_dict, orient='index',
-                                columns=['start', 'end'])
-    
-    df.to_csv(output_directory+'periods.csv')
-    print(output_directory+'periods.csv created')
+    # df.to_csv(output_directory+'periods.csv')
+    # print(output_directory+'periods.csv created')
      
     return df
 
 
-def get_periods(track_file, output_directory):
+def get_periods(track_file, output_directory, i):
     # Set the output file names
     periods_outfile_path = output_directory + 'periods'
     periods_didatic_outfile_path = output_directory + 'periods_didatic'
@@ -373,7 +405,7 @@ def get_periods(track_file, output_directory):
     vorticity = array_vorticity(zeta_df)
 
     # Determine the periods
-    periods = get_phases(vorticity, output_directory)
+    periods = get_phases(vorticity, output_directory, i)
 
     # Create plots
     # plot_periods(vorticity, periods, periods_outfile_path)
@@ -382,7 +414,19 @@ def get_periods(track_file, output_directory):
 # Testing #
 if __name__ == "__main__":
 
-    track_file = '../inputs/track-test-periods'
-    output_directory = './'
-    get_periods(track_file, output_directory)
+    # track_file = '../inputs/track-test-periods'
+    # output_directory = './'
+    # get_periods(track_file, output_directory)
+
+    files = glob.glob('../../SWSA-cyclones_energetic-analysis/LEC_results/*/*track')
+
+    for track_file in files:
+
+        filename = os.path.basename(track_file)
+        file_id = filename.split('_')[0]
+
+        # if file_id == '20180722':
+
+        output_directory = '../../SWSA-cyclones_energetic-analysis/figures/periods_test'
+        get_periods(track_file, output_directory, file_id)
 
