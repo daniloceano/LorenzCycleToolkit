@@ -464,14 +464,16 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
             iwspd_850_slice = iwspd_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
 
              # Check if 'min_zeta_850', 'min_hgt_850' and 'max_wind_850' columns exists in the track file.
-             # If they exist, then retrieve and convert the value from the track file.  If they do not exist, calculate them
+             # If they exist, then retrieve and convert the value from the track file.
+             # If they do not exist, calculate them.
             try:
                 min_zeta = float(track.loc[track_itime]['min_zeta_850'])
             except KeyError:
                 if args.zeta:
-                    min_zeta = float(izeta_850.sel(latitude=central_lat, longitude=central_lon, method='nearest'))
+                    min_zeta_unformatted = izeta_850.sel(latitude=central_lat, longitude=central_lon, method='nearest')
                 else:
-                    min_zeta = float(izeta_850_slice.min())
+                    min_zeta_unformatted = izeta_850_slice.min()
+                min_zeta = float(np.nanmin(min_zeta_unformatted))
             try:
                 min_hgt = float(track.loc[track_itime]['min_hgt_850'])
             except KeyError:
@@ -672,7 +674,9 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--outname", type=str, help="Choose a name for saving results.")
     parser.add_argument("-v", "--verbosity", action='store_true', help="Increase output verbosity.")
 
-    args = parser.parse_args()
+    # args = parser.parse_args()
+    args = parser.parse_args(['../../SWSA-cyclones_energetic-analysis/met_data/ERA5/DATA/20160639_ERA5.nc',
+                              '-g', '-r', '-t', '-z'])
     
     infile  = args.infile
     varlist = '../inputs/fvars'
