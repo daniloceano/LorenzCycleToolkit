@@ -35,7 +35,7 @@ from select_area import slice_domain
 from select_area import draw_box_map
 from select_area import plot_domain_attributes
 
-from determine_periods import get_periods
+from determine_periods import determine_periods
 
 from scipy.signal import savgol_filter 
 from numpy.linalg import LinAlgError
@@ -645,7 +645,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
     check_create_folder(FigsDirectory)
     
     # Determine periods
-    get_periods(output_trackfile, ResultsSubDirectory)
+    determine_periods(output_trackfile, ResultsSubDirectory)
     
     if args.residuals:
         flag = ' -r'
