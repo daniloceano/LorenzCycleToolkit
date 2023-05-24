@@ -14,6 +14,6 @@ do
     
     cp $file ../inputs/track
     
-    python lorenz-cycle.py $era5_file -t -r -g
+    python lorenz-cycle.py $era5_file -t -r -g -z
 
 done
