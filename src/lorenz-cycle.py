@@ -674,9 +674,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--outname", type=str, help="Choose a name for saving results.")
     parser.add_argument("-v", "--verbosity", action='store_true', help="Increase output verbosity.")
 
-    # args = parser.parse_args()
-    args = parser.parse_args(['../../SWSA-cyclones_energetic-analysis/met_data/ERA5/DATA/20160639_ERA5.nc',
-                              '-g', '-r', '-t', '-z'])
+    args = parser.parse_args()
     
     infile  = args.infile
     varlist = '../inputs/fvars'
