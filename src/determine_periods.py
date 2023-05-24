@@ -14,7 +14,7 @@
 # **************************************************************************** #
 
 import os
-import glob
+import csv
 
 import xarray as xr
 import pandas as pd
@@ -563,6 +563,19 @@ def plot_didactic(periods_dict, df, vorticity, output_directory):
     plt.savefig(outfile, dpi=500)
     print(f"{outfile} created.")
 
+def export_periods_to_csv(phases_dict, periods_outfile_path):
+
+    filepath = f"{periods_outfile_path}.csv"
+
+    # Extract phase names, start dates, and end dates from the periods dictionary
+    data = [(phase, start, end) for phase, (start, end) in phases_dict.items()]
+    
+    # Write the data to a CSV file
+    with open(filepath, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(['', 'start', 'end'])  # Write the header
+        writer.writerows(data)  # Write the data rows
+
 def determine_periods(track_file, output_directory):
     # Set the output file names
     periods_outfile_path = output_directory + 'periods'
@@ -579,6 +592,7 @@ def determine_periods(track_file, output_directory):
     # Create plots
     plot_all_periods(periods_dict, df, ax=None, vorticity=vorticity.zeta, periods_outfile_path=periods_outfile_path)
     plot_didactic(periods_dict, df, vorticity, periods_didatic_outfile_path)
+    export_periods_to_csv(periods_dict, periods_outfile_path)
     
 
 # Testing #
