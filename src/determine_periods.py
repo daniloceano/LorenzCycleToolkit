@@ -576,6 +576,8 @@ def export_periods_to_csv(phases_dict, periods_outfile_path):
         writer.writerow(['', 'start', 'end'])  # Write the header
         writer.writerows(data)  # Write the data rows
 
+    print(f"{filepath} written.")
+
 def determine_periods(track_file, output_directory):
     # Set the output file names
     periods_outfile_path = output_directory + 'periods'
