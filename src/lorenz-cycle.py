@@ -394,10 +394,18 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
         if len(times) == 0:
             raise ValueError("Mismatch between trackfile and data! Check that and try again!")
         
+    
     for t in times:
 
         idata = data.sel({TimeName: t})
         idTdt = dTdt.sel({TimeName: t})
+
+        # Sometimes there are errors on indexing the time coordinate on the NetCDF file
+        #  and I can't do anything about it. So I will have to discard one of the timesteps.
+        # Any complaints can be sent directly to the original owner of the .nc file.
+        if idata[TimeName].shape != ():
+            idata = data.isel({TimeName: 0})
+            idTdt = dTdt.isel({TimeName: 0})
 
         iu = (idata[dfVars.loc['Eastward Wind Component']['Variable']].compute() *
             units(dfVars.loc['Eastward Wind Component']['Units']).to('m/s'))
@@ -419,7 +427,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
         iwspd_850, izeta_850 = wind_speed(iu_850, iv_850), vorticity(iu_850, iv_850).metpy.dequantify()
 
         lat, lon = idata[LatIndexer], idata[LonIndexer]
-        
+
         # Get current time and box limits
         itime = str(t)
         datestr = pd.to_datetime(itime).strftime('%Y-%m-%d-%H%M')
@@ -433,7 +441,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
                 izeta_850 = izeta_850.fillna(0).to_dataset(name='vorticity').apply(savgol_filter, window_length=31, polyorder=2).vorticity
             except Exception as e:
                 raise e
-        
+
         if args.track:
             # Get current time and box limits
             if 'width'in track.columns:
@@ -449,23 +457,23 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
                                 ) < abs(t - track.index[closest_index])):
                 closest_index -= 1
             track_itime = track.index[closest_index]
-             # Store system position and attributes
+                # Store system position and attributes
             central_lon, central_lat = track.loc[track_itime]['Lon'], track.loc[track_itime]['Lat']
             min_lon = central_lon-(width/2)
             max_lon = central_lon+(width/2)
             min_lat = central_lat-(length/2)
             max_lat = central_lat+(length/2)
             limits = {'min_lon':min_lon,'max_lon':max_lon,
-                      'min_lat':min_lat,'max_lat':max_lat}
+                        'min_lat':min_lat,'max_lat':max_lat}
             
             # Slice data for defined box
             izeta_850_slice = izeta_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
             ight_850_slice = ight_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
             iwspd_850_slice = iwspd_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
 
-             # Check if 'min_zeta_850', 'min_hgt_850' and 'max_wind_850' columns exists in the track file.
-             # If they exist, then retrieve and convert the value from the track file.
-             # If they do not exist, calculate them.
+                # Check if 'min_zeta_850', 'min_hgt_850' and 'max_wind_850' columns exists in the track file.
+                # If they exist, then retrieve and convert the value from the track file.
+                # If they do not exist, calculate them.
             try:
                 min_zeta = float(track.loc[track_itime]['min_zeta_850'])
             except KeyError:
@@ -482,14 +490,14 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
                 max_wind = float(track.loc[track_itime]['max_wind_850'])
             except KeyError:
                 max_wind = float(iwspd_850_slice.max())
-        
+
         elif args.choose:
 
             # Draw maps and ask user to specify corners for specifying the box
             limits = draw_box_map(iu_850, iv_850, izeta_850, ight_850,
-                                  lat, lon, itime)
+                                    lat, lon, itime)
             
-             # Store system position and attributes
+                # Store system position and attributes
             min_lon, max_lon = limits['min_lon'],  limits['max_lon']
             min_lat, max_lat = limits['min_lat'],  limits['max_lat']
             width, length = limits['max_lon'] - limits['min_lon'], limits['max_lat'] - limits['min_lat']
@@ -503,14 +511,14 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
             min_zeta = float(izeta_850_slice.min())
             min_hgt = float(ight_850_slice.min())
             max_wind = float(iwspd_850_slice.max())
-        
+
         # Find position of the extremes
         lat_slice, lon_slice = izeta_850_slice[LatIndexer], izeta_850_slice[LonIndexer]
         min_zeta_lat, min_zeta_lon = find_extremum_coordinates(izeta_850_slice, lat_slice, lon_slice, 'min_zeta')
         min_hgt_lat, min_hgt_lon = find_extremum_coordinates(ight_850_slice, lat_slice, lon_slice, 'min_hgt')
         max_wind_lat, max_wind_lon = find_extremum_coordinates(iwspd_850_slice, lat_slice, lon_slice, 'max_wind')
-       
-       # Store the results in a dictionary for plotting purposes
+
+        # Store the results in a dictionary for plotting purposes
         data850 = {
             'min_zeta': {
                 'latitude': min_zeta_lat,
@@ -530,7 +538,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
             'lat': lat,
             'lon': lon,
         }
-        
+
         position = {
         'datestr': datestr,
         'central_lat': central_lat,
@@ -545,7 +553,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
         out_track = out_track.append(position, ignore_index=True)
 
         plot_domain_attributes(data850, position, FigsDirectory)
-        
+
         print(f'\nTime: {datestr}')
         print(f'central lat/lon: {central_lon}, {central_lat}')
         print(f'Box min_lon, max_lon: {min_lon}/{max_lon}')
@@ -674,7 +682,9 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--outname", type=str, help="Choose a name for saving results.")
     parser.add_argument("-v", "--verbosity", action='store_true', help="Increase output verbosity.")
 
-    args = parser.parse_args()
+    # args = parser.parse_args()
+    args = parser.parse_args(['../../SWSA-cyclones_energetic-analysis/met_data/ERA5/DATA/20160639_ERA5.nc',
+                             '-g', '-t', '-z', '-r'])
     
     infile  = args.infile
     varlist = '../inputs/fvars'
