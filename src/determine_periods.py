@@ -220,7 +220,7 @@ def find_decay_period(df):
                 if (not any(df['dz_peaks_valleys'].loc[dz_peak:valid_dz2_valley][1:] == 'peak')
                     ) and (df.loc[dz_peak:valid_dz2_valley, 'dz'].mean() > 0):
                     # Fill the period between dz_peak and valid_dz2_valley with 'decay'                    
-                    df.loc[dz_peak:valid_dz2_valley, 'periods'].fillna('decay')
+                    df.loc[dz_peak:valid_dz2_valley, 'periods'].fillna('decay', inplace=True)
             
     return df
 
