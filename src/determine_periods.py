@@ -172,19 +172,32 @@ def find_intensification_period(df):
     dz_valleys = df[df['dz_peaks_valleys'] == 'valley'].index
     dz2_valleys = df[df['dz2_peaks_valleys'] == 'valley'].index
 
-    # Find the corresponding dz2 valley for each dz valley
-    dz2_valley_indices = []
-    for dz_valley in dz_valleys:
-        idx = np.argmin(np.abs(dz2_valleys - dz_valley))
-        dz2_valley_indices.append(idx)
-
+    # Find the periods between dz2 and dz valleys
+    valley_pairs = []
+    for i in range(len(dz2_valleys) - 1):
+        for j in range(len(dz_valleys)):
+            # dz_valley has to be before the next dz2_valley
+            if (dz_valleys[j] > dz2_valleys[i]) and (
+                dz_valleys[j] < dz2_valleys[i+1]):
+                valley_pairs.append((dz2_valleys[i], dz_valleys[j]))
+    
     # Fill periods between dz2 and dz valleys with "intensification"
-    for dz2_valley_idx, dz_valley in zip(dz2_valley_indices, dz_valleys):
-        dz2_valley = dz2_valleys[dz2_valley_idx]
+    for pair in valley_pairs:
+        df.loc[pair[0]:pair[1], 'periods'] = 'intensification'
 
-        if (df.loc[dz2_valley, 'dz2'] < 0) and (df.loc[dz_valley, 'dz'] < 0):
+    # # Find the corresponding dz2 valley for each dz valley
+    # dz2_valley_indices = []
+    # for dz_valley in dz_valleys:
+    #     idx = np.argmin(np.abs(dz2_valleys - dz_valley))
+    #     dz2_valley_indices.append(idx)
 
-            df.loc[dz2_valley:dz_valley, 'periods'] = 'intensification'
+    # # Fill periods between dz2 and dz valleys with "intensification"
+    # for dz2_valley_idx, dz_valley in zip(dz2_valley_indices, dz_valleys):
+    #     dz2_valley = dz2_valleys[dz2_valley_idx]
+
+    #     if (df.loc[dz2_valley, 'dz2'] < 0) and (df.loc[dz_valley, 'dz'] < 0):
+
+    #         df.loc[dz2_valley:dz_valley, 'periods'] = 'intensification'
 
     return df
 
@@ -206,8 +219,8 @@ def find_decay_period(df):
                 # The mean dz values between dz_peak and dz2_valley need positive
                 if (not any(df['dz_peaks_valleys'].loc[dz_peak:valid_dz2_valley][1:] == 'peak')
                     ) and (df.loc[dz_peak:valid_dz2_valley, 'dz'].mean() > 0):
-                    # Fill the period between dz_peak and valid_dz2_valley with 'decay'
-                    df.loc[dz_peak:valid_dz2_valley, 'periods'] = 'decay'
+                    # Fill the period between dz_peak and valid_dz2_valley with 'decay'                    
+                    df.loc[dz_peak:valid_dz2_valley, 'periods'].fillna('decay')
             
     return df
 
