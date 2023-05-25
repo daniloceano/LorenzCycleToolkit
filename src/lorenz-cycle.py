@@ -404,8 +404,8 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
         #  and I can't do anything about it. So I will have to discard one of the timesteps.
         # Any complaints can be sent directly to the original owner of the .nc file.
         if idata[TimeName].shape != ():
-            idata = data.isel({TimeName: 0})
-            idTdt = dTdt.isel({TimeName: 0})
+            idata = data.isel({TimeName: 1})
+            idTdt = dTdt.isel({TimeName: 1})
 
         iu = (idata[dfVars.loc['Eastward Wind Component']['Variable']].compute() *
             units(dfVars.loc['Eastward Wind Component']['Units']).to('m/s'))
@@ -682,9 +682,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--outname", type=str, help="Choose a name for saving results.")
     parser.add_argument("-v", "--verbosity", action='store_true', help="Increase output verbosity.")
 
-    # args = parser.parse_args()
-    args = parser.parse_args(['../../SWSA-cyclones_energetic-analysis/met_data/ERA5/DATA/20160639_ERA5.nc',
-                             '-g', '-t', '-z', '-r'])
+    args = parser.parse_args()
     
     infile  = args.infile
     varlist = '../inputs/fvars'
