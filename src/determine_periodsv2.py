@@ -121,8 +121,14 @@ def find_mature_stage(df):
     # Iterate over z valleys
     for z_valley in z_valleys:
         # Find the previous and next dz valleys relative to the current z valley
-        previous_dz_valley = dz_valleys[dz_valleys < z_valley][-1]
-        
+        previous_dz_valley = dz_valleys[dz_valleys < z_valley]
+
+        # Check if there is a previous dz valley
+        if len(previous_dz_valley) == 0:
+            continue
+
+        previous_dz_valley = previous_dz_valley[-1]
+
         # Find the next dz peak after the z valley
         next_dz_peak = dz_peaks[dz_peaks > z_valley]
 
@@ -145,25 +151,19 @@ def find_mature_stage(df):
 
     return df
 
-
-
 def find_intensification_period(df):
     # Find z and dz2 valleys indices
     z_valleys = df[df['z_peaks_valleys'] == 'valley'].index
     dz2_valleys = df[df['dz2_peaks_valleys'] == 'valley'].index
+    dz_peaks = df[df['dz_peaks_valleys'] == 'peak'].index
 
-    # Find the periods between dz2 and dz valleys
-    valley_pairs = []
-    for i in range(len(dz2_valleys) - 1):
-        for j in range(len(z_valleys)):
-            # dz_valley has to be before the next dz2_valley
-            if (z_valleys[j] > dz2_valleys[i]) and (
-                z_valleys[j] < dz2_valleys[i+1]):
-                valley_pairs.append((dz2_valleys[i], z_valleys[j]))
-    
-    # Fill periods between dz2 and dz valleys with "intensification"
-    for pair in valley_pairs:
-        df.loc[pair[0]:pair[1], 'periods'] = 'intensification'
+    # Find the periods between dz2 and z valleys, excluding positive dz peaks
+    for dz2_valley in dz2_valleys:
+        next_z_valley = z_valleys[z_valleys > dz2_valley].min()
+        valid_dz_peaks = dz_peaks[(dz_peaks > dz2_valley) & (dz_peaks < next_z_valley)]
+        if (len(valid_dz_peaks) == 0) or (df.loc[valid_dz_peaks, 'dz'].max() <= 0):
+            intensification_end = next_z_valley if next_z_valley in df.index else df.index[-1]
+            df.loc[dz2_valley:intensification_end, 'periods'] = 'intensification'
 
     return df
 
