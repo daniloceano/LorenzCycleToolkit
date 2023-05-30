@@ -122,7 +122,15 @@ def find_mature_stage(df):
     for z_valley in z_valleys:
         # Find the previous and next dz valleys relative to the current z valley
         previous_dz_valley = dz_valleys[dz_valleys < z_valley][-1]
-        next_dz_peak = dz_peaks[dz_peaks > z_valley][0]
+        
+        # Find the next dz peak after the z valley
+        next_dz_peak = dz_peaks[dz_peaks > z_valley]
+
+        # Check if there is a next dz peak
+        if len(next_dz_peak) == 0:
+            continue
+
+        next_dz_peak = next_dz_peak[0]
 
         # Calculate the distances between z valley and the previous/next dz valleys
         distance_to_previous_dz_valley = z_valley - previous_dz_valley
