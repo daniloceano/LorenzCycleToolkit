@@ -162,21 +162,37 @@ def find_intensification_period(df):
         next_z_valley = z_valleys[z_valleys > dz2_valley].min()
         valid_dz_peaks = dz_peaks[(dz_peaks > dz2_valley) & (dz_peaks < next_z_valley)]
         if (len(valid_dz_peaks) == 0) or (df.loc[valid_dz_peaks, 'dz'].max() <= 0):
-            intensification_end = next_z_valley if next_z_valley in df.index else df.index[-1]
-            df.loc[dz2_valley:intensification_end, 'periods'] = 'intensification'
+            if next_z_valley is not pd.NaT:
+                intensification_end = next_z_valley
+                df.loc[dz2_valley:intensification_end, 'periods'] = 'intensification'
 
     return df
 
 def find_decay_period(df):
 
-    # Find dz peaks and dz2 valleys indices
+    # # Find z and dz2 valleys indices
+    # z_valleys = df[df['z_peaks_valleys'] == 'valley'].index
+    # dz2_valleys = df[df['dz2_peaks_valleys'] == 'valley'].index
+    # dz_valleys = df[df['dz_peaks_valleys'] == 'valley'].index
+
+    # # Find the periods between dz2 and z valleys, excluding positive dz peaks
+    # for dz2_valley in dz2_valleys:
+    #     previous_z_valley = z_valleys[z_valleys < dz2_valley].min()
+    #     valid_dz_valleys = dz_valleys[(dz_valleys < dz2_valley) & (dz_valleys > previous_z_valley)]
+    #     if (len(valid_dz_valleys) == 0): #or (df.loc[valid_dz_peaks, 'dz'].max() <= 0):
+    #         if previous_z_valley is not pd.NaT:
+    #             decay_start = previous_z_valley
+    #             df.loc[decay_start:dz2_valley, 'periods'] = 'decay'
+
+    # return df
+
+    # Find z and dz valleys and dz2 valleys indices
     z_valleys = df[df['z_peaks_valleys'] == 'valley'].index
     dz2_valleys = df[df['dz2_peaks_valleys'] == 'valley'].index
 
     for z_valley in z_valleys:
-        # Find dz2 valleys with index greater than z_valley
+        # Find dz2 valleys with index greater than z_valley, excluding negative dz valleys
         valid_dz2_valleys = dz2_valleys[dz2_valleys > z_valley]
-
         if len(valid_dz2_valleys) > 0:
             # Find dz2 valleys that occurs after z_valley
             for valid_dz2_valley in valid_dz2_valleys:
