@@ -156,50 +156,55 @@ def find_intensification_period(df):
     z_valleys = df[df['z_peaks_valleys'] == 'valley'].index
     dz2_valleys = df[df['dz2_peaks_valleys'] == 'valley'].index
     dz_peaks = df[df['dz_peaks_valleys'] == 'peak'].index
+    dz_valleys = df[df['dz_peaks_valleys'] == 'valley'].index
 
-    # Find the periods between dz2 and z valleys, excluding positive dz peaks
+    # Remove z_valley if it is the last value of the series,
+    #  here we assume that the cyclone cannot end intensifying
+    z_valleys = z_valleys[z_valleys != df.index[-1]]
+
+    # Filter dz_peaks that are at least 12 hours apart from dz_valleys
+    # This is to avoid false interruption of intensification periods
+    filtered_dz_peaks = dz_peaks.copy()
+    for dz_peak in dz_peaks:
+        time_diffs = abs(dz_peak - dz_valleys)
+        closest_dz_valley_idx = time_diffs.argmin()
+        closest_dz_valley = dz_valleys[closest_dz_valley_idx]
+        if abs(dz_peak - closest_dz_valley) < pd.Timedelta(hours=12):
+            filtered_dz_peaks = filtered_dz_peaks.drop(dz_peak)
+
+    # Find the periods between dz2 and z valleys, excluding positive dz peaks,
+    # negative dz valleys, and peaks more than 6 hours apart
     for dz2_valley in dz2_valleys:
         next_z_valley = z_valleys[z_valleys > dz2_valley].min()
-        valid_dz_peaks = dz_peaks[(dz_peaks > dz2_valley) & (dz_peaks < next_z_valley)]
-        if (len(valid_dz_peaks) == 0) or (df.loc[valid_dz_peaks, 'dz'].max() <= 0):
+        valid_dz_peaks = [peak for peak in filtered_dz_peaks if dz2_valley < peak < next_z_valley]
+        if not valid_dz_peaks or (df.loc[valid_dz_peaks, 'dz'] > 0).all():
             if next_z_valley is not pd.NaT:
                 intensification_end = next_z_valley
                 df.loc[dz2_valley:intensification_end, 'periods'] = 'intensification'
 
     return df
 
+
+
 def find_decay_period(df):
-
-    # # Find z and dz2 valleys indices
-    # z_valleys = df[df['z_peaks_valleys'] == 'valley'].index
-    # dz2_valleys = df[df['dz2_peaks_valleys'] == 'valley'].index
-    # dz_valleys = df[df['dz_peaks_valleys'] == 'valley'].index
-
-    # # Find the periods between dz2 and z valleys, excluding positive dz peaks
-    # for dz2_valley in dz2_valleys:
-    #     previous_z_valley = z_valleys[z_valleys < dz2_valley].min()
-    #     valid_dz_valleys = dz_valleys[(dz_valleys < dz2_valley) & (dz_valleys > previous_z_valley)]
-    #     if (len(valid_dz_valleys) == 0): #or (df.loc[valid_dz_peaks, 'dz'].max() <= 0):
-    #         if previous_z_valley is not pd.NaT:
-    #             decay_start = previous_z_valley
-    #             df.loc[decay_start:dz2_valley, 'periods'] = 'decay'
-
-    # return df
-
     # Find z and dz valleys and dz2 valleys indices
     z_valleys = df[df['z_peaks_valleys'] == 'valley'].index
     dz2_valleys = df[df['dz2_peaks_valleys'] == 'valley'].index
+    dz_valleys = df[df['dz_peaks_valleys'] == 'valley'].index
 
     for z_valley in z_valleys:
         # Find dz2 valleys with index greater than z_valley, excluding negative dz valleys
         valid_dz2_valleys = dz2_valleys[dz2_valleys > z_valley]
         if len(valid_dz2_valleys) > 0:
-            # Find dz2 valleys that occurs after z_valley
-            for valid_dz2_valley in valid_dz2_valleys:
-                  
-                df.loc[z_valley:valid_dz2_valley, 'periods'].fillna('decay', inplace=True)
-            
+            # Check for dz_valleys between z_valley and the next dz2_valley
+            dz_valleys_between = dz_valleys[(dz_valleys > z_valley) & (dz_valleys < valid_dz2_valleys[0])]
+            if len(dz_valleys_between) == 0:
+                # Find dz2 valleys that occur after z_valley
+                for valid_dz2_valley in valid_dz2_valleys:
+                    df.loc[z_valley:valid_dz2_valley, 'periods'].fillna('decay', inplace=True)
+
     return df
+
 
 def find_incipient_period(df):
     df['periods'].fillna('incipient', inplace=True)
