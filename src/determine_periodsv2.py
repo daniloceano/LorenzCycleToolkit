@@ -184,26 +184,28 @@ def find_intensification_period(df):
 
     return df
 
-
-
 def find_decay_period(df):
     # Find z and dz valleys and dz2 valleys indices
     z_valleys = df[df['z_peaks_valleys'] == 'valley'].index
+    z_peaks = df[df['z_peaks_valleys'] == 'peak'].index
     dz2_valleys = df[df['dz2_peaks_valleys'] == 'valley'].index
     dz_valleys = df[df['dz_peaks_valleys'] == 'valley'].index
 
+    # remove z_peaks that match the last index of the series
+    z_peaks = z_peaks[:-1] if z_peaks[-1] == df.index[-1] else z_peaks
+
     for z_valley in z_valleys:
-        # Find dz2 valleys with index greater than z_valley, excluding negative dz valleys
-        valid_dz2_valleys = dz2_valleys[dz2_valleys > z_valley]
-        if len(valid_dz2_valleys) > 0:
-            # Check for dz_valleys between z_valley and the next dz2_valley
-            dz_valleys_between = dz_valleys[(dz_valleys > z_valley) & (dz_valleys < valid_dz2_valleys[0])]
-            if len(dz_valleys_between) == 0:
-                # Find dz2 valleys that occur after z_valley
-                for valid_dz2_valley in valid_dz2_valleys:
-                    df.loc[z_valley:valid_dz2_valley, 'periods'].fillna('decay', inplace=True)
+        next_z_peak = z_peaks[z_peaks > z_valley].min()
+        if next_z_peak is not pd.NaT:
+            valid_dz2_valleys = dz2_valleys[(dz2_valleys > z_valley) & (dz2_valleys < next_z_peak)]
+        else:
+            valid_dz2_valleys = dz2_valleys[dz2_valleys > z_valley]
+
+        for valid_dz2_valley in valid_dz2_valleys:
+                df.loc[z_valley:valid_dz2_valley, 'periods'].fillna('decay', inplace=True)
 
     return df
+
 
 
 def find_incipient_period(df):
