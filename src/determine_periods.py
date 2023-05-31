@@ -9,7 +9,7 @@
 #    By: danilocs <danilocs@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/05/19 19:06:47 by danilocs          #+#    #+#              #
-#    Updated: 2023/05/22 13:26:04 by danilocs         ###   ########.fr        #
+#    Updated: 2023/05/29 13:29:04 by danilocs         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -67,162 +67,146 @@ def array_vorticity(df):
     # Calculate derivatives of the double-filtered vorticity
     dzfilt2_dt = da.zeta_filt2.differentiate('time', datetime_unit='h')
     dzfilt2_dt2 = dzfilt2_dt.differentiate('time', datetime_unit='h')
-    dzfilt2_dt3 = dzfilt2_dt2.differentiate('time', datetime_unit='h')
 
     # Filter derivatives
     dz_dt_filt2 = xr.DataArray(filter_var(dzfilt2_dt), coords={'time':df.index})
     dz_dt2_filt2 = xr.DataArray(filter_var(dzfilt2_dt2), coords={'time':df.index})
-    dz_dt3_filt2 = xr.DataArray(filter_var(dzfilt2_dt3), coords={'time':df.index})
-    dz_dt3_filt2 = xr.DataArray(filter_var(dz_dt3_filt2), coords={'time':df.index})
 
     # Assign variables to xarray
     da = da.assign(variables={'dzfilt2_dt': dzfilt2_dt,
                               'dzfilt2_dt2': dzfilt2_dt2,
-                              'dzfilt2_dt3': dzfilt2_dt3,
                               'dz_dt_filt2': dz_dt_filt2,
-                              'dz_dt2_filt2': dz_dt2_filt2,
-                              'dz_dt3_filt2': dz_dt3_filt2})
+                              'dz_dt2_filt2': dz_dt2_filt2})
 
     return da
     
 
 def find_peaks_valleys(series):
     """
-    Find peaks and valleys in a pandas series
+    Find peaks, valleys, and zero locations in a pandas series
 
     Args:
     series: pandas Series
 
     Returns:
-    result: pandas Series with nans and "peaks" or "valley" in their respective positions
+    result: pandas Series with nans, "peak", "valley", and 0 in their respective positions
     """
     # Extract the values of the series
     data = series.values
 
-    # Find peaks and valleys
+    # Find peaks, valleys, and zero locations
     peaks = argrelextrema(data, np.greater_equal)[0]
     valleys = argrelextrema(data, np.less_equal)[0]
+    zeros = np.where(data == 0)[0]
 
     # Create a series of NaNs
     result = pd.Series(index=series.index, dtype=object)
     result[:] = np.nan
 
-    # Label the peaks and valleys
+    # Label the peaks, valleys, and zero locations
     result.iloc[peaks] = 'peak'
     result.iloc[valleys] = 'valley'
-
-    # # Don't assume that first and last data are either a peak or a valley
-    # result.iloc[0] = np.nan
-    # result.iloc[-1] = np.nan
+    result.iloc[zeros] = 0
 
     return result
-
-def filter_peaks_valleys(result):
-
-    filtered_result = result.copy()
-    peaks = result[result == 'peak'].index
-    valleys = result[result == 'valley'].index
-
-    for peak_idx in peaks:
-        next_valley = valleys[valleys > peak_idx].min()
-        if next_valley is not pd.NaT and (next_valley - peak_idx) <= pd.Timedelta(days=1):
-            filtered_result[next_valley] = np.nan
-
-    for valley_idx in valleys:
-        previous_peak = peaks[peaks < valley_idx].max()
-        if previous_peak is not pd.NaT and (valley_idx - previous_peak) <= pd.Timedelta(days=1):
-            filtered_result[valley_idx] = np.nan
-
-    return filtered_result
 
 import pandas as pd
 import numpy as np
 
 def find_mature_stage(df):
+    dz_peaks = df[df['dz_peaks_valleys'] == 'peak'].index
+    dz_valleys = df[df['dz_peaks_valleys'] == 'valley'].index
+    z_valleys = df[df['z_peaks_valleys'] == 'valley'].index
 
-    valleys = df[df['dz_peaks_valleys'] == 'valley'].index
-    peaks = df[df['dz_peaks_valleys'] == 'peak'].index
+    # Iterate over z valleys
+    for z_valley in z_valleys:
+        # Find the previous and next dz valleys relative to the current z valley
+        previous_dz_valley = dz_valleys[dz_valleys < z_valley]
 
-    # Iterate over valleys and find corresponding peaks
-    for i in range(len(valleys)):
-        valley = valleys[i]
+        # Check if there is a previous dz valley
+        if len(previous_dz_valley) == 0:
+            continue
 
-        # Find the peaks that occur after the current valley
-        corresponding_peaks = peaks[peaks > valley]
+        previous_dz_valley = previous_dz_valley[-1]
 
-        if len(corresponding_peaks) > 0:
-            # Find the first peak that occurs after the current valley
-            corresponding_peak = corresponding_peaks[0]
+        # Find the next dz peak after the z valley
+        next_dz_peak = dz_peaks[dz_peaks > z_valley]
 
-            # Mature stage will only be defined if the valley starts at negative values
-            if df.loc[valley, 'dz'] < 0:
+        # Check if there is a next dz peak
+        if len(next_dz_peak) == 0:
+            continue
 
-                duration = corresponding_peak - valley
+        next_dz_peak = next_dz_peak[0]
 
-                # Mature stage needs to be at least 1 day long
-                if duration >= pd.Timedelta(hours=24):
+        # Calculate the distances between z valley and the previous/next dz valleys
+        distance_to_previous_dz_valley = z_valley - previous_dz_valley
+        distance_to_next_dz_peak = next_dz_peak - z_valley
 
-                    df.loc[valley:corresponding_peak, 'periods'] = 'mature'
+        # Calculate the 3/4 distances from z valley to the previous/next dz valleys
+        three_fourth_previous = z_valley - (1 / 4) * distance_to_previous_dz_valley
+        three_fourth_next = z_valley + (1 / 4) * distance_to_next_dz_peak
+
+        # Fill the period between three_fourth_previous and three_fourth_next with 'mature'
+        df.loc[three_fourth_previous:three_fourth_next, 'periods'] = 'mature'
 
     return df
 
-
 def find_intensification_period(df):
-    # Find dz and dz2 valleys indices
-    dz_valleys = df[df['dz_peaks_valleys'] == 'valley'].index
+    # Find z and dz2 valleys indices
+    z_valleys = df[df['z_peaks_valleys'] == 'valley'].index
     dz2_valleys = df[df['dz2_peaks_valleys'] == 'valley'].index
+    dz_peaks = df[df['dz_peaks_valleys'] == 'peak'].index
+    dz_valleys = df[df['dz_peaks_valleys'] == 'valley'].index
 
-    # Find the periods between dz2 and dz valleys
-    valley_pairs = []
-    for i in range(len(dz2_valleys) - 1):
-        for j in range(len(dz_valleys)):
-            # dz_valley has to be before the next dz2_valley
-            if (dz_valleys[j] > dz2_valleys[i]) and (
-                dz_valleys[j] < dz2_valleys[i+1]):
-                valley_pairs.append((dz2_valleys[i], dz_valleys[j]))
-    
-    # Fill periods between dz2 and dz valleys with "intensification"
-    for pair in valley_pairs:
-        df.loc[pair[0]:pair[1], 'periods'] = 'intensification'
+    # Remove z_valley if it is the last value of the series,
+    #  here we assume that the cyclone cannot end intensifying
+    z_valleys = z_valleys[z_valleys != df.index[-1]]
 
-    # # Find the corresponding dz2 valley for each dz valley
-    # dz2_valley_indices = []
-    # for dz_valley in dz_valleys:
-    #     idx = np.argmin(np.abs(dz2_valleys - dz_valley))
-    #     dz2_valley_indices.append(idx)
+    # Filter dz_peaks that are at least 12 hours apart from dz_valleys
+    # This is to avoid false interruption of intensification periods
+    filtered_dz_peaks = dz_peaks.copy()
+    for dz_peak in dz_peaks:
+        time_diffs = abs(dz_peak - dz_valleys)
+        closest_dz_valley_idx = time_diffs.argmin()
+        closest_dz_valley = dz_valleys[closest_dz_valley_idx]
+        if abs(dz_peak - closest_dz_valley) < pd.Timedelta(hours=12):
+            filtered_dz_peaks = filtered_dz_peaks.drop(dz_peak)
 
-    # # Fill periods between dz2 and dz valleys with "intensification"
-    # for dz2_valley_idx, dz_valley in zip(dz2_valley_indices, dz_valleys):
-    #     dz2_valley = dz2_valleys[dz2_valley_idx]
-
-    #     if (df.loc[dz2_valley, 'dz2'] < 0) and (df.loc[dz_valley, 'dz'] < 0):
-
-    #         df.loc[dz2_valley:dz_valley, 'periods'] = 'intensification'
+    # Find the periods between dz2 and z valleys, excluding positive dz peaks,
+    # negative dz valleys, and peaks more than 6 hours apart
+    for dz2_valley in dz2_valleys:
+        next_z_valley = z_valleys[z_valleys > dz2_valley].min()
+        valid_dz_peaks = [peak for peak in filtered_dz_peaks if dz2_valley < peak < next_z_valley]
+        if not valid_dz_peaks or (df.loc[valid_dz_peaks, 'dz'] > 0).all():
+            if next_z_valley is not pd.NaT:
+                intensification_end = next_z_valley
+                df.loc[dz2_valley:intensification_end, 'periods'] = 'intensification'
 
     return df
 
 def find_decay_period(df):
-    # Find dz peaks and dz2 valleys indices
-    dz_peaks = df[df['dz_peaks_valleys'] == 'peak'].index
+    # Find z and dz valleys and dz2 valleys indices
+    z_valleys = df[df['z_peaks_valleys'] == 'valley'].index
+    z_peaks = df[df['z_peaks_valleys'] == 'peak'].index
     dz2_valleys = df[df['dz2_peaks_valleys'] == 'valley'].index
+    dz_valleys = df[df['dz_peaks_valleys'] == 'valley'].index
 
-    # Iterate over dz peaks
-    for dz_peak in dz_peaks:
-        # Find dz2 valleys with index greater than dz_peak
-        valid_dz2_valleys = dz2_valleys[dz2_valleys > dz_peak]
+    # remove z_peaks that match the last index of the series
+    z_peaks = z_peaks[:-1] if z_peaks[-1] == df.index[-1] else z_peaks
 
-        if len(valid_dz2_valleys) > 0:
-            # Find dz2 valleys that occurs after dz_peaks
-            for valid_dz2_valley in valid_dz2_valleys:
+    for z_valley in z_valleys:
+        next_z_peak = z_peaks[z_peaks > z_valley].min()
+        if next_z_peak is not pd.NaT:
+            valid_dz2_valleys = dz2_valleys[(dz2_valleys > z_valley) & (dz2_valleys < next_z_peak)]
+        else:
+            valid_dz2_valleys = dz2_valleys[dz2_valleys > z_valley]
 
-                # Check if there are no dz peaks between dz_peak and dz2_valley
-                # The mean dz values between dz_peak and dz2_valley need positive
-                if (not any(df['dz_peaks_valleys'].loc[dz_peak:valid_dz2_valley][1:] == 'peak')
-                    ) and (df.loc[dz_peak:valid_dz2_valley, 'dz'].mean() > 0):
-                    # Fill the period between dz_peak and valid_dz2_valley with 'decay'                    
-                    df.loc[dz_peak:valid_dz2_valley, 'periods'].fillna('decay', inplace=True)
-            
+        for valid_dz2_valley in valid_dz2_valleys:
+                df.loc[z_valley:valid_dz2_valley, 'periods'].fillna('decay', inplace=True)
+
     return df
+
+
 
 def find_incipient_period(df):
     df['periods'].fillna('incipient', inplace=True)
@@ -312,29 +296,30 @@ def plot_phase(df, phase, ax=None, show_title=True):
     if ax is None:
         plt.show()
 
-def plot_specific_peaks_valleys(df, key1, key2, ax):
+def plot_specific_peaks_valleys(df, ax, key1, key2, key3=None):
     # Define the series and colors for plotting
-    series_colors = {'dz':'#d62828', 'dz2':'#f7b538', 'dz3':'#65a1e6'}
-    marker_sizes = {'dz': 250, 'dz2': 200, 'dz3': 150}
+    series_colors = {'z': 'k', 'dz':'#d62828', 'dz2':'#f7b538'}
+    marker_sizes = {'z': 190, 'dz': 120, 'dz2': 50}
 
-    for key in [key1, key2]:
+    for key in [key1, key2, key3]:
 
-        key_name =  key.split('_')[0]
-        peak_or_valley = key.split('_')[1][:-1]
+        if key != None:
+            key_name =  key.split('_')[0]
+            peak_or_valley = key.split('_')[1][:-1]
 
-        peaks_valleys_series =  df[f"{key_name}_peaks_valleys"]
+            peaks_valleys_series =  df[f"{key_name}_peaks_valleys"]
 
-        color  = series_colors[key_name]
-        marker_size = marker_sizes[key_name]
+            color  = series_colors[key_name]
+            marker_size = marker_sizes[key_name]
 
-        # Plot the specified peaks or valleys
-        if peak_or_valley == 'peak':
-            ax.scatter(df.index[peaks_valleys_series == peak_or_valley],
-                       df[peaks_valleys_series == 'peak'].z, color=color, marker='o', s=marker_size)
-        elif peak_or_valley == 'valley':
-            ax.scatter(df.index[peaks_valleys_series == peak_or_valley],
-                       df[peaks_valleys_series == 'valley'].z, color=color, marker='o', s=marker_size,
-                         facecolors='none', linewidth=2)
+            # Plot the specified peaks or valleys
+            if peak_or_valley == 'peak':
+                ax.scatter(df.index[peaks_valleys_series == peak_or_valley],
+                        df[peaks_valleys_series == 'peak'].z, color=color, marker='o', s=marker_size)
+            elif peak_or_valley == 'valley':
+                ax.scatter(df.index[peaks_valleys_series == peak_or_valley],
+                        df[peaks_valleys_series == 'valley'].z, color=color, marker='o', s=marker_size,
+                            facecolors='none', linewidth=2)
 
 def plot_vorticity(ax, vorticity):
 
@@ -354,17 +339,15 @@ def plot_series_with_peaks_valleys(df, ax):
 
     ax.axhline(0, c='gray', linewidth=0.5)
 
-    ax.plot(df.index, df['z'], label='ζ', color='k')
-
     # Define the series and colors for plotting
-    series_names = ['dz', 'dz2', 'dz3']
-    labels = [r"$\frac{∂ζ_{filt}}{∂t} \times 10^{3}$",
-               r"$\frac{∂^{2}ζ_{filt}}{∂t^{2}} \times 10^{4}$",
-                 r"$\frac{∂^{3}ζ_{filt}}{∂t^{3}} \times 10^{5}$"]
-    series_colors = ['#d62828', '#f7b538', '#65a1e6']
-    marker_sizes = [80, 60, 40]
-    peaks_valleys_columns = ['dz_peaks_valleys', 'dz2_peaks_valleys', 'dz3_peaks_valleys']
-    scaling_factors = [100, 1000, 10000]
+    series_names = ['z', 'dz', 'dz2']
+    labels = ['ζ',
+              r"$\frac{∂ζ_{filt}}{∂t} \times 10^{3}$",
+               r"$\frac{∂^{2}ζ_{filt}}{∂t^{2}} \times 20^{4}$"]
+    series_colors = ['k', '#d62828', '#f7b538']
+    marker_sizes = [190, 120, 50]
+    peaks_valleys_columns = ['z_peaks_valleys', 'dz_peaks_valleys', 'dz2_peaks_valleys']
+    scaling_factors = [1, 100, 2000]
 
     # Plot the series and their peaks/valleys
     for series_name, label, series_color, peaks_valleys_col, marker_size, scaling_factor in zip(series_names,
@@ -374,10 +357,12 @@ def plot_series_with_peaks_valleys(df, ax):
                                                                                          marker_sizes,
                                                                                          scaling_factors):
         ax.plot(df.index, df[series_name] * scaling_factor, color=series_color, label=label)
-        ax.scatter(df.index[df[peaks_valleys_col] == 'peak'], df[series_name][df[peaks_valleys_col] == 'peak'] * scaling_factor,
+        ax.scatter(df.index[df[peaks_valleys_col] == 'peak'],
+                    df[series_name][df[peaks_valleys_col] == 'peak'] * scaling_factor,
                    color=series_color, marker='o', s=marker_size)
-        ax.scatter(df.index[df[peaks_valleys_col] == 'valley'], df[series_name][df[peaks_valleys_col] == 'valley'] * scaling_factor,
-                   color=series_color, marker='o', facecolors='none', s=marker_size, linewidth=2)
+        ax.scatter(df.index[df[peaks_valleys_col] == 'valley'],
+                    df[series_name][df[peaks_valleys_col] == 'valley'] * scaling_factor,
+                   color=series_color, marker='o', facecolor='None', linewidth=2, s=marker_size)
 
     ax.set_title('derivate ζ')
 
@@ -385,31 +370,39 @@ def plot_series_with_peaks_valleys(df, ax):
 
 def plot_peaks_valleys_series(series, ax, *peaks_valleys_series_list):
 
-    ax.axhline(0, c='gray', linewidth=0.5)
-    
     # Plot the series
     ax.plot(series, color='k')
 
     # Plot peaks and valleys
-    colors = ['#d62828', '#f7b538', '#65a1e6']  # List of colors for differentiating multiple series
-    markers = ['o', 'o']  # List of markers for peaks and valleys
-
+    colors = ['k', '#d62828', '#f7b538','#9aa981'] 
+    marker_size = [190, 120, 50]
+    zorder = [99, 100, 101]
     for i, peaks_valleys_series in enumerate(peaks_valleys_series_list):
         mask_notna = peaks_valleys_series.notna()
         mask_peaks = peaks_valleys_series == 'peak'
 
-        # Calculate decreasing marker size
-        marker_size = 250 - (i * 50)
-
         # Plot peaks
         ax.scatter(series.index[mask_notna & mask_peaks], series[mask_notna & mask_peaks],
-                    marker=markers[0], color=colors[i], s=marker_size)
+                    marker='o', color=colors[i], s=marker_size[i], zorder=zorder[i])
 
         # Plot valleys
         ax.scatter(series.index[mask_notna & ~mask_peaks], series[mask_notna & ~mask_peaks],
-                    marker=markers[1], facecolors='none', edgecolors=colors[i], s=marker_size, linewidth=2)
+                    marker='o', edgecolors=colors[i], facecolors='None', s=marker_size[i],
+                      linewidth=2,  zorder=zorder[i])
+        
+    # Plot vertical lines at valleys of z, valleys of dz, and peaks of dz
+    valleys_z = peaks_valleys_series_list[0][peaks_valleys_series_list[0] == 'valley']
+    valleys_dz = peaks_valleys_series_list[1][peaks_valleys_series_list[1] == 'valley']
+    peaks_dz = peaks_valleys_series_list[1][peaks_valleys_series_list[1] == 'peak']
 
-    ax.set_title('peaks and valleys')
+    for x in valleys_z.index:
+        ax.axvline(x=x, color=colors[1], linestyle='-', linewidth=1.5, zorder=10)
+    for x in valleys_dz.index:
+        ax.axvline(x=x, color=colors[2], linestyle='-', linewidth=1.5, zorder=11)
+    for x in peaks_dz.index:
+        ax.axvline(x=x, color=colors[3], linestyle='-', linewidth=1.5, zorder=12)
+
+    ax.set_title('find center of stages')
     ax.title.set_position([0.55, 1.05])
 
 import matplotlib.pyplot as plt
@@ -469,29 +462,27 @@ def get_periods(vorticity):
     z = vorticity.zeta_filt2
     dz = vorticity.dz_dt_filt2
     dz2 = vorticity.dz_dt2_filt2
-    dz3 = vorticity.dz_dt3_filt2
 
     df = z.to_dataframe().rename(columns={'zeta_filt2':'z'})
     df['dz'] = dz.to_dataframe()
     df['dz2'] = dz2.to_dataframe()
-    df['dz3'] = dz3.to_dataframe()
 
+    df['z_peaks_valleys'] = find_peaks_valleys(df['z'])
     df['dz_peaks_valleys'] = find_peaks_valleys(df['dz'])
     df['dz2_peaks_valleys'] = find_peaks_valleys(df['dz2'])
-    df['dz3_peaks_valleys'] = find_peaks_valleys(df['dz3'])
 
     df['periods'] = np.nan
+
+    # Intensification phase: between consecutive valleys of dz2 and zeta.
+    df = find_intensification_period(df)
+
+    # Decay phase: between consecutive valleys of z and dz2.
+    # The mean dz value between consecutive peak of dz and valley of dz2 must be negtive
+    df = find_decay_period(df)
 
     # Calculate the periods# Mature stage: between consecutive valleys and peaks of dz.
     # Valleys of dz must be negative and the phase needs to be at least 1 day long.
     df = find_mature_stage(df)
-
-    # Intensification phase: between consecutive valleys of dz2 and dz
-    df = find_intensification_period(df)
-
-    # Decay phase: between consecutive peak of dz and valley of dz2.
-    # The mean dz value between consecutive peak of dz and valley of dz2 must be negtive
-    df = find_decay_period(df)
 
     # Incipient phase: all times not classified previously
     df = find_incipient_period(df)
@@ -521,25 +512,25 @@ def plot_didactic(periods_dict, df, vorticity, output_directory):
     ax3 = fig.add_subplot(333)
     plot_peaks_valleys_series(
         df['z'], ax3,
+        df['z_peaks_valleys'],
         df['dz_peaks_valleys'],
         df['dz2_peaks_valleys'], 
-        df['dz3_peaks_valleys']
         )
     
-    # Mature phase
-    ax4 = fig.add_subplot(334)
-    plot_phase(df, "mature", ax4)
-    plot_specific_peaks_valleys(df, "dz_valleys", "dz_peaks", ax4)
-
     # Intensification phase
-    ax5 = fig.add_subplot(335)
-    plot_phase(df, "intensification", ax5)
-    plot_specific_peaks_valleys(df, "dz_valleys", "dz2_valleys", ax5)
+    ax4 = fig.add_subplot(334)
+    plot_phase(df, "intensification", ax4)
+    plot_specific_peaks_valleys(df, ax4, "z_valleys", "dz_valleys", "dz2_valleys")
 
     # Decay phase
+    ax5 = fig.add_subplot(335)
+    plot_phase(df, "decay", ax5)
+    plot_specific_peaks_valleys(df, ax5, "z_valleys", "dz_peaks", "dz2_valleys")
+
+    # Mature phase
     ax6 = fig.add_subplot(336)
-    plot_phase(df, "decay", ax6)
-    plot_specific_peaks_valleys(df, "dz_peaks", "dz2_valleys", ax6)
+    plot_phase(df, "mature", ax6)
+    plot_specific_peaks_valleys(df, ax6, "dz_valleys", "dz_peaks", )
 
     # Put everything together
     ax7 = fig.add_subplot(337)
