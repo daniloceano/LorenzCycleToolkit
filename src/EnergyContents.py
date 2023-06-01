@@ -28,9 +28,14 @@ Source for formulas used here:
 """
 
 from Math import CalcAreaAverage
-from metpy.constants import g
 from BoxData import BoxData
+
+from metpy.constants import g
+from metpy.units import units
+
+import numpy as np
 import pandas as pd
+import xarray as xr
 
 class EnergyContents:
     
@@ -56,84 +61,110 @@ class EnergyContents:
     def calc_az(self):
         print('Computing Zonal Available Potential Energy (Az)...')
 
-        _ = CalcAreaAverage(self.tair_AE**2, self.ylength)
-        function = _ / (2 * self.sigma_AA)
-        Az = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
-        
-        try: 
-            Az = Az.metpy.convert_units('J / m ** 2')
-        except ValueError:
-            raise ValueError('Unit error in Az')
-        
-        if self.box_obj.args.verbosity == True:
-            print(Az.values*Az.metpy.units)
+        squared_tair = self.tair_AE ** 2
+        function = CalcAreaAverage(squared_tair, self.ylength) / (2 * self.sigma_AA)
 
-        if self.box_obj.args.verbosity == True:
+        if np.isnan(function).any():
+            function = function.interpolate_na(dim=self.VerticalCoordIndexer) * function.metpy.units
+            if np.isnan(function).any():
+                function = function.dropna(dim=self.VerticalCoordIndexer)
+
+        Az = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
+
+        try: 
+            Az = Az.metpy.convert_units('J/m^2')
+        except ValueError as e:
+            raise ValueError('Unit error in Az') from e
+
+        if self.box_obj.args.verbosity:
+            print(Az.values * Az.metpy.units)
+
+        if self.box_obj.args.verbosity:
             print('Saving Az for each vertical level...')
 
         if self.method == 'fixed':
             df = function.to_dataframe(name='Az').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.TimeName]).to_dataframe(name=time).transpose()
+            df = function.drop(self.TimeName).to_dataframe(name=time).transpose()
 
-        df.to_csv(self.output_dir+'/Az_'+self.VerticalCoordIndexer+'.csv',
-            mode="a", header=None)
+        df.to_csv(
+            f"{self.output_dir}/Az_{self.VerticalCoordIndexer}.csv",
+            mode="a",
+            header=None
+        )
         print('Done!')
 
         return Az
     
-    def calc_ae(self): 
+    def calc_ae(self):
         print('Computing Eddy Available Potential Energy (Ae)...')
 
-        _ = CalcAreaAverage(self.tair_ZE ** 2, self.ylength, xlength=self.xlength)
-        function = _ / ( 2 * self.sigma_AA)
+        squared_tair = self.tair_ZE ** 2
+        function = CalcAreaAverage(squared_tair, self.ylength, xlength=self.xlength) / (2 * self.sigma_AA)
+
+        if np.isnan(function).any():
+            function = function.interpolate_na(dim=self.VerticalCoordIndexer) * function.metpy.units
+            if np.isnan(function).any():
+                function = function.dropna(dim=self.VerticalCoordIndexer)
+
         Ae = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
 
         try: 
-            Ae = Ae.metpy.convert_units('J/ m **2')
-        except ValueError:
+            Ae = Ae.metpy.convert_units('J/m^2')
+        except ValueError as e:
             print('Unit error in Ae')
-            raise
+            raise ValueError('Unit error in Ae') from e
 
-        if self.box_obj.args.verbosity == True:
-            print(Ae.values*Ae.metpy.units)
+        if self.box_obj.args.verbosity:
+            print(Ae.values * Ae.metpy.units)
 
         print('Saving Ae for each vertical level...')
-        if self.method == 'fixed':    
+        if self.method == 'fixed':
             df = function.to_dataframe(name='Ae').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.TimeName]).to_dataframe(name=time).transpose()
-            
-        df.to_csv(self.output_dir+'/Ae_'+self.VerticalCoordIndexer+'.csv',mode="a", header=None)
+            df = function.drop(self.TimeName).to_dataframe(name=time).transpose()
+        
+        df.to_csv(
+            f"{self.output_dir}/Ae_{self.VerticalCoordIndexer}.csv",
+            mode="a",
+            header=None
+        )
         print('Done!')
 
         return Ae
-    
+
     def calc_kz(self):
         print('Computing Zonal Kinetic Energy (Kz)...')
 
-        function = CalcAreaAverage((self.u_ZA ** 2 + self.v_ZA ** 2),self.ylength)
+        function = CalcAreaAverage((self.u_ZA ** 2 + self.v_ZA ** 2), self.ylength)
+
+        if np.isnan(function).any():
+            function = function.interpolate_na(dim=self.VerticalCoordIndexer) * function.metpy.units
+            if np.isnan(function).any():
+                function = function.dropna(dim=self.VerticalCoordIndexer)
+
         Kz = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units / (2 * g)
 
-        if self.box_obj.args.verbosity == True:
-            print(Kz.values*Kz.metpy.units)
+        if self.box_obj.args.verbosity:
+            print(Kz.values * Kz.metpy.units)
+
         print('Saving Kz for each vertical level...')
 
-        try: 
-            Kz = Kz.metpy.convert_units('J/ m **2')
+        try:
+            Kz = Kz.metpy.convert_units('J/m^2')
         except ValueError:
             print('Unit error in Kz')
             raise
 
         if self.method == 'fixed':
-            df = function.to_dataframe(name='Kz').unstack()   
+            df = function.to_dataframe(name='Kz').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.TimeName]).to_dataframe(name=time).transpose()
+            df = function.drop(self.TimeName).to_dataframe(name=time).transpose()
 
-        df.to_csv(self.output_dir+'/Kz_'+self.VerticalCoordIndexer+'.csv',mode="a", header=None)
+        df.to_csv(self.output_dir + '/Kz_' + self.VerticalCoordIndexer + '.csv', mode='a', header=None)
         print('Done!')
 
         return Kz
@@ -141,18 +172,23 @@ class EnergyContents:
     def calc_ke(self):
         print('Computing Eddy Kinetic Energy (Ke)...')
 
-        function = CalcAreaAverage((self.u_ZE ** 2) + (self.v_ZE **2 ),self.ylength,
-                              xlength=self.xlength)
+        function = CalcAreaAverage((self.u_ZE ** 2 + self.v_ZE ** 2), self.ylength)
+
+        if np.isnan(function).any():
+            function = function.interpolate_na(dim=self.VerticalCoordIndexer) * function.metpy.units
+            if np.isnan(function).any():
+                function = function.dropna(dim=self.VerticalCoordIndexer)
+
         Ke = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units / (2 * g)
-        
+
         try: 
-            Ke = Ke.metpy.convert_units('J/ m **2')
+            Ke = Ke.metpy.convert_units('J/m^2')
         except ValueError:
             print('Unit error in Ke')
             raise
 
         if self.box_obj.args.verbosity == True:
-            print(Ke.values*Ke.metpy.units)
+            print(Ke.values * Ke.metpy.units)
         print('Saving Ke for each vertical level...')
 
         if self.method == 'fixed':
@@ -161,7 +197,7 @@ class EnergyContents:
             time = pd.to_datetime(function[self.TimeName].data)
             df = function.drop([self.TimeName]).to_dataframe(name=time).transpose()
 
-        df.to_csv(self.output_dir+'/Ke_'+self.VerticalCoordIndexer+'.csv',mode="a", header=None)
+        df.to_csv(self.output_dir + '/Ke_' + self.VerticalCoordIndexer + '.csv', mode="a", header=None)
         print('Done!')
 
         return Ke

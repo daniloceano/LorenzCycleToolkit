@@ -93,7 +93,6 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
 
     LonIndexer = dfVars.loc["Longitude"]["Variable"]
     LatIndexer = dfVars.loc["Latitude"]["Variable"]
-    TimeIndexer = dfVars.loc["Time"]["Variable"]
     LevelIndexer = dfVars.loc["Vertical Level"]["Variable"]
 
     print("Opening input data...")
@@ -566,10 +565,17 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
     
         # Create box object
         try:
-            box_obj = BoxData(data=idata.compute(), dfVars=dfVars, args=args,
-            western_limit=min_lon, eastern_limit=max_lon,
-            southern_limit=min_lat, northern_limit=max_lat,
-            output_dir=ResultsSubDirectory, dTdt=idTdt)
+            box_obj = BoxData(
+                data=idata.compute(),
+                dfVars=dfVars,
+                args=args,
+                western_limit=min_lon,
+                eastern_limit=max_lon,
+                southern_limit=min_lat,
+                northern_limit=max_lat,
+                output_dir=ResultsSubDirectory,
+                dTdt=idTdt
+            )
         except Exception as e:
             print('An exception occurred: {}'.format(e))
             raise SystemExit('Error creating the box for computations')
@@ -596,7 +602,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
         # Compute boundary terms
         try:
             bt_obj = BoundaryTerms(box_obj,method='moving')
-            TermsDict['BAe'].append(bt_obj.calc_bae().values)
+            TermsDict['BAe'].append(bt_obj.calc_bae())
             TermsDict['BAz'].append(bt_obj.calc_baz())
             TermsDict['BKe'].append(bt_obj.calc_bke())
             TermsDict['BKz'].append(bt_obj.calc_bkz())
@@ -682,7 +688,9 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--outname", type=str, help="Choose a name for saving results.")
     parser.add_argument("-v", "--verbosity", action='store_true', help="Increase output verbosity.")
 
-    args = parser.parse_args()
+    # args = parser.parse_args()
+    args = parser.parse_args(['/p1-nemo/danilocs/mpas/MPAS-BR/post_proc/py/interpolations/Catarina-2403-2903_MPAS.nc',
+    '-t', '-g', '-r'])
     
     infile  = args.infile
     varlist = '../inputs/fvars'
