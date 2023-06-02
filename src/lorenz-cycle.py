@@ -688,12 +688,12 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--outname", type=str, help="Choose a name for saving results.")
     parser.add_argument("-v", "--verbosity", action='store_true', help="Increase output verbosity.")
 
-    # args = parser.parse_args()
+    args = parser.parse_args()
 
     # Debuggings:
     # args = parser.parse_args(['../samples/Reg1-Representative_NCEP-R2.nc', '-r', '-t'])
-    args = parser.parse_args(['/p1-nemo/danilocs/mpas/MPAS-BR/post_proc/py/interpolations/Catarina-2403-2903_MPAS.nc',
-     '-t', '-g', '-r'])
+    #args = parser.parse_args(['/p1-nemo/danilocs/mpas/MPAS-BR/post_proc/py/interpolations/Catarina-2403-2903_MPAS.nc',
+    # '-t', '-g', '-r'])
 
     infile  = args.infile
     varlist = '../inputs/fvars'
