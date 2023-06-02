@@ -79,6 +79,8 @@ class EnergyContents:
         if self.box_obj.args.verbosity:
             print(Az.values * Az.metpy.units)
 
+        Az = Az.metpy.dequantify()
+
         if self.box_obj.args.verbosity:
             print('Saving Az for each vertical level...')
 
@@ -119,6 +121,8 @@ class EnergyContents:
         if self.box_obj.args.verbosity:
             print(Ae.values * Ae.metpy.units)
 
+        Ae = Ae.metpy.dequantify()
+
         print('Saving Ae for each vertical level...')
         if self.method == 'fixed':
             df = function.to_dataframe(name='Ae').unstack()
@@ -152,19 +156,29 @@ class EnergyContents:
 
         print('Saving Kz for each vertical level...')
 
-        try:
+        try: 
             Kz = Kz.metpy.convert_units('J/m^2')
-        except ValueError:
+        except ValueError as e:
             print('Unit error in Kz')
-            raise
+            raise ValueError('Unit error in Kz') from e
 
+        if self.box_obj.args.verbosity:
+            print(Kz.values * Kz.metpy.units)
+        
+        Kz = Kz.metpy.dequantify()
+
+        print('Saving Kz for each vertical level...')
         if self.method == 'fixed':
             df = function.to_dataframe(name='Kz').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
             df = function.drop(self.TimeName).to_dataframe(name=time).transpose()
-
-        df.to_csv(self.output_dir + '/Kz_' + self.VerticalCoordIndexer + '.csv', mode='a', header=None)
+        
+        df.to_csv(
+            f"{self.output_dir}/Kz_{self.VerticalCoordIndexer}.csv",
+            mode="a",
+            header=None
+        )
         print('Done!')
 
         return Kz
@@ -172,7 +186,7 @@ class EnergyContents:
     def calc_ke(self):
         print('Computing Eddy Kinetic Energy (Ke)...')
 
-        function = CalcAreaAverage((self.u_ZE ** 2 + self.v_ZE ** 2), self.ylength)
+        function = CalcAreaAverage((self.u_ZE ** 2 + self.v_ZE ** 2), self.ylength, self.xlength)
 
         if np.isnan(function).any():
             function = function.interpolate_na(dim=self.VerticalCoordIndexer) * function.metpy.units
@@ -183,21 +197,27 @@ class EnergyContents:
 
         try: 
             Ke = Ke.metpy.convert_units('J/m^2')
-        except ValueError:
+        except ValueError as e:
             print('Unit error in Ke')
-            raise
+            raise ValueError('Unit error in Ke') from e
 
-        if self.box_obj.args.verbosity == True:
+        if self.box_obj.args.verbosity:
             print(Ke.values * Ke.metpy.units)
-        print('Saving Ke for each vertical level...')
 
+        Ke = Ke.metpy.dequantify()
+
+        print('Saving Ke for each vertical level...')
         if self.method == 'fixed':
-            df = function.to_dataframe(name='Ke').unstack() 
+            df = function.to_dataframe(name='Ke').unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop([self.TimeName]).to_dataframe(name=time).transpose()
-
-        df.to_csv(self.output_dir + '/Ke_' + self.VerticalCoordIndexer + '.csv', mode="a", header=None)
+            df = function.drop(self.TimeName).to_dataframe(name=time).transpose()
+        
+        df.to_csv(
+            f"{self.output_dir}/Ke_{self.VerticalCoordIndexer}.csv",
+            mode="a",
+            header=None
+        )
         print('Done!')
 
         return Ke
