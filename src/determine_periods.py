@@ -408,40 +408,48 @@ def plot_all_periods(phases_dict, df, ax=None, vorticity=None, periods_outfile_p
 
     # Create a new figure if ax is not provided
     if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 8))
+        fig, ax = plt.subplots(figsize=(6.5, 5))
 
     if vorticity is not None:
-        ax.plot(vorticity.time, vorticity, linewidth=0.75, color='gray', label='Vorticity')
+        ax.plot(vorticity.time, vorticity, linewidth=0.75, color='gray', label=r'ζ')
 
     # Plot the vorticity data
-    ax.plot(df.index, df['z'], c='k', label='ζ')
-    
+    ax.plot(df.index, df['z'], c='k', label=r'$ζ_{f}$')
+
     legend_labels = set()  # To store unique legend labels
-    
+
     # Shade the areas between the beginning and end of each period
     for phase, (start, end) in phases_dict.items():
         # Extract the base phase name (without suffix)
         base_phase = phase.split()[0]
-        
+
         # Access the color based on the base phase name
         color = colors_phases[base_phase]
-        
+
         # Fill between the start and end indices with the corresponding color
         ax.fill_between(df.index, df['z'], where=(df.index >= start) & (df.index <= end),
                         alpha=0.7, color=color, label=base_phase)
-        
+
         # Add the base phase name to the legend labels set
         legend_labels.add(base_phase)
-    
+
+    # Add legend labels for Vorticity and ζ
+    legend_labels.add('ζ')
+    legend_labels.add(r'$ζ_{f}$')
+
     # Set the title
     ax.set_title('Vorticity Data with Periods')
 
     if periods_outfile_path is not None:
         # Remove duplicate labels from the legend
         handles, labels = ax.get_legend_handles_labels()
-        unique_labels = [label for label in labels if label in legend_labels]
-        ax.legend(handles, unique_labels)
-        
+        unique_labels = []
+        for label in labels:
+            if label not in unique_labels and label in legend_labels:
+                unique_labels.append(label)
+
+        ax.legend(handles, unique_labels, loc='upper right', bbox_to_anchor=(1.5, 1))
+
         ax.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3))
         date_format = mdates.DateFormatter("%Y-%m-%d")
         ax.xaxis.set_major_formatter(date_format)
