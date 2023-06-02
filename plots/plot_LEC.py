@@ -288,11 +288,7 @@ reads an CSV file with all terms from the Lorenz Energy Cycle \
     parser.add_argument("outfile", help = "The .csv file containing the \
 results from the main.py program.")
 
-    # args = parser.parse_args()
-
-    # Debugging
-    args = parser.parse_args(['../LEC_Results/19820684_ERA5_track-15x15/19820684_ERA5_track-15x15.csv'])
-
+    args = parser.parse_args()
     outfile = args.outfile
     
     ResultsSubDirectory = '/'.join(outfile.split('/')[:-1])
