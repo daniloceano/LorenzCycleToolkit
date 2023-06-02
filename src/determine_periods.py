@@ -21,10 +21,7 @@ import pandas as pd
 import numpy as np
 
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 import matplotlib.dates as mdates
-import matplotlib.ticker as ticker
-
 
 import cmocean.cm as cmo
 
@@ -251,14 +248,14 @@ def periods_to_dict(df):
             end += pd.Timedelta(hours=6)
 
         # Check if the period name already exists in the dictionary
-        if period_name in periods_dict:
+        if period_name in periods_dict.keys():
             # Append a suffix to the period name
-            suffix = len(periods_dict[period_name]) + 1
+            suffix = len(periods_dict[period_name]) + 1 if len(periods_dict[period_name]) > 2 else 2
             new_period_name = f"{period_name} {suffix}"
             periods_dict[new_period_name] = (start, end)
         else:
             periods_dict[period_name] = (start, end)
-
+        
     return periods_dict
 
 
@@ -405,7 +402,6 @@ def plot_peaks_valleys_series(series, ax, *peaks_valleys_series_list):
     ax.set_title('find center of stages')
     ax.title.set_position([0.55, 1.05])
 
-import matplotlib.pyplot as plt
 
 def plot_all_periods(phases_dict, df, ax=None, vorticity=None, periods_outfile_path=None):
     colors_phases = {'incipient': '#65a1e6', 'intensification': '#f7b538', 'mature': '#d62828', 'decay': '#9aa981'}
