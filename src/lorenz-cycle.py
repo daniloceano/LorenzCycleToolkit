@@ -685,6 +685,7 @@ if __name__ == "__main__":
     group.add_argument("-t", "--track", action='store_true', help="Define the box using a track file specified by the 'track' file.")
     group.add_argument("-c", "--choose", action='store_true', help="Choose the domain for each time step by clicking on the screen.")
     parser.add_argument("-z", "--zeta", action='store_true', help="Use this flag if the track file was created using vorticity.")
+    parser.add_argument("-m", "--mpas", action='store_true', help="for MPAS-A data processed with MPAS-BR routines")
     parser.add_argument("-o", "--outname", type=str, help="Choose a name for saving results.")
     parser.add_argument("-v", "--verbosity", action='store_true', help="Increase output verbosity.")
 
@@ -700,6 +701,9 @@ if __name__ == "__main__":
     
     # Open data
     data = get_data(infile, varlist) 
+
+    if args.mpas:
+        data = data.drop_dims('standard_height')
     
     # Slice data so the code runs faster
     data, method = slice_domain(data, args, varlist)

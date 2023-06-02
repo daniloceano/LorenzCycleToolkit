@@ -78,7 +78,7 @@ class GenerationDissipationTerms:
             df = function.to_dataframe(name='Ce', dim_order=[self.TimeName, self.VerticalCoordIndexer]).unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop(self.TimeName).drop('standard_height').to_dataframe(name=time).transpose()
+            df = function.drop(self.TimeName).to_dataframe(name=time).transpose()
 
         df.to_csv(self.output_dir + '/Gz_' + self.VerticalCoordIndexer + '.csv', mode="a", header=None)
         print('Done!')
@@ -112,7 +112,7 @@ class GenerationDissipationTerms:
             df = function.to_dataframe(name='Ce', dim_order=[self.TimeName, self.VerticalCoordIndexer]).unstack()
         else:
             time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop(self.TimeName).drop('standard_height').to_dataframe(name=time).transpose()
+            df = function.drop(self.TimeName).to_dataframe(name=time).transpose()
 
         df.to_csv(self.output_dir + '/Ge_' + self.VerticalCoordIndexer + '.csv', mode="a", header=None)
         print('Done!')
