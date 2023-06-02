@@ -152,7 +152,7 @@ def BKz_BKe(ax,value,i,width,head_width):
     ax.text(1.18,0.5,value,fontdict={'fontsize':fs},transform=ax.transAxes,
             verticalalignment='center',horizontalalignment='left')
 
-def plot_LEC(idata,flag, FigsDir):
+def plot_LEC(idata,flag, FigsDir, period=False):
     
 
     # Adjust arrow size proportionally to the conversion rate, residual and 
@@ -174,7 +174,7 @@ def plot_LEC(idata,flag, FigsDir):
         plt.title(str(idata.name.date()),fontsize=fs, loc='center',y=0.5,
               fontdict={'fontweight':'bold'})
     elif flag == 'periods':
-        plt.title((str(idata.index[0])),fontsize=fs, loc='center',y=0.5,
+        plt.title(period,fontsize=fs, loc='center',y=0.5,
                fontdict={'fontweight':'bold'})
     
     i = 0
@@ -273,10 +273,10 @@ def main(outfile, FigsDir):
     for i in range(len(periods)):
         start,end = periods.iloc[i]['start'],periods.iloc[i]['end']
         selected_dates = df[(df['Datetime'] >= start) & (df['Datetime'] <= end)]
-        period = selected_dates.drop(['Datetime','Date','Hour'],axis=1).mean()
-        period = period.to_frame(name=periods.iloc[i].name).transpose()
-        period = period.T.squeeze()
-        plot_LEC(period,'periods', FigsDir)
+        period_mean = selected_dates.drop(['Datetime','Date','Hour'],axis=1).mean()
+        period_mean = period_mean.to_frame(name=periods.iloc[i].name).transpose()
+        period_mean = period_mean.T.squeeze()
+        plot_LEC(period_mean,'periods', FigsDir, period=periods.index[i])
 
 
 if __name__ == "__main__":
@@ -288,7 +288,11 @@ reads an CSV file with all terms from the Lorenz Energy Cycle \
     parser.add_argument("outfile", help = "The .csv file containing the \
 results from the main.py program.")
 
-    args = parser.parse_args()
+    # args = parser.parse_args()
+
+    # Debugging
+    args = parser.parse_args(['../LEC_Results/19820684_ERA5_track-15x15/19820684_ERA5_track-15x15.csv'])
+
     outfile = args.outfile
     
     ResultsSubDirectory = '/'.join(outfile.split('/')[:-1])
