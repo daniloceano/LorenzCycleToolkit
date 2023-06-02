@@ -189,10 +189,7 @@ time step. The user needs to specify the file where the CSV are located")
     parser.add_argument("--verbosity", default = False,
                         action='store_true')
     
-    # args = parser.parse_args()
-
-    args = parser.parse_args(['../LEC_Results/Catarina-2403-2903_MPAS_track-15x15/'])
-
+    args = parser.parse_args()
     Directory = args.Directory
     
     # Diectory for saving figures

@@ -237,15 +237,15 @@ def plot_LEC(idata,flag, FigsDir, period=False):
             i+=1
             
     if flag == 'example':
-        plt.savefig(FigsDir+'LEC_example.png')
+        plt.savefig(FigsDir + 'LEC_example.png')
         print('Created LEC example figure')
     elif flag == 'daily_mean':
         datestr = idata.name.strftime("%Y-%m-%d")
-        print('Created LEC (daily mean) for: '+datestr)
-        plt.savefig(FigsDir+'LEC_'+datestr+'.png')
+        print(f"Created LEC (daily mean) for: {datestr}")
+        plt.savefig(FigsDir + f'LEC_{datestr}.png')
     elif flag == 'periods':
-        print('Created LEC for period: '+idata.name)
-        plt.savefig(FigsDir+'LEC_'+idata.index[0]+'.png')
+        print(f"Created LEC for period: {period}")
+        plt.savefig(FigsDir + f'LEC_{period}.png')
     
 
 def main(outfile, FigsDir):
@@ -273,7 +273,7 @@ def main(outfile, FigsDir):
     for i in range(len(periods)):
         start,end = periods.iloc[i]['start'],periods.iloc[i]['end']
         selected_dates = df[(df['Datetime'] >= start) & (df['Datetime'] <= end)]
-        period_mean = selected_dates.drop(['Datetime','Date','Hour'],axis=1).mean()
+        period_mean = selected_dates.drop(['Datetime','Date','Hour'],axis=1).mean(numeric_only=True)
         period_mean = period_mean.to_frame(name=periods.iloc[i].name).transpose()
         period_mean = period_mean.T.squeeze()
         plot_LEC(period_mean,'periods', FigsDir, period=periods.index[i])
@@ -288,7 +288,8 @@ reads an CSV file with all terms from the Lorenz Energy Cycle \
     parser.add_argument("outfile", help = "The .csv file containing the \
 results from the main.py program.")
 
-    args = parser.parse_args()
+    # args = parser.parse_args()
+    args = parser.parse_args(['../LEC_Results/Catarina-2403-2903_MPAS_track-15x15/Catarina-2403-2903_MPAS_track-15x15.csv'])
     outfile = args.outfile
     
     ResultsSubDirectory = '/'.join(outfile.split('/')[:-1])
