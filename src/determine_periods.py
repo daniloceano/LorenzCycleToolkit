@@ -218,8 +218,8 @@ def clean_periods(df):
     # Calculate the duration of each period
     df['period_duration'] = df.groupby((df['periods'] != df['periods'].shift()).cumsum())['time'].transform(lambda x: x.max() - x.min())
 
-    # Filter out periods with duration <= 6 hours
-    df = df[df['period_duration'] > pd.Timedelta(hours=6)].copy()
+    # Filter out periods with duration <= 3 hours
+    df = df[df['period_duration'] > pd.Timedelta(hours=3)].copy()
 
     # Remove the extra columns
     df.drop('period_duration', axis=1, inplace=True)
@@ -491,7 +491,7 @@ def get_periods(vorticity):
     # Incipient phase: all times not classified previously
     df = find_incipient_period(df)
 
-    # Remove noisy periods that are less than 6 hours long
+    # Remove noisy periods that are less than 3 hours long
     df = clean_periods(df)
 
     # Pass the periods to a dictionary with each period's name as key
