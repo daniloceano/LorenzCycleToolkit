@@ -29,12 +29,13 @@ from scipy.signal import argrelextrema
 from scipy.signal import savgol_filter 
 
 
-def check_create_folder(DirName):
+def check_create_folder(DirName, verbosity=False):
     if not os.path.exists(DirName):
                 os.makedirs(DirName)
                 print(DirName+' created')
     else:
-        print(DirName+' directory exists')
+        if verbosity:
+            print(DirName+' directory exists')
 
 def filter_var(variable):
     window_lenght = round(len(variable)/2)
