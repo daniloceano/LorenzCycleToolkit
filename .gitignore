@@ -12,6 +12,9 @@ inputs/box_lims
 inputs/fvars
 inputs/track
 
+# automation
+src/automate-SWSA-cyclones_energetic-analysis.sh
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

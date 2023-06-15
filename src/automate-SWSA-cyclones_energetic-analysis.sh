@@ -1,5 +1,5 @@
 
-track_dir='../../SWSA-cyclones_energetic-analysis/tracks_LEC-format/intense/'
+track_dir='../../SWSA-cyclones_energetic-analysis/tracks_LEC-format/moda/'
 era5_dir='../../SWSA-cyclones_energetic-analysis/met_data/ERA5/DATA/'
 
 for file in "$track_dir"*
@@ -7,7 +7,7 @@ do
 
     filename=$(basename "$file")
     id=$(echo "$filename" | sed 's/track_//')
-    era5_file="${era5_dir}${id}_ERA5.nc"
+    era5_file="${era5_dir}moda-${id}_ERA5.nc"
     
     echo "\nFile ID: $id"
     echo "ERA5 data: $era5_file"
