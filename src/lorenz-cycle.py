@@ -391,7 +391,10 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
     if args.track:
         times = times[(times>=track.index[0]) & (times<=track.index[-1])]
         if len(times) == 0:
-            raise ValueError("Mismatch between trackfile and data! Check that and try again!")
+            raise ValueError(
+                "Mismatch between trackfile and data! Check that and try again!"
+                f" file starts and ends in times {times[0]} and {times[-1]},"
+                f"while track starts and ends in times {track.index[0]} and {track.index[-1]}")
         
     # times = times[:10]
     for t in times:
