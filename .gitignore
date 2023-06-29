@@ -178,6 +178,7 @@ cython_debug/
 
 # from automating tasks
 src/nohup.out
+src/automate-MPAS.sh
 
 # from vscode
 src/.vscode/launch.json
@@ -186,3 +187,4 @@ src/.vscode/launch.json
 src/periods.png
 src/periods.csv
 src/periods_didatic.png
+
