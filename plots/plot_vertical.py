@@ -40,11 +40,11 @@ import glob
 from datetime import datetime
 import argparse
 
-def get_data_dict(list_terms):
+def get_data_dict(list_terms, results_directory, args):
     data = {}
     # Loop to store results in dictionary
     for term in list_terms:
-        file = glob.glob(Directory+'/'+term+'_*')[0]
+        file = glob.glob(os.path.join(results_directory, f'{term}_*'))[0]
         data[term] = pd.read_csv(file)
         if args.verbosity:
             print('Opening '+term)
@@ -52,25 +52,12 @@ def get_data_dict(list_terms):
             print('Ok!')
     return data
 
-def create_dir():
-    # Diectory for saving figures
-    FigsDirectory = Directory+'/Figures_vertical_profiles/'
-    # Check if the directory for saving figures exists. If not, creates it
-    if not os.path.exists(FigsDirectory):
-                os.makedirs(FigsDirectory)
-                print(FigsDirectory+' created')
-    else:
-        print(FigsDirectory+' directory exists')
-    return FigsDirectory
-
-def plot_vertical(list_terms):
+def plot_vertical(list_terms, results_directory, figures_subdirectory, args):
     # Get info
-    data = get_data_dict(list_terms)
+    data = get_data_dict(list_terms, results_directory)
     term = list(data.keys())[0]
     ntime = data[term].shape[0] # Number of time steps
     levs = data[term].columns[1:] # Vertical levels
-    # Create dir for saving figs
-    FigsDirectory = create_dir()
     # Loop through time to plot each vertical profile
     for t in range(ntime):
         timestep = data[term].iloc[t].values[0]
@@ -97,12 +84,12 @@ def plot_vertical(list_terms):
             fname = 'Energy'
         elif term in conversion_labels:
             fname = 'Conversion'
-        outfile = FigsDirectory+fname+'_'+timestring+'.png'
-        plt.savefig(outfile,bbox_inches='tight')
-        print('Created '+outfile)
+        outfile = os.path.join(figures_subdirectory, f"{fname}_{timestring}.png")
+        plt.savefig(outfile, bbox_inches='tight')
+        print(f'Created {outfile}')
     
-def plot_hovmoller(list_terms):
-    data = get_data_dict(list_terms)
+def plot_hovmoller(list_terms, results_directory, figures_subdirectory, args):
+    data = get_data_dict(list_terms, results_directory, args)
     term = list(data.keys())[0]
     TimeName = data[term].columns[0]
     dates = data[term][TimeName]
@@ -149,7 +136,6 @@ def plot_hovmoller(list_terms):
         ax.xaxis.set_tick_params(labelsize=16)
         ax.yaxis.set_tick_params(labelsize=16)
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
-        start, end = ax.get_xlim()
         ax.set_title(term,fontdict={'fontsize':20})
         ax.tick_params(axis='x',labelrotation=50)
         # colorbar
@@ -159,23 +145,13 @@ def plot_hovmoller(list_terms):
             cbar.ax.get_yaxis().labelpad = 20
         for t in cbar.ax.get_yticklabels():
              t.set_fontsize(14)
-    outfile = FigsSubDir+'/hovmoller_'+fname+'.png'
+    outfile = os.path.join(figures_subdirectory, f"hovmoller_{fname}.png")
     plt.savefig(outfile,bbox_inches='tight')
     print('Created '+outfile)
     
 
 def main():
-    for term_list in [energy_labels,conversion_labels,generation_labels]: 
-        if args.vertical:
-            print('-------------------------------------------------------------')
-            print('Creating figures with vertical profiles for each model time')
-            plot_vertical(term_list)
-        print('-------------------------------------------------------------')
-        print('Creating hovmoller diagrams')
-        plot_hovmoller(term_list)
 
-if __name__ == "__main__":
-    
     parser = argparse.ArgumentParser(description = "\
 reads CSV files with energy and conversion terms from the Lorenz \
 Energy Cycle, for each vertical level and time step, and plot them for each \
@@ -189,14 +165,25 @@ time step. The user needs to specify the file where the CSV are located")
     parser.add_argument("--verbosity", default = False,
                         action='store_true')
     
-    args = parser.parse_args()
-    Directory = args.Directory
+    # args = parser.parse_args()
+    args = parser.parse_args(['../LEC_Results/thompson-grell_freitas-mynn_MPAS_track/'])
+    results_directory = args.Directory
     
     # Diectory for saving figures
-    FigsDir = Directory+'/Figures/'
-    FigsSubDir = FigsDir+'/vertical/'
-    check_create_folder(FigsSubDir)
-    
+    figures_directory = os.path.join(results_directory, "Figures")
+    figures_subdirectory = os.path.join(figures_directory, 'vertical')
+    check_create_folder(figures_subdirectory)
+
+    for term_list in [energy_labels,conversion_labels,generation_labels]: 
+        if args.vertical:
+            print('-------------------------------------------------------------')
+            print('Creating figures with vertical profiles for each model time')
+            plot_vertical(term_list, results_directory, figures_subdirectory, args)
+        print('-------------------------------------------------------------')
+        print('Creating hovmoller diagrams')
+        plot_hovmoller(term_list, results_directory, figures_subdirectory, args)
+
+if __name__ == "__main__":
     main()
 
 
