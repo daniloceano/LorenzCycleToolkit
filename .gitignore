@@ -182,6 +182,7 @@ src/automate-MPAS.sh
 
 # from vscode
 src/.vscode/launch.json
+plots/.vscode/launch.json
 
 # testing periods
 src/periods.png
