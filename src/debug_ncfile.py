@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/17 14:39:44 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/18 17:03:02 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/18 17:25:14 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -126,8 +126,10 @@ def calc_ca(tair_AE, tair_ZE, v_ZE, omega_ZE, sigma_AA, PressureData, VerticalCo
     function = term1 + term2
 
     if np.isnan(function).any():
+        print('interpolating')
         function = function.interpolate_na(dim=VerticalCoordIndexer) * function.metpy.units
         if np.isnan(function).any():
+            print('removing nans')
             function = function.dropna(dim=VerticalCoordIndexer)
 
     Ca = -function.integrate(VerticalCoordIndexer) * PressureData.metpy.units
@@ -224,7 +226,6 @@ def plot_timeseries(times, values, y_label):
     plt.figure()
     flattened_values = np.array(values).flatten()
     plt.plot(times, flattened_values)
-    plt.xlabel("Time")
     plt.ylabel(y_label)
     plt.xticks(rotation=45, ha="right")  # Adjust x ticks rotation and alignment
     plt.tight_layout()  # Ensure tight layout to prevent overlapping
@@ -408,14 +409,28 @@ def analyse_tair_AE(data, time, track, varlist):
     tair_ZA = CalcZonalAverage(tair, xlength)
     tair_AA = CalcAreaAverage(tair_ZA, ylength)
     tair_AE = tair_ZA - tair_AA
-
     DelPres_tairAE = (tair_AE).differentiate(vertical_coord_indexer) / units('Pa')
+    DelPhi_tairAE = (tair_AE * tair_AE["coslats"]).differentiate("rlats")
+
+    tair_AE_AA = CalcAreaAverage(tair_AE, ylength)
+    DelPres_tairAE_AA = CalcAreaAverage(DelPres_tairAE, ylength)
+    DelPhi_tairAE_AA = CalcAreaAverage(DelPhi_tairAE, ylength)
+
+    print(float(tair_AE_AA.integrate(coord=vertical_coord_indexer)))
+    print(float(DelPres_tairAE_AA.integrate(coord=vertical_coord_indexer)))
+    print(float(DelPhi_tairAE_AA.integrate(coord=vertical_coord_indexer)))
 
     # Plot tair_AE
     plot_panel(tair_AE, lat_indexer, "debug/tair_AE")
+    plot_timeseries(DelPres_tairAE_AA.level, DelPres_tairAE_AA, "DelPres_tairAE_AA")
 
     # Plot DelPres_tairAE
     plot_panel(DelPres_tairAE, lat_indexer, "debug/DelPres_tairAE")
+    plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, "DelPhi_tairAE_AA")
+
+    # Plot DelPres_tairAE
+    plot_panel(DelPhi_tairAE, lat_indexer, "debug/DelPhi_tairAE")
+    plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, "DelPhi_tairAE_AA")
 
 
 def plot_panel(data, lat_indexer, title):
