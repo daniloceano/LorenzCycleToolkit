@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/17 14:39:44 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/17 17:36:54 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/18 15:48:29 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -217,19 +217,18 @@ def get_ca_arguments(data, df_vars, western_limit, eastern_limit, southern_limit
     )
 
 
-def plot_timeseries(times, values, title, y_label):
+def plot_timeseries(times, values, y_label):
+    plt.close("all")
+    plt.figure()
     flattened_values = np.array(values).flatten()
     plt.plot(times, flattened_values)
     plt.xlabel("Time")
     plt.ylabel(y_label)
-    plt.title(title)
+    plt.xticks(rotation=45, ha="right")  # Adjust x ticks rotation and alignment
+    plt.tight_layout()  # Ensure tight layout to prevent overlapping
     plt.savefig(f"debug/{y_label}.png")
 
-
-def main(args):
-    infile = args.infile
-    varlist = "../inputs/fvars_ERA5-cdsapi"
-    trackfile = "/p1-nemo/danilocs/SWSA-cyclones_energetic-analysis//LEC_results-q0.999/RG3-q0.999-20070557_ERA5_track-15x15/RG3-q0.999-20070557_ERA5_track-15x15_track"
+def analyse_timeseries(data, varlist, times, track):
 
     # Indexers
     df_vars = pd.read_csv(varlist, sep=";", index_col=0, header=0)
@@ -238,15 +237,6 @@ def main(args):
     time_name = df_vars.loc["Time"]["Variable"]
     vertical_coord_indexer = df_vars.loc["Vertical Level"]["Variable"]
 
-    # Open data
-    data = get_data(infile, varlist)
-    track = pd.read_csv(trackfile, parse_dates=[0], delimiter=";", index_col="time")
-    times = pd.to_datetime(track.index)
-
-    dTdt = data[df_vars.loc["Air Temperature"]["Variable"]].differentiate(
-        df_vars.loc["Time"]["Variable"], datetime_unit="s"
-    ) * units("K/s")
-
     sigma_series = []
     ca_series = []
     DelPhi_tairAE_series = []
@@ -254,6 +244,14 @@ def main(args):
     DelPres_tairAE_series = []
     omega_tair_ZE_series = []
     tair_series = []
+    tair_ZE_series = []
+
+    # Specify the desired dates
+    start_date = pd.Timestamp("2007-09-07")
+    end_date = pd.Timestamp("2007-09-11")
+
+    # Slice the times for the specified dates
+    times = times[(times >= start_date) & (times <= end_date)]
 
     for time in times:
         print(f"Computing for {time}")
@@ -298,21 +296,69 @@ def main(args):
         omega_tair_ZE_AA = CalcAreaAverage(omega_tair_ZE, ylength=ylength, xlength=xlength)
         omega_tair_ZE_series.append(float(omega_tair_ZE_AA.integrate(coord=vertical_coord_indexer)))
 
-        tair_AA = CalcAreaAverage(
-            idata[df_vars.loc["Air Temperature"]["Variable"]], ylength=ylength, xlength=xlength)
+        tair = idata[df_vars.loc["Air Temperature"]["Variable"]]
+        tair_AA = CalcAreaAverage(tair, ylength=ylength, xlength=xlength)
         tair_series.append(float(tair_AA.integrate(coord=vertical_coord_indexer)))
 
+        tair_ZA = CalcZonalAverage(tair, xlength)
+        tair_AA = CalcAreaAverage(tair_ZA, ylength)
+        tair_ZE = tair - tair_ZA
+
+        tair_ZE_AA = CalcAreaAverage(tair_ZE, ylength=ylength, xlength=xlength)
+        tair_ZE_series.append(float(tair_ZE_AA.integrate(coord=vertical_coord_indexer)))
+
     os.makedirs("debug", exist_ok=True)
-    plot_timeseries(times, ca_series, "Timeseries of Ca", "Ca")
-    plot_timeseries(times, DelPhi_tairAE_series, "Timeseries of DelPhi_tairAE", "DelPhi_tairAE")
-    plot_timeseries(times, tair_v_ZE_sigma_AA_series, "Timeseries of tair_v_ZE_sigma_AA", "tair_v_ZE_sigma_AA")
-    plot_timeseries(times, DelPres_tairAE_series, "Timeseries of DelPres_tairAE", "DelPres_tairAE")
-    plot_timeseries(times, omega_tair_ZE_series, "Timeseries of omega_tair_ZE", "omega_tair_ZE")
-    plot_timeseries(times, sigma_series, "Timeseries of Static Stability", "Static Stability")
-    plot_timeseries(times, tair_series, "Timeseries of Temperature", "Temperature")
+    plot_timeseries(times, ca_series, "Ca")
+    plot_timeseries(times, DelPhi_tairAE_series, "DelPhi_tairAE")
+    plot_timeseries(times, tair_v_ZE_sigma_AA_series, "tair_v_ZE_sigma_AA")
+    plot_timeseries(times, DelPres_tairAE_series, "DelPres_tairAE")
+    plot_timeseries(times, omega_tair_ZE_series, "omega_tair_ZE")
+    plot_timeseries(times, sigma_series, "Static Stability")
+    plot_timeseries(times, tair_series, "Temperature")
+    plot_timeseries(times, tair_ZE_series, "tair_ZE")
 
+def analyse_variable(data, time, track, varlist):
 
+    # Indexers
+    df_vars = pd.read_csv(varlist, sep=";", index_col=0, header=0)
+    lon_indexer = df_vars.loc["Longitude"]["Variable"]
+    lat_indexer = df_vars.loc["Latitude"]["Variable"]
+    time_name = df_vars.loc["Time"]["Variable"]
+    vertical_coord_indexer = df_vars.loc["Vertical Level"]["Variable"]
 
+    itrack = track.loc[time]
+    width, length = itrack["width"], itrack["length"]
+    western_limit, eastern_limit = itrack["Lon"] - width/2, itrack["Lon"] + width/2
+    southern_limit, northern_limit = itrack["Lat"] - length/2, itrack["Lat"] + length/2
+    idata = data.sel(
+            {time_name: time}
+        ).sel(
+            {lat_indexer: slice(southern_limit, northern_limit)}
+        ).sel(
+            {lon_indexer: slice(western_limit, eastern_limit)}
+        )
+    tair = idata[df_vars.loc["Air Temperature"]["Variable"]]
+
+def main(args):
+    infile = args.infile
+    varlist = "../inputs/fvars_ERA5-cdsapi"
+    trackfile = "/p1-nemo/danilocs/SWSA-cyclones_energetic-analysis//LEC_results-q0.999/RG3-q0.999-20070557_ERA5_track-15x15/RG3-q0.999-20070557_ERA5_track-15x15_track"
+
+    # Indexers
+    df_vars = pd.read_csv(varlist, sep=";", index_col=0, header=0)
+    lon_indexer = df_vars.loc["Longitude"]["Variable"]
+    lat_indexer = df_vars.loc["Latitude"]["Variable"]
+    time_name = df_vars.loc["Time"]["Variable"]
+
+    # Open data
+    data = get_data(infile, varlist)
+    track = pd.read_csv(trackfile, parse_dates=[0], delimiter=";", index_col="time")
+    times = pd.to_datetime(track.index)
+
+    #analyse_timeseries(data, varlist, times, track)
+
+    time = pd.Timestamp("2007-09-09 00:00")
+    analyse_variable(data, time, track, varlist)
 
 
 if __name__ == "__main__":
