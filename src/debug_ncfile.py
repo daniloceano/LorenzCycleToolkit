@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/17 14:39:44 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/18 16:51:47 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/18 17:01:49 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -345,10 +345,14 @@ def analyse_tair(data, time, track, varlist):
     lon = idata[lon_indexer]
     lat = idata[lat_indexer]
 
+    maps_dir = 'debug/maps'
+    os.makedirs(maps_dir, exist_ok=True)
+
     # Loop through each vertical level
     for level in tair[vertical_coord_indexer]:
 
         # Plotting
+        plt.close("all")
         plt.figure(figsize=(10, 6))
         ax = plt.axes(projection=ccrs.PlateCarree())
         
@@ -371,7 +375,7 @@ def analyse_tair(data, time, track, varlist):
         gl.yformatter = LATITUDE_FORMATTER
 
         # Save the figure for each vertical level
-        plt.savefig(f'./debug/tair_level_{level_hPa}.png')
+        plt.savefig(f'{maps_dir}/tair_level_{level_hPa}.png')
 
         # Clear the plot for the next level
         plt.clf()
@@ -408,10 +412,10 @@ def analyse_tair_AE(data, time, track, varlist):
     DelPres_tairAE = (tair_AE).differentiate(vertical_coord_indexer) / units('Pa')
 
     # Plot tair_AE
-    plot_panel(tair_AE, lat_indexer, "tair_AE")
+    plot_panel(tair_AE, lat_indexer, "debug/tair_AE")
 
     # Plot DelPres_tairAE
-    plot_panel(DelPres_tairAE, lat_indexer, "DelPres_tairAE")
+    plot_panel(DelPres_tairAE, lat_indexer, "debug/DelPres_tairAE")
 
 
 def plot_panel(data, lat_indexer, title):
@@ -423,6 +427,7 @@ def plot_panel(data, lat_indexer, title):
     num_cols = min(num_levels, 4)
 
     # Create the panel of subplots
+    plt.close("all")
     fig, axes = plt.subplots(num_rows, num_cols, figsize=(12, 12))
 
     # Flatten the axes array in case there is only one row or one column
@@ -461,10 +466,10 @@ def main(args):
     track = pd.read_csv(trackfile, parse_dates=[0], delimiter=";", index_col="time")
     times = pd.to_datetime(track.index)
 
-    #analyse_timeseries(data, varlist, times, track)
+    analyse_timeseries(data, varlist, times, track)
 
     time = pd.Timestamp("2007-09-09 00:00")
-    # analyse_tair(data, time, track, varlist)
+    analyse_tair(data, time, track, varlist)
 
     analyse_tair_AE(data, time, track, varlist)
 
