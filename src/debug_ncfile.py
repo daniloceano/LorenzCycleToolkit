@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/17 14:39:44 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/18 15:48:29 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/18 16:25:28 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -21,7 +21,9 @@ from thermodynamics import StaticStability
 import matplotlib.pyplot as plt
 from Math import CalcAreaAverage, CalcZonalAverage
 from metpy.constants import Re
-
+import cartopy.crs as ccrs
+import matplotlib.pyplot as plt
+from cartopy.mpl.gridliner import LATITUDE_FORMATTER, LONGITUDE_FORMATTER
 
 def convert_longitude(data, lon_indexer):
     data.coords[lon_indexer] = (data.coords[lon_indexer] + 180) % 360 - 180
@@ -318,7 +320,6 @@ def analyse_timeseries(data, varlist, times, track):
     plot_timeseries(times, tair_ZE_series, "tair_ZE")
 
 def analyse_variable(data, time, track, varlist):
-
     # Indexers
     df_vars = pd.read_csv(varlist, sep=";", index_col=0, header=0)
     lon_indexer = df_vars.loc["Longitude"]["Variable"]
@@ -330,14 +331,50 @@ def analyse_variable(data, time, track, varlist):
     width, length = itrack["width"], itrack["length"]
     western_limit, eastern_limit = itrack["Lon"] - width/2, itrack["Lon"] + width/2
     southern_limit, northern_limit = itrack["Lat"] - length/2, itrack["Lat"] + length/2
+
     idata = data.sel(
-            {time_name: time}
-        ).sel(
-            {lat_indexer: slice(southern_limit, northern_limit)}
-        ).sel(
-            {lon_indexer: slice(western_limit, eastern_limit)}
-        )
+        {time_name: time}
+    ).sel(
+        {lat_indexer: slice(southern_limit, northern_limit)}
+    ).sel(
+        {lon_indexer: slice(western_limit, eastern_limit)}
+    )
     tair = idata[df_vars.loc["Air Temperature"]["Variable"]]
+
+    # Create a meshgrid for lon, lat coordinates
+    lon = idata[lon_indexer]
+    lat = idata[lat_indexer]
+
+    # Loop through each vertical level
+    for level in tair[vertical_coord_indexer]:
+
+        # Plotting
+        plt.figure(figsize=(10, 6))
+        ax = plt.axes(projection=ccrs.PlateCarree())
+        
+        level = float(level)
+        level_data = tair.sel({vertical_coord_indexer: level})
+        level_hPa = level/100
+
+        # Plot contourf of tair and get the mappable object
+        contour = ax.contourf(lon, lat, level_data, cmap='coolwarm', transform=ccrs.PlateCarree())
+        plt.colorbar(contour, label='Temperature')
+
+        ax.coastlines(resolution='50m', color='black',
+                       linewidth=1, alpha=0.5, transform=ccrs.PlateCarree(), zorder=101)
+
+        # Add gridlines with labels for left and bottom sides
+        gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True, linewidth=1, color='gray', alpha=0.5)
+        gl.top_labels = False
+        gl.right_labels = False
+        gl.xformatter = LONGITUDE_FORMATTER
+        gl.yformatter = LATITUDE_FORMATTER
+
+        # Save the figure for each vertical level
+        plt.savefig(f'./debug/tair_level_{level_hPa}.png')
+
+        # Clear the plot for the next level
+        plt.clf()
 
 def main(args):
     infile = args.infile
