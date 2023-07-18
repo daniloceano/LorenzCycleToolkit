@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/17 14:39:44 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/18 17:01:49 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/18 17:03:02 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -469,7 +469,7 @@ def main(args):
     analyse_timeseries(data, varlist, times, track)
 
     time = pd.Timestamp("2007-09-09 00:00")
-    analyse_tair(data, time, track, varlist)
+    # analyse_tair(data, time, track, varlist)
 
     analyse_tair_AE(data, time, track, varlist)
 
