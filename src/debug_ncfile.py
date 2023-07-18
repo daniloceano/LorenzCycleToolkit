@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/17 14:39:44 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/18 17:25:14 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/18 17:40:40 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -231,7 +231,7 @@ def plot_timeseries(times, values, y_label):
     plt.tight_layout()  # Ensure tight layout to prevent overlapping
     plt.savefig(f"debug/{y_label}.png")
 
-def analyse_timeseries(data, varlist, times, track):
+def analyse_timeseries(data, varlist, times, track, slice_flag=False):
 
     # Indexers
     df_vars = pd.read_csv(varlist, sep=";", index_col=0, header=0)
@@ -311,14 +311,21 @@ def analyse_timeseries(data, varlist, times, track):
         tair_ZE_series.append(float(tair_ZE_AA.integrate(coord=vertical_coord_indexer)))
 
     os.makedirs("debug", exist_ok=True)
-    plot_timeseries(times, ca_series, "Ca")
-    plot_timeseries(times, DelPhi_tairAE_series, "DelPhi_tairAE")
-    plot_timeseries(times, tair_v_ZE_sigma_AA_series, "tair_v_ZE_sigma_AA")
-    plot_timeseries(times, DelPres_tairAE_series, "DelPres_tairAE")
-    plot_timeseries(times, omega_tair_ZE_series, "omega_tair_ZE")
-    plot_timeseries(times, sigma_series, "Static Stability")
-    plot_timeseries(times, tair_series, "Temperature")
-    plot_timeseries(times, tair_ZE_series, "tair_ZE")
+
+    if slice_flag == False:
+        plot_timeseries(times, ca_series, "Ca")
+        plot_timeseries(times, DelPhi_tairAE_series, "DelPhi_tairAE")
+        plot_timeseries(times, tair_v_ZE_sigma_AA_series, "tair_v_ZE_sigma_AA")
+        plot_timeseries(times, DelPres_tairAE_series, "DelPres_tairAE")
+        plot_timeseries(times, omega_tair_ZE_series, "omega_tair_ZE")
+        plot_timeseries(times, sigma_series, "Static Stability")
+        plot_timeseries(times, tair_series, "Temperature")
+        plot_timeseries(times, tair_ZE_series, "tair_ZE")
+    else:
+        plot_timeseries(times, ca_series, "Ca")
+        plot_timeseries(times, DelPhi_tairAE_series, "DelPhi_tairAE_sliced")
+        plot_timeseries(times, tair_v_ZE_sigma_AA_series, "tair_v_ZE_sigma_AA_sliced")
+        plot_timeseries(times, tair_ZE_series, "tair_ZE_sliced")        
 
 def analyse_tair(data, time, track, varlist):
     # Indexers
@@ -472,16 +479,18 @@ def main(args):
 
     # Indexers
     df_vars = pd.read_csv(varlist, sep=";", index_col=0, header=0)
-    lon_indexer = df_vars.loc["Longitude"]["Variable"]
-    lat_indexer = df_vars.loc["Latitude"]["Variable"]
-    time_name = df_vars.loc["Time"]["Variable"]
-
+    vertical_coord_indexer = df_vars.loc["Vertical Level"]["Variable"]
+    
     # Open data
     data = get_data(infile, varlist)
     track = pd.read_csv(trackfile, parse_dates=[0], delimiter=";", index_col="time")
     times = pd.to_datetime(track.index)
 
     analyse_timeseries(data, varlist, times, track)
+
+    # Slice the data for levels from 100000 to 100
+    sliced_data = data.sel({vertical_coord_indexer: slice(100000, 100)})
+    analyse_timeseries(sliced_data, varlist, times, track, slice=True)
 
     time = pd.Timestamp("2007-09-09 00:00")
     # analyse_tair(data, time, track, varlist)
