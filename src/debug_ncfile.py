@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/17 14:39:44 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/18 16:25:28 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/18 16:51:47 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -319,7 +319,7 @@ def analyse_timeseries(data, varlist, times, track):
     plot_timeseries(times, tair_series, "Temperature")
     plot_timeseries(times, tair_ZE_series, "tair_ZE")
 
-def analyse_variable(data, time, track, varlist):
+def analyse_tair(data, time, track, varlist):
     # Indexers
     df_vars = pd.read_csv(varlist, sep=";", index_col=0, header=0)
     lon_indexer = df_vars.loc["Longitude"]["Variable"]
@@ -376,6 +376,75 @@ def analyse_variable(data, time, track, varlist):
         # Clear the plot for the next level
         plt.clf()
 
+def analyse_tair_AE(data, time, track, varlist):
+    # Indexers
+    df_vars = pd.read_csv(varlist, sep=";", index_col=0, header=0)
+    lon_indexer = df_vars.loc["Longitude"]["Variable"]
+    lat_indexer = df_vars.loc["Latitude"]["Variable"]
+    time_name = df_vars.loc["Time"]["Variable"]
+    vertical_coord_indexer = df_vars.loc["Vertical Level"]["Variable"]
+
+    itrack = track.loc[time]
+    width, length = itrack["width"], itrack["length"]
+    western_limit, eastern_limit = itrack["Lon"] - width/2, itrack["Lon"] + width/2
+    southern_limit, northern_limit = itrack["Lat"] - length/2, itrack["Lat"] + length/2
+
+    idata = data.sel(
+        {time_name: time}
+    ).sel(
+        {lat_indexer: slice(southern_limit, northern_limit)}
+    ).sel(
+        {lon_indexer: slice(western_limit, eastern_limit)}
+    )
+
+    ylength = northern_limit - southern_limit
+    xlength = eastern_limit - western_limit
+
+    tair = idata[df_vars.loc["Air Temperature"]["Variable"]]
+    tair_ZA = CalcZonalAverage(tair, xlength)
+    tair_AA = CalcAreaAverage(tair_ZA, ylength)
+    tair_AE = tair_ZA - tair_AA
+
+    DelPres_tairAE = (tair_AE).differentiate(vertical_coord_indexer) / units('Pa')
+
+    # Plot tair_AE
+    plot_panel(tair_AE, lat_indexer, "tair_AE")
+
+    # Plot DelPres_tairAE
+    plot_panel(DelPres_tairAE, lat_indexer, "DelPres_tairAE")
+
+
+def plot_panel(data, lat_indexer, title):
+    # Get the number of vertical levels
+    num_levels = len(data['level'])
+
+    # Determine the number of rows and columns for subplots
+    num_rows = int(num_levels / 4) + (num_levels % 4 > 0)
+    num_cols = min(num_levels, 4)
+
+    # Create the panel of subplots
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=(12, 12))
+
+    # Flatten the axes array in case there is only one row or one column
+    axes = axes.flatten()
+
+    # Loop through each vertical level and plot the data in the corresponding subplot
+    for i, level in enumerate(data['level']):
+        level_hPa = level/100
+        ax = axes[i]
+        ax.plot(data[lat_indexer], data.sel(level=level))
+        ax.set_title(f"Level: {level_hPa:.2f} hPa")
+        ax.set_aspect('auto')
+        ax.grid(True)
+
+    # Adjust the layout of subplots
+    plt.tight_layout()
+
+    # Save the figure
+    plt.savefig(f"{title}_panel.png")
+    plt.show()
+
+
 def main(args):
     infile = args.infile
     varlist = "../inputs/fvars_ERA5-cdsapi"
@@ -395,7 +464,9 @@ def main(args):
     #analyse_timeseries(data, varlist, times, track)
 
     time = pd.Timestamp("2007-09-09 00:00")
-    analyse_variable(data, time, track, varlist)
+    # analyse_tair(data, time, track, varlist)
+
+    analyse_tair_AE(data, time, track, varlist)
 
 
 if __name__ == "__main__":
