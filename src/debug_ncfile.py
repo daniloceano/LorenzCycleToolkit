@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/17 14:39:44 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/19 12:28:33 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/19 17:22:32 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -221,7 +221,7 @@ def get_ca_arguments(data, df_vars, western_limit, eastern_limit, southern_limit
     )
 
 
-def plot_timeseries(times, values, y_label):
+def plot_timeseries(times, values, y_label, outdir):
     plt.close("all")
     plt.figure()
     flattened_values = np.array(values).flatten()
@@ -229,7 +229,7 @@ def plot_timeseries(times, values, y_label):
     plt.ylabel(y_label)
     plt.xticks(rotation=45, ha="right")  # Adjust x ticks rotation and alignment
     plt.tight_layout()  # Ensure tight layout to prevent overlapping
-    plt.savefig(f"debug/{y_label}.png")
+    plt.savefig(f"{outdir}/{y_label}.png")
 
 def analyse_timeseries(data, varlist, times, track, slice_flag=False):
 
@@ -310,22 +310,23 @@ def analyse_timeseries(data, varlist, times, track, slice_flag=False):
         tair_ZE_AA = CalcAreaAverage(tair_ZE, ylength=ylength, xlength=xlength)
         tair_ZE_series.append(float(tair_ZE_AA.integrate(coord=vertical_coord_indexer)))
 
-    os.makedirs("debug", exist_ok=True)
+    outdir = "./ debug"
+    os.makedirs(outdir, exist_ok=True)
 
     if slice_flag == False:
-        plot_timeseries(times, ca_series, "Ca")
-        plot_timeseries(times, DelPhi_tairAE_series, "DelPhi_tairAE")
-        plot_timeseries(times, tair_v_ZE_sigma_AA_series, "tair_v_ZE_sigma_AA")
-        plot_timeseries(times, DelPres_tairAE_series, "DelPres_tairAE")
-        plot_timeseries(times, omega_tair_ZE_series, "omega_tair_ZE")
-        plot_timeseries(times, sigma_series, "Static Stability")
-        plot_timeseries(times, tair_series, "Temperature")
-        plot_timeseries(times, tair_ZE_series, "tair_ZE")
+        plot_timeseries(times, ca_series, "Ca", outdir)
+        plot_timeseries(times, DelPhi_tairAE_series, "DelPhi_tairAE", outdir)
+        plot_timeseries(times, tair_v_ZE_sigma_AA_series, "tair_v_ZE_sigma_AA", outdir)
+        plot_timeseries(times, DelPres_tairAE_series, "DelPres_tairAE, outdir")
+        plot_timeseries(times, omega_tair_ZE_series, "omega_tair_ZE", outdir)
+        plot_timeseries(times, sigma_series, "Static Stability", outdir)
+        plot_timeseries(times, tair_series, "Temperature", outdir)
+        plot_timeseries(times, tair_ZE_series, "tair_ZE", outdir)
     else:
         plot_timeseries(times, ca_series, "Ca")
-        plot_timeseries(times, DelPhi_tairAE_series, "DelPhi_tairAE_sliced")
-        plot_timeseries(times, tair_v_ZE_sigma_AA_series, "tair_v_ZE_sigma_AA_sliced")
-        plot_timeseries(times, tair_ZE_series, "tair_ZE_sliced")        
+        plot_timeseries(times, DelPhi_tairAE_series, "DelPhi_tairAE_sliced", outdir)
+        plot_timeseries(times, tair_v_ZE_sigma_AA_series, "tair_v_ZE_sigma_AA_sliced", outdir)
+        plot_timeseries(times, tair_ZE_series, "tair_ZE_sliced", outdir)        
 
 def analyse_tair(data, time, track, varlist):
     # Indexers
@@ -353,7 +354,7 @@ def analyse_tair(data, time, track, varlist):
     lon = idata[lon_indexer]
     lat = idata[lat_indexer]
 
-    maps_dir = 'debug/maps'
+    maps_dir = f'debug/maps_{str(time)}'
     os.makedirs(maps_dir, exist_ok=True)
 
     # Loop through each vertical level
@@ -427,35 +428,40 @@ def analyse_tair_AE(data, time, track, varlist, slice_flag=False):
     print(float(DelPres_tairAE_AA.integrate(coord=vertical_coord_indexer)))
     print(float(DelPhi_tairAE_AA.integrate(coord=vertical_coord_indexer)))
 
+    outdir = f"debug/analysis_{str(time)}"
+    os.makedirs(outdir)
+
     if slice_flag == False:
         # Plot tair_AE
-        plot_panel(tair_AE, lat_indexer, f"debug/tair_AE{str(time)}")
-        plot_timeseries(tair_AE.latitude, tair_AE.isel(level=0), f"tair_AE_{float(tair_AE.level[0])}Pa_{str(time)}")
-        plot_timeseries(DelPres_tairAE.latitude, DelPres_tairAE.isel(level=0), f"DelPres_tairAE{float(DelPres_tairAE.level[0])}Pa")
-        plot_timeseries(DelPres_tairAE_AA.level, DelPres_tairAE_AA, f"DelPres_tairAE_AA_{str(time)}")
+        plot_panel(tair_AE, lat_indexer, f"{outdir}/tair_AE{str(time)}")
+        plot_timeseries(tair_AE.latitude, tair_AE.isel(level=0), f"tair_AE_{float(tair_AE.level[0])}Pa_{str(time)}", outdir)
+        plot_timeseries(DelPres_tairAE.latitude, DelPres_tairAE.isel(level=0),
+                         f"DelPres_tairAE{float(DelPres_tairAE.level[0])}Pa", outdir)
+        plot_timeseries(DelPres_tairAE_AA.level, DelPres_tairAE_AA, f"DelPres_tairAE_AA_{str(time)}", outdir)
         print(f"plotting tair_AE for: {float(tair_AE.level[0])}")
 
         # Plot DelPres_tairAE
-        plot_panel(DelPres_tairAE, lat_indexer, f"debug/DelPres_tairAE_{str(time)}")
-        plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, f"DelPhi_tairAE_AA_{str(time)}")
+        plot_panel(DelPres_tairAE, lat_indexer, f"{outdir}/DelPres_tairAE_{str(time)}")
+        plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, f"DelPhi_tairAE_AA_{str(time)}", outdir)
 
         # Plot DelPres_tairAE
-        plot_panel(DelPhi_tairAE, lat_indexer, f"debug/DelPhi_tairAE_{str(time)}")
-        plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, f"DelPhi_tairAE_AA_{str(time)}")
+        plot_panel(DelPhi_tairAE, lat_indexer, f"{outdir}/DelPhi_tairAE_{str(time)}")
+        plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, f"DelPhi_tairAE_AA_{str(time)}", outdir)
 
     else:
-        plot_timeseries(tair_AE.latitude, tair_AE.isel(level=0), f"tair_AE_{float(tair_AE.level[0])}Pa_{str(time)}")
-        plot_timeseries(DelPres_tairAE.latitude, DelPres_tairAE.isel(level=0), f"DelPres_tairAE{float(DelPres_tairAE.level[0])}Pa_{str(time)}")
-        plot_panel(tair_AE, lat_indexer, "debug/tair_AE_slice")
-        plot_timeseries(DelPres_tairAE_AA.level, DelPres_tairAE_AA, f"DelPres_tairAE_AA_slice_{str(time)}")
+        plot_timeseries(tair_AE.latitude, tair_AE.isel(level=0), f"tair_AE_{float(tair_AE.level[0])}Pa_{str(time)}", outdir)
+        plot_timeseries(DelPres_tairAE.latitude, DelPres_tairAE.isel(level=0),
+                         f"DelPres_tairAE{float(DelPres_tairAE.level[0])}Pa_{str(time)}", outdir)
+        plot_panel(tair_AE, lat_indexer, "{outdir}/tair_AE_slice")
+        plot_timeseries(DelPres_tairAE_AA.level, DelPres_tairAE_AA, f"DelPres_tairAE_AA_slice_{str(time)}", outdir)
 
         # Plot DelPres_tairAE
-        plot_panel(DelPres_tairAE, lat_indexer, f"debug/DelPres_tairAE_slice_{str(time)}")
-        plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, f"DelPhi_tairAE_AA_slice_{str(time)}")
+        plot_panel(DelPres_tairAE, lat_indexer, f"{outdir}/DelPres_tairAE_slice_{str(time)}")
+        plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, f"DelPhi_tairAE_AA_slice_{str(time)}", outdir)
 
         # Plot DelPres_tairAE
-        plot_panel(DelPhi_tairAE, lat_indexer, f"debug/DelPhi_tairAE_slice_{str(time)}")
-        plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, f"DelPhi_tairAE_AA_slice_{str(time)}")
+        plot_panel(DelPhi_tairAE, lat_indexer, f"{outdir}/DelPhi_tairAE_slice_{str(time)}")
+        plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, f"DelPhi_tairAE_AA_slice_{str(time)}", outdir)
 
 def plot_panel(data, lat_indexer, title):
     # Get the number of vertical levels
@@ -507,11 +513,10 @@ def main(args):
     sliced_data = data.sel({vertical_coord_indexer: slice(1000, 100000)})
     analyse_timeseries(sliced_data, varlist, times, track, slice_flag=True)
 
-    time = pd.Timestamp("2007-09-09 00:00")
-    analyse_tair(data, time, track, varlist)
-
-    analyse_tair_AE(data, time, track, varlist)
-    analyse_tair_AE(sliced_data, time, track, varlist, slice_flag=True)
+    for time in pd.date_range(start="2007-09-08 22:00", periods=4, freq='1H'):
+        analyse_tair(data, time, track, varlist)
+        analyse_tair_AE(data, time, track, varlist)
+        analyse_tair_AE(sliced_data, time, track, varlist, slice_flag=True)
 
 
 if __name__ == "__main__":
