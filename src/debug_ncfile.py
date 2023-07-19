@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/17 14:39:44 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/19 12:28:06 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/19 12:28:33 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -501,11 +501,11 @@ def main(args):
     track = pd.read_csv(trackfile, parse_dates=[0], delimiter=";", index_col="time")
     times = pd.to_datetime(track.index)
 
-    #analyse_timeseries(data, varlist, times, track)
+    analyse_timeseries(data, varlist, times, track)
 
     # Slice the data for levels from 100000 to 100
     sliced_data = data.sel({vertical_coord_indexer: slice(1000, 100000)})
-    #analyse_timeseries(sliced_data, varlist, times, track, slice_flag=True)
+    analyse_timeseries(sliced_data, varlist, times, track, slice_flag=True)
 
     time = pd.Timestamp("2007-09-09 00:00")
     analyse_tair(data, time, track, varlist)
