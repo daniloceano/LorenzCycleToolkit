@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/17 14:39:44 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/19 10:45:32 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/19 10:46:52 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -430,7 +430,7 @@ def analyse_tair_AE(data, time, track, varlist, slice_flag=False):
     if slice_flag == False:
         # Plot tair_AE
         plot_panel(tair_AE, lat_indexer, "debug/tair_AE")
-        plot_timeseries(tair_AE.latitude, tair_AE.isel(level=0), f"tair_AE for: {float(tair_AE.level[0])}")
+        plot_timeseries(tair_AE.latitude, tair_AE.isel(level=0), f"tair_AE_{float(tair_AE.level[0])}hPa")
         plot_timeseries(DelPres_tairAE_AA.level, DelPres_tairAE_AA, "DelPres_tairAE_AA")
         print(f"plotting tair_AE for: {float(tair_AE.level[0])}")
 
@@ -443,7 +443,7 @@ def analyse_tair_AE(data, time, track, varlist, slice_flag=False):
         plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, "DelPhi_tairAE_AA")
 
     else:
-        plot_timeseries(tair_AE.latitude, tair_AE.isel(level=0), f"tair_AE for: {float(tair_AE.level[0])}")
+        plot_timeseries(tair_AE.latitude, tair_AE.isel(level=0), f"tair_AE_{float(tair_AE.level[0])}Pa")
         plot_panel(tair_AE, lat_indexer, "debug/tair_AE_slice")
         plot_timeseries(DelPres_tairAE_AA.level, DelPres_tairAE_AA, "DelPres_tairAE_AA_slice")
 
