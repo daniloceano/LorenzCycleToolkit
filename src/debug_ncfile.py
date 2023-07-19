@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/17 14:39:44 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/19 17:22:32 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/19 17:26:44 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -317,7 +317,7 @@ def analyse_timeseries(data, varlist, times, track, slice_flag=False):
         plot_timeseries(times, ca_series, "Ca", outdir)
         plot_timeseries(times, DelPhi_tairAE_series, "DelPhi_tairAE", outdir)
         plot_timeseries(times, tair_v_ZE_sigma_AA_series, "tair_v_ZE_sigma_AA", outdir)
-        plot_timeseries(times, DelPres_tairAE_series, "DelPres_tairAE, outdir")
+        plot_timeseries(times, DelPres_tairAE_series, "DelPres_tairAE, outdir", outdir)
         plot_timeseries(times, omega_tair_ZE_series, "omega_tair_ZE", outdir)
         plot_timeseries(times, sigma_series, "Static Stability", outdir)
         plot_timeseries(times, tair_series, "Temperature", outdir)
