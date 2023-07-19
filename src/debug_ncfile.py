@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/17 14:39:44 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/19 11:08:53 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/19 12:28:06 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -429,33 +429,33 @@ def analyse_tair_AE(data, time, track, varlist, slice_flag=False):
 
     if slice_flag == False:
         # Plot tair_AE
-        plot_panel(tair_AE, lat_indexer, "debug/tair_AE")
-        plot_timeseries(tair_AE.latitude, tair_AE.isel(level=0), f"tair_AE_{float(tair_AE.level[0])}Pa")
-        plot_timeseries(DelPres_tairAE.latitude, DelPres_tairAE.isel(level=0), f"tair_AE_{float(DelPres_tairAE.level[0])}Pa")
-        plot_timeseries(DelPres_tairAE_AA.level, DelPres_tairAE_AA, "DelPres_tairAE_AA")
+        plot_panel(tair_AE, lat_indexer, f"debug/tair_AE{str(time)}")
+        plot_timeseries(tair_AE.latitude, tair_AE.isel(level=0), f"tair_AE_{float(tair_AE.level[0])}Pa_{str(time)}")
+        plot_timeseries(DelPres_tairAE.latitude, DelPres_tairAE.isel(level=0), f"DelPres_tairAE{float(DelPres_tairAE.level[0])}Pa")
+        plot_timeseries(DelPres_tairAE_AA.level, DelPres_tairAE_AA, f"DelPres_tairAE_AA_{str(time)}")
         print(f"plotting tair_AE for: {float(tair_AE.level[0])}")
 
         # Plot DelPres_tairAE
-        plot_panel(DelPres_tairAE, lat_indexer, "debug/DelPres_tairAE")
-        plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, "DelPhi_tairAE_AA")
+        plot_panel(DelPres_tairAE, lat_indexer, f"debug/DelPres_tairAE_{str(time)}")
+        plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, f"DelPhi_tairAE_AA_{str(time)}")
 
         # Plot DelPres_tairAE
-        plot_panel(DelPhi_tairAE, lat_indexer, "debug/DelPhi_tairAE")
-        plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, "DelPhi_tairAE_AA")
+        plot_panel(DelPhi_tairAE, lat_indexer, f"debug/DelPhi_tairAE_{str(time)}")
+        plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, f"DelPhi_tairAE_AA_{str(time)}")
 
     else:
-        plot_timeseries(tair_AE.latitude, tair_AE.isel(level=0), f"tair_AE_{float(tair_AE.level[0])}Pa")
-        plot_timeseries(DelPres_tairAE.latitude, DelPres_tairAE.isel(level=0), f"tair_AE_{float(DelPres_tairAE.level[0])}Pa")
+        plot_timeseries(tair_AE.latitude, tair_AE.isel(level=0), f"tair_AE_{float(tair_AE.level[0])}Pa_{str(time)}")
+        plot_timeseries(DelPres_tairAE.latitude, DelPres_tairAE.isel(level=0), f"DelPres_tairAE{float(DelPres_tairAE.level[0])}Pa_{str(time)}")
         plot_panel(tair_AE, lat_indexer, "debug/tair_AE_slice")
-        plot_timeseries(DelPres_tairAE_AA.level, DelPres_tairAE_AA, "DelPres_tairAE_AA_slice")
+        plot_timeseries(DelPres_tairAE_AA.level, DelPres_tairAE_AA, f"DelPres_tairAE_AA_slice_{str(time)}")
 
         # Plot DelPres_tairAE
-        plot_panel(DelPres_tairAE, lat_indexer, "debug/DelPres_tairAE_slice")
-        plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, "DelPhi_tairAE_AA_slice")
+        plot_panel(DelPres_tairAE, lat_indexer, f"debug/DelPres_tairAE_slice_{str(time)}")
+        plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, f"DelPhi_tairAE_AA_slice_{str(time)}")
 
         # Plot DelPres_tairAE
-        plot_panel(DelPhi_tairAE, lat_indexer, "debug/DelPhi_tairAE_slice")
-        plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, "DelPhi_tairAE_AA_slice")
+        plot_panel(DelPhi_tairAE, lat_indexer, f"debug/DelPhi_tairAE_slice_{str(time)}")
+        plot_timeseries(DelPhi_tairAE_AA.level, DelPhi_tairAE_AA, f"DelPhi_tairAE_AA_slice_{str(time)}")
 
 def plot_panel(data, lat_indexer, title):
     # Get the number of vertical levels
