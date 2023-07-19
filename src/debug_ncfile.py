@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/17 14:39:44 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/19 17:28:26 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/19 17:30:14 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -429,7 +429,7 @@ def analyse_tair_AE(data, time, track, varlist, slice_flag=False):
     print(float(DelPhi_tairAE_AA.integrate(coord=vertical_coord_indexer)))
 
     outdir = f"debug/analysis_{str(time)}"
-    os.makedirs(outdir)
+    os.makedirs(outdir, exist_ok=True)
 
     if slice_flag == False:
         # Plot tair_AE
@@ -507,7 +507,7 @@ def main(args):
     track = pd.read_csv(trackfile, parse_dates=[0], delimiter=";", index_col="time")
     times = pd.to_datetime(track.index)
 
-    analyse_timeseries(data, varlist, times, track)
+    # analyse_timeseries(data, varlist, times, track)
 
     # Slice the data for levels from 100000 to 100
     sliced_data = data.sel({vertical_coord_indexer: slice(1000, 100000)})
