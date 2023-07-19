@@ -1,12 +1,12 @@
 # **************************************************************************** #
 #                                                                              #
 #                                                         :::      ::::::::    #
-#    determine_periodv2.py                              :+:      :+:    :+:    #
+#    determine_periods.py                               :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
+#    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/05/19 19:06:47 by danilocs          #+#    #+#              #
-#    Updated: 2023/07/13 15:57:10 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/19 19:43:14 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -700,6 +700,6 @@ def determine_periods(track_file, output_directory):
 # Testing #
 if __name__ == "__main__":
 
-    track_file = '../LEC_results-10MostIntense/10MostIntense-19920334_ERA5_track-15x15/10MostIntense-19920334_ERA5_track-15x15_track'
+    track_file = '../../SWSA-cyclones_energetic-analysis/LEC_results-q0.99/RG3-q0.99-19990619_ERA5_track-15x15/RG3-q0.99-19990619_ERA5_track-15x15_track'
     output_directory = './'
     determine_periods(track_file, output_directory)
