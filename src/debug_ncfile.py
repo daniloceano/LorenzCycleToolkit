@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/17 14:39:44 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/19 17:30:14 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/19 17:32:34 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -452,7 +452,7 @@ def analyse_tair_AE(data, time, track, varlist, slice_flag=False):
         plot_timeseries(tair_AE.latitude, tair_AE.isel(level=0), f"tair_AE_{float(tair_AE.level[0])}Pa_{str(time)}", outdir)
         plot_timeseries(DelPres_tairAE.latitude, DelPres_tairAE.isel(level=0),
                          f"DelPres_tairAE{float(DelPres_tairAE.level[0])}Pa_{str(time)}", outdir)
-        plot_panel(tair_AE, lat_indexer, "{outdir}/tair_AE_slice")
+        plot_panel(tair_AE, lat_indexer, f"{outdir}/tair_AE_slice")
         plot_timeseries(DelPres_tairAE_AA.level, DelPres_tairAE_AA, f"DelPres_tairAE_AA_slice_{str(time)}", outdir)
 
         # Plot DelPres_tairAE
