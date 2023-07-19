@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/17 14:39:44 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/19 10:20:37 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/19 10:23:16 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -506,6 +506,7 @@ def main(args):
     # analyse_tair(data, time, track, varlist)
 
     analyse_tair_AE(data, time, track, varlist)
+    analyse_tair_AE(data, time, track, varlist, slice_flag=True)
 
 
 if __name__ == "__main__":
