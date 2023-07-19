@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/17 14:39:44 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/19 10:23:30 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/19 10:34:24 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -420,6 +420,11 @@ def analyse_tair_AE(data, time, track, varlist, slice_flag=False):
     DelPhi_tairAE = (tair_AE * tair_AE["coslats"]).differentiate("rlats")
 
     tair_AE_AA = CalcAreaAverage(tair_AE, ylength)
+
+    print('--------')
+    print(tair_AE_AA)
+    print('--------')
+
     DelPres_tairAE_AA = CalcAreaAverage(DelPres_tairAE, ylength)
     DelPhi_tairAE_AA = CalcAreaAverage(DelPhi_tairAE, ylength)
 
