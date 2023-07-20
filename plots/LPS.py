@@ -1,10 +1,14 @@
-'''
- # @ Author: Dnailo Couto de Souza
- # @ Create Time: 2022-06-14 16:32:27
- # @ Modified by: Danilo Couto de Souza
- # @ Modified time: 2023-05-14 19:08:49
- # @ Description: Lorenz Phase Space main function
- '''
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    LPS.py                                             :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2022/06/14 16:32:27 by Danilo            #+#    #+#              #
+#    Updated: 2023/07/20 14:47:10 by Danilo           ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
 
 import pandas as pd
 import matplotlib.colors as colors
@@ -55,9 +59,9 @@ def MarkerSizeKe(Ke, ke_label, labelsize):
     leg._legend_box.align = "center"
     plt.setp(leg.get_title(), color = '#383838')
     plt.setp(leg.get_title(),fontsize = labelsize)
-    for i in range(len(leg.legendHandles)):
-        leg.legendHandles[i].set_color('#383838')
-        leg.legendHandles[i].set_edgecolor('gray')
+    for i in range(len(leg.legend_handles)):
+        leg.legend_handles[i].set_color('#383838')
+        leg.legend_handles[i].set_edgecolor('gray')
     
     return Ke
 
@@ -200,6 +204,8 @@ def LorenzPhaseSpace(ax, zoom=False, example=False, **kwargs):
         norm = colors.TwoSlopeNorm(vmin=-7, vcenter=0, vmax=15)
         # pad for labels
         labelpad = 38
+        # whether to extend cbar
+        extend = 'both'
         
     else:
         # Labels
@@ -209,10 +215,11 @@ def LorenzPhaseSpace(ax, zoom=False, example=False, **kwargs):
         ke_label = 'Ke - '+r' $J\,m^{-2}$'
         limits_zoomed(ax, **kwargs)
         minGe, maxGe =  get_min_vals('Ge', **kwargs), get_max_vals('Ge', **kwargs)
-        if minGe > 0:
-            minGe = -1
-        elif maxGe < 0:
-            maxGe = 1
+        if abs(maxGe) > abs(minGe):
+            minGe = -maxGe
+        else:
+            maxGe = -minGe
+        print(f"min Ge: {minGe}, max Ge: {maxGe}")
         norm =  colors.TwoSlopeNorm(vmin=minGe, vcenter=0, vmax=maxGe)
         # pad for labels
         labelpad = 5
@@ -222,6 +229,7 @@ def LorenzPhaseSpace(ax, zoom=False, example=False, **kwargs):
         ax.axvline(x=0,linewidth=lw,c=c,alpha=alpha,zorder=1)
         ax.plot(range(0,-40,-1),range(0,40,1),
                 linewidth=lw/3,c=c,alpha=alpha,zorder=1)
+        extend = 'neither'
 
     labelsize = kwargs.get('labelsize', 14)
 
@@ -267,7 +275,7 @@ def LorenzPhaseSpace(ax, zoom=False, example=False, **kwargs):
     # Colorbar
     cax = ax.inset_axes([ax.get_position().x1+0.12,
                     ax.get_position().y0+0.35,0.02, ax.get_position().height/1.5])
-    cbar = plt.colorbar(dots, extend='both',cax=cax)
+    cbar = plt.colorbar(dots, extend=extend,cax=cax)
     
     # Write labels
     ax.set_xlabel(ck_label, fontsize=labelsize,labelpad=labelpad,c='#383838')
@@ -279,3 +287,30 @@ def LorenzPhaseSpace(ax, zoom=False, example=False, **kwargs):
          t.set_fontsize(10) 
     
     plt.subplots_adjust(right=0.84, bottom=0.1)
+
+if __name__ == '__main__':
+
+    outfile = '../inputs/sample_results.csv'
+
+    df = pd.read_csv(outfile, index_col=[0])
+    df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
+
+    # Set datetime to the date range
+    start = pd.to_datetime(df['Datetime'].iloc[0]).strftime('%Y-%m-%d %H:%M')
+    end = pd.to_datetime(df['Datetime'].iloc[-1]).strftime('%Y-%m-%d %H:%M')
+
+    # Plot example
+    kwargs = {'terms':[], 'title': 'sample', 'datasource': 'sample', 'start': start, 'end': end}
+    terms = {'Ca': df['Ca'], 'Ck': df['Ck'],  'Ge': df['Ge'], 'Ke': df['Ke']}
+    kwargs['terms'].append(terms) 
+
+    for zoom in [False, True]:
+        plt.close('all')
+        plt.figure(figsize=(10,10))
+        ax = plt.gca()
+        LorenzPhaseSpace(ax, zoom=zoom, **kwargs)
+        zoom_suffix = "_zoom" if zoom else ""
+        fname = f"./LPS_test{zoom_suffix}.png"
+        with plt.rc_context({'savefig.dpi': 500}):
+                plt.savefig(fname)
+        print(f"{fname} created!")
