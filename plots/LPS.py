@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/06/14 16:32:27 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/20 21:25:27 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/21 14:21:27 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -51,7 +51,7 @@ def plot_legend(ax, cmap):
               borderpad=1.5, scatteryoffsets=[0.1], framealpha=1,
               handletextpad=1.5, scatterpoints=1)
 
-def annotate_plot(ax, **kwargs):
+def annotate_plot(ax, LPS_type, **kwargs):
     fontsize = kwargs.get('fontsize', 10)
     title = kwargs.get('title', '')
     datasource = kwargs.get('datasource', '')
@@ -68,70 +68,68 @@ def annotate_plot(ax, **kwargs):
     ax.text(0.14,1.025,str(kwargs['end']),fontsize=14,c='#242424',
             horizontalalignment='left',transform=ax.transAxes)
     
-    y_upper = 'Eddy is gaining potential energy \n from the mean flow'
-    y_lower = 'Eddy is providing potential energy \n to the mean flow'
-    x_left = 'Eddy is gaining kinetic energy \n from the mean flow'
-    x_right = 'Eddy is providing kinetic energy \n to the mean flow'
-    col_lower = 'Subsidence decreases \n eddy potential energy'
-    col_upper = 'Latent heat release feeds \n eddy potential energy'
-    lower_left = 'Barotropic instability'
-    upper_left = 'Barotropic and baroclinic instabilities'
-    lower_right = 'Eddy is feeding the local atmospheric circulation'
-    upper_right = 'Baroclinic instability'
+    labels = get_labels(LPS_type, zoom)
         
-    ax.text(-0.07,-0.02,y_lower,
-            rotation=90,fontsize=fontsize,horizontalalignment='center',c='#19616C',
-            transform=ax.transAxes)
-    ax.text(-0.07,0.5,y_upper,
-            rotation=90,fontsize=fontsize,horizontalalignment='center',c='#CF6D66',
-            transform=ax.transAxes)
-    ax.text(0.22,-0.07,x_left,
-            fontsize=fontsize,horizontalalignment='center',c='#CF6D66',
-            transform=ax.transAxes)
-    ax.text(0.75,-0.07,x_right,
-            fontsize=fontsize,horizontalalignment='center',c='#19616C',
-            transform=ax.transAxes)
-    ax.text(1.13,0.49,col_lower,
-            rotation=270,fontsize=fontsize,horizontalalignment='center',c='#19616C'
-            ,transform=ax.transAxes)
-    ax.text(1.13,0.75,col_upper,
-            rotation=270,fontsize=fontsize,horizontalalignment='center',c='#CF6D66',
-            transform=ax.transAxes)
-    ax.text(0.22,0.03,lower_left,
-            fontsize=fontsize,horizontalalignment='center',c='#660066',
-            verticalalignment='center', transform=ax.transAxes)
-    ax.text(0.22,0.97,upper_left,
-            fontsize=fontsize,horizontalalignment='center',c='#800000',
-            verticalalignment='center', transform=ax.transAxes)
-    ax.text(0.75,0.03,lower_right,
-            fontsize=fontsize,horizontalalignment='center',c='#000066',
-            verticalalignment='center', transform=ax.transAxes)
-    ax.text(0.75,0.97,upper_right,
-            fontsize=fontsize,horizontalalignment='center',c='#660066',
-            verticalalignment='center', transform=ax.transAxes)
+    ax.text(-0.07,-0.02, labels['y_lower'], rotation=90, fontsize=fontsize,
+             horizontalalignment='center', c='#19616C', transform=ax.transAxes)
+    ax.text(-0.07,0.5, labels['y_upper'], rotation=90, fontsize=fontsize,
+             horizontalalignment='center', c='#CF6D66', transform=ax.transAxes)
     
-def gradient_lines(ax):
-    alpha, offsetalpha = 0.3, 20
-    lw, c = 2.5, '#383838'
-    offsetx, offsety = 18, 6
-    for i in range(7):
-        ax.axhline(y=0+(i/offsetx),zorder=0+(i/5),linewidth=lw,
-                   alpha=alpha-(i/offsetalpha),c=c)
-        ax.axhline(y=0-(i/offsetx),zorder=0+(i/5),linewidth=lw,
-                   alpha=alpha-(i/offsetalpha),c=c)
-        ax.axvline(x=0+(i/offsety),zorder=0+(i/5),linewidth=lw,
-               alpha=alpha-(i/offsetalpha),c=c)
-        ax.axvline(x=0-(i/offsety),zorder=0+(i/5),linewidth=lw,
-               alpha=alpha-(i/offsetalpha),c=c)
+    ax.text(0.22,-0.07, labels['x_left'], fontsize=fontsize,
+             horizontalalignment='center', c='#CF6D66', transform=ax.transAxes)
+    ax.text(0.75,-0.07,labels['x_right'], fontsize=fontsize,
+            horizontalalignment='center', c='#19616C', transform=ax.transAxes)
+    
+    ax.text(1.13,0.49, labels['col_lower'], rotation=270, fontsize=fontsize, 
+            horizontalalignment='center', c='#19616C', transform=ax.transAxes)
+    ax.text(1.13,0.75, labels['col_upper'], rotation=270,fontsize=fontsize,
+            horizontalalignment='center', c='#CF6D66', transform=ax.transAxes)
+    
+    ax.text(0.22,0.03, labels['lower_left'], fontsize=fontsize, horizontalalignment='center',
+            c='#660066', verticalalignment='center', transform=ax.transAxes)
+    ax.text(0.22,0.97, labels['upper_left'], fontsize=fontsize,horizontalalignment='center',
+            c='#800000', verticalalignment='center', transform=ax.transAxes)
+    
+    ax.text(0.75,0.03, labels['lower_right'], fontsize=fontsize,horizontalalignment='center',
+            c='#000066', verticalalignment='center', transform=ax.transAxes)
+    ax.text(0.75,0.97,labels['upper_right'], fontsize=fontsize,horizontalalignment='center',
+            c='#660066', verticalalignment='center', transform=ax.transAxes)
+    
+def gradient_lines(ax, LPS_type):
+    lw, c = 0.5, '#383838'
+    num_lines = 20
+    x_ticks = ax.get_xticks()
+    y_ticks = ax.get_yticks()
+
+    x_previous0 = x_ticks[int((len(x_ticks))/2)-1] * 0.17
+    y_previous0 = y_ticks[int((len(y_ticks))/2)-1] * 0.17
+
+    x_offsets = np.linspace(x_previous0, 0, num_lines)
+    y_offsets = np.linspace(y_previous0, 0, num_lines)
+
+    alpha_values = np.linspace(0, 0.8, num_lines)
+
+    for i, alpha in enumerate(alpha_values):
+        ax.axhline(y=0 + y_offsets[i], linewidth=lw, alpha=alpha, c=c)
+        ax.axhline(y=0 - y_offsets[i], linewidth=lw, alpha=alpha, c=c)
+        ax.axvline(x=0 + x_offsets[i], linewidth=lw, alpha=alpha, c=c)
+        ax.axvline(x=0 - x_offsets[i], linewidth=lw, alpha=alpha, c=c)
+
+    if LPS_type == 'mixed':
+        for i, alpha in enumerate(alpha_values):
+            x, y = x_offsets[i], y_offsets[i]
+            ax.plot([x, -x_ticks[-1] + x], [y, y_ticks[-1] + y], linewidth=lw, alpha=alpha, c=c)
+            ax.plot([-x, -x_ticks[-1] - x], [-y, y_ticks[-1] - y], linewidth=lw, alpha=alpha, c=c)
         
-        # Vertical line showing when Ca is more important than Ck
-        n = 15
-        plt.plot(np.arange(0-(i/offsety),-n-(i/offsety),-1),
-                 np.arange(0,n), c=c,zorder=1, 
-                 alpha=0.2-(i/offsetalpha*.5))
-        plt.plot(np.arange(0+(i/offsety),-n+(i/offsety),-1),
-                 np.arange(0,n), c=c,zorder=1, linewidth=lw,
-                 alpha=0.2-(i/offsetalpha*.5))
+    # Vertical line showing when y_label is more important than x_label
+    # if LPS_type == 'mixed':
+    #     x_min, x_max = ax.get_xlim()
+    #     plt.plot(np.arange(0-(i/offsety),-x_max-(i/offsety),-1),
+    #             np.arange(0,x_max), c=c,zorder=1, 
+    #             alpha=0.2-(i/offsetalpha*.5))
+    #     plt.plot(np.arange(0+(i/offsety),-x_max+(i/offsety),-1),
+    #             np.arange(0,x_max), c=c,zorder=1, linewidth=lw,
+    #             alpha=0.2-(i/offsetalpha*.5))
         
 def get_max_vals(term, **kwargs):
     max_values = []
@@ -149,35 +147,35 @@ def get_min_vals(term, **kwargs):
 
 def limits_zoomed(ax, **kwargs):
     # Get limits
-    minCk, maxCk =  get_min_vals('Ck', **kwargs), get_max_vals('Ck', **kwargs)
-    minCa, maxCa = get_min_vals('Ca', **kwargs), get_max_vals('Ca', **kwargs)
+    min_x, max_x =  get_min_vals('x_axis', **kwargs), get_max_vals('x_axis', **kwargs)
+    min_y, max_y = get_min_vals('y_axis', **kwargs), get_max_vals('y_axis', **kwargs)
 
-    # Plot limits for Ck
-    if minCk < -1:
-        minLimitCk = minCk*1.3
+    # Plot limits for x_label
+    if min_x < -1:
+        xlabel_min = min_x*1.3
     else:
-        minLimitCk = -1
-    if maxCk > 3:
-        maxLimitCk = maxCk*1.3
+        xlabel_min = -1
+    if max_x > 3:
+        xlabel_max = max_x*1.3
     else:
-        maxLimitCk = 3
-    ax.set_xlim(minLimitCk,maxLimitCk)
+        xlabel_max = 3
+    ax.set_xlim(xlabel_min,xlabel_max)
 
     # Plot limits for Ca
-    if minCa < -0.5:
-        minLimitCa =minCa*1.3
+    if min_y < -0.5:
+        ylabel_min =min_y*1.3
     else:
-        minLimitCa = -0.5
-    if maxCa > 2:
-        maxLimitCa = maxCa*1.3
+        ylabel_min = -0.5
+    if max_y > 2:
+        ylabel_max = max_y*1.3
     else:
-        maxLimitCa = 2.5
-    ax.set_ylim(minLimitCa,maxLimitCa)
+        ylabel_max = 2.5
+    ax.set_ylim(ylabel_min,ylabel_max)
 
-def get_labels(label_type, zoom=False):
+def get_labels(LPS_type, zoom=False):
     labels_dict = {}
 
-    if label_type == 'mixed':
+    if LPS_type == 'mixed':
         labels_dict['y_upper'] = 'Eddy is gaining potential energy \n from the mean flow'
         labels_dict['y_lower'] = 'Eddy is providing potential energy \n to the mean flow'
         labels_dict['x_left'] = 'Eddy is gaining kinetic energy \n from the mean flow'
@@ -200,17 +198,17 @@ def get_labels(label_type, zoom=False):
             labels_dict['color_label'] = 'Ge - $W\,m^{-2}$'
             labels_dict['size_label'] = 'Ke - $J\,m^{-2}$'
 
-    elif label_type == 'baroclinic':
-        labels_dict['y_upper'] = ''
-        labels_dict['y_lower'] = ''
-        labels_dict['x_left'] = ''
-        labels_dict['x_right'] = ''
-        labels_dict['col_lower'] = ''
-        labels_dict['col_upper'] = ''
+    elif LPS_type == 'baroclinic':
+        labels_dict['y_upper'] = 'Eddy gains Potential Eneergy from zonal circulation'
+        labels_dict['y_lower'] = 'Eddy Kinetic Energy feeds Zonal Potential Energy'
+        labels_dict['x_left'] = 'Eddy is feeding the temperature gradient'
+        labels_dict['x_right'] = 'Eddy Potential Energy feeds zonal circulation\n and temperature gradient'
+        labels_dict['col_lower'] = 'Subsidence decreases \n eddy potential energy'
+        labels_dict['col_upper'] = 'Latent heat release feeds \n eddy potential energy'
         labels_dict['lower_left'] = ''
         labels_dict['upper_left'] = ''
         labels_dict['lower_right'] = ''
-        labels_dict['upper_right'] = ''
+        labels_dict['upper_right'] = 'Baroclinic instability'
         
         if zoom == False:
             labels_dict['x_label'] = 'Conversion from zonal to eddy Kinetic Energy (Ce - $W\,m^{-2})$'
@@ -223,7 +221,7 @@ def get_labels(label_type, zoom=False):
             labels_dict['color_label'] = 'Ge - $W\,m^{-2}$'
             labels_dict['size_label'] = 'Ke - $J\,m^{-2}$'
 
-    elif label_type == 'barotropic':
+    elif LPS_type == 'barotropic':
         labels_dict['y_upper'] = ''
         labels_dict['y_lower'] = ''
         labels_dict['x_left'] = ''
@@ -249,21 +247,27 @@ def get_labels(label_type, zoom=False):
     return labels_dict
 
 
-def LorenzPhaseSpace(ax, type, zoom=False, example=False, **kwargs):
-    
+def LorenzPhaseSpace(ax, LPS_type, zoom=False, example=False, **kwargs):
     if zoom == False:
         #Limits
-        ax.set_xlim(-30,30)
-        ax.set_ylim(-6,12)
+        if LPS_type == 'mixed':
+            ax.set_xlim(-70,70)
+            ax.set_ylim(-15,15)
+        elif LPS_type == 'baroclinic':
+            ax.set_xlim(-70,70)
+            ax.set_ylim(-20,20)
+        elif LPS_type == 'barotropic':
+            ax.set_xlim(-70,70)
+            ax.set_ylim(-220,200)
         
         # Write physical meaning of each quadrant
         plt.tick_params(labelsize=kwargs.get('fontsize', 10))
-        annotate_plot(ax, **kwargs)
+        annotate_plot(ax, LPS_type, **kwargs)
 
         # Gradient lines in the center of the plot
-        gradient_lines(ax)
+        gradient_lines(ax, LPS_type)
 
-        # limits for Ge
+        # limits for coors
         norm = colors.TwoSlopeNorm(vmin=-7, vcenter=0, vmax=15)
 
         # pad for labels
@@ -275,12 +279,12 @@ def LorenzPhaseSpace(ax, type, zoom=False, example=False, **kwargs):
     else:
         # Limits
         limits_zoomed(ax, **kwargs)
-        minGe, maxGe =  get_min_vals('Ge', **kwargs), get_max_vals('Ge', **kwargs)
-        if abs(maxGe) > abs(minGe):
-            minGe = -maxGe
+        min_colors, max_colors =  get_min_vals('circles_colors', **kwargs), get_max_vals('circles_colors', **kwargs)
+        if abs(max_colors) > abs(min_colors):
+            min_colors = -max_colors
         else:
-            maxGe = -minGe
-        norm =  colors.TwoSlopeNorm(vmin=minGe, vcenter=0, vmax=maxGe)
+            max_colors = -min_colors
+        norm =  colors.TwoSlopeNorm(vmin=min_colors, vcenter=0, vmax=max_colors)
 
         # pad for labels
         labelpad = 5
@@ -293,16 +297,15 @@ def LorenzPhaseSpace(ax, type, zoom=False, example=False, **kwargs):
                 linewidth=lw/3,c=c,alpha=alpha,zorder=1)
         extend = 'neither'
     
-    labels = get_labels(label_type=type, zoom=zoom)
+    labels = get_labels(LPS_type, zoom)
     labelsize = kwargs.get('labelsize', 14)
 
     # Loop through all list of terms in kwargs
     for term_list in kwargs['terms']:    
-
         y_axis = term_list['y_axis']
         x_axis = term_list['x_axis']
         circles_colors = term_list['circles_colors']
-        circles_sizes = term_list['circles_colors']
+        circles_sizes = term_list['circles_size']
 
         # Line plot
         ax.plot(x_axis, y_axis,'-',c='gray',linewidth=3)
@@ -323,8 +326,7 @@ def LorenzPhaseSpace(ax, type, zoom=False, example=False, **kwargs):
                 c='None',s=marker_sizes.loc[marker_sizes.idxmax()]*1.1,
                 zorder=100,edgecolors='k', linewidth=3)
         
-        # Circles representing Ck on x-axis and Ca on y-axis, while the
-        # colors represent Ge and the circle sizes, Ke.
+        # Circles colors represent Ge and the circle sizes represent Ke.
         dots = ax.scatter(x_axis, y_axis, c=circles_colors, cmap=cmocean.cm.curl,s=marker_sizes,zorder=100,
                         edgecolors='grey', norm=norm)
         
@@ -364,19 +366,34 @@ if __name__ == '__main__':
     start = pd.to_datetime(df['Datetime'].iloc[0]).strftime('%Y-%m-%d %H:%M')
     end = pd.to_datetime(df['Datetime'].iloc[-1]).strftime('%Y-%m-%d %H:%M')
 
-    # Plot example
+    # Kwargs for plotting LPS example
     kwargs = {'terms':[], 'title': 'sample', 'datasource': 'sample', 'start': start, 'end': end}
-    terms = {'Ca': df['Ca'], 'Ck': df['Ck'],  'Ge': df['Ge'], 'Ke': df['Ke']}
-    kwargs['terms'].append(terms) 
 
-    for type in ['mixed', 'baroclinic', 'barotropic']:
+    # Kwargs for each kind of plot
+    terms_mixed = {'y_axis': df['Ca'], 'x_axis': df['Ck'],
+                     'circles_colors': df['Ge'], 'circles_size': df['Ke']}
+    term_baroclinic = {'y_axis': df['Ca'], 'x_axis': df['Ce'],
+                     'circles_colors': df['Ge'], 'circles_size': df['Ke']}
+    terms_barotropic = {'y_axis': df['BKz'], 'x_axis': df['Ck'],
+                     'circles_colors': df['Ge'], 'circles_size': df['Ke']}
+
+    for LPS_type, term_list in zip(['mixed', 'baroclinic', 'barotropic'],
+                               [terms_mixed, term_baroclinic, terms_barotropic]):
+        kwargs['terms'] = []
+        kwargs['terms'].append(term_list)
+
+        print("\n--------------------------")
+        print(f"Plotting for {LPS_type} terms\n")
+        for term in kwargs['terms'][0]:
+            print(f"axis: {term} term: {kwargs['terms'][0][term].name}")
+        
         for zoom in [False, True]:
             plt.close('all')
             plt.figure(figsize=(10,10))
             ax = plt.gca()
-            LorenzPhaseSpace(ax, type, zoom=zoom, **kwargs)
+            LorenzPhaseSpace(ax, LPS_type, zoom=zoom, **kwargs)
             zoom_suffix = "_zoom" if zoom else ""
-            fname = f"./LPS_test_{type}{zoom_suffix}.png"
+            fname = f"./LPS_test_{LPS_type}{zoom_suffix}.png"
             with plt.rc_context({'savefig.dpi': 500}):
                     plt.savefig(fname)
             print(f"{fname} created!")

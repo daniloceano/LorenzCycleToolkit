@@ -192,3 +192,9 @@ src/periods_didatic.png
 # testing LPS
 plots/LPS_test_zoom.png
 plots/LPS_test.png
+plots/LPS_test_baroclinic_zoom.png
+plots/LPS_test_baroclinic.png
+plots/LPS_test_barotropic_zoom.png
+plots/LPS_test_barotropic.png
+plots/LPS_test_mixed_zoom.png
+plots/LPS_test_mixed.png
