@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    LPS.py                                             :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
+#    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/06/14 16:32:27 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/21 14:21:27 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/21 18:36:27 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -70,10 +70,16 @@ def annotate_plot(ax, LPS_type, **kwargs):
     
     labels = get_labels(LPS_type, zoom)
         
-    ax.text(-0.07,-0.02, labels['y_lower'], rotation=90, fontsize=fontsize,
-             horizontalalignment='center', c='#19616C', transform=ax.transAxes)
-    ax.text(-0.07,0.5, labels['y_upper'], rotation=90, fontsize=fontsize,
-             horizontalalignment='center', c='#CF6D66', transform=ax.transAxes)
+    # Centering text annotations on y-axis
+    yticks, xticks = ax.get_yticks(), ax.get_xticks()
+    y_tick_0 = len(yticks) // 2
+    y_offset = 0.5 * (yticks[y_tick_0] - yticks[-1])  # Half the distance between two consecutive y-ticks
+    x_tick_pos = xticks[0] - ((xticks[1] - xticks[0])/12)
+
+    ax.text(x_tick_pos, yticks[0] - y_offset, labels['y_lower'], rotation=90, fontsize=fontsize,
+            horizontalalignment='center', c='#19616C', verticalalignment='center')
+    ax.text(x_tick_pos, yticks[-1] + y_offset, labels['y_upper'], rotation=90, fontsize=fontsize,
+            horizontalalignment='center', c='#CF6D66', verticalalignment='center')
     
     ax.text(0.22,-0.07, labels['x_left'], fontsize=fontsize,
              horizontalalignment='center', c='#CF6D66', transform=ax.transAxes)
@@ -107,7 +113,7 @@ def gradient_lines(ax, LPS_type):
     x_offsets = np.linspace(x_previous0, 0, num_lines)
     y_offsets = np.linspace(y_previous0, 0, num_lines)
 
-    alpha_values = np.linspace(0, 0.8, num_lines)
+    alpha_values = np.linspace(0, 0.6, num_lines)
 
     for i, alpha in enumerate(alpha_values):
         ax.axhline(y=0 + y_offsets[i], linewidth=lw, alpha=alpha, c=c)
@@ -120,16 +126,7 @@ def gradient_lines(ax, LPS_type):
             x, y = x_offsets[i], y_offsets[i]
             ax.plot([x, -x_ticks[-1] + x], [y, y_ticks[-1] + y], linewidth=lw, alpha=alpha, c=c)
             ax.plot([-x, -x_ticks[-1] - x], [-y, y_ticks[-1] - y], linewidth=lw, alpha=alpha, c=c)
-        
-    # Vertical line showing when y_label is more important than x_label
-    # if LPS_type == 'mixed':
-    #     x_min, x_max = ax.get_xlim()
-    #     plt.plot(np.arange(0-(i/offsety),-x_max-(i/offsety),-1),
-    #             np.arange(0,x_max), c=c,zorder=1, 
-    #             alpha=0.2-(i/offsetalpha*.5))
-    #     plt.plot(np.arange(0+(i/offsety),-x_max+(i/offsety),-1),
-    #             np.arange(0,x_max), c=c,zorder=1, linewidth=lw,
-    #             alpha=0.2-(i/offsetalpha*.5))
+    
         
 def get_max_vals(term, **kwargs):
     max_values = []
@@ -163,7 +160,7 @@ def limits_zoomed(ax, **kwargs):
 
     # Plot limits for Ca
     if min_y < -0.5:
-        ylabel_min =min_y*1.3
+        ylabel_min = min_y*1.3
     else:
         ylabel_min = -0.5
     if max_y > 2:
@@ -293,9 +290,18 @@ def LorenzPhaseSpace(ax, LPS_type, zoom=False, example=False, **kwargs):
         c,lw,alpha = '#383838',20,0.2
         ax.axhline(y=0,linewidth=lw,c=c,alpha=alpha,zorder=1)
         ax.axvline(x=0,linewidth=lw,c=c,alpha=alpha,zorder=1)
-        ax.plot(range(0,-40,-1),range(0,40,1),
-                linewidth=lw/3,c=c,alpha=alpha,zorder=1)
         extend = 'neither'
+
+        # Vertical lines for mixed LPS
+        if LPS_type == 'mixed':
+            min_x = int(round(ax.get_xlim()[0],-1)+5)
+            max_y = int(round(ax.get_ylim()[1],-1)-5)
+            if abs(min_x) > abs(max_y):
+                max_y = -min_x
+            else:
+                min_x = -max_y
+            ax.plot(range(0, min_x,-1),range(0, max_y, 1), linewidth=lw/3,
+                    c=c, alpha=alpha,zorder=1)
     
     labels = get_labels(LPS_type, zoom)
     labelsize = kwargs.get('labelsize', 14)
@@ -312,7 +318,6 @@ def LorenzPhaseSpace(ax, LPS_type, zoom=False, example=False, **kwargs):
         
         # Label for eddy kinectinc energy (Ke)
         marker_sizes = calculate_marker_size(circles_sizes)
-        # s = MarkerSizeKe(Ke, size_label, labelsize)['sizes']
     
         # arrows connecting dots
         ax.quiver(x_axis[:-1], y_axis[:-1],
