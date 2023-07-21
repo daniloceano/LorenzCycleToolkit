@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    LPS.py                                             :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
+#    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/06/14 16:32:27 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/20 17:41:50 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/20 21:25:27 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -190,17 +190,17 @@ def get_labels(label_type, zoom=False):
         labels_dict['upper_right'] = 'Baroclinic instability'
 
         if zoom == False:
-            labels_dict['ck_label'] = 'Conversion from zonal to eddy Kinetic Energy (Ck - $W\,m^{-2})$'
-            labels_dict['ca_label'] = 'Conversion from zonal to eddy Potential Energy (Ca - $W\,m^{-2})$'
-            labels_dict['ge_label'] = 'Generation of eddy Potential Energy (Ge - $W\,m^{-2})$'
-            labels_dict['ke_label'] = 'Eddy Kinect\n    Energy\n(Ke - $J\,m^{-2})$'
+            labels_dict['x_label'] = 'Conversion from zonal to eddy Kinetic Energy (Ck - $W\,m^{-2})$'
+            labels_dict['y_label'] = 'Conversion from zonal to eddy Potential Energy (Ca - $W\,m^{-2})$'
+            labels_dict['color_label'] = 'Generation of eddy Potential Energy (Ge - $W\,m^{-2})$'
+            labels_dict['size_label'] = 'Eddy Kinect\n    Energy\n(Ke - $J\,m^{-2})$'
         elif zoom == True:
-            labels_dict['ck_label'] = 'Ck - $W\,m^{-2}$'
-            labels_dict['ca_label'] = 'Ca - $W\,m^{-2}$'
-            labels_dict['ge_label'] = 'Ge - $W\,m^{-2}$'
-            labels_dict['ke_label'] = 'Ke - $J\,m^{-2}$'
+            labels_dict['x_label'] = 'Ck - $W\,m^{-2}$'
+            labels_dict['y_label'] = 'Ca - $W\,m^{-2}$'
+            labels_dict['color_label'] = 'Ge - $W\,m^{-2}$'
+            labels_dict['size_label'] = 'Ke - $J\,m^{-2}$'
 
-    if label_type == 'baroclinic':
+    elif label_type == 'baroclinic':
         labels_dict['y_upper'] = ''
         labels_dict['y_lower'] = ''
         labels_dict['x_left'] = ''
@@ -213,15 +213,38 @@ def get_labels(label_type, zoom=False):
         labels_dict['upper_right'] = ''
         
         if zoom == False:
-            labels_dict['ck_label'] = 'Conversion from zonal to eddy Kinetic Energy (Ck - $W\,m^{-2})$'
-            labels_dict['ca_label'] = 'Conversion from zonal to eddy Potential Energy (Ca - $W\,m^{-2})$'
-            labels_dict['ge_label'] = 'Generation of eddy Potential Energy (Ge - $W\,m^{-2})$'
-            labels_dict['ke_label'] = 'Eddy Kinect\n    Energy\n(Ke - $J\,m^{-2})$'
+            labels_dict['x_label'] = 'Conversion from zonal to eddy Kinetic Energy (Ce - $W\,m^{-2})$'
+            labels_dict['y_label'] = 'Conversion from zonal to eddy Potential Energy (Ca - $W\,m^{-2})$'
+            labels_dict['color_label'] = 'Generation of eddy Potential Energy (Ge - $W\,m^{-2})$'
+            labels_dict['size_label'] = 'Eddy Kinect\n    Energy\n(Ke - $J\,m^{-2})$'
         elif zoom == True:
-            labels_dict['ck_label'] = 'Ck - $W\,m^{-2}$'
-            labels_dict['ca_label'] = 'Ca - $W\,m^{-2}$'
-            labels_dict['ge_label'] = 'Ge - $W\,m^{-2}$'
-            labels_dict['ke_label'] = 'Ke - $J\,m^{-2}$'
+            labels_dict['x_label'] = 'Ce - $W\,m^{-2}$'
+            labels_dict['y_label'] = 'Ca - $W\,m^{-2}$'
+            labels_dict['color_label'] = 'Ge - $W\,m^{-2}$'
+            labels_dict['size_label'] = 'Ke - $J\,m^{-2}$'
+
+    elif label_type == 'barotropic':
+        labels_dict['y_upper'] = ''
+        labels_dict['y_lower'] = ''
+        labels_dict['x_left'] = ''
+        labels_dict['x_right'] = ''
+        labels_dict['col_lower'] = ''
+        labels_dict['col_upper'] = ''
+        labels_dict['lower_left'] = ''
+        labels_dict['upper_left'] = ''
+        labels_dict['lower_right'] = ''
+        labels_dict['upper_right'] = ''
+        
+        if zoom == False:
+            labels_dict['x_label'] = 'Conversion from zonal to eddy Kinetic Energy (Ck - $W\,m^{-2})$'
+            labels_dict['y_label'] = ' Kinetic Energy transport across boundaries (BKz - $W\,m^{-2})$'
+            labels_dict['color_label'] = 'Generation of eddy Potential Energy (Ge - $W\,m^{-2})$'
+            labels_dict['size_label'] = 'Eddy Kinect\n    Energy\n(Ke - $J\,m^{-2})$'
+        elif zoom == True:
+            labels_dict['x_label'] = 'Ck - $W\,m^{-2}$'
+            labels_dict['y_label'] = 'Bkz - $W\,m^{-2}$'
+            labels_dict['color_label'] = 'Ge - $W\,m^{-2}$'
+            labels_dict['size_label'] = 'Ke - $J\,m^{-2}$'
 
     return labels_dict
 
@@ -276,40 +299,40 @@ def LorenzPhaseSpace(ax, type, zoom=False, example=False, **kwargs):
     # Loop through all list of terms in kwargs
     for term_list in kwargs['terms']:    
 
-        Ca = term_list['Ca']
-        Ck = term_list['Ck']
-        Ge = term_list['Ge']
-        Ke = term_list['Ke']
+        y_axis = term_list['y_axis']
+        x_axis = term_list['x_axis']
+        circles_colors = term_list['circles_colors']
+        circles_sizes = term_list['circles_colors']
 
         # Line plot
-        ax.plot(Ck,Ca,'-',c='gray',linewidth=3)
+        ax.plot(x_axis, y_axis,'-',c='gray',linewidth=3)
         
         # Label for eddy kinectinc energy (Ke)
-        marker_sizes = calculate_marker_size(Ke)
-        # s = MarkerSizeKe(Ke, ke_label, labelsize)['sizes']
+        marker_sizes = calculate_marker_size(circles_sizes)
+        # s = MarkerSizeKe(Ke, size_label, labelsize)['sizes']
     
         # arrows connecting dots
-        ax.quiver(Ck[:-1], Ca[:-1],
-                (Ck[1:].values-Ck[:-1].values)*.97,
-                (Ca[1:].values-Ca[:-1].values)*.97,
+        ax.quiver(x_axis[:-1], y_axis[:-1],
+                (x_axis[1:].values - x_axis[:-1].values)*.97,
+                (y_axis[1:].values-y_axis[:-1].values)*.97,
                 angles='xy', scale_units='xy',
                 scale=1, color='k')
 
         # plot the moment of maximum intensity
-        ax.scatter(Ck.loc[marker_sizes.idxmax()],Ca.loc[marker_sizes.idxmax()],
+        ax.scatter(x_axis.loc[marker_sizes.idxmax()],y_axis.loc[marker_sizes.idxmax()],
                 c='None',s=marker_sizes.loc[marker_sizes.idxmax()]*1.1,
                 zorder=100,edgecolors='k', linewidth=3)
         
         # Circles representing Ck on x-axis and Ca on y-axis, while the
         # colors represent Ge and the circle sizes, Ke.
-        dots = ax.scatter(Ck,Ca,c=Ge,cmap=cmocean.cm.curl,s=marker_sizes,zorder=100,
+        dots = ax.scatter(x_axis, y_axis, c=circles_colors, cmap=cmocean.cm.curl,s=marker_sizes,zorder=100,
                         edgecolors='grey', norm=norm)
         
         # Marking start and end of the system
-        ax.text(Ck[0], Ca[0],'A',
+        ax.text(x_axis[0], y_axis[0],'A',
                 zorder=101,fontsize=22,horizontalalignment='center',
                 verticalalignment='center')
-        ax.text(Ck.iloc[-1], Ca.iloc[-1], 'Z',
+        ax.text(x_axis.iloc[-1], y_axis.iloc[-1], 'Z',
                 zorder=101,fontsize=22,horizontalalignment='center',
                 verticalalignment='center')
 
@@ -319,9 +342,9 @@ def LorenzPhaseSpace(ax, type, zoom=False, example=False, **kwargs):
     cbar = plt.colorbar(dots, extend=extend,cax=cax)
     
     # Write labels
-    ax.set_xlabel(labels['ck_label'], fontsize=labelsize,labelpad=labelpad,c='#383838')
-    ax.set_ylabel(labels['ca_label'], fontsize=labelsize,labelpad=labelpad,c='#383838')
-    cbar.ax.set_ylabel(labels['ge_label'], rotation=270,fontsize=labelsize,
+    ax.set_xlabel(labels['x_label'], fontsize=labelsize,labelpad=labelpad,c='#383838')
+    ax.set_ylabel(labels['y_label'], fontsize=labelsize,labelpad=labelpad,c='#383838')
+    cbar.ax.set_ylabel(labels['color_label'], rotation=270,fontsize=labelsize,
                        verticalalignment='bottom', c='#383838',
                        labelpad=labelpad, y=0.59)
     
