@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/06/14 16:32:27 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/24 18:49:36 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/24 20:17:18 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -53,7 +53,7 @@ def plot_legend(ax):
               borderpad=1.5, scatteryoffsets=[0.1], framealpha=1,
               handletextpad=1.5, scatterpoints=1)
 
-def annotate_plot(ax, LPS_type, **kwargs):
+def annotate_plot(ax, LPS_type, zoom, **kwargs):
     fontsize = kwargs.get('fontsize', 10)
     title = kwargs.get('title', '')
     datasource = kwargs.get('datasource', '')
@@ -263,7 +263,7 @@ def LorenzPhaseSpace(ax, LPS_type, zoom=False, example=False, **kwargs):
         
         # Write physical meaning of each quadrant
         plt.tick_params(labelsize=kwargs.get('fontsize', 10))
-        annotate_plot(ax, LPS_type, **kwargs)
+        annotate_plot(ax, LPS_type, zoom, **kwargs)
 
         # Gradient lines in the center of the plot
         gradient_lines(ax, LPS_type)
@@ -317,54 +317,54 @@ def LorenzPhaseSpace(ax, LPS_type, zoom=False, example=False, **kwargs):
         circles_colors = term_list['circles_colors']
         circles_sizes = term_list['circles_size']
 
-    # Line plot
-    ax.plot(x_axis, y_axis,'-',c='gray',linewidth=3)
-    
-    # Label for eddy kinectinc energy (Ke)
-    marker_sizes = calculate_marker_size(circles_sizes)
+        # Line plot
+        ax.plot(x_axis, y_axis,'-',c='gray',linewidth=3)
+        
+        # Label for eddy kinectinc energy (Ke)
+        marker_sizes = calculate_marker_size(circles_sizes)
 
-    # arrows connecting dots
-    ax.quiver(x_axis[:-1], y_axis[:-1],
-            (x_axis[1:].values - x_axis[:-1].values)*.97,
-            (y_axis[1:].values-y_axis[:-1].values)*.97,
-            angles='xy', scale_units='xy',
-            scale=1, color='k')
+        # arrows connecting dots
+        ax.quiver(x_axis[:-1], y_axis[:-1],
+                (x_axis[1:].values - x_axis[:-1].values)*.97,
+                (y_axis[1:].values-y_axis[:-1].values)*.97,
+                angles='xy', scale_units='xy',
+                scale=1, color='k')
 
-    # plot the moment of maximum intensity
-    ax.scatter(x_axis.loc[marker_sizes.idxmax()],y_axis.loc[marker_sizes.idxmax()],
-            c='None',s=marker_sizes.loc[marker_sizes.idxmax()]*1.1,
-            zorder=100,edgecolors='k', linewidth=3)
-    
-    # Circles colors represent Ge and the circle sizes represent Ke.
-    dots = ax.scatter(x_axis, y_axis, c=circles_colors, cmap=cmocean.cm.curl,s=marker_sizes,zorder=100,
-                    edgecolors='grey', norm=norm)
-    
-    # Marking start and end of the system
-    ax.text(x_axis[0], y_axis[0],'A',
-            zorder=101,fontsize=22,horizontalalignment='center',
-            verticalalignment='center')
-    ax.text(x_axis.iloc[-1], y_axis.iloc[-1], 'Z',
-            zorder=101,fontsize=22,horizontalalignment='center',
-            verticalalignment='center')
+        # plot the moment of maximum intensity
+        ax.scatter(x_axis.loc[marker_sizes.idxmax()],y_axis.loc[marker_sizes.idxmax()],
+                c='None',s=marker_sizes.loc[marker_sizes.idxmax()]*1.1,
+                zorder=100,edgecolors='k', linewidth=3)
+        
+        # Circles colors represent Ge and the circle sizes represent Ke.
+        dots = ax.scatter(x_axis, y_axis, c=circles_colors, cmap=cmocean.cm.curl,s=marker_sizes,zorder=100,
+                        edgecolors='grey', norm=norm)
+        
+        # Marking start and end of the system
+        ax.text(x_axis[0], y_axis[0],'A',
+                zorder=101,fontsize=22,horizontalalignment='center',
+                verticalalignment='center')
+        ax.text(x_axis.iloc[-1], y_axis.iloc[-1], 'Z',
+                zorder=101,fontsize=22,horizontalalignment='center',
+                verticalalignment='center')
 
-    # Colorbar
-    cax = ax.inset_axes([ax.get_position().x1+0.12,
-                    ax.get_position().y0+0.35,0.02, ax.get_position().height/1.5])
-    cbar = plt.colorbar(dots, extend=extend,cax=cax)
-    
-    # Write labels
-    ax.set_xlabel(labels['x_label'], fontsize=labelsize,labelpad=labelpad,c='#383838')
-    ax.set_ylabel(labels['y_label'], fontsize=labelsize,labelpad=labelpad,c='#383838')
-    cbar.ax.set_ylabel(labels['color_label'], rotation=270,fontsize=labelsize,
-                       verticalalignment='bottom', c='#383838',
-                       labelpad=labelpad, y=0.59)
-    
-    for t in cbar.ax.get_yticklabels():
-         t.set_fontsize(10) 
+        # Colorbar
+        cax = ax.inset_axes([ax.get_position().x1+0.12,
+                        ax.get_position().y0+0.35,0.02, ax.get_position().height/1.5])
+        cbar = plt.colorbar(dots, extend=extend,cax=cax)
+        
+        # Write labels
+        ax.set_xlabel(labels['x_label'], fontsize=labelsize,labelpad=labelpad,c='#383838')
+        ax.set_ylabel(labels['y_label'], fontsize=labelsize,labelpad=labelpad,c='#383838')
+        cbar.ax.set_ylabel(labels['color_label'], rotation=270,fontsize=labelsize,
+                        verticalalignment='bottom', c='#383838',
+                        labelpad=labelpad, y=0.59)
+        
+        for t in cbar.ax.get_yticklabels():
+            t.set_fontsize(10) 
 
-    plot_legend(ax)
-    
-    plt.subplots_adjust(right=0.84, bottom=0.1)
+        plot_legend(ax)
+        
+        plt.subplots_adjust(right=0.84, bottom=0.1)
 
 if __name__ == '__main__':
 
