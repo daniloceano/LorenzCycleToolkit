@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/06/14 16:32:27 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/24 20:33:54 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/24 20:38:53 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -253,10 +253,10 @@ def LorenzPhaseSpace(ax, LPS_type, zoom=False, example=False, **kwargs):
         #Limits
         if LPS_type == 'mixed':
             ax.set_xlim(-70,70)
-            ax.set_ylim(-10,20)
+            ax.set_ylim(-20,20)
         elif LPS_type == 'baroclinic':
             ax.set_xlim(-70,70)
-            ax.set_ylim(-10,20)
+            ax.set_ylim(-20,20)
         elif LPS_type == 'barotropic':
             ax.set_xlim(-70,70)
             ax.set_ylim(-200,200)
