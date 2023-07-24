@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/06/14 16:32:27 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/24 20:17:18 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/24 20:33:54 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -253,10 +253,10 @@ def LorenzPhaseSpace(ax, LPS_type, zoom=False, example=False, **kwargs):
         #Limits
         if LPS_type == 'mixed':
             ax.set_xlim(-70,70)
-            ax.set_ylim(-15,15)
+            ax.set_ylim(-10,20)
         elif LPS_type == 'baroclinic':
             ax.set_xlim(-70,70)
-            ax.set_ylim(-15,15)
+            ax.set_ylim(-10,20)
         elif LPS_type == 'barotropic':
             ax.set_xlim(-70,70)
             ax.set_ylim(-200,200)
@@ -310,7 +310,7 @@ def LorenzPhaseSpace(ax, LPS_type, zoom=False, example=False, **kwargs):
     labels = get_labels(LPS_type, zoom)
     labelsize = kwargs.get('labelsize', 14)
 
-    # Loop through all list of terms in kwargs
+    # Loop through all list of terms in kwargs: this allows to a plotting multiple systems at once
     for term_list in kwargs['terms']:  
         y_axis = term_list['y_axis']
         x_axis = term_list['x_axis']
@@ -339,32 +339,32 @@ def LorenzPhaseSpace(ax, LPS_type, zoom=False, example=False, **kwargs):
         dots = ax.scatter(x_axis, y_axis, c=circles_colors, cmap=cmocean.cm.curl,s=marker_sizes,zorder=100,
                         edgecolors='grey', norm=norm)
         
-        # Marking start and end of the system
-        ax.text(x_axis[0], y_axis[0],'A',
-                zorder=101,fontsize=22,horizontalalignment='center',
-                verticalalignment='center')
-        ax.text(x_axis.iloc[-1], y_axis.iloc[-1], 'Z',
-                zorder=101,fontsize=22,horizontalalignment='center',
-                verticalalignment='center')
+    # Marking start and end of the system
+    ax.text(x_axis[0], y_axis[0],'A',
+            zorder=101,fontsize=22,horizontalalignment='center',
+            verticalalignment='center')
+    ax.text(x_axis.iloc[-1], y_axis.iloc[-1], 'Z',
+            zorder=101,fontsize=22,horizontalalignment='center',
+            verticalalignment='center')
 
-        # Colorbar
-        cax = ax.inset_axes([ax.get_position().x1+0.12,
-                        ax.get_position().y0+0.35,0.02, ax.get_position().height/1.5])
-        cbar = plt.colorbar(dots, extend=extend,cax=cax)
-        
-        # Write labels
-        ax.set_xlabel(labels['x_label'], fontsize=labelsize,labelpad=labelpad,c='#383838')
-        ax.set_ylabel(labels['y_label'], fontsize=labelsize,labelpad=labelpad,c='#383838')
-        cbar.ax.set_ylabel(labels['color_label'], rotation=270,fontsize=labelsize,
-                        verticalalignment='bottom', c='#383838',
-                        labelpad=labelpad, y=0.59)
-        
-        for t in cbar.ax.get_yticklabels():
-            t.set_fontsize(10) 
+    # Colorbar
+    cax = ax.inset_axes([ax.get_position().x1+0.12,
+                    ax.get_position().y0+0.35,0.02, ax.get_position().height/1.5])
+    cbar = plt.colorbar(dots, extend=extend,cax=cax)
+    
+    # Write labels
+    ax.set_xlabel(labels['x_label'], fontsize=labelsize,labelpad=labelpad,c='#383838')
+    ax.set_ylabel(labels['y_label'], fontsize=labelsize,labelpad=labelpad,c='#383838')
+    cbar.ax.set_ylabel(labels['color_label'], rotation=270,fontsize=labelsize,
+                    verticalalignment='bottom', c='#383838',
+                    labelpad=labelpad, y=0.59)
+    
+    for t in cbar.ax.get_yticklabels():
+        t.set_fontsize(10) 
 
-        plot_legend(ax)
-        
-        plt.subplots_adjust(right=0.84, bottom=0.1)
+    plot_legend(ax)
+    
+    plt.subplots_adjust(right=0.84, bottom=0.1)
 
 if __name__ == '__main__':
 
