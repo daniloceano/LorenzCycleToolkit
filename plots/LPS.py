@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/06/14 16:32:27 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/21 18:36:27 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/24 20:38:53 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -34,7 +34,7 @@ def calculate_marker_size(term):
             sizes.append(msizes[4])
     return pd.Series(sizes)
 
-def plot_legend(ax, cmap):
+def plot_legend(ax):
     msizes = [200, 400, 600, 800, 1000]
     intervals = [3e5, 4e5, 5e5, 6e5]
     labels = ['< ' + str(intervals[0]),
@@ -42,16 +42,18 @@ def plot_legend(ax, cmap):
               '< ' + str(intervals[2]),
               '< ' + str(intervals[3]),
               '> ' + str(intervals[3])]
-    for i, label in enumerate(labels):
-        ax.scatter([], [], c=cmap(msizes[i]), s=msizes[i], label=label)
 
-    ax.legend(title='Eddy Potential Energy (Ge - $W\,m^{-2}$)',
-              fontsize=10, loc='lower left', bbox_to_anchor=(0.73, -0.57, 0.5, 1),
+    # Create separate scatter plots for each size category
+    for i in range(len(msizes)):
+        ax.scatter([], [], c='#383838', s=msizes[i], label=labels[i])
+
+    ax.legend(title='Eddy Kinetic Energy \n(Ke - $W\,m^{-2}$)',
+              fontsize=10, loc='lower left', bbox_to_anchor=(0.97, 0, 0.5, 1),
               labelcolor='#383838', frameon=False, handlelength=0.3, handleheight=4,
               borderpad=1.5, scatteryoffsets=[0.1], framealpha=1,
               handletextpad=1.5, scatterpoints=1)
 
-def annotate_plot(ax, LPS_type, **kwargs):
+def annotate_plot(ax, LPS_type, zoom, **kwargs):
     fontsize = kwargs.get('fontsize', 10)
     title = kwargs.get('title', '')
     datasource = kwargs.get('datasource', '')
@@ -121,11 +123,13 @@ def gradient_lines(ax, LPS_type):
         ax.axvline(x=0 + x_offsets[i], linewidth=lw, alpha=alpha, c=c)
         ax.axvline(x=0 - x_offsets[i], linewidth=lw, alpha=alpha, c=c)
 
+    # Diagonal line
     if LPS_type == 'mixed':
+        y_ticks = -x_ticks
         for i, alpha in enumerate(alpha_values):
             x, y = x_offsets[i], y_offsets[i]
-            ax.plot([x, -x_ticks[-1] + x], [y, y_ticks[-1] + y], linewidth=lw, alpha=alpha, c=c)
-            ax.plot([-x, -x_ticks[-1] - x], [-y, y_ticks[-1] - y], linewidth=lw, alpha=alpha, c=c)
+            ax.plot([x, -x_ticks[-1] + x], [y, -y_ticks[-1] + y], linewidth=lw, alpha=alpha, c=c)
+            ax.plot([-x, -x_ticks[-1] - x], [-y, -y_ticks[-1] - y], linewidth=lw, alpha=alpha, c=c)
     
         
 def get_max_vals(term, **kwargs):
@@ -158,7 +162,7 @@ def limits_zoomed(ax, **kwargs):
         xlabel_max = 3
     ax.set_xlim(xlabel_min,xlabel_max)
 
-    # Plot limits for Ca
+    # Plot limits for y-axis
     if min_y < -0.5:
         ylabel_min = min_y*1.3
     else:
@@ -196,13 +200,13 @@ def get_labels(LPS_type, zoom=False):
             labels_dict['size_label'] = 'Ke - $J\,m^{-2}$'
 
     elif LPS_type == 'baroclinic':
-        labels_dict['y_upper'] = 'Eddy gains Potential Eneergy from zonal circulation'
-        labels_dict['y_lower'] = 'Eddy Kinetic Energy feeds Zonal Potential Energy'
-        labels_dict['x_left'] = 'Eddy is feeding the temperature gradient'
-        labels_dict['x_right'] = 'Eddy Potential Energy feeds zonal circulation\n and temperature gradient'
+        labels_dict['y_upper'] = 'Zonal temperature gradient feeds \n eddy potential energy'
+        labels_dict['y_lower'] = 'Eddy potential energy feeds \n zonal temperature gradient'
+        labels_dict['x_left'] = 'Meridional temperature gradient feeds \n eddy kinetic energy'
+        labels_dict['x_right'] = 'Eddy kinetic energy consumes \n meridional temperature gradient'
         labels_dict['col_lower'] = 'Subsidence decreases \n eddy potential energy'
         labels_dict['col_upper'] = 'Latent heat release feeds \n eddy potential energy'
-        labels_dict['lower_left'] = ''
+        labels_dict['lower_left'] = 'Baroclinic stability'
         labels_dict['upper_left'] = ''
         labels_dict['lower_right'] = ''
         labels_dict['upper_right'] = 'Baroclinic instability'
@@ -219,16 +223,16 @@ def get_labels(LPS_type, zoom=False):
             labels_dict['size_label'] = 'Ke - $J\,m^{-2}$'
 
     elif LPS_type == 'barotropic':
-        labels_dict['y_upper'] = ''
-        labels_dict['y_lower'] = ''
-        labels_dict['x_left'] = ''
-        labels_dict['x_right'] = ''
-        labels_dict['col_lower'] = ''
-        labels_dict['col_upper'] = ''
-        labels_dict['lower_left'] = ''
-        labels_dict['upper_left'] = ''
-        labels_dict['lower_right'] = ''
-        labels_dict['upper_right'] = ''
+        labels_dict['y_upper'] = 'Importation of Kinectic Energy'
+        labels_dict['y_lower'] = 'Exportation of Kinectic Energy'
+        labels_dict['x_left'] = 'Eddy is gaining kinetic energy \n from the mean flow'
+        labels_dict['x_right'] = 'Eddy is providing kinetic energy \n to the mean flow'
+        labels_dict['col_lower'] = 'Subsidence decreases \n eddy potential energy'
+        labels_dict['col_upper'] = 'Latent heat release feeds \n eddy potential energy'
+        labels_dict['lower_left'] = 'Barotropic instability wihtout \n downstream development'
+        labels_dict['upper_left'] = 'Barotropic instability and \n downstream development'
+        labels_dict['lower_right'] = 'Barotropic stability without \n downstream development'
+        labels_dict['upper_right'] = 'Barotropic stability and \n downstream development'
         
         if zoom == False:
             labels_dict['x_label'] = 'Conversion from zonal to eddy Kinetic Energy (Ck - $W\,m^{-2})$'
@@ -249,23 +253,23 @@ def LorenzPhaseSpace(ax, LPS_type, zoom=False, example=False, **kwargs):
         #Limits
         if LPS_type == 'mixed':
             ax.set_xlim(-70,70)
-            ax.set_ylim(-15,15)
+            ax.set_ylim(-20,20)
         elif LPS_type == 'baroclinic':
             ax.set_xlim(-70,70)
             ax.set_ylim(-20,20)
         elif LPS_type == 'barotropic':
             ax.set_xlim(-70,70)
-            ax.set_ylim(-220,200)
+            ax.set_ylim(-200,200)
         
         # Write physical meaning of each quadrant
         plt.tick_params(labelsize=kwargs.get('fontsize', 10))
-        annotate_plot(ax, LPS_type, **kwargs)
+        annotate_plot(ax, LPS_type, zoom, **kwargs)
 
         # Gradient lines in the center of the plot
         gradient_lines(ax, LPS_type)
 
         # limits for coors
-        norm = colors.TwoSlopeNorm(vmin=-7, vcenter=0, vmax=15)
+        norm = colors.TwoSlopeNorm(vmin=-30, vcenter=0, vmax=30)
 
         # pad for labels
         labelpad = 38
@@ -306,8 +310,8 @@ def LorenzPhaseSpace(ax, LPS_type, zoom=False, example=False, **kwargs):
     labels = get_labels(LPS_type, zoom)
     labelsize = kwargs.get('labelsize', 14)
 
-    # Loop through all list of terms in kwargs
-    for term_list in kwargs['terms']:    
+    # Loop through all list of terms in kwargs: this allows to a plotting multiple systems at once
+    for term_list in kwargs['terms']:  
         y_axis = term_list['y_axis']
         x_axis = term_list['x_axis']
         circles_colors = term_list['circles_colors']
@@ -318,7 +322,7 @@ def LorenzPhaseSpace(ax, LPS_type, zoom=False, example=False, **kwargs):
         
         # Label for eddy kinectinc energy (Ke)
         marker_sizes = calculate_marker_size(circles_sizes)
-    
+
         # arrows connecting dots
         ax.quiver(x_axis[:-1], y_axis[:-1],
                 (x_axis[1:].values - x_axis[:-1].values)*.97,
@@ -335,13 +339,13 @@ def LorenzPhaseSpace(ax, LPS_type, zoom=False, example=False, **kwargs):
         dots = ax.scatter(x_axis, y_axis, c=circles_colors, cmap=cmocean.cm.curl,s=marker_sizes,zorder=100,
                         edgecolors='grey', norm=norm)
         
-        # Marking start and end of the system
-        ax.text(x_axis[0], y_axis[0],'A',
-                zorder=101,fontsize=22,horizontalalignment='center',
-                verticalalignment='center')
-        ax.text(x_axis.iloc[-1], y_axis.iloc[-1], 'Z',
-                zorder=101,fontsize=22,horizontalalignment='center',
-                verticalalignment='center')
+    # Marking start and end of the system
+    ax.text(x_axis[0], y_axis[0],'A',
+            zorder=101,fontsize=22,horizontalalignment='center',
+            verticalalignment='center')
+    ax.text(x_axis.iloc[-1], y_axis.iloc[-1], 'Z',
+            zorder=101,fontsize=22,horizontalalignment='center',
+            verticalalignment='center')
 
     # Colorbar
     cax = ax.inset_axes([ax.get_position().x1+0.12,
@@ -352,11 +356,13 @@ def LorenzPhaseSpace(ax, LPS_type, zoom=False, example=False, **kwargs):
     ax.set_xlabel(labels['x_label'], fontsize=labelsize,labelpad=labelpad,c='#383838')
     ax.set_ylabel(labels['y_label'], fontsize=labelsize,labelpad=labelpad,c='#383838')
     cbar.ax.set_ylabel(labels['color_label'], rotation=270,fontsize=labelsize,
-                       verticalalignment='bottom', c='#383838',
-                       labelpad=labelpad, y=0.59)
+                    verticalalignment='bottom', c='#383838',
+                    labelpad=labelpad, y=0.59)
     
     for t in cbar.ax.get_yticklabels():
-         t.set_fontsize(10) 
+        t.set_fontsize(10) 
+
+    plot_legend(ax)
     
     plt.subplots_adjust(right=0.84, bottom=0.1)
 
@@ -383,7 +389,7 @@ if __name__ == '__main__':
                      'circles_colors': df['Ge'], 'circles_size': df['Ke']}
 
     for LPS_type, term_list in zip(['mixed', 'baroclinic', 'barotropic'],
-                               [terms_mixed, term_baroclinic, terms_barotropic]):
+                                [terms_mixed, term_baroclinic, terms_barotropic]):
         kwargs['terms'] = []
         kwargs['terms'].append(term_list)
 
@@ -402,3 +408,4 @@ if __name__ == '__main__':
             with plt.rc_context({'savefig.dpi': 500}):
                     plt.savefig(fname)
             print(f"{fname} created!")
+
