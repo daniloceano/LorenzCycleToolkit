@@ -37,9 +37,6 @@ from select_area import plot_domain_attributes
 
 from determine_periods import determine_periods
 
-from scipy.signal import savgol_filter 
-from numpy.linalg import LinAlgError
-
 import pandas as pd
 import xarray as xr
 import os
@@ -439,16 +436,6 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
         itime = str(t)
         datestr = pd.to_datetime(itime).strftime('%Y-%m-%d-%H%M')
 
-        # Apply filter when using high resolution gridded data
-        dx = float(idata[LonIndexer][1] - idata[LonIndexer][0])
-        if dx < 1:
-            try:
-                izeta_850 = izeta_850.to_dataset(name='vorticity').apply(savgol_filter, window_length=31, polyorder=2).vorticity
-            except LinAlgError:
-                izeta_850 = izeta_850.fillna(0).to_dataset(name='vorticity').apply(savgol_filter, window_length=31, polyorder=2).vorticity
-            except Exception as e:
-                raise e
-
         if args.track:
             # Get current time and box limits
             if 'width'in track.columns:
@@ -697,14 +684,14 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--outname", type=str, help="Choose a name for saving results.")
     parser.add_argument("-v", "--verbosity", action='store_true', help="Increase output verbosity.")
 
-    # args = parser.parse_args()
+    args = parser.parse_args()
 
     # Debug:
     # args = parser.parse_args(['../samples/Reg1-Representative_NCEP-R2.nc', '-r', '-t'])
     # args = parser.parse_args(['/p1-nemo/danilocs/mpas/MPAS-BR/post_proc/py/interpolations/Catarina-2403-2903_MPAS.nc',
     # '-t', '-g', '-r'])
-    args = parser.parse_args(['/p1-nemo/danilocs/SWSA-cyclones_energetic-analysis/met_data/ERA5/DATA/10MostIntense-19830422_ERA5.nc',
-    '-t', '-g', '-r'])
+    # args = parser.parse_args(['/p1-nemo/danilocs/SWSA-cyclones_energetic-analysis/met_data/ERA5/DATA/10MostIntense-19830422_ERA5.nc',
+    # '-c', '-g', '-r'])
 
     infile  = args.infile
     varlist = '../inputs/fvars'
