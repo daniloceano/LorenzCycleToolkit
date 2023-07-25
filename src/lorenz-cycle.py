@@ -113,9 +113,14 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
     data = data.assign_coords({"rlons": np.deg2rad(data[LonIndexer])})
 
     levels_Pa = (data[LevelIndexer] * units(str(data[LevelIndexer].units))).metpy.convert_units("Pa")
+
     data = data.assign_coords({LevelIndexer: levels_Pa})
     
     data = data.sortby(LonIndexer).sortby(LevelIndexer, ascending=True).sortby(LatIndexer, ascending=True)
+
+    # Set the highest vertical level to 1000 Pa
+    lowest_level = float(data[LevelIndexer].max())
+    data = data.sel({LevelIndexer: slice(1000, lowest_level)})
 
     print("Data opened successfully.")
     return data
@@ -692,12 +697,14 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--outname", type=str, help="Choose a name for saving results.")
     parser.add_argument("-v", "--verbosity", action='store_true', help="Increase output verbosity.")
 
-    args = parser.parse_args()
+    # args = parser.parse_args()
 
-    # Debuggings:
+    # Debug:
     # args = parser.parse_args(['../samples/Reg1-Representative_NCEP-R2.nc', '-r', '-t'])
-    #args = parser.parse_args(['/p1-nemo/danilocs/mpas/MPAS-BR/post_proc/py/interpolations/Catarina-2403-2903_MPAS.nc',
+    # args = parser.parse_args(['/p1-nemo/danilocs/mpas/MPAS-BR/post_proc/py/interpolations/Catarina-2403-2903_MPAS.nc',
     # '-t', '-g', '-r'])
+    args = parser.parse_args(['/p1-nemo/danilocs/SWSA-cyclones_energetic-analysis/met_data/ERA5/DATA/10MostIntense-19830422_ERA5.nc',
+    '-t', '-g', '-r'])
 
     infile  = args.infile
     varlist = '../inputs/fvars'
