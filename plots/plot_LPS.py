@@ -71,9 +71,9 @@ results from the main.py program.")
 
     # args = parser.parse_args()
     
-    # outfile = args.outfile
+    outfile = args.outfile
 
-    outfile = '../../SWSA-cyclones_energetic-analysis/LEC_results-q0.99/RG1-q0.99-19900288_ERA5_track-15x15/RG1-q0.99-19900288_ERA5_track-15x15.csv'
+    # outfile = '../../SWSA-cyclones_energetic-analysis/LEC_results-q0.99/RG1-q0.99-19900288_ERA5_track-15x15/RG1-q0.99-19900288_ERA5_track-15x15.csv'
 
     ResultsSubDirectory = '/'.join(outfile.split('/')[:-1])
     FigsDir = ResultsSubDirectory+'/Figures/LPS/'
