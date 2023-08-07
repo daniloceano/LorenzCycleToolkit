@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/06/14 16:32:27 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/24 20:38:53 by Danilo           ###   ########.fr        #
+#    Updated: 2023/08/07 10:49:02 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -339,13 +339,13 @@ def LorenzPhaseSpace(ax, LPS_type, zoom=False, example=False, **kwargs):
         dots = ax.scatter(x_axis, y_axis, c=circles_colors, cmap=cmocean.cm.curl,s=marker_sizes,zorder=100,
                         edgecolors='grey', norm=norm)
         
-    # Marking start and end of the system
-    ax.text(x_axis[0], y_axis[0],'A',
-            zorder=101,fontsize=22,horizontalalignment='center',
-            verticalalignment='center')
-    ax.text(x_axis.iloc[-1], y_axis.iloc[-1], 'Z',
-            zorder=101,fontsize=22,horizontalalignment='center',
-            verticalalignment='center')
+        # Marking start and end of the system
+        ax.text(x_axis[0], y_axis[0],'A',
+                zorder=101,fontsize=22,horizontalalignment='center',
+                verticalalignment='center')
+        ax.text(x_axis.iloc[-1], y_axis.iloc[-1], 'Z',
+                zorder=101,fontsize=22,horizontalalignment='center',
+                verticalalignment='center')
 
     # Colorbar
     cax = ax.inset_axes([ax.get_position().x1+0.12,
