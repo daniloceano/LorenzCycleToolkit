@@ -198,3 +198,8 @@ plots/LPS_test_barotropic_zoom.png
 plots/LPS_test_barotropic.png
 plots/LPS_test_mixed_zoom.png
 plots/LPS_test_mixed.png
+
+# debug
+src/debug.py
+src/*.csv
+debug
