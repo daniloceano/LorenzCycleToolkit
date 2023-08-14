@@ -203,3 +203,4 @@ plots/LPS_test_mixed.png
 src/debug.py
 src/*.csv
 debug
+debug*
