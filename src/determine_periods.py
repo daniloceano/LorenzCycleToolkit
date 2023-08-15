@@ -3,12 +3,25 @@
 #                                                         :::      ::::::::    #
 #    determine_periods.py                               :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
+#    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/05/19 19:06:47 by danilocs          #+#    #+#              #
-#    Updated: 2023/07/19 19:43:14 by Danilo           ###   ########.fr        #
+#    Updated: 2023/08/15 19:40:31 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
+
+"""
+Version: 1.0.0
+
+This script processes vorticity data, identifies different phases of the cyclone     
+and plots the identified periods on periods.png and periods_didatic.png   
+
+The input track file should have the following columns:
+
+    time;Lat;Lon;length;width;min_zeta_850;min_hgt_850;max_wind_850
+
+The current version only works for negative vorciticity values
+"""
 
 import os
 import csv
@@ -583,7 +596,7 @@ def get_periods(vorticity):
     df = find_incipient_period(df)
 
     # Remove noisy periods that are less than 3 hours long
-    df = clean_periods(df)
+    #df = clean_periods(df)
 
     # Pass the periods to a dictionary with each period's name as key
     #  and their corresponding start and end times as values.
@@ -654,7 +667,7 @@ def plot_didactic(df, vorticity, output_directory):
     # Set y-axis labels in scientific notation (power notation) and change date format to "%m%d"
     for ax in [ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8, ax9]:
         ax.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3))
-        date_format = mdates.DateFormatter("%m-%d")
+        date_format = mdates.DateFormatter("%m-%d %HZ")
         ax.xaxis.set_major_formatter(date_format)
         plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
     plt.subplots_adjust(hspace=0.6)
@@ -700,6 +713,6 @@ def determine_periods(track_file, output_directory):
 # Testing #
 if __name__ == "__main__":
 
-    track_file = '../../SWSA-cyclones_energetic-analysis/LEC_results-q0.99/RG3-q0.99-19990619_ERA5_track-15x15/RG3-q0.99-19990619_ERA5_track-15x15_track'
+    track_file = '../inputs/track-test-periods'
     output_directory = './'
     determine_periods(track_file, output_directory)
