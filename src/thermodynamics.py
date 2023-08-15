@@ -58,7 +58,17 @@ def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
     function = (FirstTerm-(SecondTerm*ThirdTerm))
     sigma_ZA = function.integrate("rlons")/xlength
     sigma_AA = (sigma_ZA*sigma_ZA["coslats"]).integrate("rlats")/ylength
-    return sigma_AA
+
+    # For some cases, the Az and Ca values become too large. After close inspection,
+    # I've found out that for sigma values smaller than 0.03 the equation for those terms
+    # becomes unstable. Therefore, we set it to 0.03 wehenever this happens. I've also
+    # tested interpolating the values, however setting sigma to 0.03 presented better results.
+    units_sigma = sigma_AA.metpy.units
+    sigma_AA = sigma_AA.metpy.dequantify()
+    sigma_AA_filtered = sigma_AA.where(sigma_AA > 0.03, 0.03)
+    sigma_AA_filtered = sigma_AA_filtered*units_sigma
+
+    return sigma_AA_filtered
 
 def AdiabaticHEating(TemperatureData, PressureData, OmegaData,
                       UWindComponentData,VWindComponentData,
