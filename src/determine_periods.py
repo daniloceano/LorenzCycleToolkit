@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/05/19 19:06:47 by danilocs          #+#    #+#              #
-#    Updated: 2023/08/15 23:47:29 by Danilo           ###   ########.fr        #
+#    Updated: 2023/08/16 14:20:35 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -754,8 +754,6 @@ def determine_periods(track_file, output_directory):
 # Testing #
 if __name__ == "__main__":
 
-    # track_file = '../inputs/track-test-periods'
-    # track_file = './track-test-periods'
-    track_file = '../LEC_results-0.99/RG1-0.99-20060364_ERA5_track-15x15/RG1-0.99-20060364_ERA5_track-15x15_track'
+    track_file = '../inputs/track-test-periods'
     output_directory = './'
     determine_periods(track_file, output_directory)
