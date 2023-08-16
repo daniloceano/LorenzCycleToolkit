@@ -6,12 +6,12 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/05/19 19:06:47 by danilocs          #+#    #+#              #
-#    Updated: 2023/08/15 19:40:31 by Danilo           ###   ########.fr        #
+#    Updated: 2023/08/15 23:47:29 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 """
-Version: 1.0.0
+Version: 1.1.0
 
 This script processes vorticity data, identifies different phases of the cyclone     
 and plots the identified periods on periods.png and periods_didatic.png   
@@ -204,7 +204,7 @@ def find_intensification_period(df):
         next_block_start = blocks[i+1][0]
         gap = next_block_start - block_end
 
-        # If the gap between blocks is smaller than 7.5%, fill with decay
+        # If the gap between blocks is smaller than 7.5%, fill with intensification
         if gap < length*0.075:
             df.loc[block_end:next_block_start, 'periods'] = 'intensification'
 
@@ -249,42 +249,52 @@ def find_decay_period(df):
 
 
 def find_residual_period(df):
-    mature_periods = df[df['periods'] == 'mature'].index
-    decay_periods = df[df['periods'] == 'decay'].index
-    intensification_periods = df[df['periods'] == 'intensification'].index
+    unique_phases = [item for item in df['periods'].unique() if pd.notnull(item)]
+    num_unique_phases = len(unique_phases)
 
-    # Find residual periods where there is no decay stage after the mature stage
-    for mature_period in mature_periods:
-        # Assume that there are more than two unique periods (excluding NaN)
-       if len([item for item in df['periods'].unique() if pd.notnull(item)]) > 2:
-            next_decay_period = decay_periods[decay_periods > mature_period].min()
-            if next_decay_period is pd.NaT:
-                df.loc[mature_period:, 'periods'] = 'residual'
+    if num_unique_phases == 1:
+        phase_to_fill = unique_phases[0]
 
-    # Fills with residual period intensification stage if there isn't a mature stage after it
-    # but only if there's more than two periods
-    if len([item for item in df['periods'].unique() if (pd.notnull(item) and item != 'residual')]) > 2:
+        last_phase_index = df[df['periods'] == phase_to_fill].index[-1]
+        dt = df.index[1] - df.index[0]
+        df.loc[last_phase_index + dt:, 'periods'].fillna('residual', inplace=True)
+    else:
         mature_periods = df[df['periods'] == 'mature'].index
-        for intensification_period in intensification_periods:
-            next_mature_period = mature_periods[mature_periods > intensification_period].min()
-            if next_mature_period is pd.NaT:
-                df.loc[intensification_period:, 'periods'] = 'residual'
+        decay_periods = df[df['periods'] == 'decay'].index
+        intensification_periods = df[df['periods'] == 'intensification'].index
 
-    # Fill NaNs after decay with residual if there is a decay, else, fill the NaNs after mature
-    if len(df[df['periods'] == 'decay'].index) > 0:
-        last_decay_index = df[df['periods'] == 'decay'].index[-1]
+        # Find residual periods where there is no decay stage after the mature stage
+        for mature_period in mature_periods:
+            if len(unique_phases) > 2:
+                next_decay_period = decay_periods[decay_periods > mature_period].min()
+                if next_decay_period is pd.NaT:
+                    df.loc[mature_period:, 'periods'] = 'residual'
+                    
+        # Update mature periods
+        mature_periods = df[df['periods'] == 'mature'].index
+
+        # Fills with residual period intensification stage if there isn't a mature stage after it
+        # but only if there's more than two periods
+        if len(unique_phases) > 2:
+            for intensification_period in intensification_periods:
+                next_mature_period = mature_periods[mature_periods > intensification_period].min()
+                if next_mature_period is pd.NaT:
+                    df.loc[intensification_period:, 'periods'] = 'residual'
+
+        # Fill NaNs after decay with residual if there is a decay, else, fill the NaNs after mature
+        if 'decay' in unique_phases:
+            last_decay_index = df[df['periods'] == 'decay'].index[-1]
+        elif 'mature' in unique_phases:
+            last_decay_index = df[df['periods'] == 'mature'].index[-1]
         dt = df.index[1] - df.index[0]
-        df.loc[last_decay_index+dt:, 'periods'].fillna('residual', inplace=True)
-    elif len(df[df['periods'] == 'mature'].index) > 0:
-        last_decay_index = df[df['periods'] == 'mature'].index[-1]
-        dt = df.index[1] - df.index[0]
-        df.loc[last_decay_index+dt:, 'periods'].fillna('residual', inplace=True)
+        df.loc[last_decay_index + dt:, 'periods'].fillna('residual', inplace=True)
 
     return df
 
 def find_incipient_period(df):
 
     periods = df['periods']
+    mature_periods = df[periods == 'mature'].index
     decay_periods = df[periods == 'decay'].index
 
     dt = df.index[1] - df.index[0]
@@ -304,31 +314,67 @@ def find_incipient_period(df):
 
                 else:
                     prev_index = first_index - dt
-                    # Check if the previous index is incipient o
-                    if df.loc[prev_index, 'periods'] == 'incipient' or pd.isna(df.loc[prev_index, 'periods']):
+                    # Check if the previous index is incipient AND before mature stage
+                    if (df.loc[prev_index, 'periods'] == 'incipient' or pd.isna(df.loc[prev_index, 'periods'])) and \
+                    (len(mature_periods) > 0 and prev_index < mature_periods[-1]):
                         # Set the first period of the block to incipient
                         df.loc[block, 'periods'] = 'incipient'
+
     
     df['periods'].fillna('incipient', inplace=True)
+
+    # If there's more than 2 unique phases other than residual and life cycle begins with
+    # incipient fill first 6 hours with incipient.
+    # If the life cycle begins with intensification, incipient phase will be from the
+    # beginning of it, until 2/5 to the next dz_valley
+    if len([item for item in df['periods'].unique() if (pd.notnull(item) and item != 'residual')]) > 2:
+        phase_order = [item for item in df['periods'].unique() if pd.notnull(item)]
+        if phase_order[0] in ['incipient', 'intensification'] or (phase_order[0] == 'incipient' and phase_order[1] == 'intensification'):
+            start_time = df.iloc[0].name
+            # Check if there's a dz valley before the next mature stage
+            next_dz_valley = df[1:][df[1:]['dz_peaks_valleys'] == 'valley'].index.min()
+            next_mature = df[df['periods'] == 'mature'].index.min()
+            if next_dz_valley < next_mature:
+                time_range = start_time + 2 * (next_dz_valley - start_time) / 5
+                df.loc[start_time:time_range, 'periods'] = 'incipient'
 
     return df
 
 import pandas as pd
 
-def clean_periods(df):
-
-    df['time'] = df.index
-
-    # Calculate the duration of each period
-    df['period_duration'] = df.groupby((df['periods'] != df['periods'].shift()).cumsum())['time'].transform(lambda x: x.max() - x.min())
-
-    # Filter out periods with duration <= 3 hours
-    df = df[df['period_duration'] > pd.Timedelta(hours=3)].copy()
-
-    # Remove the extra columns
-    df.drop('period_duration', axis=1, inplace=True)
-    df.drop('time', axis=1, inplace=True)
-
+def post_process_periods(df):
+    dt = df.index[1] - df.index[0]
+    
+    # Find consecutive blocks of intensification and decay
+    intensification_blocks = np.split(df[df['periods'] == 'intensification'].index, np.where(np.diff(df[df['periods'] == 'intensification'].index) != dt)[0] + 1)
+    decay_blocks = np.split(df[df['periods'] == 'decay'].index, np.where(np.diff(df[df['periods'] == 'decay'].index) != dt)[0] + 1)
+    
+    # Fill NaN periods between consecutive intensification or decay blocks
+    for blocks in [intensification_blocks, decay_blocks]:
+        if len(blocks) > 1:
+            phase = df.loc[blocks[0][0], 'periods']
+            for i in range(len(blocks)):
+                block = blocks[i]
+                if i != 0:
+                    if len(block) > 0:
+                        last_index_prev_block = blocks[i -1][-1]
+                        first_index_current_block = block[0]
+                        preiods_between = df.loc[
+                            (last_index_prev_block + dt):(first_index_current_block - dt)]['periods']
+                        if all(pd.isna(preiods_between.unique())):
+                            df.loc[preiods_between.index, 'periods'] = phase
+    
+    # Replace periods of length dt with previous or next phase
+    for index in df.index:
+        period = df.loc[index, 'periods']
+        if pd.notna(period) and len(period) == dt:
+            prev_index = index - dt
+            next_index = index + dt
+            if prev_index in df.index and prev_index != df.index[0]:
+                df.loc[index, 'periods'] = df.loc[prev_index, 'periods']
+            elif next_index in df.index:
+                df.loc[index, 'periods'] = df.loc[next_index, 'periods']
+    
     return df
 
 def periods_to_dict(df):
@@ -343,13 +389,6 @@ def periods_to_dict(df):
         period_name = df.loc[period_starts[i], 'periods']
         start = period_starts[i]
         end = period_ends[i]
-
-        # # Add 6 hours to the beginning and to the end of the period as confidence intervals,
-        # # except for the beginning and the end of the series
-        # if start != df.index[0]:
-        #     start -= pd.Timedelta(hours=6)
-        # if end != df.index[0]:
-        #     end += pd.Timedelta(hours=6)
 
         # Check if the period name already exists in the dictionary
         if period_name in periods_dict.keys():
@@ -390,37 +429,35 @@ def plot_phase(df, phase, ax=None, show_title=True):
     ax.plot(df_copy.index, df_copy['z'], c='k')
 
     if show_title:
-        title = ax.set_title(f'{phase} phase')
-        title.set_position([0.55, 1.05])  # Adjust the title position as needed
+        title = ax.set_title(f'{phase}', fontweight='bold', horizontalalignment='center')
+        title.set_position([0.5, 1.05])  # Adjust the title position as needed
 
 
     if ax is None:
         plt.show()
 
-def plot_specific_peaks_valleys(df, ax, key1, key2, key3=None):
+def plot_specific_peaks_valleys(df, ax, *kwargs):
     # Define the series and colors for plotting
     series_colors = {'z': 'k', 'dz':'#d62828', 'dz2':'#f7b538'}
     marker_sizes = {'z': 190, 'dz': 120, 'dz2': 50}
 
-    for key in [key1, key2, key3]:
+    for key in kwargs:
+        key_name =  key.split('_')[0]
+        peak_or_valley = key.split('_')[1][:-1]
 
-        if key != None:
-            key_name =  key.split('_')[0]
-            peak_or_valley = key.split('_')[1][:-1]
+        peaks_valleys_series =  df[f"{key_name}_peaks_valleys"]
 
-            peaks_valleys_series =  df[f"{key_name}_peaks_valleys"]
+        color  = series_colors[key_name]
+        marker_size = marker_sizes[key_name]
 
-            color  = series_colors[key_name]
-            marker_size = marker_sizes[key_name]
-
-            # Plot the specified peaks or valleys
-            if peak_or_valley == 'peak':
-                ax.scatter(df.index[peaks_valleys_series == peak_or_valley],
-                        df[peaks_valleys_series == 'peak'].z, color=color, marker='o', s=marker_size)
-            elif peak_or_valley == 'valley':
-                ax.scatter(df.index[peaks_valleys_series == peak_or_valley],
-                        df[peaks_valleys_series == 'valley'].z, color=color, marker='o', s=marker_size,
-                            facecolors='none', linewidth=2)
+        # Plot the specified peaks or valleys
+        if peak_or_valley == 'peak':
+            ax.scatter(df.index[peaks_valleys_series == peak_or_valley],
+                    df[peaks_valleys_series == 'peak'].z, color=color, marker='o', s=marker_size)
+        elif peak_or_valley == 'valley':
+            ax.scatter(df.index[peaks_valleys_series == peak_or_valley],
+                    df[peaks_valleys_series == 'valley'].z, color=color, marker='o', s=marker_size,
+                        facecolors='none', linewidth=2)
 
 def plot_vorticity(ax, vorticity):
 
@@ -434,7 +471,7 @@ def plot_vorticity(ax, vorticity):
 
     ax.legend(loc='best')
 
-    ax.set_title("filter ζ")
+    ax.set_title("filter ζ", fontweight='bold', horizontalalignment='center')
 
 def plot_series_with_peaks_valleys(df, ax):
 
@@ -465,7 +502,7 @@ def plot_series_with_peaks_valleys(df, ax):
                     df[series_name][df[peaks_valleys_col] == 'valley'] * scaling_factor,
                    color=series_color, marker='o', facecolor='None', linewidth=2, s=marker_size)
 
-    ax.set_title('derivate ζ')
+    ax.set_title('derivate ζ', fontweight='bold', horizontalalignment='center')
 
     ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.5), ncol=4)
 
@@ -503,8 +540,8 @@ def plot_peaks_valleys_series(series, ax, *peaks_valleys_series_list):
     for x in peaks_dz.index:
         ax.axvline(x=x, color=colors[3], linestyle='-', linewidth=1.5, zorder=12)
 
-    ax.set_title('find center of stages')
-    ax.title.set_position([0.55, 1.05])
+    ax.set_title('stages centers', fontweight='bold', horizontalalignment='center')
+    ax.title.set_position([0.5, 1.05])
 
 
 def plot_all_periods(phases_dict, df, ax=None, vorticity=None, periods_outfile_path=None):
@@ -593,10 +630,12 @@ def get_periods(vorticity):
 
     df = find_residual_period(df)
 
-    df = find_incipient_period(df)
+    # 1) Fill consecutive intensification or decay periods that have NaNs between them
+    # 2) Remove periods that are too short and fill with the previous period
+    # (or the next one if there is no previous period)
+    df = post_process_periods(df)
 
-    # Remove noisy periods that are less than 3 hours long
-    #df = clean_periods(df)
+    df = find_incipient_period(df)
 
     # Pass the periods to a dictionary with each period's name as key
     #  and their corresponding start and end times as values.
@@ -608,7 +647,7 @@ def get_periods(vorticity):
 def plot_didactic(df, vorticity, output_directory):
     
     # First step: filter vorticity data
-    fig = plt.figure(figsize=(10, 8))
+    fig = plt.figure(figsize=(10, 8.5))
     ax1 = fig.add_subplot(331)
     plot_vorticity(ax1, vorticity)
 
@@ -629,29 +668,31 @@ def plot_didactic(df, vorticity, output_directory):
     df_int = find_intensification_period(df.copy())
     ax4 = fig.add_subplot(334)
     plot_phase(df_int, "intensification", ax4)
-    plot_specific_peaks_valleys(df_int, ax4, "z_valleys", "dz_valleys", "dz2_valleys")
+    plot_specific_peaks_valleys(df_int, ax4, "z_peaks", "z_valleys")
 
     # Decay phase
     df_decay = find_decay_period(df.copy())
     ax5 = fig.add_subplot(335)
     plot_phase(df_decay, "decay", ax5)
-    plot_specific_peaks_valleys(df_decay, ax5, "z_valleys", "dz_peaks", "dz2_valleys")
+    plot_specific_peaks_valleys(df_decay, ax5, "z_peaks", "z_valleys")
 
     # Mature phase
     df_mature = find_mature_stage(df.copy())
     ax6 = fig.add_subplot(336)
     plot_phase(df_mature, "mature", ax6)
-    plot_specific_peaks_valleys(df_mature, ax6, "dz_valleys", "dz_peaks")
+    plot_specific_peaks_valleys(df_mature, ax6, "z_peaks", "z_valleys", "dz_valleys", "dz_peaks")
 
     # Residual stage
     ax7 = fig.add_subplot(337)
     plot_phase(df, "residual", ax7)
+    plot_specific_peaks_valleys(df_decay, ax7, "z_peaks", "z_valleys")
 
     # Incipient phase
     ax8 = fig.add_subplot(338)
     plot_phase(df, "incipient", ax8, show_title=False)
-    ax8.set_title("add incipient phase")
-    ax8.title.set_position([0.55, 1.05])
+    ax8.set_title("incipient", fontweight='bold', horizontalalignment='center')
+    ax8.title.set_position([0.5, 1.05])
+    plot_specific_peaks_valleys(df_decay, ax8, "z_valleys", "dz_valleys")
 
     # Put everything together
     ax9 = fig.add_subplot(339)
@@ -660,8 +701,8 @@ def plot_didactic(df, vorticity, output_directory):
     plot_phase(df, "mature", ax9, show_title=False)
     plot_phase(df, "decay", ax9, show_title=False)
     plot_phase(df, "residual", ax9)
-    ax9.set_title("combine everythng")
-    ax9.title.set_position([0.55, 1.05])
+    ax9.set_title("post processing", fontweight='bold', horizontalalignment='center')
+    ax9.title.set_position([0.5, 1.05])
 
 
     # Set y-axis labels in scientific notation (power notation) and change date format to "%m%d"
@@ -713,6 +754,8 @@ def determine_periods(track_file, output_directory):
 # Testing #
 if __name__ == "__main__":
 
-    track_file = '../inputs/track-test-periods'
+    # track_file = '../inputs/track-test-periods'
+    # track_file = './track-test-periods'
+    track_file = '../LEC_results-0.99/RG1-0.99-20060364_ERA5_track-15x15/RG1-0.99-20060364_ERA5_track-15x15_track'
     output_directory = './'
     determine_periods(track_file, output_directory)
