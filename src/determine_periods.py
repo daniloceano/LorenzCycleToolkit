@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    determine_periods.py                               :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
+#    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/05/19 19:06:47 by danilocs          #+#    #+#              #
-#    Updated: 2023/08/22 10:23:39 by Danilo           ###   ########.fr        #
+#    Updated: 2023/08/22 20:14:38 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -38,6 +38,8 @@ import cmocean.cm as cmo
 from scipy.signal import argrelextrema
 from scipy.signal import savgol_filter 
 from scipy.signal import convolve
+
+from sklearn.preprocessing import MinMaxScaler
 
 def check_create_folder(DirName, verbosity=False):
     if not os.path.exists(DirName):
@@ -76,6 +78,40 @@ def lanczos_filter(variable, window_length_lanczo, frequency):
     filtered_variable = convolve(variable, weights, mode="same")
     return filtered_variable
 
+def pass_weights_bandpass(window, cutoff_low, cutoff_high):
+    """Calculate weights for a bandpass Lanczos filter.
+
+    Args:
+    window: int
+        The length of the filter window.
+
+    cutoff_low: float
+        The low cutoff frequency in inverse time steps.
+
+    cutoff_high: float
+        The high cutoff frequency in inverse time steps.
+
+    """
+    order = ((window - 1) // 2) + 1
+    nwts = 2 * order + 1
+    w = np.zeros([nwts])
+    n = nwts // 2
+    w[n] = 2 * (cutoff_high - cutoff_low)
+    k = np.arange(1.0, n)
+    sigma = np.sin(np.pi * k / n) * n / (np.pi * k)
+    firstfactor = (
+        np.sin(2.0 * np.pi * cutoff_high * k) / (np.pi * k)
+        - np.sin(2.0 * np.pi * cutoff_low * k) / (np.pi * k)
+    )
+    w[n - 1 : 0 : -1] = firstfactor * sigma
+    w[n + 1 : -1] = firstfactor * sigma
+    return w[1:-1]
+
+def lanczos_bandpass_filter(variable, window_length_lanczo, cutoff_low, cutoff_high):
+    weights = pass_weights_bandpass(window_length_lanczo, cutoff_low, cutoff_high)
+    filtered_variable = convolve(variable, weights, mode="same")
+    return filtered_variable
+
 def array_vorticity(zeta_df):
     """
     Calculate derivatives of the vorticity and filter the resulting series
@@ -88,29 +124,53 @@ def array_vorticity(zeta_df):
     """
 
     # Parameter for filtering and smoothing processes
-    frequency = 24
+    frequency = 24.0
     savgol_polynomial = 3
-    window_length_savgol = len(zeta_df) // 2 | 1
-    window_length_lanczo = len(zeta_df) // 20
+    window_length_lanczo = len(zeta_df) // 2 
+    window_length_savgol = len(zeta_df) | 1
     window_length_savgol_2nd = window_length_savgol // 2 | 1
     if window_length_savgol_2nd < savgol_polynomial:
         window_length_savgol_2nd = 3
+    cutoff_low = 1.0 / (12.0 * 24.0)  # 4 days
+    cutoff_high = 1.0 / 24.0  # 24 hours
     
     # Convert dataframe to xarray
     da = zeta_df.to_xarray()
 
     # Apply Lanczos filter to vorticity 
-    zeta_filtred = lanczos_filter(da.zeta.copy(), window_length_lanczo, frequency)
+    zeta_filtred = lanczos_bandpass_filter(da['zeta'].copy(), window_length_lanczo, cutoff_low, cutoff_high)
+    zeta_filtred_low_pass = lanczos_filter(da.zeta.copy(), window_length_lanczo, frequency)
     zeta_filtred = xr.DataArray(zeta_filtred, coords={'time':zeta_df.index})
     da = da.assign(variables={'zeta_filt': zeta_filtred})
 
+    num_samples = len(zeta_filtred)
+    num_copy_samples = int(0.05 * num_samples)
+    zeta_filtred.data[:num_copy_samples] = zeta_filtred_low_pass.data[:num_copy_samples]
+    zeta_filtred.data[-num_copy_samples:] = zeta_filtred_low_pass.data[-num_copy_samples:]
+
+    if pd.Timedelta(zeta_smoothed.time[-1].values - zeta_smoothed.time[0].values) > pd.Timedelta('8D'):
+        window_length_savgol = window_length_savgol // 2 | 1
+        
     # Smooth filtered vorticity with Savgol filter
     zeta_smoothed = xr.DataArray(
-        savgol_filter(zeta_filtred, window_length_savgol, savgol_polynomial, mode="nearest"),
+        savgol_filter(zeta_filtred, window_length_savgol//2|1, savgol_polynomial, mode="nearest"),
         coords={'time':zeta_df.index})
-    zeta_smoothed2 = xr.DataArray(
-        savgol_filter(zeta_smoothed, window_length_savgol_2nd, savgol_polynomial, mode="nearest"),
-                        coords={'time':zeta_df.index})
+
+    if pd.Timedelta(zeta_smoothed.time[-1].values - zeta_smoothed.time[0].values) > pd.Timedelta('8D'):
+        zeta_smoothed2 = xr.DataArray(
+            savgol_filter(zeta_smoothed, window_length_savgol_2nd, savgol_polynomial, mode="nearest"),
+            coords={'time':zeta_df.index})
+
+    else:
+        zeta_smoothed2 = xr.DataArray(
+            savgol_filter(zeta_filtred, window_length_savgol_2nd, savgol_polynomial, mode="nearest"),
+            coords={'time':zeta_df.index})
+    
+    # num_samples = len(zeta_filtred)
+    # num_copy_samples = int(0.05 * num_samples)
+    # zeta_smoothed2.data[:num_copy_samples] = zeta_smoothed.data[:num_copy_samples]
+    # zeta_smoothed2.data[-num_copy_samples:] = zeta_smoothed.data[-num_copy_samples:]
+    
     da = da.assign(variables={'zeta_smoothed': zeta_smoothed})
     da = da.assign(variables={'zeta_smoothed2': zeta_smoothed2})
 
@@ -177,13 +237,11 @@ def find_peaks_valleys(series):
 
     return result
 
-import pandas as pd
-import numpy as np
-
 def find_mature_stage(df):
     dz_peaks = df[df['dz_peaks_valleys'] == 'peak'].index
     dz_valleys = df[df['dz_peaks_valleys'] == 'valley'].index
     z_valleys = df[df['z_peaks_valleys'] == 'valley'].index
+    z_peaks = df[df['z_peaks_valleys'] == 'peak'].index
 
     series_length = df.index[-1] - df.index[0]
     dt = df.index[1] - df.index[0]
@@ -192,37 +250,52 @@ def find_mature_stage(df):
     for z_valley in z_valleys:
         # Find the previous and next dz valleys relative to the current z valley
         previous_dz_valley = dz_valleys[dz_valleys < z_valley]
+        previous_z_peak = z_peaks[z_peaks < z_valley]
+        next_z_peak = z_peaks[z_peaks > z_valley]
 
         # Check if there is a previous dz valley
         if len(previous_dz_valley) == 0:
             continue
 
         previous_dz_valley = previous_dz_valley[-1]
+        previous_z_peak = previous_z_peak[-1]
+        next_z_peak = next_z_peak[0]
 
         # Find the previous and next z peaks relative to the current z valley
-        previous_z_peak = df[(df.index < z_valley) & (df['z_peaks_valleys'] == 'peak')].index.max()
-        next_z_peak = df[(df.index > z_valley) & (df['z_peaks_valleys'] == 'peak')].index.min()
+        previous_dz_valley = df[(df.index < z_valley) & (df['dz_peaks_valleys'] == 'valley')].index.max()
+        next_dz_peak = df[(df.index > z_valley) & (df['dz_peaks_valleys'] == 'peak')].index.min()
 
         # Calculate the distances between z valley and the previous/next dz valleys
+        distance_to_previous_z_peak = z_valley - previous_dz_valley
+        distance_to_next_z_peak = next_dz_peak - z_valley
         distance_to_previous_dz_valley = z_valley - previous_dz_valley
-        distance_to_previous_z_peak = z_valley - previous_z_peak
-        distance_to_next_z_peak = next_z_peak - z_valley
+        distance_to_next_dz_peak = next_dz_peak - z_valley
 
-        # Check if either the previous or next z peak is within 7.5% of the length of z away from the valley
-        if (
-            distance_to_previous_z_peak <= 0.075 * series_length) or (
-            distance_to_next_z_peak <= 0.075 * series_length):
-            continue
+        # Check if there is a dz valley between previous z peak and z valley
+        dz_valley_between = any(dz_valleys[(dz_valleys > previous_z_peak) & (dz_valleys < z_valley)])
 
-        # Calculate the 3/4 distances from z valley to the previous/next dz valleys
-        three_fourth_previous = z_valley - (1 / 4) * distance_to_previous_dz_valley
-        three_fourth_next = z_valley + (1 / 4) * distance_to_next_z_peak
+        # Check if there is a dz peak between z valley and next z peak
+        dz_peak_between = any(dz_peaks[(dz_peaks > z_valley) & (dz_peaks < next_z_peak)])
+
+        # Calculate the distances between z valley and previous/next z peaks or dz valleys/peaks
+        if dz_valley_between:
+            mature_distance_previous = 0.25 * distance_to_previous_dz_valley  # 1/4 distance
+        else:
+            mature_distance_previous = 0.125 * distance_to_previous_z_peak  # 1/8 distance
+
+        if dz_peak_between:
+            mature_distance_next = 0.25 * distance_to_next_dz_peak  # 1/4 distance
+        else:
+            mature_distance_next = 0.125 * distance_to_next_z_peak  # 1/8 distance
+
+        mature_start = z_valley - mature_distance_previous
+        mature_end = z_valley + mature_distance_next
 
         # Mature stage needs to be at least 7% of total length
-        mature_indexes = df.loc[three_fourth_previous:three_fourth_next].index
-        if mature_indexes[-1] - mature_indexes[0] > 0.07*series_length:
-            # Fill the period between three_fourth_previous and three_fourth_next with 'mature'
-            df.loc[three_fourth_previous:three_fourth_next, 'periods'] = 'mature'
+        mature_indexes = df.loc[mature_start:mature_end].index
+        if mature_indexes[-1] - mature_indexes[0] > 0.07 * series_length:
+            # Fill the period between mature_start and mature_end with 'mature'
+            df.loc[mature_start:mature_end, 'periods'] = 'mature'
 
     # Check if all mature stages are preceeded by an intensification
     mature_periods = df[df['periods'] == 'mature'].index
@@ -234,6 +307,7 @@ def find_mature_stage(df):
                 df.loc[block_start:block_end, 'periods'] = np.nan
 
     return df
+
 
 def find_intensification_period(df):
     # Find z peaks and valleys
@@ -305,7 +379,6 @@ def find_decay_period(df):
             df.loc[block_end:next_block_start, 'periods'] = 'decay'
 
     return df
-
 
 def find_residual_period(df):
     unique_phases = [item for item in df['periods'].unique() if pd.notnull(item)]
@@ -465,6 +538,9 @@ def plot_phase(df, phase, ax=None, show_title=True):
     # Create a copy of the DataFrame
     df_copy = df.copy()
 
+    zeta = df_copy['z_unfil']
+    zeta_smoothed = df_copy['z']
+
     colors_phases = {'incipient': '#65a1e6', 'intensification': '#f7b538',
                      'mature': '#d62828', 'decay': '#9aa981', 'residual': 'gray'}
 
@@ -482,11 +558,13 @@ def plot_phase(df, phase, ax=None, show_title=True):
 
     # Iterate over the periods and fill the area
     for start, end in zip(phase_starts, phase_ends):
-        ax.fill_between(df_copy.index, df_copy['z_unfil'], where=(df_copy.index >= start) &
+        ax.fill_between(df_copy.index, zeta, where=(df_copy.index >= start) &
                         (df_copy.index <= end), alpha=0.7, color=colors_phases[phase])
 
-    ax.plot(df_copy.index, df_copy['z_unfil'], c='gray', lw=3, alpha=0.8)
-    ax.plot(df_copy.index, df_copy['z'], c='k')
+    ax.plot(df_copy.index, zeta, c='gray', lw=3, alpha=0.8)
+    ax2 = ax.twinx()
+    ax2.axis('off')
+    ax2.plot(df_copy.index, zeta_smoothed, c='k')
 
     if show_title:
         title = ax.set_title(f'{phase}', fontweight='bold', horizontalalignment='center')
@@ -498,34 +576,50 @@ def plot_phase(df, phase, ax=None, show_title=True):
 
 def plot_specific_peaks_valleys(df, ax, *kwargs):
     # Define the series and colors for plotting
-    series_colors = {'z': 'k', 'dz':'#d62828', 'dz2':'#f7b538'}
+    series_colors = {'z': 'k', 'dz': '#d62828', 'dz2': '#f7b538'}
     marker_sizes = {'z': 190, 'dz': 120, 'dz2': 50}
 
+    zeta = df['z']
+
+    ax2 = ax.twinx()
+    ax2.axis('off')
+
     for key in kwargs:
-        key_name =  key.split('_')[0]
+        key_name = key.split('_')[0]
         peak_or_valley = key.split('_')[1][:-1]
 
-        peaks_valleys_series =  df[f"{key_name}_peaks_valleys"]
+        peaks_valleys_series = df[f"{key_name}_peaks_valleys"]
 
-        color  = series_colors[key_name]
+        color = series_colors[key_name]
         marker_size = marker_sizes[key_name]
+        zorder = 99 if key_name == 'z' else 100 if key_name == 'dz' else 101
 
-        # Plot the specified peaks or valleys
-        if peak_or_valley == 'peak':
-            ax.scatter(df.index[peaks_valleys_series == peak_or_valley],
-                    df[peaks_valleys_series == 'peak'].z, color=color, marker='o', s=marker_size)
-        elif peak_or_valley == 'valley':
-            ax.scatter(df.index[peaks_valleys_series == peak_or_valley],
-                    df[peaks_valleys_series == 'valley'].z, color=color, marker='o', s=marker_size,
-                        facecolors='none', linewidth=2)
+        mask_notna = peaks_valleys_series.notna()
+        mask_peaks = peaks_valleys_series == 'peak'
+
+        # Plot peaks
+        ax2.scatter(df.index[mask_notna & mask_peaks],
+                   zeta[mask_notna & mask_peaks],
+                   marker='o', color=color, s=marker_size, zorder=zorder)
+
+        # Plot valleys
+        ax2.scatter(df.index[mask_notna & ~mask_peaks],
+                   zeta[mask_notna & ~mask_peaks],
+                   marker='o', edgecolors=color, facecolors='none',
+                   s=marker_size, linewidth=2, zorder=zorder)
 
 def plot_vorticity(ax, vorticity):
 
+    zeta = vorticity.zeta
+    zeta_smoothed = vorticity.zeta_smoothed2
+
     ax.axhline(0, c='gray', linewidth=0.5)
     
-    ax.plot(vorticity.time, vorticity.zeta, c='gray', linewidth=0.75, label='ζ')
+    ax.plot(vorticity.time, zeta, c='gray', linewidth=0.75, label='ζ')
 
-    ax.plot(vorticity.time, vorticity.zeta_smoothed2, c='k', linewidth=2, label=r"$ζ_{filt}$")
+    ax2 = ax.twinx()
+    ax2.axis('off')
+    ax2.plot(vorticity.time, zeta_smoothed, c='k', linewidth=2, label=r"$ζ_{filt}$")
 
     ax.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3))
 
@@ -616,10 +710,16 @@ def plot_all_periods(phases_dict, df, ax=None, vorticity=None, periods_outfile_p
         fig, ax = plt.subplots(figsize=(6.5, 5))
 
     if vorticity is not None:
-        ax.plot(vorticity.time, vorticity, linewidth=0.75, color='gray', label=r'ζ')
+        ax.plot(vorticity.time, vorticity.zeta, linewidth=2.5, color='gray', label=r'ζ')
 
-    # Plot the vorticity data
-    ax.plot(df.index, df['z'], c='k', label=r'$ζ_{f}$')
+        ax2 = ax.twinx()
+        ax2.axis('off')
+        ax2.plot(vorticity.time, vorticity.zeta_filt, linewidth=2, c='#d68c45', label=r'$ζ_{f}$')
+        ax2.plot(vorticity.time, vorticity.zeta_smoothed, linewidth=2, c='#1d3557', label=r'$ζ_{fs}$')
+        ax2.plot(vorticity.time, vorticity.zeta_smoothed2, linewidth=2, c='#e63946', label=r'$ζ_{fs^{2}}$')
+
+    else:
+        ax.plot(df.time, df.z, linewidth=0.75, color='gray', label=r'ζ')
 
     legend_labels = set()  # To store unique legend labels
 
@@ -632,15 +732,15 @@ def plot_all_periods(phases_dict, df, ax=None, vorticity=None, periods_outfile_p
         color = colors_phases[base_phase]
 
         # Fill between the start and end indices with the corresponding color
-        ax.fill_between(df.index, df['z'], where=(df.index >= start) & (df.index <= end),
-                        alpha=0.7, color=color, label=base_phase)
+        ax.fill_between(vorticity.time, vorticity.zeta.values, where=(vorticity.time >= start) & (vorticity.time <= end),
+                        alpha=0.4, color=color, label=base_phase)
 
         # Add the base phase name to the legend labels set
         legend_labels.add(base_phase)
 
     # Add legend labels for Vorticity and ζ
-    legend_labels.add('ζ')
-    legend_labels.add(r'$ζ_{f}$')
+    for label in [r'ζ', r'$ζ_{f}$', r'$ζ_{fs}$', r'$ζ_{fs^{2}}$']:
+        legend_labels.add(label)
 
     # Set the title
     ax.set_title('Vorticity Data with Periods')
@@ -807,7 +907,7 @@ def determine_periods(track_file, output_directory):
     periods_dict, df = get_periods(vorticity.copy())
 
     # Create plots
-    plot_all_periods(periods_dict, df, ax=None, vorticity=vorticity.zeta, periods_outfile_path=periods_outfile_path)
+    plot_all_periods(periods_dict, df, ax=None, vorticity=vorticity, periods_outfile_path=periods_outfile_path)
     plot_didactic(df, vorticity, periods_didatic_outfile_path)
     export_periods_to_csv(periods_dict, periods_outfile_path)
     
