@@ -3,15 +3,15 @@
 #                                                         :::      ::::::::    #
 #    determine_periods.py                               :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
+#    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/05/19 19:06:47 by danilocs          #+#    #+#              #
-#    Updated: 2023/08/22 20:14:38 by Danilo           ###   ########.fr        #
+#    Updated: 2023/08/24 10:57:17 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 """
-Version: 1.1.2
+Version: 1.2.0
 
 This script processes vorticity data, identifies different phases of the cyclone     
 and plots the identified periods on periods.png and periods_didatic.png   
@@ -123,16 +123,19 @@ def array_vorticity(zeta_df):
     xarray DataArray
     """
 
-    # Parameter for filtering and smoothing processes
+    # Parameters for filtering and smoothing processes
     frequency = 24.0
     savgol_polynomial = 3
     window_length_lanczo = len(zeta_df) // 2 
     window_length_savgol = len(zeta_df) | 1
-    window_length_savgol_2nd = window_length_savgol // 2 | 1
+    if pd.Timedelta(zeta_df.index[-1] - zeta_df.index[0]) > pd.Timedelta('8D'):
+        window_length_savgol_2nd = window_length_savgol // 2 | 1
+    else:
+        window_length_savgol_2nd = window_length_savgol // 4 | 1
     if window_length_savgol_2nd < savgol_polynomial:
         window_length_savgol_2nd = 3
-    cutoff_low = 1.0 / (12.0 * 24.0)  # 4 days
-    cutoff_high = 1.0 / 24.0  # 24 hours
+    cutoff_low = 1.0 / (7 * 24.0)
+    cutoff_high = 1.0 / 48.0  # 24 hours
     
     # Convert dataframe to xarray
     da = zeta_df.to_xarray()
@@ -148,7 +151,7 @@ def array_vorticity(zeta_df):
     zeta_filtred.data[:num_copy_samples] = zeta_filtred_low_pass.data[:num_copy_samples]
     zeta_filtred.data[-num_copy_samples:] = zeta_filtred_low_pass.data[-num_copy_samples:]
 
-    if pd.Timedelta(zeta_smoothed.time[-1].values - zeta_smoothed.time[0].values) > pd.Timedelta('8D'):
+    if pd.Timedelta(zeta_df.index[-1] - zeta_df.index[0]) > pd.Timedelta('8D'):
         window_length_savgol = window_length_savgol // 2 | 1
         
     # Smooth filtered vorticity with Savgol filter
@@ -156,20 +159,9 @@ def array_vorticity(zeta_df):
         savgol_filter(zeta_filtred, window_length_savgol//2|1, savgol_polynomial, mode="nearest"),
         coords={'time':zeta_df.index})
 
-    if pd.Timedelta(zeta_smoothed.time[-1].values - zeta_smoothed.time[0].values) > pd.Timedelta('8D'):
-        zeta_smoothed2 = xr.DataArray(
+    zeta_smoothed2 = xr.DataArray(
             savgol_filter(zeta_smoothed, window_length_savgol_2nd, savgol_polynomial, mode="nearest"),
             coords={'time':zeta_df.index})
-
-    else:
-        zeta_smoothed2 = xr.DataArray(
-            savgol_filter(zeta_filtred, window_length_savgol_2nd, savgol_polynomial, mode="nearest"),
-            coords={'time':zeta_df.index})
-    
-    # num_samples = len(zeta_filtred)
-    # num_copy_samples = int(0.05 * num_samples)
-    # zeta_smoothed2.data[:num_copy_samples] = zeta_smoothed.data[:num_copy_samples]
-    # zeta_smoothed2.data[-num_copy_samples:] = zeta_smoothed.data[-num_copy_samples:]
     
     da = da.assign(variables={'zeta_smoothed': zeta_smoothed})
     da = da.assign(variables={'zeta_smoothed2': zeta_smoothed2})
@@ -249,51 +241,29 @@ def find_mature_stage(df):
     # Iterate over z valleys
     for z_valley in z_valleys:
         # Find the previous and next dz valleys relative to the current z valley
-        previous_dz_valley = dz_valleys[dz_valleys < z_valley]
-        previous_z_peak = z_peaks[z_peaks < z_valley]
         next_z_peak = z_peaks[z_peaks > z_valley]
+        previous_z_peak =  z_peaks[z_peaks < z_valley]
 
-        # Check if there is a previous dz valley
-        if len(previous_dz_valley) == 0:
+        # Check if there is a previous or next z_peak
+        if len(previous_z_peak) == 0 or len(next_z_peak) == 0:
             continue
 
-        previous_dz_valley = previous_dz_valley[-1]
         previous_z_peak = previous_z_peak[-1]
         next_z_peak = next_z_peak[0]
 
-        # Find the previous and next z peaks relative to the current z valley
-        previous_dz_valley = df[(df.index < z_valley) & (df['dz_peaks_valleys'] == 'valley')].index.max()
-        next_dz_peak = df[(df.index > z_valley) & (df['dz_peaks_valleys'] == 'peak')].index.min()
-
         # Calculate the distances between z valley and the previous/next dz valleys
-        distance_to_previous_z_peak = z_valley - previous_dz_valley
-        distance_to_next_z_peak = next_dz_peak - z_valley
-        distance_to_previous_dz_valley = z_valley - previous_dz_valley
-        distance_to_next_dz_peak = next_dz_peak - z_valley
+        distance_to_previous_z_peak = z_valley - previous_z_peak
+        distance_to_next_z_peak = next_z_peak - z_valley
 
-        # Check if there is a dz valley between previous z peak and z valley
-        dz_valley_between = any(dz_valleys[(dz_valleys > previous_z_peak) & (dz_valleys < z_valley)])
-
-        # Check if there is a dz peak between z valley and next z peak
-        dz_peak_between = any(dz_peaks[(dz_peaks > z_valley) & (dz_peaks < next_z_peak)])
-
-        # Calculate the distances between z valley and previous/next z peaks or dz valleys/peaks
-        if dz_valley_between:
-            mature_distance_previous = 0.25 * distance_to_previous_dz_valley  # 1/4 distance
-        else:
-            mature_distance_previous = 0.125 * distance_to_previous_z_peak  # 1/8 distance
-
-        if dz_peak_between:
-            mature_distance_next = 0.25 * distance_to_next_dz_peak  # 1/4 distance
-        else:
-            mature_distance_next = 0.125 * distance_to_next_z_peak  # 1/8 distance
+        mature_distance_previous = 0.125 * distance_to_previous_z_peak
+        mature_distance_next = 0.125 * distance_to_next_z_peak
 
         mature_start = z_valley - mature_distance_previous
         mature_end = z_valley + mature_distance_next
 
-        # Mature stage needs to be at least 7% of total length
+        # Mature stage needs to be at least 3% of total length
         mature_indexes = df.loc[mature_start:mature_end].index
-        if mature_indexes[-1] - mature_indexes[0] > 0.07 * series_length:
+        if mature_indexes[-1] - mature_indexes[0] > 0.03 * series_length:
             # Fill the period between mature_start and mature_end with 'mature'
             df.loc[mature_start:mature_end, 'periods'] = 'mature'
 
