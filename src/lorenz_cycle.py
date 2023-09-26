@@ -24,7 +24,6 @@ from BoundaryTerms import BoundaryTerms
 from GenerationDissipationTerms import GenerationDissipationTerms
 from BoxData import BoxData
 from BudgetResidual import calc_budget_diff,calc_residuals
-from thermodynamics import AdiabaticHEating
 
 from metpy.units import units
 from metpy.calc import vorticity
@@ -35,7 +34,7 @@ from select_area import slice_domain
 from select_area import draw_box_map
 from select_area import plot_domain_attributes
 
-from determine_periods import determine_periods
+from cyclophaser import determine_periods
 
 import pandas as pd
 import xarray as xr
@@ -184,6 +183,7 @@ def LEC_fixed(data):
     if min_lon > max_lon:
         raise ValueError('Error in box_limits: min_lon > max_lon')
         quit()
+
     if min_lat > max_lat:
         raise ValueError('Error in box_limits: min_lat > max_lat')
         quit()
@@ -202,17 +202,21 @@ def LEC_fixed(data):
     print('\n Parameters spcified for the bounding box:')
     print('min_lon, max_lon, min_lat, max_lat: '+str([min_lon,
                                                      max_lon, min_lat, max_lat]))
+    
     # Convert box limits to strings for apprending to file name
     lims = ''
     for i in [min_lon, max_lon]:
         i = str(int(i))
+
         if i[0] == '-':
             j = i.replace('-','')+'W'
         else:
             j = i+'E'
         lims += j
+
     for i in [min_lat, max_lat]:
         i = str(int(i))
+
         if i[0] == '-':
             j = i.replace('-','')+'S'
         else:
@@ -227,6 +231,7 @@ def LEC_fixed(data):
         tmp.to_csv(ResultsSubDirectory+term+'_'+VerticalCoordIndexer+'.csv',
                    index=None)
     # 4) 
+
     print('Computing zonal and area averages and eddy terms for each variable')
     print('and the static stability parameter...')
     try:
@@ -238,6 +243,7 @@ def LEC_fixed(data):
         raise SystemExit('Error on creating the box for the computations')
     print('Ok!')
     # 5) 
+
     print('\n------------------------------------------------------------------------')
     print('Computing zonal and eddy kinectic and available potential energy terms')
     try:
@@ -248,6 +254,7 @@ def LEC_fixed(data):
         raise SystemExit('Error on computing Energy Contents')
     print('Ok!')
     # 6)
+
     print('\n------------------------------------------------------------------------')
     print('Computing the conversion terms between energy contents') 
     try:
@@ -258,6 +265,7 @@ def LEC_fixed(data):
         raise SystemExit('Error on computing Conversion Terms')
     print('Ok!')
     # 7)
+
     print('\n------------------------------------------------------------------------')
     print('Computing the boundary terms') 
     try:
@@ -269,6 +277,7 @@ def LEC_fixed(data):
         raise SystemExit('Error on computing Boundary Terms')
     print('Ok!')
     # 8)
+
     print('\n------------------------------------------------------------------------')
     print('Computing generation and disspiation terms') 
     try:
@@ -281,14 +290,17 @@ def LEC_fixed(data):
     except:
         raise SystemExit('Error on computing generation/Dissipation Terms')
     print('Ok!')
+
     # 9)
     print('\nOrganising results in a Pandas DataFrame')
+
     # First, extract dates to construct a dataframe
     dates = data[TimeName].values
     days = dates.astype('datetime64[D]')
     hours = pd.to_datetime(dates).hour
     df = pd.DataFrame(data=[*days],columns=['Date'])
     df['Hour'] = hours
+
     # Then adds the data to the DataFrame
     for i,j in zip(range(4),['Az','Ae','Kz','Ke']):
         df[j] = EnergyList[i]
@@ -304,34 +316,40 @@ def LEC_fixed(data):
             df[l] = GenDissList[i]
         for i,m in zip(range(6),['BAz','BAe','BKz','BKe','BΦZ','BΦE']):
             df[m] = BoundaryList[i]  
+
     # 10) 
     print('\n------------------------------------------------------------------------')
     print('Estimating budget terms (∂X/∂t) using finite differences ')
     df = calc_budget_diff(df,dates, args) 
     print('Ok!')
+
     # 11) 
     print('\n------------------------------------------------------------------------')
     print('Computing residuals RGz, RKz, RGe and RKe')
     df = calc_residuals(df, args)
     print('Ok!')
+
     # 12) save file
     print('\nCreating a csv to store results...')
     outfile = ResultsSubDirectory+'/'+outfile_name+'.csv'
     df.to_csv(outfile)
     print(outfile+' created') 
     print('All done!')
+
     # 13) Make figures
     if args.residuals:
         flag = ' -r'
     else:
         flag = ' '
-    os.system("python ../plots/plot_timeseries.py "+outfile+flag)
-    os.system("python ../plots/plot_vertical.py "+ResultsSubDirectory)
-    os.system("python ../plots/plot_boxplot.py "+ResultsSubDirectory+flag)
-    os.system("python ../plots/plot_LEC.py "+outfile)
-    os.system("python ../plots/plot_LPS.py "+outfile)
-    cmd = "python ../plots/plot_area.py {0} {1} {2} {3} {4}".format(min_lon, max_lon,min_lat,max_lat, ResultsSubDirectory)
-    os.system(cmd)
+
+    if args.plots:    
+        os.system("python ../plots/plot_timeseries.py "+outfile+flag)
+        os.system("python ../plots/plot_vertical.py "+ResultsSubDirectory)
+        os.system("python ../plots/plot_boxplot.py "+ResultsSubDirectory+flag)
+        os.system("python ../plots/plot_LEC.py "+outfile)
+        os.system("python ../plots/plot_LPS.py "+outfile)
+        cmd = "python ../plots/plot_area.py {0} {1} {2} {3} {4}".format(min_lon, max_lon,min_lat,max_lat, ResultsSubDirectory)
+        os.system(cmd)
     
 
 def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
@@ -465,9 +483,9 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
             ight_850_slice = ight_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
             iwspd_850_slice = iwspd_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
 
-                # Check if 'min_zeta_850', 'min_hgt_850' and 'max_wind_850' columns exists in the track file.
-                # If they exist, then retrieve and convert the value from the track file.
-                # If they do not exist, calculate them.
+            # Check if 'min_zeta_850', 'min_hgt_850' and 'max_wind_850' columns exists in the track file.
+            # If they exist, then retrieve and convert the value from the track file.
+            # If they do not exist, calculate them.
             try:
                 min_zeta = float(track.loc[track_itime]['min_zeta_850'])
             except KeyError:
@@ -476,22 +494,23 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
                 else:
                     min_zeta_unformatted = izeta_850_slice.min()
                 min_zeta = float(np.nanmin(min_zeta_unformatted))
+
             try:
                 min_hgt = float(track.loc[track_itime]['min_hgt_850'])
             except KeyError:
                 min_hgt = float(ight_850_slice.min())
+
             try:
                 max_wind = float(track.loc[track_itime]['max_wind_850'])
             except KeyError:
                 max_wind = float(iwspd_850_slice.max())
 
         elif args.choose:
-
             # Draw maps and ask user to specify corners for specifying the box
             limits = draw_box_map(iu_850, iv_850, izeta_850, ight_850,
                                     lat, lon, itime)
             
-                # Store system position and attributes
+            # Store system position and attributes
             min_lon, max_lon = limits['min_lon'],  limits['max_lon']
             min_lat, max_lat = limits['min_lat'],  limits['max_lat']
             width, length = limits['max_lon'] - limits['min_lon'], limits['max_lat'] - limits['min_lat']
@@ -574,6 +593,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
         except Exception as e:
             print('An exception occurred: {}'.format(e))
             raise SystemExit('Error creating the box for computations')
+        
         # Compute energy terms
         try:
             ec_obj = EnergyContents(box_obj,method='moving')
@@ -584,6 +604,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
         except Exception as e:
             print('An exception occurred: {}'.format(e))
             raise SystemExit('Error on computing Energy Contents')
+        
         # Compute conversion terms
         try:
             ct_obj = ConversionTerms(box_obj,method='moving')
@@ -594,6 +615,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
         except Exception as e:
             print('An exception occurred: {}'.format(e))
             raise SystemExit('Error on computing Conversion Terms')
+        
         # Compute boundary terms
         try:
             bt_obj = BoundaryTerms(box_obj,method='moving')
@@ -606,6 +628,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
         except Exception as e:
             print('An exception occurred: {}'.format(e))
             raise SystemExit('Error on computing Boundary Terms')
+        
         # Compute generation/dissipation terms
         try:
             gdt_obj = GenerationDissipationTerms(box_obj,method='moving')
@@ -617,6 +640,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
         except Exception as e:
             print('An exception occurred: {}'.format(e))
             raise SystemExit('Error on computing Generation Terms')
+        
     print('\nOrganising results in a Pandas DataFrame')
     df = pd.DataFrame.from_dict(TermsDict, orient ='columns',dtype = float)
     days = times.values.astype('datetime64[D]')
@@ -656,18 +680,33 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
     check_create_folder(FigsDirectory)
     
     # Determine periods
-    determine_periods(output_trackfile, ResultsSubDirectory)
+    try:
+        determine_periods_options = {
+            "vorticity_column": 'min_zeta_850',
+            "plot": os.path.join(ResultsSubDirectory, 'periods'),
+            "plot_steps": os.path.join(ResultsSubDirectory, 'periods_didatic'),
+            "export_dict": os.path.join(ResultsSubDirectory, 'periods'),
+            "process_vorticity_args": {
+                "use_filter": "auto",
+                "use_smoothing_twice": "auto"}
+        }
+        determine_periods(output_trackfile, **determine_periods_options)
+    except Exception as e:
+        print('An exception occurred: {}'.format(e))
+        raise SystemExit('Error on determining periods')
     
     if args.residuals:
         flag = ' -r'
     else:
         flag = ' '
-    os.system("python ../plots/plot_timeseries.py "+outfile+flag)
-    os.system("python ../plots/plot_vertical.py "+ResultsSubDirectory)
-    os.system("python ../plots/plot_boxplot.py "+ResultsSubDirectory+flag)
-    os.system("python ../plots/plot_LEC.py "+outfile)
-    os.system("python ../plots/plot_LPS.py "+outfile)
-    os.system("python ../plots/plot_track.py "+outfile)
+
+    if args.plots:
+        os.system("python ../plots/plot_timeseries.py "+outfile+flag)
+        os.system("python ../plots/plot_vertical.py "+ResultsSubDirectory)
+        os.system("python ../plots/plot_boxplot.py "+ResultsSubDirectory+flag)
+        os.system("python ../plots/plot_LEC.py "+outfile)
+        os.system("python ../plots/plot_LPS.py "+outfile)
+        os.system("python ../plots/plot_track.py "+outfile)
 
 if __name__ == "__main__":
     
@@ -681,13 +720,14 @@ if __name__ == "__main__":
     group.add_argument("-c", "--choose", action='store_true', help="Choose the domain for each time step by clicking on the screen.")
     parser.add_argument("-z", "--zeta", action='store_true', help="Use this flag if the track file was created using vorticity.")
     parser.add_argument("-m", "--mpas", action='store_true', help="for MPAS-A data processed with MPAS-BR routines")
+    parser.add_argument("-p", "--plots", action='store_true', help="wether or not to make plots.")
     parser.add_argument("-o", "--outname", type=str, help="Choose a name for saving results.")
     parser.add_argument("-v", "--verbosity", action='store_true', help="Increase output verbosity.")
 
     args = parser.parse_args()
 
     # Debug:
-    # args = parser.parse_args(['../samples/Reg1-Representative_NCEP-R2.nc', '-r', '-t'])
+    # args = parser.parse_args(['../samples/Reg1-Representative_NCEP-R2.nc', '-r', '-t', '-p'])
     # args = parser.parse_args(['/p1-nemo/danilocs/mpas/MPAS-BR/post_proc/py/interpolations/Catarina-2403-2903_MPAS.nc',
     # '-t', '-g', '-r'])
     # args = parser.parse_args(['/p1-nemo/danilocs/SWSA-cyclones_energetic-analysis/met_data/ERA5/DATA/10MostIntense-19830422_ERA5.nc',
