@@ -108,26 +108,32 @@ def map_decorators(ax):
 def plot_min_zeta(ax, zeta, lat, lon, limits):
     max_lon, min_lon = limits['max_lon'], limits['min_lon']
     max_lat, min_lat = limits['max_lat'], limits['min_lat']
+
     # Plot mininum zeta point whithin box
     izeta = zeta.sel({lon.dims[0]:slice(min_lon,max_lon),
                     lat.dims[0]:slice(min_lat,max_lat)})
-    zeta_min = izeta.min()
-    zeta_min_loc = izeta.where(izeta==zeta_min, drop=True).squeeze()
+    if min_lat < 0:
+        min_max_zeta = izeta.min()
+    else:
+        min_max_zeta = izeta.max()
+    
+    min_max_zeta_loc = izeta.where(izeta==min_max_zeta, drop=True).squeeze()
+
     # sometimes there are multiple minimuns
-    if zeta_min_loc.shape:
-        if len(zeta_min_loc.shape) >1:
-            for points in zeta_min_loc:
+    if min_max_zeta_loc.shape:
+        if len(min_max_zeta_loc.shape) >1:
+            for points in min_max_zeta_loc:
                 for point in points:
                     ax.scatter(point[lon.dims[0]], point[lat.dims[0]],
                            marker='o', facecolors='none', linewidth=3,
                            edgecolor='k',  s=200)
         else:
-            for point in zeta_min_loc:
+            for point in min_max_zeta_loc:
                 ax.scatter(point[lon.dims[0]], point[lat.dims[0]],
                        marker='o', facecolors='none', linewidth=3,
                        edgecolor='k',  s=200)
     else:
-        ax.scatter(zeta_min_loc[lon.dims[0]], zeta_min_loc[lat.dims[0]],
+        ax.scatter(min_max_zeta_loc[lon.dims[0]], min_max_zeta_loc[lat.dims[0]],
                marker='o', facecolors='none', linewidth=3,
                edgecolor='k',  s=200)
 
@@ -310,8 +316,8 @@ def plot_domain_attributes(data850, position, FigsDirectory):
     
     # Plot central point, mininum vorticity, minimum hgt and maximum wind
     ax.scatter(central_lon, central_lat,  marker='o', c='#31332e', s=100, zorder=4)
-    ax.scatter(data850['min_zeta']['longitude'], data850['min_zeta']['latitude'],
-                marker='s', c='#31332e', s=100, zorder=4, label='min zeta')
+    ax.scatter(data850['min_max_zeta']['longitude'], data850['min_max_zeta']['latitude'],
+                marker='s', c='#31332e', s=100, zorder=4, label='min/max zeta')
     ax.scatter(data850['min_hgt']['longitude'], data850['min_hgt']['latitude'],
                  marker='x', c='#31332e', s=100, zorder=4, label='min hgt')
     ax.scatter(data850['max_wind']['longitude'], data850['max_wind']['latitude'],
@@ -327,7 +333,7 @@ def plot_domain_attributes(data850, position, FigsDirectory):
     # Add title
     plt.title('Box defined for computations\n', fontsize=22)
 
-    plot_zeta(ax, data850['min_zeta']['data'], data850['lat'], data850['lon'], data850['min_hgt']['data'])
+    plot_zeta(ax, data850['min_max_zeta']['data'], data850['lat'], data850['lon'], data850['min_hgt']['data'])
     ax.add_feature(COASTLINE,edgecolor='#283618',linewidth=1)
     ax.add_feature(BORDERS,edgecolor='#283618',linewidth=1)
     _ = ax.add_feature(cfeature.NaturalEarthFeature('physical',
