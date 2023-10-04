@@ -138,8 +138,13 @@ def find_extremum_coordinates(data, lat, lon, variable):
     lat_values = lat.values
     lon_values = lon.values
 
-    if variable == 'min_zeta':
-        index = np.unravel_index(data.argmin(), data.shape)
+    min_lat = lat_values.min()
+
+    if variable == 'min_max_zeta':
+        if min_lat < 0:
+            index = np.unravel_index(data.argmin(), data.shape)
+        else:
+            index = np.unravel_index(data.argmax(), data.shape)
     elif variable == 'min_hgt':
         index = np.unravel_index(data.argmin(), data.shape)
     elif variable == 'max_wind':
@@ -391,7 +396,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
 
     # Dictionary for saving system position and attributes
     results_keys = ['datestr', 'central_lat', 'central_lon', 'length', 'width',
-                'min_zeta_850', 'min_hgt_850', 'max_wind_850']
+                'min_max_zeta_850', 'min_hgt_850', 'max_wind_850']
     out_track = pd.DataFrame(columns=results_keys)
 
     # Create dict for store results
@@ -483,17 +488,20 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
             ight_850_slice = ight_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
             iwspd_850_slice = iwspd_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
 
-            # Check if 'min_zeta_850', 'min_hgt_850' and 'max_wind_850' columns exists in the track file.
+            # Check if 'min_max_zeta_850', 'min_hgt_850' and 'max_wind_850' columns exists in the track file.
             # If they exist, then retrieve and convert the value from the track file.
             # If they do not exist, calculate them.
             try:
-                min_zeta = float(track.loc[track_itime]['min_zeta_850'])
+                min_max_zeta = float(track.loc[track_itime]['min_max_zeta_850'])
             except KeyError:
                 if args.zeta:
-                    min_zeta_unformatted = izeta_850.sel(latitude=central_lat, longitude=central_lon, method='nearest')
+                    min_max_zeta_unformatted = izeta_850.sel(latitude=central_lat, longitude=central_lon, method='nearest')
                 else:
-                    min_zeta_unformatted = izeta_850_slice.min()
-                min_zeta = float(np.nanmin(min_zeta_unformatted))
+                    min_max_zeta_unformatted = izeta_850_slice.min()
+                if min_lat < 0:
+                    min_max_zeta = float(np.nanmin(min_max_zeta_unformatted))
+                else:
+                    min_max_zeta = float(np.nanmax(min_max_zeta_unformatted))
 
             try:
                 min_hgt = float(track.loc[track_itime]['min_hgt_850'])
@@ -521,21 +529,21 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
             izeta_850_slice = izeta_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
             ight_850_slice = ight_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
             iwspd_850_slice = iwspd_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
-            min_zeta = float(izeta_850_slice.min())
+            min_max_zeta = float(izeta_850_slice.min())
             min_hgt = float(ight_850_slice.min())
             max_wind = float(iwspd_850_slice.max())
 
         # Find position of the extremes
         lat_slice, lon_slice = izeta_850_slice[LatIndexer], izeta_850_slice[LonIndexer]
-        min_zeta_lat, min_zeta_lon = find_extremum_coordinates(izeta_850_slice, lat_slice, lon_slice, 'min_zeta')
+        min_max_zeta_lat, min_max_zeta_lon = find_extremum_coordinates(izeta_850_slice, lat_slice, lon_slice, 'min_max_zeta')
         min_hgt_lat, min_hgt_lon = find_extremum_coordinates(ight_850_slice, lat_slice, lon_slice, 'min_hgt')
         max_wind_lat, max_wind_lon = find_extremum_coordinates(iwspd_850_slice, lat_slice, lon_slice, 'max_wind')
 
         # Store the results in a dictionary for plotting purposes
         data850 = {
-            'min_zeta': {
-                'latitude': min_zeta_lat,
-                'longitude': min_zeta_lon,
+            'min_max_zeta': {
+                'latitude': min_max_zeta_lat,
+                'longitude': min_max_zeta_lon,
                 'data': izeta_850
             },
             'min_hgt': {
@@ -558,7 +566,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
         'central_lon': central_lon,
         'length': length,
         'width': width,
-        'min_zeta_850': min_zeta,
+        'min_max_zeta_850': min_max_zeta,
         'min_hgt_850': min_hgt,
         'max_wind_850': max_wind
         }
@@ -573,7 +581,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
         print(f'Box min_lat, max_lat: {min_lat}/{max_lat}')
         print(f'Box size (longitude): {width}')
         print(f'Box size (latitude): {length}')
-        print(f'Minimum vorticity at 850 hPa: {min_zeta}')
+        print(f'Minimum/Maximum vorticity at 850 hPa: {min_max_zeta}')
         print(f'Minimum geopotential height at 850 hPa: {min_hgt}')
         print(f'Maximum wind speed at 850 hPa: {max_wind}')
     
@@ -682,7 +690,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
     # Determine periods
     try:
         determine_periods_options = {
-            "vorticity_column": 'min_zeta_850',
+            "vorticity_column": 'min_max_zeta_850',
             "plot": os.path.join(ResultsSubDirectory, 'periods'),
             "plot_steps": os.path.join(ResultsSubDirectory, 'periods_didatic'),
             "export_dict": os.path.join(ResultsSubDirectory, 'periods'),
