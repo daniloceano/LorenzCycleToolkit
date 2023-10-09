@@ -760,8 +760,10 @@ if __name__ == "__main__":
 
     # Initialize error logging
     log_file = 'error_log.txt'
-    log_level = logging.ERROR  # Change this to the desired logging level
-    logging.basicConfig(filename=log_file, level=log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    log_level = logging.ERROR 
+
+    # Configure logging to overwrite the log file if it exists
+    logging.basicConfig(filename=log_file, filemode='w', level=log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')    
     
     # Open data
     data = get_data(infile, varlist) 
@@ -806,3 +808,6 @@ if __name__ == "__main__":
         LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory)
         print("--- %s seconds for running moving framework ---" % (time.time() - start_time))
     
+    # Check if the error log file is empty
+    if os.path.getsize(log_file) == 0:
+        os.remove(log_file)
