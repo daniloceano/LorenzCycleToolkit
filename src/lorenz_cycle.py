@@ -100,7 +100,8 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
             )
     except FileNotFoundError:
         raise SystemExit("ERROR: Could not open file. Check if path, fvars file, and file format (.nc) are correct.")
-    except:
+    except Exception as e:
+        logging.exception("An exception occurred: {}".format(e))
         raise
 
     print("Assigning geospatial coordinates in radians...")
@@ -244,7 +245,8 @@ def LEC_fixed(data):
         western_limit=min_lon, eastern_limit=max_lon,
         southern_limit=min_lat, northern_limit=max_lat,
         output_dir=ResultsSubDirectory)
-    except:
+    except Exception as e:
+        logging.exception("An exception occurred: {}".format(e))
         raise SystemExit('Error on creating the box for the computations')
     print('Ok!')
     # 5) 
@@ -255,7 +257,8 @@ def LEC_fixed(data):
         ec_obj = EnergyContents(box_obj,method='fixed')
         EnergyList = [ec_obj.calc_az(), ec_obj.calc_ae(),
                       ec_obj.calc_kz(),ec_obj.calc_ke()]
-    except:
+    except Exception as e:
+        logging.exception("An exception occurred: {}".format(e))
         raise SystemExit('Error on computing Energy Contents')
     print('Ok!')
     # 6)
@@ -266,7 +269,8 @@ def LEC_fixed(data):
         ct_obj = ConversionTerms(box_obj,method='fixed')
         ConversionList = [ct_obj.calc_cz(),ct_obj.calc_ca(),
                           ct_obj.calc_ck(),ct_obj.calc_ce()]
-    except:
+    except Exception as e:
+        logging.exception("An exception occurred: {}".format(e))
         raise SystemExit('Error on computing Conversion Terms')
     print('Ok!')
     # 7)
@@ -278,7 +282,8 @@ def LEC_fixed(data):
         BoundaryList = [bt_obj.calc_baz(),bt_obj.calc_bae(),
                         bt_obj.calc_bkz(),bt_obj.calc_bke(),
                         bt_obj.calc_boz(),bt_obj.calc_boe()]
-    except:
+    except Exception as e:
+        logging.exception("An exception occurred: {}".format(e))
         raise SystemExit('Error on computing Boundary Terms')
     print('Ok!')
     # 8)
@@ -292,7 +297,8 @@ def LEC_fixed(data):
         else:
              GenDissList = [gdt_obj.calc_gz(),gdt_obj.calc_ge(),
                             gdt_obj.calc_dz(),gdt_obj.calc_de()]
-    except:
+    except Exception as e:
+        logging.exception("An exception occurred: {}".format(e))
         raise SystemExit('Error on computing generation/Dissipation Terms')
     print('Ok!')
 
@@ -599,6 +605,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
                 dTdt=idTdt
             )
         except Exception as e:
+            logging.exception("An exception occurred: {}".format(e))
             print('An exception occurred: {}'.format(e))
             raise SystemExit('Error creating the box for computations')
         
@@ -610,6 +617,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
             TermsDict['Kz'].append(ec_obj.calc_kz())
             TermsDict['Ke'].append(ec_obj.calc_ke())
         except Exception as e:
+            logging.exception("An exception occurred: {}".format(e))
             print('An exception occurred: {}'.format(e))
             raise SystemExit('Error on computing Energy Contents')
         
@@ -621,6 +629,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
             TermsDict['Ck'].append(ct_obj.calc_ck())
             TermsDict['Cz'].append(ct_obj.calc_cz())
         except Exception as e:
+            logging.exception("An exception occurred: {}".format(e))
             print('An exception occurred: {}'.format(e))
             raise SystemExit('Error on computing Conversion Terms')
         
@@ -634,6 +643,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
             TermsDict['BΦE'].append(bt_obj.calc_boe())
             TermsDict['BΦZ'].append(bt_obj.calc_boz())
         except Exception as e:
+            logging.exception("An exception occurred: {}".format(e))
             print('An exception occurred: {}'.format(e))
             raise SystemExit('Error on computing Boundary Terms')
         
@@ -646,6 +656,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
                 TermsDict['De'].append(gdt_obj.calc_de())
                 TermsDict['Dz'].append(gdt_obj.calc_dz())
         except Exception as e:
+            logging.exception("An exception occurred: {}".format(e))
             print('An exception occurred: {}'.format(e))
             raise SystemExit('Error on computing Generation Terms')
         
@@ -700,6 +711,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
         }
         determine_periods(output_trackfile, **determine_periods_options)
     except Exception as e:
+        logging.exception("An exception occurred: {}".format(e))
         print('An exception occurred: {}'.format(e))
         raise SystemExit('Error on determining periods')
     
@@ -740,9 +752,16 @@ if __name__ == "__main__":
     # '-t', '-g', '-r'])
     # args = parser.parse_args(['/p1-nemo/danilocs/SWSA-cyclones_energetic-analysis/met_data/ERA5/DATA/10MostIntense-19830422_ERA5.nc',
     # '-c', '-g', '-r'])
+    # args = parser.parse_args(['../../data_etc/netCDF_data/2022.nc', '-r', '-f', '-p'])
+    # args = parser.parse_args(['../samples/Reg1-Representative_NCEP-R2.nc', '-r', '-f', '-p'])
 
     infile  = args.infile
     varlist = '../inputs/fvars'
+
+    # Initialize error logging
+    log_file = 'error_log.txt'
+    log_level = logging.ERROR  # Change this to the desired logging level
+    logging.basicConfig(filename=log_file, level=log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
     # Open data
     data = get_data(infile, varlist) 
