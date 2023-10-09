@@ -8,9 +8,9 @@ LEC_Results/
 netCDF_data/
 
 # inputs
-inputs/box_lims
-inputs/fvars
-inputs/track
+inputs/box_limits*
+inputs/fvars*
+inputs/track*
 
 # automation
 src/automate-SWSA-cyclones_energetic-analysis.sh
@@ -204,3 +204,6 @@ src/debug.py
 src/*.csv
 debug
 debug*
+
+# error log
+src/error_log.txt
