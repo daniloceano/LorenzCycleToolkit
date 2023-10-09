@@ -68,7 +68,7 @@ def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
     sigma_AA_filtered = sigma_AA.where(sigma_AA > 0.03, 0.03)
     sigma_AA_filtered = sigma_AA_filtered*units_sigma
 
-    return sigma_AA_filtered
+    return sigma_AA_filtered.drop("coslats", errors='ignore')
 
 def AdiabaticHEating(TemperatureData, PressureData, OmegaData,
                       UWindComponentData,VWindComponentData,
