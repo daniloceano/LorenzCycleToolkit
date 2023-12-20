@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/20 13:57:42 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/20 15:26:48 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -22,7 +22,7 @@ from BoundaryTerms import BoundaryTerms
 from GenerationDissipationTerms import GenerationDissipationTerms
 from BoxData import BoxData
 from BudgetResidual import calc_budget_diff, calc_residuals
-from tools import initialize_logging, prepare_data
+from tools import initialize_logging
 
 def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirectory: str,
               args: argparse.Namespace):
@@ -137,6 +137,8 @@ def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirec
         os.system(f"python ../plots/plot_area.py {min_lon} {max_lon} {min_lat} {max_lat} {results_subdirectory}")
 
 if __name__ == '__main__':
+    from tools import prepare_data
+    
     args = argparse.Namespace(
         infile='../samples/Reg1-Representative_NCEP-R2.nc',
         residuals=True,
