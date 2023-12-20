@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/19 23:42:42 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/20 13:43:56 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -24,7 +24,8 @@ from BoxData import BoxData
 from BudgetResidual import calc_budget_diff, calc_residuals
 from tools import initialize_logging, prepare_data
 
-def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirectory: str, args: argparse.Namespace):
+def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirectory: str,
+              args: argparse.Namespace):
     """
     Computes the Lorenz Energy Cycle (LEC) using a fixed framework.
 
