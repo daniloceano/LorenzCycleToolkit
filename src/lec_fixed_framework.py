@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/20 15:26:48 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/20 16:31:30 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -79,7 +79,7 @@ def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirec
         pd.DataFrame(columns=columns).to_csv(output_path, index=None)
 
     try:
-        box_obj = BoxData(data, variable_list_df, args, min_lon, max_lon, min_lat, max_lat, results_subdirectory)
+        box_obj = BoxData(data, variable_list_df, min_lon, max_lon, min_lat, max_lat, args, results_subdirectory)
     except Exception as e:
         logging.exception("An exception occurred while creating BoxData object")
         raise
@@ -148,7 +148,7 @@ if __name__ == '__main__':
         choose=False,
         zeta=False,
         mpas=False,
-        plots=False,
+        plots=True,
         outname=None,
         verbosity=False
     )
@@ -160,7 +160,7 @@ if __name__ == '__main__':
 
     data, _ = prepare_data(args, varlist)
 
-    results_subdirectory = "../LEC_results"
+    results_subdirectory = "../LEC_Results"
     os.makedirs(results_subdirectory, exist_ok=True)
 
     lec_fixed(data, variable_list_df, results_subdirectory, args)
