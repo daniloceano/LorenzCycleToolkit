@@ -6,12 +6,14 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/19 18:00:00 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/19 22:56:16 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
+import os 
 import pandas as pd
 import logging
+import argparse
 import xarray as xr
 from EnergyContents import EnergyContents
 from ConversionTerms import ConversionTerms
@@ -20,13 +22,13 @@ from GenerationDissipationTerms import GenerationDissipationTerms
 from BoxData import BoxData
 from BudgetResidual import calc_budget_diff, calc_residuals
 
-def lec_fixed(data: xr.Dataset, df_vars: pd.DataFrame, results_subdirectory: str, args: argparse.Namespace):
+def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirectory: str, args: argparse.Namespace):
     """
     Computes the Lorenz Energy Cycle (LEC) using a fixed framework.
 
     Args:
         data (xr.Dataset): Dataset containing the atmospheric data for LEC computation.
-        df_vars (pd.DataFrame): DataFrame with variable mappings used in the LEC analysis.
+        variable_list_df (pd.DataFrame): DataFrame with variable mappings used in the LEC analysis.
         results_subdirectory (str): Directory path to save the results.
         args (argparse.Namespace): Arguments provided to the script, including configurations 
                                    for the LEC computation.
@@ -47,8 +49,8 @@ def lec_fixed(data: xr.Dataset, df_vars: pd.DataFrame, results_subdirectory: str
     logging.info('Data loaded into memory.')
 
     dfbox = pd.read_csv('../inputs/box_limits', header=None, delimiter=';', index_col=0)
-    min_lon, max_lon = dfbox.loc['min_lon'][0], dfbox.loc['max_lon'][0]
-    min_lat, max_lat = dfbox.loc['min_lat'][0], dfbox.loc['max_lat'][0]
+    min_lon, max_lon = dfbox.loc['min_lon'].iloc[0], dfbox.loc['max_lon'].iloc[0]
+    min_lat, max_lat = dfbox.loc['min_lat'].iloc[0], dfbox.loc['max_lat'].iloc[0]
     
     if min_lon > max_lon:
         raise ValueError('Error in box_limits: min_lon > max_lon')
@@ -56,10 +58,10 @@ def lec_fixed(data: xr.Dataset, df_vars: pd.DataFrame, results_subdirectory: str
         raise ValueError('Error in box_limits: min_lat > max_lat')
 
     LonIndexer, LatIndexer, TimeName, VerticalCoordIndexer = (
-        df_vars.loc['Longitude']['Variable'],
-        df_vars.loc['Latitude']['Variable'],
-        df_vars.loc['Time']['Variable'],
-        df_vars.loc['Vertical Level']['Variable']
+        variable_list_df.loc['Longitude']['Variable'],
+        variable_list_df.loc['Latitude']['Variable'],
+        variable_list_df.loc['Time']['Variable'],
+        variable_list_df.loc['Vertical Level']['Variable']
     )
     
     pres = data[VerticalCoordIndexer] * data[VerticalCoordIndexer].metpy.units
@@ -72,7 +74,7 @@ def lec_fixed(data: xr.Dataset, df_vars: pd.DataFrame, results_subdirectory: str
         pd.DataFrame(columns=columns).to_csv(os.path.join(results_subdirectory, f'{term}_{VerticalCoordIndexer}.csv'), index=None)
     
     try:
-        box_obj = BoxData(data=data, df_vars=df_vars, args=args, western_limit=min_lon, eastern_limit=max_lon, southern_limit=min_lat, northern_limit=max_lat, output_dir=results_subdirectory)
+        box_obj = BoxData(data=data, variable_list_df=variable_list_df, args=args, western_limit=min_lon, eastern_limit=max_lon, southern_limit=min_lat, northern_limit=max_lat, output_dir=results_subdirectory)
         ec_obj = EnergyContents(box_obj, method='fixed')
         energy_list = [ec_obj.calc_az(), ec_obj.calc_ae(), ec_obj.calc_kz(), ec_obj.calc_ke()]
 
@@ -101,7 +103,7 @@ def lec_fixed(data: xr.Dataset, df_vars: pd.DataFrame, results_subdirectory: str
     df = calc_budget_diff(df, dates, args)
     df = calc_residuals(df, args)
 
-    outfile_name = args.outname if args.outname else ''.join(args.infile.split('/')[-1].split('.nc')) + '_' + args.method
+    outfile_name = args.outname if args.outname else ''.join(args.infile.split('/')[-1].split('.nc')) + '_fixed' 
     outfile = os.path.join(results_subdirectory, f'{outfile_name}.csv')
     df.to_csv(outfile)
     logging.info(f'Results saved to {outfile}')
@@ -113,3 +115,34 @@ def lec_fixed(data: xr.Dataset, df_vars: pd.DataFrame, results_subdirectory: str
         for script in plot_scripts:
             os.system(f"python ../plots/{script} {outfile}{plot_flag}")
         os.system(f"python ../plots/plot_area.py {min_lon} {max_lon} {min_lat} {max_lat} {results_subdirectory}")
+
+if __name__ == '__main__':
+    from tools import initialize_logging, prepare_data
+
+    # Mocking the argparse.Namespace for testing
+    args = argparse.Namespace(
+        infile='../samples/Reg1-Representative_NCEP-R2.nc',
+        residuals=True,
+        fixed=True,
+        geopotential=False,
+        track=False,
+        choose=False,
+        zeta=False,
+        mpas=False,
+        plots=False,
+        outname=None,
+        verbosity=False
+    )
+
+    initialize_logging()
+
+    varlist = "../inputs/fvars_NCEP-R2"
+    variable_list_df = pd.read_csv(varlist, sep=';', index_col=0, header=0)
+
+    # Assuming create_arg_parser and prepare_data are modified to work with the mocked args
+    data, _ = prepare_data(args, varlist)
+
+    results_subdirectory = "../LEC_results"
+    os.makedirs(results_subdirectory, exist_ok=True)
+
+    lec_fixed(data, variable_list_df, results_subdirectory, args)
