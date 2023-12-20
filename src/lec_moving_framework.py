@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/20 17:26:37 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/20 20:12:45 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -234,7 +234,7 @@ def compute_and_store_terms(box_obj, terms_dict):
 
     return terms_dict
 
-def finalize_results(times, terms_dict, args, results_subdirectory):
+def finalize_results(times, terms_dict, args, results_subdirectory, out_track):
     """
     Process and finalize results. 
     This includes creating a DataFrame with results and saving it to a CSV file.
@@ -267,7 +267,7 @@ def finalize_results(times, terms_dict, args, results_subdirectory):
 
     # Save system position as a csv file for replicability
     out_track = out_track.rename(columns={'datestr':'time','central_lat':'Lat','central_lon':'Lon'})
-    output_trackfile =  results_subdirectory+outfile_name+'_track'
+    output_trackfile = os.path.join(results_subdirectory, outfile_name+'_trackfile')
     out_track.to_csv(output_trackfile, index=False, sep=";")
 
     return outfile_path, df
@@ -404,7 +404,7 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
         terms_dict = compute_and_store_terms(box_obj, terms_dict)
 
     # Finalize and process results
-    df, outfile_path = finalize_results(times, terms_dict, args, results_subdirectory)
+    df, outfile_path = finalize_results(times, terms_dict, args, results_subdirectory, out_track)
 
     if args.plots:
         plot_results(outfile_path, results_subdirectory, args)
@@ -421,7 +421,7 @@ if __name__ == '__main__':
         choose=False,
         zeta=False,
         mpas=False,
-        plots=False,
+        plots=True,
         outname=None,
         verbosity=False
     )
@@ -436,8 +436,11 @@ if __name__ == '__main__':
     dTdt =  data[variable_list_df.loc['Air Temperature']['Variable']].differentiate(
                 variable_list_df.loc['Time']['Variable'],datetime_unit='s') * units('K/s')
 
-    results_subdirectory = "../LEC_Results"
-    figures_directory = f"{results_subdirectory}/figures"
+    resuts_directory = "../LEC_Results/"
+    results_subdirectory = os.path.join(resuts_directory, "".join(args.infile.split('/')[-1].split('.nc')))
+    figures_directory = os.path.join(results_subdirectory, 'Figures')
+    os.makedirs(figures_directory, exist_ok=True)
+    os.makedirs(results_subdirectory, exist_ok=True)
     os.makedirs(results_subdirectory, exist_ok=True)
 
     lec_moving(data, variable_list_df, dTdt, results_subdirectory, figures_directory, args)
