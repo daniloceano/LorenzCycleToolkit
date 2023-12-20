@@ -1,12 +1,12 @@
 # **************************************************************************** #
 #                                                                              #
 #                                                         :::      ::::::::    #
-#    AtmosphericProcessing.py                          :+:      :+:    :+:    #
+#    tools.py                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/19 17:33:07 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/19 23:25:48 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -19,7 +19,18 @@ import numpy as np
 from metpy.units import units
 from select_area import slice_domain
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+def initialize_logging():
+    """
+    Initializes the logging configuration for the application.
+    """
+    log_file = 'error_log.txt'
+    logging.basicConfig(filename=log_file, filemode='w', level=logging.ERROR, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    
+    # Remove the log file if it exists and is empty
+    if os.path.exists(log_file) and os.path.getsize(log_file) == 0:
+        os.remove(log_file)
+
+initialize_logging()
 
 def convert_longitude_range(df: xr.Dataset, lon_indexer: str) -> xr.Dataset:
     """
@@ -60,9 +71,11 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
     try:
         variable_list_df = pd.read_csv(varlist, sep=';', index_col=0, header=0)
     except FileNotFoundError:
-        raise FileNotFoundError("The 'fvar' text file could not be found.")
+        logging.error("The 'fvar' text file could not be found.")
+        raise
     except pd.errors.EmptyDataError:
-        raise ValueError("The 'fvar' text file is empty.")
+        logging.error("The 'fvar' text file is empty.")
+        raise
 
     logging.info("List of variables found:\n" + str(variable_list_df))
 
@@ -78,7 +91,8 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
                 variable_list_df.loc['Longitude']['Variable']
             )
     except FileNotFoundError:
-        raise FileNotFoundError("Could not open file. Check if path, fvars file, and file format (.nc) are correct.")
+        logging.error("Could not open file. Check if path, fvars file, and file format (.nc) are correct.")
+        raise
     except Exception as e:
         logging.exception("An exception occurred: {}".format(e))
         raise
@@ -89,7 +103,6 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
     data = data.assign_coords({"rlons": np.deg2rad(data[LonIndexer])})
 
     levels_Pa = (data[LevelIndexer] * units(str(data[LevelIndexer].units))).metpy.convert_units("Pa")
-
     data = data.assign_coords({LevelIndexer: levels_Pa})
     
     data = data.sortby(LonIndexer).sortby(LevelIndexer, ascending=True).sortby(LatIndexer, ascending=True)
@@ -122,21 +135,25 @@ def find_extremum_coordinates(data: xr.DataArray, lat: xr.DataArray, lon: xr.Dat
     elif variable in ['min_hgt', 'max_wind']:
         index = np.unravel_index(data.argmin() if variable == 'min_hgt' else data.argmax(), data.shape)
     else:
+        logging.error(f"Invalid variable specified: {variable}")
         raise ValueError(f"Invalid variable specified: {variable}")
 
     return lat_values[index[0]], lon_values[index[1]]
 
 def prepare_data(args, fvars: str = '../inputs/fvars') -> xr.Dataset:
+    """
+    Prepare the data for further analysis.
+
+    Parameters:
+        args (object): The arguments for the function.
+        fvars (str): The file path to the fvars.
+
+    Returns:
+        method (str): The method used for the analysis: fixed, track or choose.
+        xr.Dataset: The prepared dataset for analysis.
+    """
     data = get_data(args.infile, fvars)
     if args.mpas:
         data = data.drop_dims('standard_height')
     
     return slice_domain(data, args, fvars)
-
-def initialize_logging():
-    log_file = 'error_log.txt'
-    logging.basicConfig(filename=log_file, filemode='w', level=logging.ERROR, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-    # Check if the log file exists and its size is zero, then remove it
-    if os.path.exists(log_file) and os.path.getsize(log_file) == 0:
-        os.remove(log_file)
