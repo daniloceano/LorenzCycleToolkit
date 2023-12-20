@@ -46,15 +46,15 @@ class BoxData:
     '''
     Object containing all meteorological data required for the LEC computation
     '''
-    def __init__(self, data: xr.Dataset, dfVars: pd.DataFrame,
+    def __init__(self, data: xr.Dataset, variable_list_df: pd.DataFrame,
                  western_limit: float, eastern_limit: float,
                  southern_limit: float, northern_limit: float,
                  args: argparse.Namespace, output_dir: str,
                  dTdt : xr.DataArray = None):
-        self.LonIndexer = dfVars.loc['Longitude']['Variable']
-        self.LatIndexer = dfVars.loc['Latitude']['Variable']
-        self.TimeName = dfVars.loc['Time']['Variable']
-        self.VerticalCoordIndexer = dfVars.loc['Vertical Level']['Variable']
+        self.LonIndexer = variable_list_df.loc['Longitude']['Variable']
+        self.LatIndexer = variable_list_df.loc['Latitude']['Variable']
+        self.TimeName = variable_list_df.loc['Time']['Variable']
+        self.VerticalCoordIndexer = variable_list_df.loc['Vertical Level']['Variable']
         self.PressureData = data[self.VerticalCoordIndexer] * units('Pa')
         self.args = args
         self.output_dir = output_dir
@@ -77,8 +77,8 @@ class BoxData:
                               ) - np.sin(self.southern_limit['rlats'])
         
         # Temperature data values, averages and eddy terms
-        self.tair = (data[dfVars.loc['Air Temperature']['Variable']] \
-              * units(dfVars.loc['Air Temperature']['Units']).to('K')).sel(
+        self.tair = (data[variable_list_df.loc['Air Temperature']['Variable']] \
+              * units(variable_list_df.loc['Air Temperature']['Units']).to('K')).sel(
                   **{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                   self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         self.tair_ZA = CalcZonalAverage(self.tair,self.xlength)
@@ -87,8 +87,8 @@ class BoxData:
         self.tair_AE = self.tair_ZA - self.tair_AA 
         
         # Zonal wind component data values, averages and eddy terms
-        self.u = (data[dfVars.loc['Eastward Wind Component']['Variable']] \
-             * units(dfVars.loc['Eastward Wind Component']['Units']).to('m/s')
+        self.u = (data[variable_list_df.loc['Eastward Wind Component']['Variable']] \
+             * units(variable_list_df.loc['Eastward Wind Component']['Units']).to('m/s')
              ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         self.u_ZA = CalcZonalAverage(self.u,self.xlength)
@@ -97,8 +97,8 @@ class BoxData:
         self.u_AE = self.u_ZA - self.u_AA
         
         # Meridional wind component data values, averages and eddy terms
-        self.v = (data[dfVars.loc['Northward Wind Component']['Variable']] \
-             * units(dfVars.loc['Northward Wind Component']['Units']).to('m/s')
+        self.v = (data[variable_list_df.loc['Northward Wind Component']['Variable']] \
+             * units(variable_list_df.loc['Northward Wind Component']['Units']).to('m/s')
              ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         self.v_ZA = CalcZonalAverage(self.v,self.xlength)
@@ -111,12 +111,12 @@ class BoxData:
             self.ust = self.tair*np.nan
             self.vst = self.tair*np.nan
         else:
-            self.ust = (data[dfVars.loc['Zonal Wind Stress']['Variable']] \
-                 * units(dfVars.loc['Zonal Wind Stress']['Units'])
+            self.ust = (data[variable_list_df.loc['Zonal Wind Stress']['Variable']] \
+                 * units(variable_list_df.loc['Zonal Wind Stress']['Units'])
                  ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                      self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
-            self.vst = (data[dfVars.loc['Meridional Wind Stress']['Variable']] \
-                 * units(dfVars.loc['Meridional Wind Stress']['Units'])
+            self.vst = (data[variable_list_df.loc['Meridional Wind Stress']['Variable']] \
+                 * units(variable_list_df.loc['Meridional Wind Stress']['Units'])
                  ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                      self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
                           
@@ -131,8 +131,8 @@ class BoxData:
         
         # Omega velocity (vertical velocity in pressure levels) data values,
         # averages and eddy terms
-        self.omega = (data[dfVars.loc['Omega Velocity']['Variable']] \
-             * units(dfVars.loc['Omega Velocity']['Units']).to('Pa/s')
+        self.omega = (data[variable_list_df.loc['Omega Velocity']['Variable']] \
+             * units(variable_list_df.loc['Omega Velocity']['Units']).to('Pa/s')
              ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                  self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         self.omega_ZA = CalcZonalAverage(self.omega,self.xlength)
@@ -143,13 +143,13 @@ class BoxData:
         # Geopotential (g*hgt) height data values data values, a
         # verages and eddy terms
         if args.geopotential:
-            self.geopt = (data[dfVars.loc['Geopotential']['Variable']] \
-                 * units(dfVars.loc['Geopotential']['Units']).to('m**2/s**2')
+            self.geopt = (data[variable_list_df.loc['Geopotential']['Variable']] \
+                 * units(variable_list_df.loc['Geopotential']['Units']).to('m**2/s**2')
                  ).sel(**{self.LatIndexer:slice(self.southern_limit, self.northern_limit),
                      self.LonIndexer: slice(self.western_limit, self.eastern_limit)})
         else:
-            self.geopt = (data[dfVars.loc['Geopotential Height']['Variable']]*g\
-             * units(dfVars.loc['Geopotential Height']['Units'])
+            self.geopt = (data[variable_list_df.loc['Geopotential Height']['Variable']]*g\
+             * units(variable_list_df.loc['Geopotential Height']['Units'])
              ).sel(**{self.LatIndexer:slice(self.southern_limit,
                                             self.northern_limit),
              self.LonIndexer: slice(self.western_limit, self.eastern_limit)}
