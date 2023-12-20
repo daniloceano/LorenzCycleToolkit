@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/20 13:43:56 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/20 13:57:42 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -45,9 +45,6 @@ def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirec
         It also triggers plotting scripts if specified in the arguments.
     """
     logging.info('Computing energetics using fixed framework')
-    
-    logging.info('Loading data into memory..')
-    data = data.compute()
 
     dfbox = pd.read_csv('../inputs/box_limits', header=None, delimiter=';', index_col=0)
     min_lon, max_lon = dfbox.loc['min_lon'].iloc[0], dfbox.loc['max_lon'].iloc[0]
@@ -62,6 +59,9 @@ def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirec
         error_message = f"Error in box_limits: min_lat ({min_lat}) is greater than max_lat ({max_lat})"
         logging.error(error_message)
         raise ValueError(error_message)
+    
+    logging.info('Loading data into memory..')
+    data = data.compute()
 
     LonIndexer, LatIndexer, TimeName, VerticalCoordIndexer = (
         variable_list_df.loc['Longitude']['Variable'],
