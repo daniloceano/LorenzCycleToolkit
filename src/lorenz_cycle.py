@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/20 10:05:52 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/19 18:04:21 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/19 22:52:34 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -23,17 +23,14 @@ Contact: danilo.oceano@gmail.com
 """
 
 import os
-import pandas as pd
 import argparse
 import time
 import logging
-from metpy.units import units
-from select_area import slice_domain
-from tools import get_data
+from tools import prepare_data, initialize_logging
 from lec_fixed_framework import lec_fixed
 from lec_moving_framework import lec_moving
 
-def main():    
+def create_arg_parser():
     parser = argparse.ArgumentParser(description="Lorenz Energy Cycle (LEC) program.")
     parser.add_argument("infile", help="Input .nc file with temperature, geopotential, and wind components.")
     parser.add_argument("-r", "--residuals", action='store_true', help="Compute the Dissipation and Generation terms as residuals.")
@@ -47,7 +44,34 @@ def main():
     parser.add_argument("-p", "--plots", action='store_true', help="wether or not to make plots.")
     parser.add_argument("-o", "--outname", type=str, help="Choose a name for saving results.")
     parser.add_argument("-v", "--verbosity", action='store_true', help="Increase output verbosity.")
+    return parser
 
+def construct_outfile_name(args):
+    return args.outname if args.outname else ''.join(args.infile.split('/')[-1].split('.nc')) + '_' + args.method
+
+def setup_results_directory(args):
+    results_main_directory = '../LEC_Results'
+    os.makedirs(results_main_directory, exist_ok=True)
+
+    results_sub_directory = os.path.join(results_main_directory, construct_outfile_name(args))
+    os.makedirs(results_sub_directory, exist_ok=True)
+
+    return results_sub_directory
+
+def run_lec_analysis(data, args):
+    start_time = time.time()
+    results_directory = setup_results_directory(args)
+
+    if args.fixed:
+        lec_fixed(data, results_directory, args)
+        logging.info("--- %s seconds running fixed framework ---" % (time.time() - start_time))
+
+    if args.track or args.choose:
+        lec_moving(data, results_directory, args)
+        logging.info("--- %s seconds running moving framework ---" % (time.time() - start_time))
+
+def main():
+    parser = create_arg_parser()
     args = parser.parse_args()
 
     # Debug:
@@ -63,43 +87,6 @@ def main():
     data = prepare_data(args)
     
     run_lec_analysis(data, args)
-
-def initialize_logging():
-    log_file = 'error_log.txt'
-    logging.basicConfig(filename=log_file, filemode='w', level=logging.ERROR, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    if os.path.getsize(log_file) == 0:
-        os.remove(log_file)
-
-def prepare_data(args):
-    data = get_data(args.infile, '../inputs/fvars')
-    if args.mpas:
-        data = data.drop_dims('standard_height')
-    
-    return slice_domain(data, args, '../inputs/fvars')
-
-def run_lec_analysis(data, args):
-    start_time = time.time()
-    results_directory = setup_results_directory(args)
-
-    if args.fixed:
-        lec_fixed(data, results_directory, args)
-        logging.info("--- %s seconds running fixed framework ---" % (time.time() - start_time))
-
-    if args.track or args.choose:
-        lec_moving(data, results_directory, args)
-        logging.info("--- %s seconds running moving framework ---" % (time.time() - start_time))
-
-def setup_results_directory(args):
-    results_main_directory = '../LEC_Results'
-    os.makedirs(results_main_directory, exist_ok=True)
-
-    results_sub_directory = os.path.join(results_main_directory, construct_outfile_name(args))
-    os.makedirs(results_sub_directory, exist_ok=True)
-
-    return results_sub_directory
-
-def construct_outfile_name(args):
-    return args.outname if args.outname else ''.join(args.infile.split('/')[-1].split('.nc')) + '_' + args.method
 
 if __name__ == "__main__":
     main()
