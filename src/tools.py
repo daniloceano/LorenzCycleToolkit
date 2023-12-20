@@ -10,12 +10,14 @@
 #                                                                              #
 # **************************************************************************** #
 
+import os
 import dask
 import logging
 import xarray as xr
 import pandas as pd
 import numpy as np
 from metpy.units import units
+from select_area import slice_domain
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -123,3 +125,18 @@ def find_extremum_coordinates(data: xr.DataArray, lat: xr.DataArray, lon: xr.Dat
         raise ValueError(f"Invalid variable specified: {variable}")
 
     return lat_values[index[0]], lon_values[index[1]]
+
+def prepare_data(args, fvars: str = '../inputs/fvars') -> xr.Dataset:
+    data = get_data(args.infile, fvars)
+    if args.mpas:
+        data = data.drop_dims('standard_height')
+    
+    return slice_domain(data, args, fvars)
+
+def initialize_logging():
+    log_file = 'error_log.txt'
+    logging.basicConfig(filename=log_file, filemode='w', level=logging.ERROR, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    # Check if the log file exists and its size is zero, then remove it
+    if os.path.exists(log_file) and os.path.getsize(log_file) == 0:
+        os.remove(log_file)
