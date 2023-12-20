@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/20 20:12:45 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/20 20:21:01 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -404,7 +404,7 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
         terms_dict = compute_and_store_terms(box_obj, terms_dict)
 
     # Finalize and process results
-    df, outfile_path = finalize_results(times, terms_dict, args, results_subdirectory, out_track)
+    outfile_path, df  = finalize_results(times, terms_dict, args, results_subdirectory, out_track)
 
     if args.plots:
         plot_results(outfile_path, results_subdirectory, args)
@@ -435,9 +435,12 @@ if __name__ == '__main__':
 
     dTdt =  data[variable_list_df.loc['Air Temperature']['Variable']].differentiate(
                 variable_list_df.loc['Time']['Variable'],datetime_unit='s') * units('K/s')
+    
+    method = "track" if args.track else "choose"
 
     resuts_directory = "../LEC_Results/"
-    results_subdirectory = os.path.join(resuts_directory, "".join(args.infile.split('/')[-1].split('.nc')))
+    results_subdirectory = os.path.join(
+        resuts_directory, "".join(args.infile.split('/')[-1].split('.nc')) + '_' + method)
     figures_directory = os.path.join(results_subdirectory, 'Figures')
     os.makedirs(figures_directory, exist_ok=True)
     os.makedirs(results_subdirectory, exist_ok=True)

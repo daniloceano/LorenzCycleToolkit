@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/20 16:31:30 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/20 20:24:28 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -160,7 +160,9 @@ if __name__ == '__main__':
 
     data, _ = prepare_data(args, varlist)
 
-    results_subdirectory = "../LEC_Results"
+    resuts_directory = "../LEC_Results/"
+    results_subdirectory = os.path.join(resuts_directory, "".join(args.infile.split('/')[-1].split('.nc'))+'_fixed')
+    os.makedirs(results_subdirectory, exist_ok=True)
     os.makedirs(results_subdirectory, exist_ok=True)
 
     lec_fixed(data, variable_list_df, results_subdirectory, args)
