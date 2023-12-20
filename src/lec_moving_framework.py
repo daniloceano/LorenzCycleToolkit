@@ -1,17 +1,33 @@
 # **************************************************************************** #
 #                                                                              #
 #                                                         :::      ::::::::    #
-#    moving_framework.py                                :+:      :+:    :+:    #
+#    lec_moving_framework.py                            :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/19 17:33:05 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/20 13:49:24 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 import os
+import logging
+import argparse
 import pandas as pd
+import xarray as xr
+import numpy as np
+
+from metpy.units import units
+from metpy.units import units
+from metpy.calc import vorticity
+from metpy.calc import wind_speed
+from metpy.constants import g
+
+from cyclophaser import determine_periods
+
+from select_area import draw_box_map, plot_domain_attributes
+
+from tools import find_extremum_coordinates
 
 from EnergyContents import EnergyContents
 from ConversionTerms import ConversionTerms
@@ -20,9 +36,9 @@ from GenerationDissipationTerms import GenerationDissipationTerms
 from BoxData import BoxData
 from BudgetResidual import calc_budget_diff,calc_residuals
 
-import logging
-
-def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
+def LEC_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Dataset,
+               results_sub_directory: str, figures_directory: str,
+               args: argparse.Namespace):
     """
     Computes the Lorenz Energy Cycle using a moving framework.
     
@@ -36,10 +52,10 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
 
     # Indexers
     LonIndexer, LatIndexer, TimeName, VerticalCoordIndexer = (
-      dfVars.loc['Longitude']['Variable'],
-      dfVars.loc['Latitude']['Variable'],
-      dfVars.loc['Time']['Variable'],
-      dfVars.loc['Vertical Level']['Variable']
+      variable_list_df.loc['Longitude']['Variable'],
+      variable_list_df.loc['Latitude']['Variable'],
+      variable_list_df.loc['Time']['Variable'],
+      variable_list_df.loc['Vertical Level']['Variable']
       )
     
     PressureData = data[VerticalCoordIndexer]
@@ -49,7 +65,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
         columns = [TimeName] + [float(i) for i in PressureData.values]
         df = pd.DataFrame(columns=columns)
         file_name = term + '_' + VerticalCoordIndexer + '.csv'
-        file_path = os.path.join(ResultsSubDirectory, file_name)
+        file_path = os.path.join(results_sub_directory, file_name)
         df.to_csv(file_path, index=None) 
         print(file_path+' created (but still empty)')
 
@@ -99,16 +115,16 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
             idata = data.isel({TimeName: 1})
             idTdt = dTdt.isel({TimeName: 1})
 
-        iu = (idata[dfVars.loc['Eastward Wind Component']['Variable']].compute() *
-            units(dfVars.loc['Eastward Wind Component']['Units']).to('m/s'))
-        iv = (idata[dfVars.loc['Northward Wind Component']['Variable']].compute() *
-            units(dfVars.loc['Northward Wind Component']['Units']).to('m/s'))
+        iu = (idata[variable_list_df.loc['Eastward Wind Component']['Variable']].compute() *
+            units(variable_list_df.loc['Eastward Wind Component']['Units']).to('m/s'))
+        iv = (idata[variable_list_df.loc['Northward Wind Component']['Variable']].compute() *
+            units(variable_list_df.loc['Northward Wind Component']['Units']).to('m/s'))
         if args.geopotential:
-            ihgt = ((idata[dfVars.loc['Geopotential']['Variable']].compute() *
-            units(dfVars.loc['Geopotential']['Units']))/g).metpy.convert_units('gpm')
+            ihgt = ((idata[variable_list_df.loc['Geopotential']['Variable']].compute() *
+            units(variable_list_df.loc['Geopotential']['Units']))/g).metpy.convert_units('gpm')
         else:
-            ihgt = (idata[dfVars.loc['Geopotential Height']['Variable']].compute() *
-            units(dfVars.loc['Geopotential Height']['Units']).to('gpm'))
+            ihgt = (idata[variable_list_df.loc['Geopotential Height']['Variable']].compute() *
+            units(variable_list_df.loc['Geopotential Height']['Units']).to('gpm'))
 
         iu_850, iv_850, ight_850 = (
             iu.sel({VerticalCoordIndexer: 85000}),
@@ -238,7 +254,7 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
 
         out_track = out_track.append(position, ignore_index=True)
 
-        plot_domain_attributes(data850, position, FigsDirectory)
+        plot_domain_attributes(data850, position, figures_directory)
 
         print(f'\nTime: {datestr}')
         print(f'central lat/lon: {central_lon}, {central_lat}')
@@ -254,13 +270,13 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
         try:
             box_obj = BoxData(
                 data=idata.compute(),
-                dfVars=dfVars,
+                variable_list_df=variable_list_df,
                 args=args,
                 western_limit=min_lon,
                 eastern_limit=max_lon,
                 southern_limit=min_lat,
                 northern_limit=max_lat,
-                output_dir=ResultsSubDirectory,
+                output_dir=results_sub_directory,
                 dTdt=idTdt
             )
         except Exception as e:
@@ -340,9 +356,20 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
     print('Computing residuals RGz, RKz, RGe and RKe')
     df = calc_residuals(df, args)
     print('Ok!')
+
+    if args.track:
+        method = 'track'
+    elif args.choose:
+        method = 'choose'
+    else:
+        error_message = f"Invalid method: {args.method}"
+        logging.error(error_message)
+        raise ValueError(error_message)
+
+    outfile_name = args.outname if args.outname else ''.join(args.infile.split('/')[-1].split('.nc')) + f'_{method}'
     
     print('\nCreating a csv to store results...')
-    outfile = ResultsSubDirectory+'/'+outfile_name+'.csv'
+    outfile = results_sub_directory+'/'+outfile_name+'.csv'
     df.to_csv(outfile)
     print(outfile+' created') 
     print('All done!')
@@ -350,20 +377,20 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
     # Save system position as a csv file for replicability
     # df = pd.DataFrame.from_dict(position, orient='index').T
     out_track = out_track.rename(columns={'datestr':'time','central_lat':'Lat','central_lon':'Lon'})
-    output_trackfile =  ResultsSubDirectory+outfile_name+'_track'
+    output_trackfile =  results_sub_directory+outfile_name+'_track'
     out_track.to_csv(output_trackfile, index=False, sep=";")
     
     # 13) Make figures directory
-    FigsDirectory = ResultsSubDirectory+'/Figures'
-    check_create_folder(FigsDirectory)
+    figures_directory = results_sub_directory+'/Figures'
+    os.makedirs(figures_directory, exist_ok=True)
     
     # Determine periods
     try:
         determine_periods_options = {
             "vorticity_column": 'min_max_zeta_850',
-            "plot": os.path.join(ResultsSubDirectory, 'periods'),
-            "plot_steps": os.path.join(ResultsSubDirectory, 'periods_didatic'),
-            "export_dict": os.path.join(ResultsSubDirectory, 'periods'),
+            "plot": os.path.join(results_sub_directory, 'periods'),
+            "plot_steps": os.path.join(results_sub_directory, 'periods_didatic'),
+            "export_dict": os.path.join(results_sub_directory, 'periods'),
             "process_vorticity_args": {
                 "use_filter": "auto",
                 "use_smoothing_twice": "auto"}
@@ -381,8 +408,8 @@ def LEC_moving(data, dfVars, dTdt, ResultsSubDirectory, FigsDirectory):
 
     if args.plots:
         os.system("python ../plots/plot_timeseries.py "+outfile+flag)
-        os.system("python ../plots/plot_vertical.py "+ResultsSubDirectory)
-        os.system("python ../plots/plot_boxplot.py "+ResultsSubDirectory+flag)
+        os.system("python ../plots/plot_vertical.py "+results_sub_directory)
+        os.system("python ../plots/plot_boxplot.py "+results_sub_directory+flag)
         os.system("python ../plots/plot_LEC.py "+outfile)
         os.system("python ../plots/plot_LPS.py "+outfile)
         os.system("python ../plots/plot_track.py "+outfile)
