@@ -287,11 +287,11 @@ def slice_domain(NetCDF_data, args, varlist):
     
     return NetCDF_data, method
 
-def plot_domain_attributes(data850, position, FigsDirectory):
+def plot_domain_attributes(data850, limits, FigsDirectory):
 
-    time = position['datestr']
-    central_lon, central_lat = position['central_lon'], position['central_lat']
-    width, length = position['width'], position['length']
+    time = limits['datestr']
+    central_lon, central_lat = limits['central_lon'], limits['central_lat']
+    width, length = limits['width'], limits['length']
     min_lon = central_lon - (width / 2)
     max_lon = central_lon + (width / 2)
     min_lat = central_lat - (length / 2)
