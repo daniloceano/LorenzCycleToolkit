@@ -27,7 +27,7 @@ Source for formulas used here:
         https://journals.ametsoc.org/view/journals/mwre/115/1/1520-0493_1987_115_0013_laeogc_2_0_co_2.xml
 
 """
-from Math import (CalcZonalAverage, CalcAreaAverage)
+from calc_averages import (CalcZonalAverage, CalcAreaAverage)
 import numpy as np
 from metpy.constants import g
 from metpy.constants import Re

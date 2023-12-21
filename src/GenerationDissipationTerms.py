@@ -5,7 +5,7 @@ Created on Thu Nov 26 18:27:40 2020
 
 @author: Danilo
 """
-from Math import CalcAreaAverage
+from calc_averages import CalcAreaAverage
 from box_data import BoxData
 
 from metpy.units import units

@@ -39,7 +39,7 @@ Terms calculated using finite differences derivatives:
         when applicable.
 
 """
-from Math import CalcAreaAverage
+from calc_averages import CalcAreaAverage
 import numpy as np
 from metpy.constants import g
 from metpy.constants import Rd

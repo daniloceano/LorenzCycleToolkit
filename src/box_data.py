@@ -1,12 +1,12 @@
 # **************************************************************************** #
 #                                                                              #
 #                                                         :::      ::::::::    #
-#    BoxData.py                                         :+:      :+:    :+:    #
+#    box_data.py                                        :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/21 09:56:00 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/21 16:11:37 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -44,7 +44,7 @@ Contact:
 """
 
 import xarray as xr
-from Math import (CalcZonalAverage, CalcAreaAverage)
+from calc_averages import (CalcZonalAverage, CalcAreaAverage)
 import argparse
 from thermodynamics import StaticStability, AdiabaticHEating
 from metpy.constants import g
@@ -53,7 +53,7 @@ import numpy as np
 import pandas as pd
 
 import xarray as xr
-from Math import CalcZonalAverage, CalcAreaAverage
+from calc_averages import CalcZonalAverage, CalcAreaAverage
 import argparse
 from thermodynamics import StaticStability, AdiabaticHEating
 from metpy.constants import g
