@@ -287,7 +287,7 @@ def slice_domain(NetCDF_data, args, varlist):
     
     return NetCDF_data, method
 
-def plot_domain_attributes(data850, iu_850, iv_850, position, FigsDirectory):
+def plot_domain_attributes(data850, position, FigsDirectory):
 
     time = position['datestr']
     central_lon, central_lat = position['central_lon'], position['central_lat']
