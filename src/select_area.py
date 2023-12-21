@@ -189,7 +189,8 @@ def draw_box_map(u, v, zeta, hgt, lat, lon, timestr):
     while True:
         pts = []
         while len(pts) < nclicks:
-            tellme(f"Select box corners \nModel time step: {timestr[:-6]}Z")
+            time_formated = timestr.strftime("%Y-%m-%d %HZ")
+            tellme(f"Select box corners \nModel time step: {time_formated}")
             pts = np.asarray(plt.ginput(nclicks, timeout=15,
                                         mouse_stop='MouseButton.MIDDLE'))
             if len(pts) < nclicks:
@@ -286,7 +287,7 @@ def slice_domain(NetCDF_data, args, varlist):
     
     return NetCDF_data, method
 
-def plot_domain_attributes(data850, position, FigsDirectory):
+def plot_domain_attributes(data850, iu_850, iv_850, position, FigsDirectory):
 
     time = position['datestr']
     central_lon, central_lat = position['central_lon'], position['central_lat']
