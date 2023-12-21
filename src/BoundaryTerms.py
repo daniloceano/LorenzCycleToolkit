@@ -32,7 +32,7 @@ import numpy as np
 from metpy.constants import g
 from metpy.constants import Re
 from metpy.units import units
-from BoxData import BoxData
+from box_data import BoxData
 
 def remove_nan(function, coordinate):
     function = function.interpolate_na(dim=coordinate) * function.metpy.units

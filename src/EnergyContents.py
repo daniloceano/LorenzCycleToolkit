@@ -28,7 +28,7 @@ Source for formulas used here:
 """
 
 from Math import CalcAreaAverage
-from BoxData import BoxData
+from box_data import BoxData
 
 from metpy.constants import g
 from metpy.units import units

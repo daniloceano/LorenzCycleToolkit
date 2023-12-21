@@ -45,7 +45,7 @@ from metpy.constants import g
 from metpy.constants import Rd
 from metpy.constants import Re
 from metpy.units import units
-from BoxData import BoxData
+from box_data import BoxData
 import pandas as pd
 
 class ConversionTerms:

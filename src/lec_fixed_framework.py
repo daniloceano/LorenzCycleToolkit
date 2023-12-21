@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/20 20:38:12 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/21 16:10:38 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -20,7 +20,7 @@ from EnergyContents import EnergyContents
 from ConversionTerms import ConversionTerms
 from BoundaryTerms import BoundaryTerms
 from GenerationDissipationTerms import GenerationDissipationTerms
-from BoxData import BoxData
+from box_data import BoxData
 from BudgetResidual import calc_budget_diff, calc_residuals
 from tools import initialize_logging
 

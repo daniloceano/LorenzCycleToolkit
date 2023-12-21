@@ -6,7 +6,7 @@ Created on Thu Nov 26 18:27:40 2020
 @author: Danilo
 """
 from Math import CalcAreaAverage
-from BoxData import BoxData
+from box_data import BoxData
 
 from metpy.units import units
 from metpy.constants import Cp_d
