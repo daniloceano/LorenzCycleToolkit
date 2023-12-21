@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/20 21:17:43 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/21 11:02:51 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -75,7 +75,7 @@ def extract_wind_and_height_components(idata, variable_list_df, args):
 
     return iu, iv, ihgt
 
-def get_position_and_limits(args, t, data850, iu_850, iv_850, track=None):
+def get_limits(args, t, data850, iu_850, iv_850, track=None):
     """
     Determine the central position of the system at a specific time and the box dimensions.
     This function calculates the central latitude and longitude, as well as the dimensions
@@ -105,7 +105,7 @@ def get_position_and_limits(args, t, data850, iu_850, iv_850, track=None):
 
     elif args.choose:
         # For the 'choose' option, interactively determine the box limits
-        izeta_850, ihgt_850 = data850['min_max_zeta']['data'], data850['min_hgt']['data']
+        izeta_850, ihgt_850, = data850['min_max_zeta']['data'], data850['min_hgt']['data']
         limits = draw_box_map(iu_850, iv_850, izeta_850, ihgt_850, data850['lat'], data850['lon'], t)
         central_lat, central_lon = (limits['max_lat'] + limits['min_lat']) / 2, (limits['max_lon'] + limits['min_lon']) / 2
         width, length = limits['max_lon'] - limits['min_lon'], limits['max_lat'] - limits['min_lat']
@@ -117,22 +117,81 @@ def get_position_and_limits(args, t, data850, iu_850, iv_850, track=None):
     # Format time for output
     datestr = pd.to_datetime(t).strftime('%Y-%m-%d-%H%M')
 
-    position = {
+    limits = {
         'datestr': datestr,
         'central_lat': central_lat,
         'central_lon': central_lon,
         'length': length,
-        'width': width
-    }
-
-    limits = {
+        'width': width,
         'min_lon': min_lon,
         'max_lon': max_lon,
         'min_lat': min_lat,
         'max_lat': max_lat
     }
 
-    return position, limits
+    return limits
+
+def get_position(track, limits, izeta_850, ihgt_850, iwspd_850, LatIndexer, LonIndexer):
+    """
+    Retrieves or calculates the values of 'min_max_zeta_850', 'min_hgt_850', and 'max_wind_850' based on the given track and data slices.
+
+    Parameters:
+        track (DataFrame): The track file containing 'min_max_zeta_850', 'min_hgt_850', and 'max_wind_850' columns.
+        track_itime (int): The index of the track file to retrieve the values from.
+        central_lat (float): The central latitude.
+        central_lon (float): The central longitude.
+        min_lat (float): The minimum latitude.
+        izeta_850 (DataArray): The data slice for 'izeta_850'.
+        izeta_850_slice (DataArray): The data slice for 'izeta_850' with the required latitude and longitude values.
+        ight_850_slice (DataArray): The data slice for 'ight_850'.
+        iwspd_850_slice (DataArray): The data slice for 'iwspd_850'.
+
+    Returns:
+        Tuple[float, float, float]: A tuple containing the values of 'min_max_zeta_850', 'min_hgt_850', and 'max_wind_850'.
+    """
+    track_itime = track.iloc[-1]
+
+    central_lat = limits['central_lat']
+    central_lon = limits['central_lon']
+    min_lat = limits['min_lat']
+    min_lon = limits['min_lon']
+    max_lat = limits['max_lat']
+    max_lon = limits['max_lon']
+
+    # Slice data for defined box
+    izeta_850_slice = izeta_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
+    ihgt_850_slice = ihgt_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
+    iwspd_850_slice = iwspd_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
+
+    try:
+        min_max_zeta = float(track.loc[track_itime]['min_max_zeta_850'])
+    except KeyError:
+        if args.zeta:
+            min_max_zeta_unformatted = izeta_850.sel(latitude=central_lat, longitude=central_lon, method='nearest')
+        else:
+            min_max_zeta_unformatted = izeta_850_slice.min()
+        if min_lat < 0:
+            min_max_zeta = float(np.nanmin(min_max_zeta_unformatted))
+        else:
+            min_max_zeta = float(np.nanmax(min_max_zeta_unformatted))
+
+    try:
+        min_hgt = float(track.loc[track_itime]['min_hgt_850'])
+    except KeyError:
+        min_hgt = float(ihgt_850_slice.min())
+
+    try:
+        max_wind = float(track.loc[track_itime]['max_wind_850'])
+    except KeyError:
+        max_wind = float(iwspd_850_slice.max())
+
+    position = {
+        'min_max_zeta_850': min_max_zeta,
+        'min_hgt_850': min_hgt,
+        'max_wind_850': max_wind
+    }
+
+    return position
 
 def construct_data850(izeta_850, ihgt_850, iwspd_850, lat, lon):
     """
@@ -377,10 +436,18 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
         lat, lon = idata[LatIndexer], idata[LonIndexer]
         data850 = construct_data850(izeta_850, ihgt_850, iwspd_850, lat, lon)
 
-        # Get current time attributes
-        position, limits = get_position_and_limits(args, t, data850, iu_850, iv_850, track if args.track else None)
-        out_track = out_track.append(position, ignore_index=True)
-        plot_domain_attributes(data850, position, figures_directory)
+        # Get box attributes for current time
+        limits = get_limits(args, t, data850, iu_850, iv_850, track if args.track else None)
+
+        # Get position of  850 hPaextreme values for current time
+        position = get_position(track, limits, izeta_850, ihgt_850, iwspd_850, LatIndexer, LonIndexer)
+
+        # Store results
+        limits_and_position = {**limits, **position}
+        out_track = pd.concat([out_track, pd.DataFrame(limits_and_position, index=[t.strftime('%Y-%m-%d-%H%M')])], ignore_index=True)
+
+        # Save figure with the domain box, extreme values, vorticity and geopotential height
+        plot_domain_attributes(data850, limits, figures_directory)
 
         # Create box object
         try:
