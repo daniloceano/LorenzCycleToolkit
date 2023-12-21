@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/20 10:05:52 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/20 20:37:09 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/20 21:25:05 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -33,6 +33,12 @@ from lec_fixed_framework import lec_fixed
 from lec_moving_framework import lec_moving
 
 def create_arg_parser():
+    """
+    Create an argument parser for the Lorenz Energy Cycle (LEC) program.
+
+    Returns:
+        argparse.ArgumentParser: The argument parser object.
+    """
     parser = argparse.ArgumentParser(description="Lorenz Energy Cycle (LEC) program.")
     parser.add_argument("infile", help="Input .nc file with temperature, geopotential, and wind components.")
     parser.add_argument("-r", "--residuals", action='store_true', help="Compute the Dissipation and Generation terms as residuals.")
@@ -48,10 +54,17 @@ def create_arg_parser():
     parser.add_argument("-v", "--verbosity", action='store_true', help="Increase output verbosity.")
     return parser
 
-def construct_outfile_name(args):
-    return args.outname if args.outname else ''.join(args.infile.split('/')[-1].split('.nc')) + '_' + args.method
-
 def setup_results_directory(args, method):
+    """
+    Create and setup the results directory for storing output files and figures.
+
+    Args:
+        args (object): The arguments object containing input file information.
+        method (str): The method used for processing the input file.
+
+    Returns:
+        tuple: A tuple containing the path to the results directory and the path to the figures directory.
+    """
     resuts_directory = "../LEC_Results/"
     results_subdirectory = os.path.join(
         resuts_directory, "".join(args.infile.split('/')[-1].split('.nc')) + '_' + method)
@@ -63,6 +76,20 @@ def setup_results_directory(args, method):
     return results_subdirectory, figures_directory
 
 def run_lec_analysis(data, method, args):
+    """
+    Runs the LEc analysis on the given data using the specified method and arguments.
+
+    Args:
+        data (pd.DataFrame): The input data for the analysis.
+        method (str): The method to be used for the analysis.
+        args (dict): Additional arguments for the analysis.
+
+    Returns:
+        None
+
+    Raises:
+        None
+    """
     start_time = time.time()
 
     results_subdirectory, figures_directory = setup_results_directory(args, method)
@@ -81,6 +108,17 @@ def run_lec_analysis(data, method, args):
         logging.info("--- %s seconds running moving framework ---" % (time.time() - start_time))
 
 def main():
+    """
+    Executes the main function.
+
+    This function is the entry point of the program. It creates an argument parser, parses the command line arguments, initializes logging, prepares the data, and runs the LEC analysis.
+
+    Parameters:
+        None.
+
+    Returns:
+        None.
+    """
     parser = create_arg_parser()
     args = parser.parse_args()
 
