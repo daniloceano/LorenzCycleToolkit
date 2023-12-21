@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/20 10:05:52 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/19 22:52:34 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/20 20:37:09 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -26,6 +26,8 @@ import os
 import argparse
 import time
 import logging
+import pandas as pd
+from metpy.units import units
 from tools import prepare_data, initialize_logging
 from lec_fixed_framework import lec_fixed
 from lec_moving_framework import lec_moving
@@ -49,44 +51,43 @@ def create_arg_parser():
 def construct_outfile_name(args):
     return args.outname if args.outname else ''.join(args.infile.split('/')[-1].split('.nc')) + '_' + args.method
 
-def setup_results_directory(args):
-    results_main_directory = '../LEC_Results'
-    os.makedirs(results_main_directory, exist_ok=True)
+def setup_results_directory(args, method):
+    resuts_directory = "../LEC_Results/"
+    results_subdirectory = os.path.join(
+        resuts_directory, "".join(args.infile.split('/')[-1].split('.nc')) + '_' + method)
+    figures_directory = os.path.join(results_subdirectory, 'Figures')
+    os.makedirs(figures_directory, exist_ok=True)
+    os.makedirs(results_subdirectory, exist_ok=True)
+    os.makedirs(results_subdirectory, exist_ok=True)
 
-    results_sub_directory = os.path.join(results_main_directory, construct_outfile_name(args))
-    os.makedirs(results_sub_directory, exist_ok=True)
+    return results_subdirectory, figures_directory
 
-    return results_sub_directory
-
-def run_lec_analysis(data, args):
+def run_lec_analysis(data, method, args):
     start_time = time.time()
-    results_directory = setup_results_directory(args)
+
+    results_subdirectory, figures_directory = setup_results_directory(args, method)
+
+    variable_list_df = pd.read_csv("../inputs/fvars", sep=';', index_col=0, header=0)
 
     if args.fixed:
-        lec_fixed(data, results_directory, args)
+        lec_fixed(data, variable_list_df, results_subdirectory, args)
         logging.info("--- %s seconds running fixed framework ---" % (time.time() - start_time))
 
     if args.track or args.choose:
-        lec_moving(data, results_directory, args)
+        dTdt =  data[variable_list_df.loc['Air Temperature']['Variable']].differentiate(
+                variable_list_df.loc['Time']['Variable'],datetime_unit='s') * units('K/s')
+        
+        lec_moving(data, variable_list_df, dTdt, results_subdirectory, figures_directory, args)
         logging.info("--- %s seconds running moving framework ---" % (time.time() - start_time))
 
 def main():
     parser = create_arg_parser()
     args = parser.parse_args()
 
-    # Debug:
-    # args = parser.parse_args(['../samples/Reg1-Representative_NCEP-R2.nc', '-r', '-t', '-p'])
-    # args = parser.parse_args(['/p1-nemo/danilocs/mpas/MPAS-BR/post_proc/py/interpolations/Catarina-2403-2903_MPAS.nc',
-    # '-t', '-g', '-r'])
-    # args = parser.parse_args(['/p1-nemo/danilocs/SWSA-cyclones_energetic-analysis/met_data/ERA5/DATA/10MostIntense-19830422_ERA5.nc',
-    # '-c', '-g', '-r'])
-    # args = parser.parse_args(['../../data_etc/netCDF_data/2022.nc', '-r', '-f', '-p'])
-    # args = parser.parse_args(['../samples/Reg1-Representative_NCEP-R2.nc', '-r', '-f', '-p'])
-
     initialize_logging()
-    data = prepare_data(args)
+    data, method = prepare_data(args)
     
-    run_lec_analysis(data, args)
+    run_lec_analysis(data, method, args)
 
 if __name__ == "__main__":
     main()
