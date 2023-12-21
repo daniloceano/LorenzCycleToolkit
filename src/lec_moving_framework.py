@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/20 20:21:01 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/20 21:17:43 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -21,7 +21,6 @@ from metpy.units import units
 from metpy.calc import vorticity, wind_speed
 from metpy.constants import g
 
-from cyclophaser import determine_periods
 from select_area import draw_box_map, plot_domain_attributes
 from tools import find_extremum_coordinates, initialize_logging
 from EnergyContents import EnergyContents
@@ -76,7 +75,7 @@ def extract_wind_and_height_components(idata, variable_list_df, args):
 
     return iu, iv, ihgt
 
-def get_position_and_limits(args, t, track, data850):
+def get_position_and_limits(args, t, data850, iu_850, iv_850, track=None):
     """
     Determine the central position of the system at a specific time and the box dimensions.
     This function calculates the central latitude and longitude, as well as the dimensions
@@ -106,7 +105,7 @@ def get_position_and_limits(args, t, track, data850):
 
     elif args.choose:
         # For the 'choose' option, interactively determine the box limits
-        iu_850, iv_850, izeta_850, ihgt_850 = data850['max_wind']['data'], data850['max_wind']['data'], data850['min_max_zeta']['data'], data850['min_hgt']['data']
+        izeta_850, ihgt_850 = data850['min_max_zeta']['data'], data850['min_hgt']['data']
         limits = draw_box_map(iu_850, iv_850, izeta_850, ihgt_850, data850['lat'], data850['lon'], t)
         central_lat, central_lon = (limits['max_lat'] + limits['min_lat']) / 2, (limits['max_lon'] + limits['min_lon']) / 2
         width, length = limits['max_lon'] - limits['min_lon'], limits['max_lat'] - limits['min_lat']
@@ -379,7 +378,7 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
         data850 = construct_data850(izeta_850, ihgt_850, iwspd_850, lat, lon)
 
         # Get current time attributes
-        position, limits = get_position_and_limits(args, t, track, data850)
+        position, limits = get_position_and_limits(args, t, data850, iu_850, iv_850, track if args.track else None)
         out_track = out_track.append(position, ignore_index=True)
         plot_domain_attributes(data850, position, figures_directory)
 
@@ -431,13 +430,11 @@ if __name__ == '__main__':
     varlist = "../inputs/fvars_NCEP-R2"
     variable_list_df = pd.read_csv(varlist, sep=';', index_col=0, header=0)
 
-    data, _ = prepare_data(args, varlist)
+    data, method = prepare_data(args, varlist)
 
     dTdt =  data[variable_list_df.loc['Air Temperature']['Variable']].differentiate(
                 variable_list_df.loc['Time']['Variable'],datetime_unit='s') * units('K/s')
     
-    method = "track" if args.track else "choose"
-
     resuts_directory = "../LEC_Results/"
     results_subdirectory = os.path.join(
         resuts_directory, "".join(args.infile.split('/')[-1].split('.nc')) + '_' + method)
