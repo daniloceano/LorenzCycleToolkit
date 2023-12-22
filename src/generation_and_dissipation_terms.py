@@ -1,12 +1,12 @@
 # **************************************************************************** #
 #                                                                              #
 #                                                         :::      ::::::::    #
-#    GenerationDissipationTerms.py                      :+:      :+:    :+:    #
+#    generation_and_dissipation_terms.py                :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2020/11/26 18:27:40 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/22 12:26:37 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/22 13:10:02 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -38,7 +38,7 @@ from box_data import BoxData
 
 class GenerationDissipationTerms:
     """
-    Class to compute partitioned energy contents of the Lorenz Energy Cycle.
+    Class to compute generation and dissipation terms of the Lorenz Energy Cycle.
 
     Attributes:
         method (str): The computation method used ('fixed', 'track', or 'choose').
