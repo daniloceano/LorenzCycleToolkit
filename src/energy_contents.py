@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/22 11:13:41 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/22 13:51:19 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -155,6 +155,7 @@ class EnergyContents:
             function = function.metpy.convert_units('J/m^2')
         except ValueError as e:
             raise ValueError(f'Unit error in {variable_name}') from e
+        return function
         
     def _handle_nans(self, function):
         """

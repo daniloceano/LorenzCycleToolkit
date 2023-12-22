@@ -1,12 +1,12 @@
 # **************************************************************************** #
 #                                                                              #
 #                                                         :::      ::::::::    #
-#    ConversionTerms.py                                 :+:      :+:    :+:    #
+#    conversion_terms.py                                :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/22 11:53:41 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/22 13:50:57 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -233,6 +233,7 @@ class ConversionTerms:
             function = function.metpy.convert_units('W/m^2')
         except ValueError as e:
             raise ValueError(f'Unit error in {variable_name}') from e
+        return function
     
     def _save_vertical_levels(self, function, variable_name):
         """Save computed energy data to a CSV file."""
