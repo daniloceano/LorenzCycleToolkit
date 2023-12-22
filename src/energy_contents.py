@@ -1,12 +1,12 @@
 # **************************************************************************** #
 #                                                                              #
 #                                                         :::      ::::::::    #
-#    EnergyContents.py                                  :+:      :+:    :+:    #
+#    energy_contents.py                                 :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/21 17:29:04 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/22 11:13:41 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -102,7 +102,7 @@ class EnergyContents:
         function = self._handle_nans(function)
         Az = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
         self._convert_units(Az, 'Az')
-        self._save_function_to_file(Az, 'Az')
+        self._save_vertical_levels(Az, 'Az')
         Az = Az.metpy.dequantify()
         return Az
     
@@ -113,7 +113,7 @@ class EnergyContents:
         function = self._handle_nans(function)
         Ae = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
         self._convert_units(Ae, 'Ae')
-        self._save_function_to_file(Ae, 'Ae')
+        self._save_vertical_levels(Ae, 'Ae')
         Ae = Ae.metpy.dequantify()
         return Ae
 
@@ -123,7 +123,7 @@ class EnergyContents:
         function = self._handle_nans(function)
         Kz = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units / (2 * g)
         self._convert_units(Kz, 'Kz')
-        self._save_function_to_file(Kz, 'Kz')
+        self._save_vertical_levels(Kz, 'Kz')
         Kz = Kz.metpy.dequantify()
         return Kz
     
@@ -133,7 +133,7 @@ class EnergyContents:
         function = self._handle_nans(function)
         Ke = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units / (2 * g)
         self._convert_units(Ke, 'Ke')
-        self._save_function_to_file(Ke, 'Ke')
+        self._save_vertical_levels(Ke, 'Ke')
         Ke = Ke.metpy.dequantify()
         return Ke
 
@@ -173,7 +173,7 @@ class EnergyContents:
                 function = function.dropna(dim=self.VerticalCoordIndexer)
         return function
         
-    def _save_function_to_file(self, function, variable_name):
+    def _save_vertical_levels(self, function, variable_name):
         """Save computed energy data to a CSV file."""
         if self.method == 'fixed':
             df = function.to_dataframe(name='Az').unstack()
