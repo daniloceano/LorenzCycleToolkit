@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2020/11/26 18:27:40 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/22 13:28:04 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/22 13:28:26 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -24,6 +24,7 @@ Created by:
 Contact:
     danilo.oceano@gmail.com
 """
+
 import logging
 import pandas as pd
 import numpy as np
@@ -34,7 +35,6 @@ from calc_averages import CalcAreaAverage
 from box_data import BoxData
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
 
 class GenerationDissipationTerms:
     """
