@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/22 11:53:55 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/22 12:27:42 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -19,7 +19,7 @@ from pathlib import Path
 from energy_contents import EnergyContents
 from conversion_terms import ConversionTerms
 from BoundaryTerms import BoundaryTerms
-from GenerationDissipationTerms import GenerationDissipationTerms
+from generation_and_dissipation_terms import GenerationDissipationTerms
 from box_data import BoxData
 from BudgetResidual import calc_budget_diff, calc_residuals
 from tools import initialize_logging
