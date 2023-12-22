@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/22 12:27:35 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/22 14:36:36 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -25,7 +25,7 @@ from select_area import draw_box_map, plot_domain_attributes
 from tools import find_extremum_coordinates, initialize_logging
 from energy_contents import EnergyContents
 from conversion_terms import ConversionTerms
-from BoundaryTerms import BoundaryTerms
+from boundary_terms import BoundaryTerms
 from generation_and_dissipation_terms import GenerationDissipationTerms
 from box_data import BoxData
 from BudgetResidual import calc_budget_diff, calc_residuals
