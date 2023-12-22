@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/21 16:10:46 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/22 08:37:19 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -23,7 +23,7 @@ from metpy.constants import g
 
 from select_area import draw_box_map, plot_domain_attributes
 from tools import find_extremum_coordinates, initialize_logging
-from EnergyContents import EnergyContents
+from energy_contents import EnergyContents
 from ConversionTerms import ConversionTerms
 from BoundaryTerms import BoundaryTerms
 from GenerationDissipationTerms import GenerationDissipationTerms

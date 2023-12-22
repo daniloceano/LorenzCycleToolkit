@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/21 16:10:38 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/22 08:37:20 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -16,7 +16,7 @@ import logging
 import argparse
 import xarray as xr
 from pathlib import Path
-from EnergyContents import EnergyContents
+from energy_contents import EnergyContents
 from ConversionTerms import ConversionTerms
 from BoundaryTerms import BoundaryTerms
 from GenerationDissipationTerms import GenerationDissipationTerms
