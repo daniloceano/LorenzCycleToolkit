@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/22 14:36:36 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/26 09:56:12 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -28,7 +28,7 @@ from conversion_terms import ConversionTerms
 from boundary_terms import BoundaryTerms
 from generation_and_dissipation_terms import GenerationDissipationTerms
 from box_data import BoxData
-from BudgetResidual import calc_budget_diff, calc_residuals
+from calc_budget_and_residual import calc_budget_diff, calc_residuals
 
 def create_terms_dict(args):
     """
@@ -308,11 +308,11 @@ def finalize_results(times, terms_dict, args, results_subdirectory, out_track):
     df = pd.DataFrame(terms_dict, index=pd.to_datetime(times), dtype = float)
 
     # Estimating budget terms (∂X/∂t) using finite differences
-    df = calc_budget_diff(df, times, args)
+    df = calc_budget_diff(df, times)
     
     # Computing residuals, if required
     if args.residuals:
-        df = calc_residuals(df, args)
+        df = calc_residuals(df)
 
     # Constructing output filename
     method = 'track' if args.track else 'choose'

@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/22 14:36:36 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/26 09:56:11 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -21,7 +21,7 @@ from conversion_terms import ConversionTerms
 from boundary_terms import BoundaryTerms
 from generation_and_dissipation_terms import GenerationDissipationTerms
 from box_data import BoxData
-from BudgetResidual import calc_budget_diff, calc_residuals
+from calc_budget_and_residual import calc_budget_diff, calc_residuals
 from tools import initialize_logging
 
 def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirectory: str,
@@ -121,8 +121,8 @@ def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirec
     for i, col in enumerate(['BAz', 'BAe', 'BKz', 'BKe', 'Gz', 'Ge', 'Dz', 'De'][:len(gen_diss_list) + 4]):
         df[col] = boundary_list[i] if i < 4 else gen_diss_list[i-4]
 
-    df = calc_budget_diff(df, dates, args)
-    df = calc_residuals(df, args)
+    df = calc_budget_diff(df, dates)
+    df = calc_residuals(df)
 
     outfile_name = args.outname if args.outname else ''.join(args.infile.split('/')[-1].split('.nc')) + '_fixed'
     outfile = Path(results_subdirectory, f'{outfile_name}.csv')
