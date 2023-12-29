@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/27 20:25:41 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/29 14:18:20 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -22,6 +22,10 @@ from ..analysis.boundary_terms import BoundaryTerms
 from ..analysis.generation_and_dissipation_terms import GenerationDissipationTerms
 from ..utils.box_data import BoxData
 from ..utils.calc_budget_and_residual import calc_budget_diff, calc_residuals
+from ..plots.timeseries_terms import plot_timeseries
+from ..plots.timeseries_zeta_and_Z import plot_min_zeta_hgt
+from ..plots.map_box_limits import plot_box_limits
+from ..plots.plot_boxplot import boxplot_terms
 
 def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirectory: str,
               app_logger: logging.Logger, args: argparse.Namespace):
@@ -45,7 +49,8 @@ def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirec
     """
     logging.info('--- Computing energetics using fixed framework ---')
     
-    dfbox = pd.read_csv('inputs/box_limits', header=None, delimiter=';', index_col=0)
+    box_limits_file = 'inputs/box_limits'
+    dfbox = pd.read_csv(box_limits_file, header=None, delimiter=';', index_col=0)
     min_lon, max_lon = dfbox.loc['min_lon'].iloc[0], dfbox.loc['max_lon'].iloc[0]
     min_lat, max_lat = dfbox.loc['min_lat'].iloc[0], dfbox.loc['max_lat'].iloc[0]
     
@@ -129,15 +134,18 @@ def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirec
     df = calc_residuals(df, app_logger)
     app_logger.info('Computed budget and residuals')
 
-    outfile_name = args.outname if args.outname else ''.join(args.infile.split('/')[-1].split('.nc')) + '_fixed'
-    outfile = Path(results_subdirectory, f'{outfile_name}.csv')
-    df.to_csv(outfile)
-    app_logger.info(f'Results saved to {outfile}')
+    if args.outname:
+        results_filename = args.outname
+    else:
+        infile_name = os.path.basename(args.infile).split('.nc')[0]
+        results_filename = ''.join(f'{infile_name}_fixed_results')
+    results_file = Path(results_subdirectory, f'{results_filename}.csv')
+    df.to_csv(results_file)
+    app_logger.info(f'Results saved to {results_file}')
 
     if args.plots:
         app_logger.info('Generating plots..')
-        plot_flag = ' -r' if args.residuals else ' '
-        plot_scripts = ["plot_timeseries.py", "plot_vertical.py", "plot_boxplot.py", "plot_LEC.py", "plot_LPS.py"]
-        for script in plot_scripts:
-            os.system(f"python plots/{script} {outfile}{plot_flag}")
-        os.system(f"python plots/plot_area.py {min_lon} {max_lon} {min_lat} {max_lat} {results_subdirectory}")
+        figures_directory = os.path.join(results_subdirectory, 'Figures')
+        plot_timeseries(results_file, figures_directory, app_logger)
+        plot_box_limits(box_limits_file, figures_directory, app_logger)
+        boxplot_terms(results_file, results_subdirectory, figures_directory, app_logger)

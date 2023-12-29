@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/28 14:48:27 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/28 18:34:01 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/29 13:54:38 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -23,13 +23,13 @@ import matplotlib.dates as mdates
 COLORS = ['#BF3D3B', '#023e8a']
 LINEWIDTH = 3
 
-def plot_min_zeta_hgt(track_file, figures_subdirectory, app_logger=False):
+def plot_min_zeta_hgt(track_file, figures_directory, app_logger=False):
     """
     Plots minimum vorticity and geopotential height from a tracking file.
     
     Parameters:
     track_file (str): Path to the CSV file containing track data.
-    figures_subdirectory (str): Directory path to save the plot.
+    figures_directory (str): Directory path to save the plot.
     """
     try:
         track = pd.read_csv(track_file, parse_dates=[0], delimiter=';', index_col='time')
@@ -59,11 +59,11 @@ def plot_min_zeta_hgt(track_file, figures_subdirectory, app_logger=False):
     fig.suptitle(r'Central Vorticity ($\zeta$) and Geopotential Height (Z) at 850 hPa', fontsize=18)
 
     # Check if the directory exists and create it if not
-    os.makedirs(figures_subdirectory, exist_ok=True)
-    plt.savefig(os.path.join(figures_subdirectory, 'timeseries-min_zeta_hgt.png'), bbox_inches='tight')
+    os.makedirs(figures_directory, exist_ok=True)
+    plt.savefig(os.path.join(figures_directory, 'timeseries-min_zeta_hgt.png'), bbox_inches='tight')
 
 if __name__ == "__main__":
     track_file = 'samples/sample_track.csv'
-    figures_subdirectory = 'samples/Figures/'
-    os.makedirs(figures_subdirectory, exist_ok=True)
-    plot_min_zeta_hgt(track_file, figures_subdirectory)
+    figures_directory = 'samples/Figures/'
+    os.makedirs(figures_directory, exist_ok=True)
+    plot_min_zeta_hgt(track_file, figures_directory)

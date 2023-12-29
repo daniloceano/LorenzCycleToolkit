@@ -24,8 +24,8 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import datetime
 import matplotlib.gridspec as gridspec
-import utils
-from utils import read_results, get_data_vertical_levels
+import src.plots.utils as utils
+from src.plots.utils import read_results, get_data_vertical_levels
 
 def boxplot_time(dict_vertical, figures_subdirectory, app_logger):
     """

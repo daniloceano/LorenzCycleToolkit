@@ -1,12 +1,12 @@
 # **************************************************************************** #
 #                                                                              #
 #                                                         :::      ::::::::    #
-#    plot_area.py                                       :+:      :+:    :+:    #
+#    map_box_limits.py                                  :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/06/14 14:58:51 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/28 19:37:31 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/29 14:02:22 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -26,9 +26,9 @@ import os
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 from shapely.geometry.polygon import Polygon
-from utils import map_borders, setup_map, setup_gridlines, read_box_limits
+from src.plots.utils import map_borders, setup_map, setup_gridlines, read_box_limits
 
-def plot_box_limits(box_limits_file, figures_directory, app_logger=None):
+def plot_box_limits(box_limits_file, figures_directory, app_logger=False):
     """
     Plots the box limits on a map.
 

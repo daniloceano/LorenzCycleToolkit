@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/05/22 17:56:57 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/29 09:05:57 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/29 14:04:06 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -26,8 +26,8 @@ Contact:
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import os
-import utils
-from utils import read_results
+import src.plots.utils as utils
+from src.plots.utils import read_results
 
 def _plotter(df, term_list, figures_directory):
     """Plots a timeseries for given terms."""
