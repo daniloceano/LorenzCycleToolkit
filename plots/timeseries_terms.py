@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/05/22 17:56:57 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/29 09:04:50 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/29 09:05:57 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -63,7 +63,6 @@ def plot_timeseries(results_file, figures_directory, app_logger=False):
     app_logger.info('Plotting timeseries...') if app_logger else print('Plotting timeseries...')
     df = read_results(results_file, app_logger)
 
-    results_subdirectory = '/'.join(results_file.split('/')[:-1])
     figures_subdirectory = os.path.join(figures_directory, 'timeseries')
     os.makedirs(figures_subdirectory, exist_ok=True)
 
