@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/20 10:05:52 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/20 21:25:05 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/28 14:23:16 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -23,14 +23,19 @@ Contact: danilo.oceano@gmail.com
 """
 
 import os
-import argparse
+import sys
 import time
 import logging
+import argparse
+import warnings
 import pandas as pd
 from metpy.units import units
-from tools import prepare_data, initialize_logging
-from lec_fixed_framework import lec_fixed
-from lec_moving_framework import lec_moving
+from src.utils.tools import prepare_data, initialize_logging
+from src.frameworks.lec_fixed_framework import lec_fixed
+from src.frameworks.lec_moving_framework import lec_moving
+
+# Suppress specific RuntimeWarning from xarray
+warnings.filterwarnings("ignore", category=RuntimeWarning, module='xarray.backends.plugins')
 
 def create_arg_parser():
     """
@@ -75,7 +80,7 @@ def setup_results_directory(args, method):
 
     return results_subdirectory, figures_directory
 
-def run_lec_analysis(data, method, args):
+def run_lec_analysis(data, args, results_subdirectory, figures_directory, app_logger):
     """
     Runs the LEc analysis on the given data using the specified method and arguments.
 
@@ -92,20 +97,18 @@ def run_lec_analysis(data, method, args):
     """
     start_time = time.time()
 
-    results_subdirectory, figures_directory = setup_results_directory(args, method)
-
-    variable_list_df = pd.read_csv("../inputs/fvars", sep=';', index_col=0, header=0)
+    variable_list_df = pd.read_csv("inputs/fvars", sep=';', index_col=0, header=0)
 
     if args.fixed:
-        lec_fixed(data, variable_list_df, results_subdirectory, args)
-        logging.info("--- %s seconds running fixed framework ---" % (time.time() - start_time))
+        lec_fixed(data, variable_list_df, results_subdirectory, app_logger, args)
+        app_logger.info("--- %s seconds running fixed framework ---" % (time.time() - start_time))
 
     if args.track or args.choose:
         dTdt =  data[variable_list_df.loc['Air Temperature']['Variable']].differentiate(
                 variable_list_df.loc['Time']['Variable'],datetime_unit='s') * units('K/s')
         
-        lec_moving(data, variable_list_df, dTdt, results_subdirectory, figures_directory, args)
-        logging.info("--- %s seconds running moving framework ---" % (time.time() - start_time))
+        lec_moving(data, variable_list_df, dTdt, results_subdirectory, figures_directory, app_logger, args)
+        app_logger.info("--- %s seconds running moving framework ---" % (time.time() - start_time))
 
 def main():
     """
@@ -119,13 +122,36 @@ def main():
     Returns:
         None.
     """
+    
+    # Parse command line arguments
     parser = create_arg_parser()
     args = parser.parse_args()
 
-    initialize_logging()
-    data, method = prepare_data(args)
+    # # Example usage for debugging
+    # print("WARNING: USING EXAMPLE ARGUMENTS")
+    # args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-t', '-r'])
+
+    # Set method
+    if args.fixed:
+        method = 'fixed'
+    elif args.track:
+        method = 'track'
+    elif args.choose:
+        method = 'choose'
+
+    # Setup results directory
+    results_subdirectory, figures_directory = setup_results_directory(args, method)
+
+    # Initialize logging
+    app_logger = initialize_logging(results_subdirectory, args.verbosity)
+    app_logger.info("Starting LEC analysis")
+    app_logger.info(f"Command line arguments: {args}")
+
+    # Prepare data
+    data = prepare_data(args)
     
-    run_lec_analysis(data, method, args)
+    # Run LEC analysis
+    run_lec_analysis(data, args, results_subdirectory, figures_directory, app_logger)
 
 if __name__ == "__main__":
     main()

@@ -23,7 +23,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import argparse
-from plot_timeseries import check_create_folder
 
 # Specs for plotting
 fs = 30

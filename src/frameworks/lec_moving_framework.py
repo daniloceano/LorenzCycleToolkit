@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/26 09:56:12 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/27 21:34:41 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -21,14 +21,14 @@ from metpy.units import units
 from metpy.calc import vorticity, wind_speed
 from metpy.constants import g
 
-from select_area import draw_box_map, plot_domain_attributes
-from tools import find_extremum_coordinates, initialize_logging
-from energy_contents import EnergyContents
-from conversion_terms import ConversionTerms
-from boundary_terms import BoundaryTerms
-from generation_and_dissipation_terms import GenerationDissipationTerms
-from box_data import BoxData
-from calc_budget_and_residual import calc_budget_diff, calc_residuals
+from ..utils.select_area import draw_box_map, plot_domain_attributes
+from ..utils.tools import find_extremum_coordinates, initialize_logging
+from ..utils.calc_budget_and_residual import calc_budget_diff, calc_residuals
+from ..utils.box_data import BoxData
+from ..analysis.energy_contents import EnergyContents
+from ..analysis.conversion_terms import ConversionTerms
+from ..analysis.boundary_terms import BoundaryTerms
+from ..analysis.generation_and_dissipation_terms import GenerationDissipationTerms
 
 def create_terms_dict(args):
     """
@@ -131,7 +131,7 @@ def get_limits(args, t, data850, iu_850, iv_850, track=None):
 
     return limits
 
-def get_position(track, limits, izeta_850, ihgt_850, iwspd_850, LatIndexer, LonIndexer):
+def get_position(track, limits, izeta_850, ihgt_850, iwspd_850, LatIndexer, LonIndexer, args):
     """
     Retrieves or calculates the values of 'min_max_zeta_850', 'min_hgt_850', and 'max_wind_850' based on the given track and data slices.
 
@@ -235,7 +235,7 @@ def construct_data850(izeta_850, ihgt_850, iwspd_850, lat, lon):
 
     return data850 
 
-def compute_and_store_terms(box_obj, terms_dict):
+def compute_and_store_terms(box_obj, terms_dict, app_logger):
     """
     Compute various meteorological terms using the provided BoxData object 
     and store the results in the provided dictionary, with specific error handling.
@@ -248,28 +248,33 @@ def compute_and_store_terms(box_obj, terms_dict):
         dict: Updated dictionary with the computed terms.
     """
     # Energy Contents
+    app_logger.info("Computing Energy Contents...")
     try:
-        ec_obj = EnergyContents(box_obj, method='moving')
+        ec_obj = EnergyContents(box_obj, method='moving', app_logger=app_logger)
         terms_dict['Az'].append(ec_obj.calc_az())
         terms_dict['Ae'].append(ec_obj.calc_ae())
         terms_dict['Kz'].append(ec_obj.calc_kz())
         terms_dict['Ke'].append(ec_obj.calc_ke())
     except Exception as e:
-        logging.exception(f"Error in computing Energy Contents: {e}")
+        app_logger.exception(f"Error in computing Energy Contents: {e}")
+        raise
 
     # Conversion Terms
+    app_logger.info("Computing Conversion Terms...")
     try:
-        ct_obj = ConversionTerms(box_obj, method='moving')
+        ct_obj = ConversionTerms(box_obj, method='moving', app_logger=app_logger)
         terms_dict['Cz'].append(ct_obj.calc_cz())
         terms_dict['Ca'].append(ct_obj.calc_ca())
         terms_dict['Ck'].append(ct_obj.calc_ck())
         terms_dict['Ce'].append(ct_obj.calc_ce())
     except Exception as e:
-        logging.exception(f"Error in computing Conversion Terms: {e}")
+        app_logger.exception(f"Error in computing Conversion Terms: {e}")
+        raise
 
     # Boundary Terms
+    app_logger.info("Computing Boundary Terms...")
     try:
-        bt_obj = BoundaryTerms(box_obj, method='moving')
+        bt_obj = BoundaryTerms(box_obj, method='moving', app_logger=app_logger)
         terms_dict['BAz'].append(bt_obj.calc_baz())
         terms_dict['BAe'].append(bt_obj.calc_bae())
         terms_dict['BKz'].append(bt_obj.calc_bkz())
@@ -277,22 +282,25 @@ def compute_and_store_terms(box_obj, terms_dict):
         terms_dict['BΦZ'].append(bt_obj.calc_boz())
         terms_dict['BΦE'].append(bt_obj.calc_boe())
     except Exception as e:
-        logging.exception(f"Error in computing Boundary Terms: {e}")
+        app_logger.exception(f"Error in computing Boundary Terms: {e}")
+        raise
 
     # Generation/Dissipation Terms
+    app_logger.info("Computing Generation/Dissipation Terms...")
     try:
-        gdt_obj = GenerationDissipationTerms(box_obj, method='moving')
+        gdt_obj = GenerationDissipationTerms(box_obj, method='moving', app_logger=app_logger)
         terms_dict['Gz'].append(gdt_obj.calc_gz())
         terms_dict['Ge'].append(gdt_obj.calc_ge())
         if not box_obj.args.residuals:
             terms_dict['Dz'].append(gdt_obj.calc_dz())
             terms_dict['De'].append(gdt_obj.calc_de())
     except Exception as e:
-        logging.exception(f"Error in computing Generation/Dissipation Terms: {e}")
+        app_logger.exception(f"Error in computing Generation/Dissipation Terms: {e}")
+        raise
 
     return terms_dict
 
-def finalize_results(times, terms_dict, args, results_subdirectory, out_track):
+def finalize_results(times, terms_dict, args, results_subdirectory, out_track, app_logger):
     """
     Process and finalize results. 
     This includes creating a DataFrame with results and saving it to a CSV file.
@@ -308,11 +316,13 @@ def finalize_results(times, terms_dict, args, results_subdirectory, out_track):
     df = pd.DataFrame(terms_dict, index=pd.to_datetime(times), dtype = float)
 
     # Estimating budget terms (∂X/∂t) using finite differences
-    df = calc_budget_diff(df, times)
+    app_logger.info("Estimating budget terms...")
+    df = calc_budget_diff(df, times, app_logger)
     
     # Computing residuals, if required
     if args.residuals:
-        df = calc_residuals(df)
+        app_logger.info("Computing residuals...")
+        df = calc_residuals(df, app_logger)
 
     # Constructing output filename
     method = 'track' if args.track else 'choose'
@@ -321,12 +331,13 @@ def finalize_results(times, terms_dict, args, results_subdirectory, out_track):
 
     # Saving the DataFrame to a CSV file
     df.to_csv(outfile_path)
-    logging.info(f'Results saved to {outfile_path}')
+    app_logger.info(f'Results saved to {outfile_path}')
 
     # Save system position as a csv file for replicability
     out_track = out_track.rename(columns={'datestr':'time','central_lat':'Lat','central_lon':'Lon'})
     output_trackfile = os.path.join(results_subdirectory, outfile_name+'_trackfile')
     out_track.to_csv(output_trackfile, index=False, sep=";")
+    app_logger.info(f'System track saved to {output_trackfile}')
 
     return outfile_path, df
 
@@ -350,7 +361,7 @@ def plot_results(outfile_path, results_subdirectory, args):
 
 def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Dataset,
                results_subdirectory: str, figures_directory: str,
-               args: argparse.Namespace):
+               app_logger: logging.Logger, args: argparse.Namespace):
     """
     Computes the Lorenz Energy Cycle using a moving (semi-lagrangian) framework.
     
@@ -365,7 +376,7 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
     Returns:
         None
     """
-    logging.info('Computing energetics using moving framework')
+    app_logger.info('Computing energetics using moving framework')
 
     # Indexers
     LonIndexer, LatIndexer, TimeName, VerticalCoordIndexer = (
@@ -384,15 +395,15 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
         file_name = term + '_' + VerticalCoordIndexer + '.csv'
         file_path = os.path.join(results_subdirectory, file_name)
         df.to_csv(file_path, index=None) 
-        logging.info(f'{file_path} created (but still empty)')
+        app_logger.info(f'{file_path} created (but still empty)')
 
     # Track file handling
     if args.track:
-        trackfile = '../inputs/track'
+        trackfile = 'inputs/track'
         try:
             track = pd.read_csv(trackfile, parse_dates=[0], delimiter=';', index_col='time')
         except FileNotFoundError:
-            logging.error(f"Track file {trackfile} not found.")
+            app_logger.error(f"Track file {trackfile} not found.")
             raise
 
     # Dictionary for saving system position and attributes
@@ -408,17 +419,18 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
     if args.track:
         times = times[(times >= track.index[0]) & (times <= track.index[-1])]
         if len(times) == 0:
-            logging.error("Mismatch between trackfile and data times.")
+            app_logger.error("Mismatch between trackfile and data times.")
             raise ValueError("Mismatch between trackfile and data times.")
 
     # Iterating over times
     for t in times:
+        app_logger.info(f"Processing data at time: {t}...")
         try:
             idata, idTdt = data.sel({TimeName: t}), dTdt.sel({TimeName: t})
             if idata[TimeName].shape != ():
                 idata, idTdt = data.isel({TimeName: 1}), dTdt.isel({TimeName: 1})
         except KeyError as e:
-            logging.error(f"Time indexing error: {e}")
+            app_logger.error(f"Time indexing error: {e}")
             continue
 
         # Wind components and geopotential height
@@ -438,18 +450,36 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
 
         # Get box attributes for current time
         limits = get_limits(args, t, data850, iu_850, iv_850, track if args.track else None)
+        app_logger.info(
+            f"central lat: {limits['central_lat']}, central lon: {limits['central_lon']}, "
+            f"size: {limits['length']} x {limits['width']}, "
+            f"lon range: {limits['min_lon']} to {limits['max_lon']}, "
+            f"lat range: {limits['min_lat']} to {limits['max_lat']}"
+            )
+
 
         # Get position of  850 hPaextreme values for current time
-        position = get_position(track, limits, izeta_850, ihgt_850, iwspd_850, LatIndexer, LonIndexer)
+        position = get_position(track, limits, izeta_850, ihgt_850, iwspd_850, LatIndexer, LonIndexer, args)
+        app_logger.info(
+            f"Information at 850 hPa --> "
+            f"min/max ζ: {position['min_max_zeta_850']:.2e}, "
+            f"min geopotential height: {position['min_hgt_850']:.0f}, "
+            f"max wind speed: {position['max_wind_850']:.4f}"
+        )
 
         # Store results
         limits_and_position = {**limits, **position}
-        out_track = pd.concat([out_track, pd.DataFrame(limits_and_position, index=[t.strftime('%Y-%m-%d-%H%M')])], ignore_index=True)
+        new_entry = pd.DataFrame([limits_and_position], index=[t.strftime('%Y-%m-%d-%H%M')])
+        if out_track.empty:
+            out_track = new_entry
+        else:
+            out_track = pd.concat([out_track, new_entry], ignore_index=True)
 
         # Save figure with the domain box, extreme values, vorticity and geopotential height
         plot_domain_attributes(data850, limits, figures_directory)
 
         # Create box object
+        app_logger.info("Creating box object...")
         try:
             box_obj = BoxData(
                 data=idata.compute(),
@@ -463,23 +493,27 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
                 dTdt=idTdt
             )
         except Exception as e:
-            logging.exception(f"Error creating BoxData object: {e}")
-            continue  # Skip to next iteration
+            app_logger.exception(f"Error creating BoxData object: {e}")
+            raise
+        app_logger.info("Ok.")
 
         # Compute and store various meteorological terms
-        terms_dict = compute_and_store_terms(box_obj, terms_dict)
+        terms_dict = compute_and_store_terms(box_obj, terms_dict, app_logger)
+
+        # Log that the processing for this time is done
+        app_logger.info("Done.\n")
 
     # Finalize and process results
-    outfile_path, df  = finalize_results(times, terms_dict, args, results_subdirectory, out_track)
+    outfile_path, df  = finalize_results(times, terms_dict, args, results_subdirectory, out_track, app_logger)
 
     if args.plots:
         plot_results(outfile_path, results_subdirectory, args)
 
 if __name__ == '__main__':
-    from tools import prepare_data
+    from ..utils.tools import prepare_data
 
     args = argparse.Namespace(
-        infile='../samples/Reg1-Representative_NCEP-R2.nc',
+        infile='samples/Reg1-Representative_NCEP-R2.nc',
         residuals=True,
         fixed=False,
         geopotential=False,

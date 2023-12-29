@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2020/11/26 18:27:40 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/22 13:50:48 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/27 20:39:51 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -31,10 +31,8 @@ import numpy as np
 from metpy.units import units
 from metpy.constants import Cp_d
 from metpy.constants import g
-from calc_averages import CalcAreaAverage
-from box_data import BoxData
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+from ..utils.calc_averages import CalcAreaAverage
+from ..utils.box_data import BoxData
 
 class GenerationDissipationTerms:
     """
@@ -58,17 +56,18 @@ class GenerationDissipationTerms:
         https://journals.ametsoc.org/view/journals/mwre/108/7/1520-0493_1980_108_0954_zaecot_2_0_co_2.xml
     """
     
-    def __init__(self, box_obj: BoxData, method: str):
+    def __init__(self, box_obj: BoxData, method: str, app_logger: logging.Logger):
         """Initialize the EnergyContents object with a BoxData object and a method."""
-        self._initialize_attributes(box_obj, method)
+        self._initialize_attributes(box_obj, method, app_logger)
 
-    def _initialize_attributes(self, box_obj, method):
+    def _initialize_attributes(self, box_obj, method, app_logger):
         """Helper method to initialize attributes from the BoxData object."""
 
         # Operational attributes
         self.method = method
         self.box_obj = box_obj
         self.output_dir = box_obj.output_dir
+        self.app_logger = app_logger
         
         # Initialize spatial and temporal attributes
         self.LonIndexer = box_obj.LonIndexer
@@ -120,22 +119,26 @@ class GenerationDissipationTerms:
     
     def calc_gz(self):
         """Computes Generation of Zonal Available Potential Energy (Gz)."""
+        self.app_logger.debug("Computing Gz...")
         term = self.Q_AE * self.tair_AE
         function = CalcAreaAverage(term, self.ylength) / (Cp_d * self.sigma_AA)
         function = self._handle_nans(function)
+        self._save_vertical_levels(function, 'Gz')
         Gz = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
         self._convert_units(Gz, 'Gz')
-        self._save_vertical_levels(Gz, 'Gz')
+        self.app_logger.debug("Ok.")
         return Gz
     
     def calc_ge(self):
         """Computes Generation of Eddy Available Potential Energy (Ge)."""
+        self.app_logger.debug("Computing Ge...")
         term = self.Q_ZE * self.tair_ZE
         function = CalcAreaAverage(term, self.ylength, xlength=self.xlength) / (Cp_d * self.sigma_AA)
         function = self._handle_nans(function)
+        self._save_vertical_levels(function, 'Ge')
         Ge = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
         self._convert_units(Ge, 'Ge')
-        self._save_vertical_levels(Ge, 'Ge')
+        self.app_logger.debug("Ok.")
         return Ge
 
     def calc_dz(self):
@@ -144,11 +147,15 @@ class GenerationDissipationTerms:
 
         Note: Still needs to be fully implemented and tested
         """
+        self.app_logger.debug("Computing Dz...")
         # Here we will use only the lowest vertical level
         term = (self.u_ZA.isel({self.VerticalCoordIndexer: 0}) * self.ust_ZA) + (
             self.v_ZA.isel({self.VerticalCoordIndexer: 0}) * self.vst_ZA)
         function = CalcAreaAverage(term, self.ylength) / g
+        self._save_vertical_levels(function, 'Dz')
         Dz = units.Pa * function
+        self._convert_units(Dz, 'Dz')
+        self.app_logger.debug("Ok.")
         return Dz
 
     def calc_de(self):
@@ -157,11 +164,15 @@ class GenerationDissipationTerms:
         
         Note: Still needs to be fully implemented and tested
         """
+        self.app_logger.debug("Computing De...")
         # Here we will use only the lowest vertical level
         term = (self.u_ZE.isel({self.VerticalCoordIndexer: 0}) * self.ust_ZE) + (
             self.v_ZE.isel({self.VerticalCoordIndexer: 0}) * self.vst_ZE)
         function = CalcAreaAverage(term, self.ylength) / g
+        self._save_vertical_levels(function, 'De')
         De = units.Pa * function
+        self._convert_units(De, 'De')
+        self.app_logger.debug("Ok.")
         return De
     
     def _handle_nans(self, function):
@@ -205,12 +216,7 @@ class GenerationDissipationTerms:
         """Save computed energy data to a CSV file."""
         if self.method == 'fixed':
             df = function.to_dataframe(name='Az').unstack()
-            logging.info(f'Computed {variable_name}')
         else:
             time = pd.to_datetime(function[self.TimeName].data)
             df = function.drop(self.TimeName).to_dataframe(name=time).transpose()
-
-        df.to_csv(f"{self.output_dir}/Az_{self.VerticalCoordIndexer}.csv",
-                  mode="a", header=None)
-
         df.to_csv(f"{self.output_dir}/{variable_name}_{self.VerticalCoordIndexer}.csv", mode="a", header=None)

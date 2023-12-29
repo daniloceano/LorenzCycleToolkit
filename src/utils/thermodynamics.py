@@ -15,6 +15,7 @@ São Paulo - Brazil
 danilo.oceano@gmail.com
 """
 
+import logging
 import numpy as np
 from metpy.units import units
 from metpy.constants import Rd
@@ -51,6 +52,8 @@ def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
         box specyfied by min_lon, max_lon, min_lat and max_lat    
     
     """
+    logging.debug("Computing static stability parameter...")
+
     FirstTerm = g*TemperatureData/Cp_d
     SecondTerm = (PressureData*g/Rd)
     ThirdTerm = TemperatureData.differentiate(VerticalCoordIndexer
@@ -68,6 +71,7 @@ def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
     sigma_AA_filtered = sigma_AA.where(sigma_AA > 0.03, 0.03)
     sigma_AA_filtered = sigma_AA_filtered*units_sigma
 
+    logging.debug("Ok.")
     return sigma_AA_filtered.drop("coslats", errors='ignore')
 
 def AdiabaticHEating(TemperatureData, PressureData, OmegaData,
@@ -77,7 +81,8 @@ def AdiabaticHEating(TemperatureData, PressureData, OmegaData,
     Compute the diabatic heating as a residual form the thermodynamic 
     equation for all vertical levels and for the desired domain
     """
-    
+    logging.debug("Computing adiabatic heating...")
+
     ## Horizontal temperature advection ##
     lons,lats  = TemperatureData[LonIndexer], TemperatureData[LatIndexer]
     cos_lats = TemperatureData["coslats"]
@@ -100,6 +105,7 @@ def AdiabaticHEating(TemperatureData, PressureData, OmegaData,
     
     AdiabaticHeating = ResT * Cp_d
     
+    logging.debug("Ok.")
     return AdiabaticHeating
         
 

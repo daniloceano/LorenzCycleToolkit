@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/22 13:50:57 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/27 20:37:50 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -24,6 +24,7 @@ Created by:
 Contact:
     danilo.oceano@gmail.com
 """
+
 import logging
 import numpy as np
 import pandas as pd
@@ -31,10 +32,8 @@ from metpy.constants import g
 from metpy.constants import Rd
 from metpy.constants import Re
 from metpy.units import units
-from box_data import BoxData
-from calc_averages import CalcAreaAverage
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+from ..utils.box_data import BoxData
+from ..utils.calc_averages import CalcAreaAverage
 
 class ConversionTerms:
     """
@@ -58,16 +57,17 @@ class ConversionTerms:
         https://journals.ametsoc.org/view/journals/mwre/108/7/1520-0493_1980_108_0954_zaecot_2_0_co_2.xml
     """
     
-    def __init__(self, box_obj: BoxData, method: str):
+    def __init__(self, box_obj: BoxData, method: str, app_logger: logging.Logger):
         """Initialize the ConversionTerms object with a BoxData object and a method."""
-        self._initialize_attributes(box_obj, method)
+        self._initialize_attributes(box_obj, method, app_logger)
 
-    def _initialize_attributes(self, box_obj, method):
+    def _initialize_attributes(self, box_obj, method, app_logger):
         """Helper method to initialize attributes from the BoxData object."""
         # Operational attributes
         self.method = method
         self.box_obj = box_obj
         self.output_dir = box_obj.output_dir
+        self.app_logger = app_logger
 
         # Initialize spatial and temporal attributes
         self.LonIndexer = box_obj.LonIndexer
@@ -108,6 +108,8 @@ class ConversionTerms:
         a 2 in the multiplication Re * self.sigma_AA. This is confirmed by looking to the
         paper by Muench (1965).
         """
+        self.app_logger.debug("Calculating CA...")
+
         # First term of the integral
         DelPhi_tairAE = (self.tair_AE * self.tair_AE["coslats"]).differentiate("rlats")
         term1 = (self.v_ZE * self.tair_ZE * DelPhi_tairAE) / (2 * Re * self.sigma_AA)
@@ -121,14 +123,17 @@ class ConversionTerms:
         # Process the integral and save the result
         function = term1 + term2
         function = self._handle_nans(function)
+        self._save_vertical_levels(function, 'Ca')
         Ca = - function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
         self._convert_units(Ca, 'Ca')
-        self._save_vertical_levels(Ca, 'Ca')
-
+        
+        self.app_logger.debug("Done.")
         return Ca
         
     def calc_ce(self):
         """Computes conversion between the two eddy energy forms (AE and KE)."""
+        self.app_logger.debug("Calculating CE...")
+
         # First term of the integral
         term1 = Rd / (self.PressureData * g)
         omega_tair_product = self.omega_ZE * self.tair_ZE
@@ -139,14 +144,17 @@ class ConversionTerms:
         # Process the integral and save the result
         function = term1 * term2
         function = self._handle_nans(function)
+        self._save_vertical_levels(function, 'Ce')
         Ce = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
         self._convert_units(Ce, 'Ce')
-        self._save_vertical_levels(Ce, 'Ce')
 
+        self.app_logger.debug("Done.")
         return Ce
     
     def calc_cz(self):
         """Computes conversion between the two zonal energy forms (ZE and KE)."""
+        self.app_logger.debug("Calculating CZ...")
+
         # First term of the integral
         term1 = Rd / (self.PressureData * g)
         omega_tair_product = self.omega_AE * self.tair_AE
@@ -157,14 +165,17 @@ class ConversionTerms:
         # Process the integral and save the result
         function = term1 * term2
         function = self._handle_nans(function)
+        self._save_vertical_levels(function, 'Cz')
         Cz = - function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
         self._convert_units(Cz, 'Cz')
-        self._save_vertical_levels(Cz, 'Cz')
 
+        self.app_logger.debug("Done.")
         return Cz
         
     def calc_ck(self):
         """Computes conversion between the two eddy kinetic energy forms (KE and KZ)."""
+        self.app_logger.debug("Calculating CK...")
+
         # First term of the integral
         DelPhi_uZA_cosphi = ((self.u_ZA / self.u_ZA["coslats"]) * self.u_ZA["coslats"]).differentiate("rlats")
         term1 = (self.u_ZE["coslats"] * self.u_ZE * self.v_ZE / Re) * DelPhi_uZA_cosphi
@@ -192,10 +203,11 @@ class ConversionTerms:
         # Process the integral and save the result
         function = term1 + term2 + term3 + term4 + term5
         function = self._handle_nans(function)
+        self._save_vertical_levels(function, 'Ck')
         Ck = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units / g
         self._convert_units(Ck, 'Ck')
-        self._save_vertical_levels(Ck, 'Ck')
 
+        self.app_logger.debug("Done.")
         return Ck
     
     def _handle_nans(self, function):
@@ -239,12 +251,7 @@ class ConversionTerms:
         """Save computed energy data to a CSV file."""
         if self.method == 'fixed':
             df = function.to_dataframe(name='Az').unstack()
-            logging.info(f'Computed {variable_name}')
         else:
             time = pd.to_datetime(function[self.TimeName].data)
             df = function.drop(self.TimeName).to_dataframe(name=time).transpose()
-
-        df.to_csv(f"{self.output_dir}/Az_{self.VerticalCoordIndexer}.csv",
-                  mode="a", header=None)
-
         df.to_csv(f"{self.output_dir}/{variable_name}_{self.VerticalCoordIndexer}.csv", mode="a", header=None)

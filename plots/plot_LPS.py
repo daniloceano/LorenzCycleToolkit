@@ -13,7 +13,6 @@ import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 import numpy as np
 import cmocean
-from plot_timeseries import check_create_folder
 from LPS import LorenzPhaseSpace
 
 def create_LPS_plots(fig_title, LPS_type, zoom=False, **kwargs):

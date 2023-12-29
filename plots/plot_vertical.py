@@ -35,7 +35,6 @@ import matplotlib.gridspec as gridspec
 import matplotlib.colors as colors
 import os
 import cmocean as cmo
-from plot_timeseries import check_create_folder
 import glob
 from datetime import datetime
 import argparse

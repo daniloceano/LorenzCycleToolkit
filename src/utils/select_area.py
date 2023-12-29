@@ -15,18 +15,15 @@ Contact:
 
 import time
 import os
-
+import logging
 import matplotlib.colors as colors
 import matplotlib.pyplot as plt
-
 import cmocean.cm as cmo
 import numpy as np
 import pandas as pd
-
 from shapely.geometry.polygon import Polygon
 from scipy.signal import savgol_filter    
 from metpy.calc import vorticity
-
 import cartopy.crs as ccrs
 from cartopy.feature import NaturalEarthFeature, COASTLINE
 from cartopy.feature import BORDERS
@@ -36,28 +33,6 @@ nclicks = 2
 
 # define all CRS
 crs_longlat = ccrs.PlateCarree() 
-
-def check_create_folder(DirName, verbose=True):
-    """
-
-    Check if directory exists and if not, creates it.
-    
-    Parameters
-    ----------
-    DirName : str
-        directory name.
-
-    Returns
-    -------
-    None. 
-
-    """
-    if not os.path.exists(DirName):
-                os.makedirs(DirName)
-                print(DirName+' created')
-    else:
-        if verbose:
-            print(DirName+' directory exists')
 
 # Transformation function
 def coordXform(orig_crs, target_crs, x, y):
@@ -228,9 +203,7 @@ def slice_domain(NetCDF_data, args, varlist):
     LevelIndexer = dfVars.loc['Vertical Level']['Variable']
     
     if args.fixed:
-
-        method = 'fixed'
-        dfbox = pd.read_csv('../inputs/box_limits',header=None,
+        dfbox = pd.read_csv('inputs/box_limits',header=None,
                             delimiter=';',index_col=0)
         WesternLimit = float(NetCDF_data[LonIndexer].sel(
             {LonIndexer:float(dfbox.loc['min_lon'].values)},
@@ -246,11 +219,10 @@ def slice_domain(NetCDF_data, args, varlist):
             method='nearest'))
         
     elif args.track:
-
         dx, dy  = (NetCDF_data[LonIndexer][1] - NetCDF_data[LonIndexer][0],
               NetCDF_data[LatIndexer][1] - NetCDF_data[LatIndexer][0])
         
-        trackfile = '../inputs/track'
+        trackfile = 'inputs/track'
         track = pd.read_csv(trackfile,parse_dates=[0],
                             delimiter=';',index_col='time')
         if 'width' in track.columns:
@@ -266,8 +238,6 @@ def slice_domain(NetCDF_data, args, varlist):
         NorthernLimit = track['Lat'].max() + (max_length / 2) + dy
         
     elif args.choose:
-
-        method = 'choose'
         iu_850 = NetCDF_data.isel({TimeIndexer:0}).sel({LevelIndexer:8500}, method='nearest'
                                                 )[dfVars.loc['Eastward Wind Component']['Variable']]
         iv_850 = NetCDF_data.isel({TimeIndexer:0}).sel({LevelIndexer:8500}, method='nearest'
@@ -285,7 +255,7 @@ def slice_domain(NetCDF_data, args, varlist):
         **{LatIndexer:slice(SouthernLimit,NorthernLimit),
            LonIndexer: slice(WesternLimit,EasternLimit)})
     
-    return NetCDF_data, method
+    return NetCDF_data
 
 def plot_domain_attributes(data850, limits, FigsDirectory):
 
@@ -352,7 +322,7 @@ def plot_domain_attributes(data850, limits, FigsDirectory):
 
     # Save figure
     boxes_directory = os.path.join(FigsDirectory, 'boxes')
-    check_create_folder(boxes_directory, verbose=False)
+    os.makedirs(boxes_directory, exist_ok=True)
     filename = os.path.join(boxes_directory, f'box_{time}.png')
     plt.savefig(filename)
-    print(f'\nCreated figure with box defined for computations at {filename}') 
+    logging.debug(f'\nCreated figure with box defined for computations at {filename}') 

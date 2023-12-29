@@ -1,12 +1,12 @@
 # **************************************************************************** #
 #                                                                              #
 #                                                         :::      ::::::::    #
-#    BoundaryTerms.py                                   :+:      :+:    :+:    #
+#    boundary_terms.py                                  :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/22 14:35:56 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/27 20:20:59 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -30,10 +30,8 @@ import numpy as np
 from metpy.constants import g
 from metpy.constants import Re
 from metpy.units import units
-from calc_averages import CalcZonalAverage, CalcAreaAverage
-from box_data import BoxData
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+from ..utils.calc_averages import CalcZonalAverage, CalcAreaAverage
+from ..utils.box_data import BoxData
 
 class BoundaryTerms:
     """
@@ -64,16 +62,17 @@ class BoundaryTerms:
         https://journals.ametsoc.org/view/journals/mwre/108/7/1520-0493_1980_108_0954_zaecot_2_0_co_2.xml
     """
     
-    def __init__(self, box_obj: BoxData, method: str):
+    def __init__(self, box_obj: BoxData, method: str, app_logger: logging.Logger):
         """Initialize the EnergyContents object with a BoxData object and a method."""
-        self._initialize_attributes(box_obj, method)
+        self._initialize_attributes(box_obj, method, app_logger)
 
-    def _initialize_attributes(self, box_obj, method):
+    def _initialize_attributes(self, box_obj, method, app_logger):
         """Helper method to initialize attributes from the BoxData object."""
         # Operational attributes
         self.method = method
         self.box_obj = box_obj
         self.output_dir = box_obj.output_dir
+        self.app_logger = app_logger
         
         # Initialize spatial and temporal attributes
         self.LonIndexer = box_obj.LonIndexer
@@ -129,6 +128,7 @@ class BoundaryTerms:
         Note:
             On Brennan et al. (1980), the area average of term3 is missing (Muench, 1965).
         """
+        self.app_logger.debug("Calculating BAZ...")
 
         # First term
         term1 = ((2 * self.tair_AE * self.tair_ZE * self.u) + (self.tair_AE ** 2 * self.u)) / (2 * self.sigma_AA)
@@ -159,10 +159,13 @@ class BoundaryTerms:
         function = self._handle_nans(function)
         Baz = self._convert_units(function, 'BAZ')
 
+        self.app_logger.debug("Done.")
         return Baz
 
     def calc_bae(self):
         """Computes the flux of Eddy Available Potential Energy across the boundaries (BAE)."""
+        self.app_logger.debug("Calculating BAE...")
+
         # First Integral
         term1 = self.u * (self.tair_ZE ** 2)
         term1 = term1.sel(**{self.LonIndexer: self.eastern_limit}) - term1.sel(**{self.LonIndexer: self.western_limit})
@@ -188,10 +191,12 @@ class BoundaryTerms:
         function = self._handle_nans(function)
         Bae = self._convert_units(function, 'BAE')
 
+        self.app_logger.debug("Done.")
         return Bae
     
     def calc_bkz(self):
         """Computes the flux of Zonal Kinetic Energy across the boundaries (BKZ)."""
+        self.app_logger.debug("Calculating BKZ...")
 
         # First term
         term1 = self.u * (self.u ** 2 + self.v ** 2 - self.u_ZE ** 2 - self.v_ZE ** 2)
@@ -218,10 +223,12 @@ class BoundaryTerms:
         function = self._handle_nans(function)
         Bkz = self._convert_units(function, 'BKz')
 
+        self.app_logger.debug("Done.")
         return Bkz
 
     def calc_bke(self):
         """Computes the flux of Eddy Kinetic Energy across the boundaries (BKE)."""
+        self.app_logger.debug("Calculating BKE...")
 
         # First term
         term1 = self.u * (self.u_ZE ** 2 + self.v_ZE ** 2)
@@ -248,6 +255,7 @@ class BoundaryTerms:
         function = self._handle_nans(function)
         Bke = self._convert_units(function, 'BKE')
 
+        self.app_logger.debug("Done.")
         return Bke
  
     def calc_boz(self):
@@ -256,6 +264,7 @@ class BoundaryTerms:
         
         Note: Cannot perform eastern boundary minus western boundary on the first term
         """
+        self.app_logger.debug("Calculating BΦZ...")
 
         # First term
         term1 = (self.v_ZA * self.geopt_AE) / g
@@ -278,10 +287,12 @@ class BoundaryTerms:
         function = self._handle_nans(function)
         Boz = self._convert_units(function, 'BOZ')
 
+        self.app_logger.debug("Done.")
         return Boz
 
     def calc_boe(self):
         """Computes the appearence of Eddy Kinetic Energy associated with work produced at its boundaries (BΦE)."""
+        self.app_logger.debug("Calculating BΦE...")
 
         # First term
         term1 = (self.v_ZE * self.geopt_AE) / g
@@ -305,6 +316,7 @@ class BoundaryTerms:
         function = self._handle_nans(function)
         Boe = self._convert_units(function, 'BOE')
 
+        self.app_logger.debug("Done.")
         return Boe
     
     def _handle_nans(self, function):
@@ -341,6 +353,8 @@ class BoundaryTerms:
         try:
             function = function.metpy.convert_units('W/m^2')
         except ValueError as e:
-            raise ValueError(f'Unit error in {variable_name}') from e
+            error_message = f'Unit error in {variable_name}'
+            self.app_logger.exception(error_message)
+            raise ValueError(error_message) from e
         
         return function

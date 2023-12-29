@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/19 23:25:48 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/27 20:41:58 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -17,20 +17,41 @@ import xarray as xr
 import pandas as pd
 import numpy as np
 from metpy.units import units
-from select_area import slice_domain
+from .select_area import slice_domain
 
-def initialize_logging():
+def initialize_logging(results_subdirectory, verbose=False):
     """
     Initializes the logging configuration for the application.
-    """
-    log_file = 'error_log.txt'
-    logging.basicConfig(filename=log_file, filemode='w', level=logging.ERROR, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    
-    # Remove the log file if it exists and is empty
-    if os.path.exists(log_file) and os.path.getsize(log_file) == 0:
-        os.remove(log_file)
 
-initialize_logging()
+    Args:
+        results_subdirectory (str): Directory path to save the log file.
+        verbose (bool): Flag to set logging level to DEBUG for detailed logging.
+    """
+    # Set root logger to higher severity level (INFO or ERROR)
+    root_log_level = logging.ERROR if not verbose else logging.INFO
+    logging.basicConfig(level=root_log_level, format='%(asctime)s - %(levelname)s - %(message)s')
+
+    # Create a separate logger for the application
+    app_logger = logging.getLogger('myapp')
+    app_log_level = logging.DEBUG if verbose else logging.INFO
+    app_logger.setLevel(app_log_level)
+    app_logger.propagate = False  # Prevent the logger from propagating messages to the root logger
+
+    # Create file handler for saving logs
+    log_file = os.path.join(results_subdirectory, 'log.txt')
+    file_handler = logging.FileHandler(log_file, mode='w')
+    file_handler.setLevel(app_log_level)
+    file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(file_formatter)
+    app_logger.addHandler(file_handler)
+
+    # Create a console handler for app logger
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(app_log_level)
+    console_handler.setFormatter(file_formatter)
+    app_logger.addHandler(console_handler)
+
+    return app_logger
 
 def convert_longitude_range(df: xr.Dataset, lon_indexer: str) -> xr.Dataset:
     """
@@ -65,8 +86,8 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
         FileNotFoundError: If CSV file or NetCDF file is not found.
         Exception: For other errors occurring during file opening.
     """
-    logging.info(f"Variables specified by the user in: {varlist}")
-    logging.info(f"Attempting to read {varlist} file...")
+    logging.debug(f"Variables specified by the user in: {varlist}")
+    logging.debug(f"Attempting to read {varlist} file...")
 
     try:
         variable_list_df = pd.read_csv(varlist, sep=';', index_col=0, header=0)
@@ -76,14 +97,13 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
     except pd.errors.EmptyDataError:
         logging.error("The 'fvar' text file is empty.")
         raise
-
-    logging.info("List of variables found:\n" + str(variable_list_df))
+    logging.debug("List of variables found:\n" + str(variable_list_df))
 
     LonIndexer = variable_list_df.loc["Longitude"]["Variable"]
     LatIndexer = variable_list_df.loc["Latitude"]["Variable"]
     LevelIndexer = variable_list_df.loc["Vertical Level"]["Variable"]
 
-    logging.info("Opening input data...")
+    logging.debug("Opening input data... ")
     try:
         with dask.config.set(array={'slicing': {'split_large_chunks': True}}):
             data = convert_longitude_range(
@@ -96,11 +116,13 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
     except Exception as e:
         logging.exception("An exception occurred: {}".format(e))
         raise
+    logging.debug("Ok.")
 
-    logging.info("Assigning geospatial coordinates in radians...")
+    logging.debug("Assigning geospatial coordinates in radians... ")
     data = data.assign_coords({"rlats": np.deg2rad(data[LatIndexer])})
     data = data.assign_coords({"coslats": np.cos(np.deg2rad(data[LatIndexer]))})
     data = data.assign_coords({"rlons": np.deg2rad(data[LonIndexer])})
+    logging.debug("Ok.")
 
     levels_Pa = (data[LevelIndexer] * units(str(data[LevelIndexer].units))).metpy.convert_units("Pa")
     data = data.assign_coords({LevelIndexer: levels_Pa})
@@ -110,7 +132,7 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
     lowest_level = float(data[LevelIndexer].max())
     data = data.sel({LevelIndexer: slice(1000, lowest_level)})
 
-    logging.info("Data opened successfully.")
+    logging.debug("Data opened successfully.")
     return data
 
 def find_extremum_coordinates(data: xr.DataArray, lat: xr.DataArray, lon: xr.DataArray, variable: str) -> tuple:
@@ -140,7 +162,7 @@ def find_extremum_coordinates(data: xr.DataArray, lat: xr.DataArray, lon: xr.Dat
 
     return lat_values[index[0]], lon_values[index[1]]
 
-def prepare_data(args, fvars: str = '../inputs/fvars') -> xr.Dataset:
+def prepare_data(args, fvars: str = 'inputs/fvars') -> xr.Dataset:
     """
     Prepare the data for further analysis.
 

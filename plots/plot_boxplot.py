@@ -24,7 +24,6 @@ import glob
 from datetime import datetime
 import argparse
 import matplotlib.gridspec as gridspec
-from plot_timeseries import check_create_folder
 
 def get_data_dict(term_list):
     data = {}
