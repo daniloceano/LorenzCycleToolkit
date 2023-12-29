@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/27 20:41:58 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/29 14:08:09 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -32,7 +32,7 @@ def initialize_logging(results_subdirectory, verbose=False):
     logging.basicConfig(level=root_log_level, format='%(asctime)s - %(levelname)s - %(message)s')
 
     # Create a separate logger for the application
-    app_logger = logging.getLogger('myapp')
+    app_logger = logging.getLogger('lorenz_cycle')
     app_log_level = logging.DEBUG if verbose else logging.INFO
     app_logger.setLevel(app_log_level)
     app_logger.propagate = False  # Prevent the logger from propagating messages to the root logger
