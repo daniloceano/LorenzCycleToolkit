@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/05/22 17:56:57 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/28 19:06:35 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/29 09:04:50 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -64,8 +64,7 @@ def plot_timeseries(results_file, figures_directory, app_logger=False):
     df = read_results(results_file, app_logger)
 
     results_subdirectory = '/'.join(results_file.split('/')[:-1])
-    figs_dir = os.path.join(results_subdirectory, 'Figures')
-    figures_subdirectory = os.path.join(figs_dir, 'timeseries')
+    figures_subdirectory = os.path.join(figures_directory, 'timeseries')
     os.makedirs(figures_subdirectory, exist_ok=True)
 
     for term_list in utils.TERM_DETAILS:
@@ -74,5 +73,5 @@ def plot_timeseries(results_file, figures_directory, app_logger=False):
 
 if __name__ == '__main__':
     results_file = 'samples/sample_results.csv'
-    figures_directory = '/'.join(results_file.split('/')[:-1])
+    figures_directory = 'samples/Figures/'
     plot_timeseries(results_file, figures_directory)
