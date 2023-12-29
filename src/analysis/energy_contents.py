@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/27 20:38:06 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/29 11:43:53 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -186,9 +186,13 @@ class EnergyContents:
         
     def _save_vertical_levels(self, function, variable_name):
         """Save computed energy data to a CSV file."""
+        df = function.to_dataframe(name=variable_name)
+        df.reset_index(inplace=True)
         if self.method == 'fixed':
-            df = function.to_dataframe(name='Az').unstack()
+            df = df.pivot(index=self.TimeName, columns=self.VerticalCoordIndexer)
         else:
-            time = pd.to_datetime(function[self.TimeName].data)
-            df = function.drop(self.TimeName).to_dataframe(name=time).transpose()
+            df.set_index(self.TimeName, inplace=True)
+            df = df.pivot(columns=self.VerticalCoordIndexer, values=variable_name)
+            df.columns.name = None
+
         df.to_csv(f"{self.output_dir}/{variable_name}_{self.VerticalCoordIndexer}.csv", mode="a", header=None)
