@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/07/05 19:48:17 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/29 14:00:56 by daniloceano      ###   ########.fr        #
+#    Updated: 2023/12/29 18:36:08 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -27,11 +27,10 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
-import cartopy
 import cmocean
 import matplotlib.colors as colors
 from bisect import bisect_left
-import src.plots.utils
+import src.plots.utils as utils
 from src.plots.utils import read_results, read_track, setup_gridlines, setup_map, map_borders
 
 COLORS = ['#BF3D3B', '#3B95BF']
