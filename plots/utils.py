@@ -1,4 +1,18 @@
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    utils.py                                           :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2023/12/29 10:02:20 by daniloceano       #+#    #+#              #
+#    Updated: 2023/12/29 11:46:02 by daniloceano      ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
+
+import os
 import pandas as pd
+from glob import glob
 import cartopy
 import cartopy.feature as cfeature
 from cartopy.feature import NaturalEarthFeature, COASTLINE
@@ -121,6 +135,30 @@ def read_box_limits(box_limits_file, app_logger=None):
         else:
             print(f'Error reading box limits file: {e}')
         return None
+    
+def get_data_vertical_levels(results_directory):
+    """
+    Retrieves data from CSV files in a given directory and organizes it based on the term found in each file.
+
+    Parameters:
+        results_directory (str): The directory containing the CSV files.
+
+    Returns:
+        data (dict): A dictionary where the keys are terms found in the CSV file names and the values are pandas DataFrames containing the data from the corresponding files.
+    """
+    all_terms = [term for details in TERM_DETAILS.values() for term in details['terms']]
+    files = glob(os.path.join(results_directory, '*.csv'))
+
+    data = {}
+    for file in files:
+        term = next((t for t in all_terms if t in file), None)
+        if term:
+            try:
+                data[term] = pd.read_csv(file, header=0, index_col=0, parse_dates=True)
+            except pd.errors.ParserError as e:
+                print(f"Error reading {file}: {e}")
+    
+    return data
 
 def setup_gridlines(ax):
     gl = ax.gridlines(draw_labels=True, zorder=2, linestyle='-', alpha=0.8, color=TEXT_COLOR, linewidth=0.25)

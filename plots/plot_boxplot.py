@@ -17,219 +17,200 @@ Contact:
     danilo.oceano@gmail.com
 """
 
+import os
+from glob import glob
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import glob
 from datetime import datetime
-import argparse
 import matplotlib.gridspec as gridspec
+import utils
+from utils import read_results, get_data_vertical_levels
 
-def get_data_dict(term_list):
-    data = {}
-    # Loop to store results in dictionary
-    for term in term_list:
-        file = glob.glob(Directory+'/'+term+'_*')[0]
-        data[term] = pd.read_csv(file)
-        if args.verbosity:
-            print('\nOpening '+term)
-            print(data[term][::data[term].shape[0]-1])
-            print('Ok!')
-    return data
+def boxplot_time(dict_vertical, figures_subdirectory, app_logger):
+    """
+    Generates a boxplot for each term in the given dictionary and saves the resulting figures in the specified subdirectory.
+    
+    Parameters:
+    - dict_vertical: A dictionary containing vertical data for different terms.
+    - figures_subdirectory: The subdirectory where the generated figures will be saved.
+    - app_logger: (Optional) The application logger to log information about the saved figures.
+    
+    Returns:
+    None
+    """
+    term_details = utils.TERM_DETAILS
+    all_terms = {key: [term for term in details['terms'] if term in dict_vertical]
+                 for key, details in term_details.items() if key in ['energy', 'conversion', 'generation_dissipation']}
 
-def boxplot_time(FigsSubDir):
-    labels_list = [energy_labels,conversion_labels]
-    for term_list in labels_list:
-        data = get_data_dict(term_list)
-        term = list(data.keys())[0]
-        t_id = data[term].columns[0] # Time indexer
-        times = data[term][t_id]
-        plt.close('all') 
-        fig = plt.figure(figsize=(12, 12))
-        if term in energy_labels:
-            fname = 'Energy'
-            gs = gridspec.GridSpec(nrows=2, ncols=2,  hspace=0.15, wspace=0.2)
-        elif term in conversion_labels:
-            fname = 'Conversion'
-            gs = gridspec.GridSpec(nrows=2, ncols=2,  hspace=0.15, wspace=0.3)
-        i = 0
-        for row in range(2):
-            for col in range(2):
-                ax = fig.add_subplot(gs[i])
-                term = term_list[i]
-                ntime = data[term].shape[0]
-                if col == 0 and term in energy_labels:
-                    ax.set_ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=18)
-                elif col == 0 and term in conversion_labels:
-                    ax.set_ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=18)
-                for t in range(ntime):
-                    time_step = (datetime.fromisoformat(times.iloc[t]))
-                    bplot = ax.boxplot(data[term].iloc[t].values[1:],
-                                         positions=[mdates.date2num(time_step)],
-                                         patch_artist=True) 
-                    bplot['boxes'][-1].set_facecolor(linecolors[i])
-                    bplot['boxes'][-1].set_alpha(0.85)
-                    locator = mdates.AutoDateLocator(minticks=5, maxticks=12)
-                    formatter = mdates.AutoDateFormatter(locator)
-                    ax.xaxis.set_major_locator(locator)
-                    ax.xaxis.set_major_formatter(formatter)
-                    ax.tick_params(axis='x',labelrotation=20)
-                    ax.xaxis.set_tick_params(labelsize=16)
-                    ax.yaxis.set_tick_params(labelsize=16)
-                    ax.set_title(term, fontsize=20)
-                    fig.autofmt_xdate()
-                    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
-                i += 1
-            
-        outfile = FigsSubDir+'/boxplot_vertical_timeseries_'+fname+'.png'
-        plt.savefig(outfile,bbox_inches='tight')
-        print('Created '+outfile)
-    
-def boxplot_vertical(FigsSubDir):
-    labels_list = [energy_labels,conversion_labels]
-    for term_list in labels_list:
-        data = get_data_dict(term_list)
-        term = list(data.keys())[0]
-        levs = data[term].columns[1:] # Vertical levels
-        plt.close('all') 
-        fig = plt.figure(figsize=(13, 10))
-        if term in energy_labels:
-            fname = 'Energy'
-            gs = gridspec.GridSpec(nrows=2, ncols=2,  hspace=0.15, wspace=0.2)
-        elif term in conversion_labels:
-            fname = 'Conversion'
-            gs = gridspec.GridSpec(nrows=2, ncols=2,  hspace=0.15, wspace=0.3)
-        i = 0
-        for row in range(2):
-            for col in range(2):
-                ax = fig.add_subplot(gs[i])
-                term = term_list[i]
-                if col == 0 and term in energy_labels:
-                    ax.set_ylabel('Energy '+r' $(J\,m^{-2})$',fontsize=18)
-                elif col == 0 and term in conversion_labels:
-                    ax.set_ylabel('Conversion '+r' $(W\,m^{-2})$',fontsize=18)
-                for lev,j in zip(levs,range(len(levs))):
-                    bplot = ax.boxplot(data[term][lev].values,positions=[j/3],
-                                       labels=[lev], patch_artist=True)
-                    bplot['boxes'][-1].set_facecolor(linecolors[i])
-                    bplot['boxes'][-1].set_alpha(0.85)
-                    ax.tick_params(axis='x',labelrotation=60)
-                    if row == 0:
-                        ax.axes.xaxis.set_ticklabels([])
-                    ax.xaxis.set_tick_params(labelsize=16)
-                    ax.yaxis.set_tick_params(labelsize=16)
-                    ax.set_title(term, fontsize=20)
-                i +=1
-        outfile = FigsSubDir+'/boxplot_vertical_'+fname+'.png'
-        plt.savefig(outfile,bbox_inches='tight')
-        print('Created '+outfile)
-    
-def plot_boxplot(df,term_list,linecolor,fname,label,FigsSubDir):
-    # Guarantee no plots are open
-    plt.close('all')
-    plt.figure(figsize=(8,8))
-    for term,i in zip(term_list,range(len(term_list))):
-        bplot = plt.boxplot(df[term],positions=[i/3],vert=True,
-                            patch_artist=True,notch=True,labels=[term])
-        bplot['boxes'][-1].set_facecolor(linecolor[i])
-        bplot['boxes'][-1].set_alpha(0.7)
-    # Horizontal line for 0
-    if term not in energy_labels:
-        plt.axhline(y = 0, color = 'k', linestyle = '-',
-                    linewidth=1, zorder=1,alpha=0.8)
-        plt.ylabel(label+r' $(J\,m^{-2})$',fontsize=14)
-    else:
-        plt.ylabel(label+r' $(W\,m^{-2})$',fontsize=14)   
-    if term in budget_diff_labels:
-        plt.xticks(rotation=25)
-    # Saving figure
-    plt.savefig(FigsSubDir+'boxplot_'+fname+'.png')
-    print('boxplot_'+fname+'.png created')
-    
-def main():
-    
-    # Diectory for saving figures
-    FigsDir = Directory+'/Figures/'
-    FigsSubDir = FigsDir+'/boxplot/'
-    check_create_folder(FigsSubDir)
-    
-    print()
-    print('-------------------------------------------------------------')
-    print('Creating boxplot for the temporal evolution of each term')
-    boxplot_time(FigsSubDir)
-    print('-------------------------------------------------------------')
-    print('Creating boxplot for each vertical level')
-    boxplot_vertical(FigsSubDir)
-    print('All done')
+    dummy_data = dict_vertical[next(iter(all_terms['energy']), None)]  # Safe access
+    t_id = dummy_data.columns[0]  # Time indexer
+    times = dummy_data[t_id].index
+
+    for term_type, terms in all_terms.items():
+        if not terms:
+            continue  # Skip if no terms to plot
+
+        plt.close('all')
+        fig_layout = (10, 10) if len(terms) == 4 else (10, 5)
+        fig = plt.figure(figsize=fig_layout)
+        n_rows, n_cols = (2, 2) if len(terms) == 4 else (1, 2)
+
+        gs = gridspec.GridSpec(nrows=n_rows, ncols=n_cols, hspace=0.25, wspace=0.3)
         
-    data = Directory+'/'.join(Directory.split('/')[2:-1])+'.csv'
-    df = pd.read_csv(data)
-    for term_list,cols,fname,label in zip(terms_list,cols_list,
-                                      fnames,labels_list):
-        plot_boxplot(df,term_list,cols,fname,label,FigsSubDir)
+        for i, term in enumerate(terms):
+            ax = fig.add_subplot(gs[i])
+            if i % n_cols == 0:
+                label = f'{term_details[term_type]["label"]} ({term_details[term_type]["unit"]})'
+                ax.set_ylabel(label, fontsize=18)
+            for t in times:
+                data = dict_vertical[term].loc[t].values
+                time_step = mdates.date2num(datetime.fromisoformat(t.strftime('%Y-%m-%d %H:%M')))
+                bplot = ax.boxplot(data, positions=[time_step], patch_artist=True)
+                bplot['boxes'][-1].set_facecolor(utils.COLORS[i % len(utils.COLORS)])
+                bplot['boxes'][-1].set_alpha(0.85)
+                for median in bplot['medians']:
+                     median.set_color('k')
+
+            locator = mdates.AutoDateLocator(minticks=5, maxticks=12)
+            formatter = mdates.ConciseDateFormatter(locator)
+            ax.xaxis.set_major_locator(locator)
+            ax.xaxis.set_major_formatter(formatter)
+            ax.tick_params(axis='x', labelrotation=20)
+            ax.xaxis.set_tick_params(labelsize=16)
+            ax.yaxis.set_tick_params(labelsize=16)
+            ax.set_title(term, fontsize=20)
+
+        file_name = f'{figures_subdirectory}/vertical_timeseries_{term_type}.png'
+        plt.savefig(file_name, bbox_inches='tight')
+        app_logger.info(f'Figure saved in directory: {figures_subdirectory}') if app_logger else print(f'Figure saved in directory: {figures_subdirectory}')
+
+    
+def boxplot_vertical(dict_vertical, figures_subdirectory, app_logger):
+    # Define the labels lists based on utils.TERM_DETAILS
+    term_details = utils.TERM_DETAILS
+    all_terms = {key: [term for term in details['terms'] if term in dict_vertical]
+                 for key, details in term_details.items() if key in ['energy', 'conversion', 'generation_dissipation']}
+
+    linecolors = utils.COLORS
+
+    for term_type, terms in all_terms.items():
+        if not terms:
+            continue  # Skip if no terms to plot
+
+        plt.close('all')
+        fig_layout = (10, 10) if len(terms) == 4 else (10, 5)
+        fig = plt.figure(figsize=fig_layout)
+        n_rows, n_cols = (2, 2) if len(terms) == 4 else (1, 2)
+
+        wspace = 0.3 if term_type != 'generation_dissipation' else 0.4
+
+        gs = gridspec.GridSpec(nrows=n_rows, ncols=n_cols, hspace=0.15, wspace=wspace)
+
+        label = f'{term_details[term_type]["label"]} ({term_details[term_type]["unit"]})'
+        for i, term in enumerate(terms):
+            ax = fig.add_subplot(gs[i])
+
+            if i % 2 == 0:
+                ax.set_ylabel(label, fontsize=18)
+
+            levs = dict_vertical[term].columns[1:]  # Assuming second column onward are levels
+            for j, lev in enumerate(levs):
+                bplot = ax.boxplot(dict_vertical[term][lev].values,
+                                   positions=[j / 3], labels=[lev],
+                                   patch_artist=True)
+                bplot['boxes'][-1].set_facecolor(linecolors[i % len(linecolors)])
+                bplot['boxes'][-1].set_alpha(0.85)
+                for median in bplot['medians']:
+                     median.set_color('k')
+
+            ax.tick_params(axis='x', labelrotation=60)
+            if i < len(terms) - 2:  # Assuming last row should have x labels
+                ax.axes.xaxis.set_ticklabels([])
+            ax.xaxis.set_tick_params(labelsize=16)
+            ax.yaxis.set_tick_params(labelsize=16)
+            ax.set_title(term, fontsize=20)
+
+        outfile = f'{figures_subdirectory}/boxplot_vertical_levels_{term_type}.png'
+        plt.savefig(outfile, bbox_inches='tight')
+        app_logger.info(f'Created {outfile}') if app_logger else print(f'Created {outfile}')
+    
+def plot_boxplot_terms(df, figures_subdirectory, app_logger):
+    """
+    Generates a boxplot for each term in the term_list from the given DataFrame and saves the resulting figure.
+
+    Parameters:
+    - df: The DataFrame containing the data to be plotted.
+    - term_list: List of terms to plot.
+    - figures_subdirectory: The directory where the figure will be saved.
+    - app_logger: Application logger for logging messages.
+    """
+     # Define the labels lists based on utils.TERM_DETAILS
+    term_details = utils.TERM_DETAILS
+    all_terms = {key: [term for term in details['terms'] if term in df.columns]
+                 for key, details in term_details.items() if key in term_details.keys()}
+
+    for term_type, term_list in all_terms.items():
+        if not term_list:
+            continue  # Skip if no terms to plot
+
+        # Determine the figure size based on the number of terms
+        fig_layout = (8, 8) if len(term_list) == 4 else (6, 8)
+        plt.figure(figsize=fig_layout)
+
+        for i, term in enumerate(term_list):
+            bplot = plt.boxplot(df[term], positions=[i], vert=True, patch_artist=True, notch=True, labels=[term])
+            box_color = utils.COLORS[i % len(utils.COLORS)]
+            for box in bplot['boxes']:
+                box.set_facecolor(box_color)
+                box.set_alpha(0.85)
+            for median in bplot['medians']:
+                median.set_color('k')
+
+            # Horizontal line for 0 if not an energy term
+            if term not in utils.TERM_DETAILS['energy']['terms']:
+                plt.axhline(y=0, color='k', linestyle='-', linewidth=1, zorder=1, alpha=0.8)
+            
+            label = utils.TERM_DETAILS[term_type]['label']
+            plt.ylabel(f'{label} ({utils.TERM_DETAILS[term_type]["unit"]})', fontsize=14)
+            plt.tick_params(axis='x', labelsize=12)
+            plt.tick_params(axis='y', labelsize=12)
+
+        # Set x-ticks rotation if budget difference terms are included
+        if any(term in utils.TERM_DETAILS['budget_diff']['terms'] for term in term_list):
+            plt.xticks(rotation=25)
+
+        plt.tight_layout()
+
+        # Saving figure
+        fname = f'boxplot_terms_{term_type}'
+        plt.savefig(f'{figures_subdirectory}/{fname}.png')
+        app_logger.info(f'{fname}.png created') if app_logger else print(f'{fname}.png created')
+
+    
+def boxplot_terms(results_file, results_directory, figures_directory, app_logger=False):
+    app_logger.info('Plotting boxplots...') if app_logger else print('Plotting boxplots...')
+
+    df = read_results(results_file, app_logger)
+
+    dict_vertical = get_data_vertical_levels(results_directory)
+
+    figures_subdirectory = os.path.join(figures_directory, 'boxplots')
+    os.makedirs(figures_subdirectory, exist_ok=True)
+    
+    app_logger.info('Creating boxplot for each time') if app_logger else print('Creating boxplot for each time')
+    boxplot_time(dict_vertical, figures_subdirectory, app_logger)
+
+    app_logger.info('Creating boxplot for each vertical level') if app_logger else print('Creating boxplot for each vertical level')
+    boxplot_vertical(dict_vertical, figures_subdirectory, app_logger)
+
+    app_logger.info('Creating boxplot for each term') if app_logger else print('Creating boxplot for each term')        
+    plot_boxplot_terms(df, figures_subdirectory, app_logger)
+
 
 if __name__ == "__main__":
-    
-    parser = argparse.ArgumentParser(description = "\
-Reads an .csv file with all terms from the Lorenz Energy Cycle and make boxplots.")
-    parser.add_argument("Directory", help = "Directory containing the\
- results from the main.py program.")
-    parser.add_argument("-r", "--residuals", default = False, action='store_true',
-    help = "If this flag is used, it will plot RGe, RGz, RKz and RKe\
- instead of Ge, Gz, Dz and De")
-    parser.add_argument("-v", "--verbosity", default = False,
-                        action='store_true')
- 
-    args = parser.parse_args()
-    Directory = args.Directory
-    print(Directory)
-    
-    ## Specs for plotting ##
-    # Labels for plots
-    conversion_labels = ['Cz','Ca','Ck','Ce']
-    energy_labels = ['Az','Ae','Kz','Ke']
-    budget_diff_labels = ['∂Az/∂t (finite diff.)', '∂Ae/∂t (finite diff.)',
-                     '∂Kz/∂t (finite diff.)', '∂Ke/∂t (finite diff.)']
-    residuals_labels = ['RGz', 'RKz', 'RGe', 'RKe']
-    gendiss_labels = ['Gz', 'Ge', 'Dz', 'De']
-    residuals_labels = ['RGz', 'RGe', 'RKz', 'RKe']
-    # This is for comparing terms estimated as residuals with terms computed  
-    comparingG_labels = ['RGz', 'RGe', 'Gz', 'Ge']
-    comparingD_labels = ['RKz', 'Dz', 'RKe', 'De']
-    # Color for plots
-    cols_energy = ['#3B95BF','#87BF4B','#BFAB37','#BF3D3B']
-    linecolors =  ['#3B95BF','#87BF4B','#BFAB37','#BF3D3B','#873e23','#A13BF0']
-    cols_conversion = ['#3B95BF','#87BF4B','#BFAB37','#BF3D3B']
-    cols_residual =  ['#3B95BF','#87BF4B','#BFAB37','#BF3D3B']
-    cols_boundary =   ['#3B95BF','#87BF4B','#BFAB37','#BF3D3B']
-    # Specs for the markers and lines
-    # markerfacecolors = ['#A53860','w','#384A0F','w','#873e23', 'w']
-    markers = ['s','o','^','v','<','>']     
-    markercolor =  ['#59c0f0','#b0fa61','#f0d643','#f75452','#f07243','#bc6ff7']   
-    linestyles = ['-','-','-','-','-','-']
-    linewidth = 3 
-    
-    if args.residuals:
-        boundary_labels = ['BAz','BAe','BKz','BKe']
-        terms_list = [energy_labels,conversion_labels,
-                                boundary_labels,residuals_labels, 
-                                budget_diff_labels,comparingG_labels]
-        cols_list = [cols_energy,cols_conversion,cols_boundary,cols_residual,
-                     cols_energy,linecolors]
-        fnames = ['energy','conversion','boundary','residuals',
-                  'energy_budget','comparing_GenRes']
-        labels_list = ['Energy', 'Conversion', 'Transport across boundaries',
-                       'Residuals', 
-                       'Enery budgets (estimated using finite diffs.)',
-                       'Generation/Residual']
-    else:
-        boundary_labels = ['BAz','BAe','BKz','BKe','BΦZ','BΦE']
-        terms_list = [energy_labels,conversion_labels]
-        term_labels = ['energy_labels','conversion_labels',
-                               'boundary_labels','residuals_labels', 
-                                'budget_diff_labels','gendiss_labels',
-                                'comparingG_labels','comparingD_labels']     
-    
-    
-    main()
+    results_file = 'samples/sample_results.csv'
+    results_directory = 'samples/'
+    figures_directory = 'samples/Figures/' 
+    boxplot_terms(results_file, results_directory, figures_directory, app_logger=False)
 
