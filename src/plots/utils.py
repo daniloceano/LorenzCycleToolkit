@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/29 10:02:20 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/29 11:46:02 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/02 15:43:26 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -84,9 +84,7 @@ def read_results(results_file_path, app_logger=False):
         pandas.DataFrame or None: The DataFrame containing the results, or None if an error occurs.
     """
     try:
-        df = pd.read_csv(results_file_path, parse_dates={'Datetime': ['Date', 'Hour']}, date_format='%Y-%m-%d %H')
-        df.index = df['Datetime']
-        df = df.drop(['Datetime', 'Unnamed: 0'], axis=1)
+        df = pd.read_csv(results_file_path, parse_dates={'Datetime': [0]}, index_col=[0])
         return df
     except FileNotFoundError:
         app_logger.error(f'Error: File {results_file_path} was not found.') if app_logger else print(f'Error: File {results_file_path} was not found.')
