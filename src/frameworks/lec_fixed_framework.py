@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/29 14:18:20 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/02 19:58:28 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -23,7 +23,6 @@ from ..analysis.generation_and_dissipation_terms import GenerationDissipationTer
 from ..utils.box_data import BoxData
 from ..utils.calc_budget_and_residual import calc_budget_diff, calc_residuals
 from ..plots.timeseries_terms import plot_timeseries
-from ..plots.timeseries_zeta_and_Z import plot_min_zeta_hgt
 from ..plots.map_box_limits import plot_box_limits
 from ..plots.plot_boxplot import boxplot_terms
 
@@ -122,7 +121,7 @@ def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirec
     app_logger.info('Computed generation dissipation terms')
 
     dates = data[TimeName].values
-    df = pd.DataFrame({'Date': dates.astype('datetime64[D]'), 'Hour': pd.to_datetime(dates).hour})
+    df = pd.DataFrame(index=dates.astype('datetime64'))
     for i, col in enumerate(['Az', 'Ae', 'Kz', 'Ke']):
         df[col] = energy_list[i]
     for i, col in enumerate(['Cz', 'Ca', 'Ck', 'Ce']):
