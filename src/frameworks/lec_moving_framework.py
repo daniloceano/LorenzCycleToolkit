@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/27 21:34:41 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/02 19:57:23 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -16,6 +16,8 @@ import argparse
 import pandas as pd
 import xarray as xr
 import numpy as np
+
+from pathlib import Path
 
 from metpy.units import units
 from metpy.calc import vorticity, wind_speed
@@ -326,38 +328,124 @@ def finalize_results(times, terms_dict, args, results_subdirectory, out_track, a
 
     # Constructing output filename
     method = 'track' if args.track else 'choose'
-    outfile_name = args.outname if args.outname else ''.join(args.infile.split('/')[-1].split('.nc')) + f'_{method}'
-    outfile_path = os.path.join(results_subdirectory, f'{outfile_name}.csv')
+    infile_name = os.path.basename(args.infile).split('.nc')[0]
+    results_filename = ''.join(f'{infile_name}_{method}_results')
+    results_file = os.path.join(results_subdirectory, f'{results_filename}.csv')
 
     # Saving the DataFrame to a CSV file
-    df.to_csv(outfile_path)
-    app_logger.info(f'Results saved to {outfile_path}')
+    df.to_csv(results_file)
+    app_logger.info(f'Results saved to {results_file}')
 
     # Save system position as a csv file for replicability
     out_track = out_track.rename(columns={'datestr':'time','central_lat':'Lat','central_lon':'Lon'})
-    output_trackfile = os.path.join(results_subdirectory, outfile_name+'_trackfile')
+    output_trackfile = os.path.join(results_subdirectory, results_filename+'_trackfile')
     out_track.to_csv(output_trackfile, index=False, sep=";")
     app_logger.info(f'System track saved to {output_trackfile}')
 
-    return outfile_path, df
+    return results_file, df
 
-def plot_results(outfile_path, results_subdirectory, args):
-    """
-    Plot the results using the specified plotting scripts or functions.
+def call_cyclophaser(out_track, times, lat, results_subdirectory, figures_directory, app_logger):
+        """
+        Calls the cyclophaser function to determine the life cycle periods.
 
-    Args:
-        outfile_path (str): Path to the file containing the results.
-        results_subdirectory (str): Directory to save plots.
-        args (argparse.Namespace): Script arguments.
-    """
-    # Example plotting commands, replace with actual plotting functions or scripts
-    plot_flag = ' -r' if args.residuals else ''
-    os.system(f"python ../plots/plot_timeseries.py {outfile_path}{plot_flag}")
-    os.system(f"python ../plots/plot_vertical.py {results_subdirectory}")
-    os.system(f"python ../plots/plot_boxplot.py {results_subdirectory}{plot_flag}")
-    os.system(f"python ../plots/plot_LEC.py {outfile_path}")
-    os.system(f"python ../plots/plot_LPS.py {outfile_path}")
-    os.system(f"python ../plots/plot_track.py {outfile_path}")
+        Parameters:
+            out_track (pd.DataFrame): The output track data.
+            times (pd.DatetimeIndex): The time values.
+            lat (xr.DataArray): The latitude values.
+            app_logger: The application logger.
+
+        Returns:
+            The result of the determine_periods function.
+        """
+        from cyclophaser import determine_periods
+
+        app_logger.info("Calling Cyclophaser for determining life cycle periods...")
+
+        periods_figure_directory = os.path.join(figures_directory, 'Periods')
+        os.makedirs(periods_figure_directory, exist_ok=True)
+        vorticity_data = out_track['min_max_zeta_850'].to_list()
+
+        options_high_res = {
+                    "use_filter": 'auto',
+                    "replace_endpoints_with_lowpass": 24,
+                    "use_smoothing": 'auto',
+                    "use_smoothing_twice": 'auto',
+                    "savgol_polynomial": 3,
+                    "cutoff_low": 168,
+                    "cutoff_high": 48
+                }
+        
+        options_low_res = {
+                    "use_filter": len(vorticity_data) // 6,
+                    "replace_endpoints_with_lowpass": 24,
+                    "use_smoothing": len(vorticity_data) // 8 | 1,
+                    "use_smoothing_twice": False,
+                    "savgol_polynomial": 3,
+                    "cutoff_low": 168,
+                    "cutoff_high": 12
+                }
+        
+        # Select options based on data resolution
+        dx = float(np.abs(lat[1] - lat[0]).values)
+        if dx < 2:
+            options = options_high_res
+            app_logger.info(f"Using high resolution options for cyclophaser (dx = {dx}): %s", options)
+        else:
+            options = options_low_res
+            app_logger.info(f"Using low resolution options for cyclophaser (dx = {dx}): %s", options)
+
+        periods_args = {
+            "plot": os.path.join(periods_figure_directory, 'periods'),
+            "plot_steps": os.path.join(periods_figure_directory, 'periods_steps'),
+            "export_dict": os.path.join(results_subdirectory, 'periods'),
+            "process_vorticity_args": options}
+        
+        try:
+            determine_periods(vorticity_data, x=times, **periods_args)
+        except Exception as e:
+            app_logger.error(f"Error calling cyclophaser: {e}")
+            return
+
+def plot_LPS(df: pd.DataFrame, infile: str, figures_directory: str, app_logger: logging.Logger):
+    from lorenz_phase_space.LPS import LorenzPhaseSpace as LPS
+    
+    app_logger.info("Plotting Lorenz Phase Space...")
+
+    infile_name = Path(infile).stem
+    title, datasource = infile_name.split('_')
+
+    time_difference = (df.index[1] - df.index[0])
+    dt_hours = int(time_difference.total_seconds() / 3600)
+
+    figures_LPS_directory = Path(figures_directory) / 'LPS'
+    figures_LPS_directory.mkdir(parents=True, exist_ok=True)
+
+    def create_and_save_plot(dataframe, zoom, plot_type, figures_dir):
+        suffix = f"_{plot_type}_zoom" if zoom else f"_{plot_type}"
+        try:
+            fig = create_plot(dataframe, zoom, title, datasource)
+            file_path = figures_dir / f"LPS{suffix}.png"
+            fig.savefig(file_path, dpi=300)
+            app_logger.info(f"LPS plot saved to {file_path}")
+        except Exception as e:
+            app_logger.error(f"Error while plotting LPS{suffix}: {e}")
+
+    def create_plot(df, zoom, title, datasource):
+        x_axis, y_axis = df['Ck'], df['Ca']
+        marker_color, marker_size = df['Ge'], df['Ke']
+        start, end = map(lambda x: pd.to_datetime(x).strftime('%Y-%m-%d %H:%M'), [df.index[0], df.index[-1]])
+
+        lps_mixed = LPS(x_axis, y_axis, marker_color, marker_size, zoom=zoom, title=title, datasource=datasource, start=start, end=end)
+        fig, ax = lps_mixed.plot()
+        return fig
+
+    for zoom in [False, True]:
+        create_and_save_plot(df, zoom, f"{dt_hours}h", figures_LPS_directory)
+        df_daily = df.resample('1D').mean()
+        create_and_save_plot(df_daily, zoom, "1d", figures_LPS_directory)
+    
+    print()
+
 
 def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Dataset,
                results_subdirectory: str, figures_directory: str,
@@ -415,13 +503,13 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
     terms_dict = create_terms_dict(args)
 
     # Slice the time array to match the track file
-    times = pd.to_datetime(data[TimeName].values)
+    times = pd.to_datetime(data[TimeName].values)[:5]
     if args.track:
         times = times[(times >= track.index[0]) & (times <= track.index[-1])]
         if len(times) == 0:
             app_logger.error("Mismatch between trackfile and data times.")
             raise ValueError("Mismatch between trackfile and data times.")
-
+        
     # Iterating over times
     for t in times:
         app_logger.info(f"Processing data at time: {t}...")
@@ -461,7 +549,7 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
         # Get position of  850 hPaextreme values for current time
         position = get_position(track, limits, izeta_850, ihgt_850, iwspd_850, LatIndexer, LonIndexer, args)
         app_logger.info(
-            f"Information at 850 hPa --> "
+            f"850 hPa diagnostics --> "
             f"min/max ζ: {position['min_max_zeta_850']:.2e}, "
             f"min geopotential height: {position['min_hgt_850']:.0f}, "
             f"max wind speed: {position['max_wind_850']:.4f}"
@@ -504,10 +592,23 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
         app_logger.info("Done.\n")
 
     # Finalize and process results
-    outfile_path, df  = finalize_results(times, terms_dict, args, results_subdirectory, out_track, app_logger)
+    results_file, df  = finalize_results(times, terms_dict, args, results_subdirectory, out_track, app_logger)
 
     if args.plots:
-        plot_results(outfile_path, results_subdirectory, args)
+        from ..plots.timeseries_terms import plot_timeseries
+        from ..plots.timeseries_zeta_and_Z import plot_min_zeta_hgt
+        from ..plots.map_box_limits import plot_box_limits
+        from ..plots.plot_boxplot import boxplot_terms
+
+        app_logger.info('Generating plots..')
+        figures_directory = os.path.join(results_subdirectory, 'Figures')
+        plot_timeseries(results_file, figures_directory, app_logger)
+        boxplot_terms(results_file, results_subdirectory, figures_directory, app_logger)
+        call_cyclophaser(out_track, times, lat, figures_directory, results_subdirectory, app_logger)
+        plot_LPS(df, args.infile, figures_directory, app_logger)
+
+
+        app_logger.info('Done.')
 
 if __name__ == '__main__':
     from ..utils.tools import prepare_data
@@ -541,7 +642,6 @@ if __name__ == '__main__':
         resuts_directory, "".join(args.infile.split('/')[-1].split('.nc')) + '_' + method)
     figures_directory = os.path.join(results_subdirectory, 'Figures')
     os.makedirs(figures_directory, exist_ok=True)
-    os.makedirs(results_subdirectory, exist_ok=True)
     os.makedirs(results_subdirectory, exist_ok=True)
 
     lec_moving(data, variable_list_df, dTdt, results_subdirectory, figures_directory, args)
