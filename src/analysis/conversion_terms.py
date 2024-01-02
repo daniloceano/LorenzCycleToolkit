@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/29 11:43:42 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/02 16:43:36 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -255,6 +255,7 @@ class ConversionTerms:
             df = df.pivot(index=self.TimeName, columns=self.VerticalCoordIndexer)
         else:
             df.set_index(self.TimeName, inplace=True)
+            df.index = df.index.strftime('%Y-%m-%d %H:%M:%S')
             df = df.pivot(columns=self.VerticalCoordIndexer, values=variable_name)
             df.columns.name = None
 
