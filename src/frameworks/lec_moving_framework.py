@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/03 00:15:53 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/03 00:47:39 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -401,7 +401,7 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
     terms_dict = create_terms_dict(args)
 
     # Slice the time array to match the track file
-    times = pd.to_datetime(data[TimeName].values)[:5]
+    times = pd.to_datetime(data[TimeName].values)
     if args.track:
         times = times[(times >= track.index[0]) & (times <= track.index[-1])]
         if len(times) == 0:
