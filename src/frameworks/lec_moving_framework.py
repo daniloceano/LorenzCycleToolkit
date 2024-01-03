@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/02 19:57:23 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/03 00:15:53 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -343,109 +343,7 @@ def finalize_results(times, terms_dict, args, results_subdirectory, out_track, a
     app_logger.info(f'System track saved to {output_trackfile}')
 
     return results_file, df
-
-def call_cyclophaser(out_track, times, lat, results_subdirectory, figures_directory, app_logger):
-        """
-        Calls the cyclophaser function to determine the life cycle periods.
-
-        Parameters:
-            out_track (pd.DataFrame): The output track data.
-            times (pd.DatetimeIndex): The time values.
-            lat (xr.DataArray): The latitude values.
-            app_logger: The application logger.
-
-        Returns:
-            The result of the determine_periods function.
-        """
-        from cyclophaser import determine_periods
-
-        app_logger.info("Calling Cyclophaser for determining life cycle periods...")
-
-        periods_figure_directory = os.path.join(figures_directory, 'Periods')
-        os.makedirs(periods_figure_directory, exist_ok=True)
-        vorticity_data = out_track['min_max_zeta_850'].to_list()
-
-        options_high_res = {
-                    "use_filter": 'auto',
-                    "replace_endpoints_with_lowpass": 24,
-                    "use_smoothing": 'auto',
-                    "use_smoothing_twice": 'auto',
-                    "savgol_polynomial": 3,
-                    "cutoff_low": 168,
-                    "cutoff_high": 48
-                }
-        
-        options_low_res = {
-                    "use_filter": len(vorticity_data) // 6,
-                    "replace_endpoints_with_lowpass": 24,
-                    "use_smoothing": len(vorticity_data) // 8 | 1,
-                    "use_smoothing_twice": False,
-                    "savgol_polynomial": 3,
-                    "cutoff_low": 168,
-                    "cutoff_high": 12
-                }
-        
-        # Select options based on data resolution
-        dx = float(np.abs(lat[1] - lat[0]).values)
-        if dx < 2:
-            options = options_high_res
-            app_logger.info(f"Using high resolution options for cyclophaser (dx = {dx}): %s", options)
-        else:
-            options = options_low_res
-            app_logger.info(f"Using low resolution options for cyclophaser (dx = {dx}): %s", options)
-
-        periods_args = {
-            "plot": os.path.join(periods_figure_directory, 'periods'),
-            "plot_steps": os.path.join(periods_figure_directory, 'periods_steps'),
-            "export_dict": os.path.join(results_subdirectory, 'periods'),
-            "process_vorticity_args": options}
-        
-        try:
-            determine_periods(vorticity_data, x=times, **periods_args)
-        except Exception as e:
-            app_logger.error(f"Error calling cyclophaser: {e}")
-            return
-
-def plot_LPS(df: pd.DataFrame, infile: str, figures_directory: str, app_logger: logging.Logger):
-    from lorenz_phase_space.LPS import LorenzPhaseSpace as LPS
     
-    app_logger.info("Plotting Lorenz Phase Space...")
-
-    infile_name = Path(infile).stem
-    title, datasource = infile_name.split('_')
-
-    time_difference = (df.index[1] - df.index[0])
-    dt_hours = int(time_difference.total_seconds() / 3600)
-
-    figures_LPS_directory = Path(figures_directory) / 'LPS'
-    figures_LPS_directory.mkdir(parents=True, exist_ok=True)
-
-    def create_and_save_plot(dataframe, zoom, plot_type, figures_dir):
-        suffix = f"_{plot_type}_zoom" if zoom else f"_{plot_type}"
-        try:
-            fig = create_plot(dataframe, zoom, title, datasource)
-            file_path = figures_dir / f"LPS{suffix}.png"
-            fig.savefig(file_path, dpi=300)
-            app_logger.info(f"LPS plot saved to {file_path}")
-        except Exception as e:
-            app_logger.error(f"Error while plotting LPS{suffix}: {e}")
-
-    def create_plot(df, zoom, title, datasource):
-        x_axis, y_axis = df['Ck'], df['Ca']
-        marker_color, marker_size = df['Ge'], df['Ke']
-        start, end = map(lambda x: pd.to_datetime(x).strftime('%Y-%m-%d %H:%M'), [df.index[0], df.index[-1]])
-
-        lps_mixed = LPS(x_axis, y_axis, marker_color, marker_size, zoom=zoom, title=title, datasource=datasource, start=start, end=end)
-        fig, ax = lps_mixed.plot()
-        return fig
-
-    for zoom in [False, True]:
-        create_and_save_plot(df, zoom, f"{dt_hours}h", figures_LPS_directory)
-        df_daily = df.resample('1D').mean()
-        create_and_save_plot(df_daily, zoom, "1d", figures_LPS_directory)
-    
-    print()
-
 
 def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Dataset,
                results_subdirectory: str, figures_directory: str,
@@ -599,13 +497,15 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
         from ..plots.timeseries_zeta_and_Z import plot_min_zeta_hgt
         from ..plots.map_box_limits import plot_box_limits
         from ..plots.plot_boxplot import boxplot_terms
+        from ..plots.plot_periods import plot_periods
+        from ..plots.plot_LPS import plot_LPS
 
         app_logger.info('Generating plots..')
         figures_directory = os.path.join(results_subdirectory, 'Figures')
         plot_timeseries(results_file, figures_directory, app_logger)
         boxplot_terms(results_file, results_subdirectory, figures_directory, app_logger)
-        call_cyclophaser(out_track, times, lat, figures_directory, results_subdirectory, app_logger)
-        plot_LPS(df, args.infile, figures_directory, app_logger)
+        plot_periods(out_track, times, lat, figures_directory, results_subdirectory, app_logger)
+        plot_LPS(df, args.infile, results_subdirectory, figures_directory, app_logger)
 
 
         app_logger.info('Done.')

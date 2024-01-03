@@ -1,139 +1,99 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Jun 14 16:32:27 2022
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    plot_LPS.py                                        :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2022/06/14 16:32:27 by daniloceano       #+#    #+#              #
+#    Updated: 2024/01/03 00:46:23 by daniloceano      ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
 
-@author: daniloceano
-"""
-
+import os
 import pandas as pd
-import argparse
-import glob
-import matplotlib.colors as colors
-import matplotlib.pyplot as plt
-import numpy as np
-import cmocean
-from LPS import LorenzPhaseSpace
+from pathlib import Path
+import logging
+from lorenz_phase_space.LPS import LorenzPhaseSpace as LPS
 
-def create_LPS_plots(fig_title, LPS_type, zoom=False, **kwargs):
-        plt.close('all')
-        plt.figure(figsize=(10,10))
-        ax = plt.gca()
-        LorenzPhaseSpace(ax, LPS_type, zoom=zoom, **kwargs)
-        zoom_suffix = "_zoom" if zoom else ""
-        fname = f"{ResultsSubDirectory}/Figures/LPS/LPS_{fig_title}_{LPS_type}{zoom_suffix}.png"
-        with plt.rc_context({'savefig.dpi': 500}):
-                plt.savefig(fname)
-        print(f"{fname} created!")
+def create_and_save_plot(
+        dataframe: pd.DataFrame,
+        title: str,
+        datasource: str,
+        zoom: bool,
+        plot_type: str,
+        figures_dir: Path,
+        app_logger: logging.Logger,
+        periods: bool = False
+    ):
+    suffix = f"_{plot_type}_zoom" if zoom else f"_{plot_type}"
+    fig, _ = create_plot(dataframe, zoom, title, datasource, periods)
+    file_path = os.path.join(figures_dir, f"LPS{suffix}.png")
+    fig.savefig(file_path, dpi=300)
+    app_logger.info(f"LPS plot saved to {file_path}")
 
-def smooth_data(df, period):
-        smoothed = df.groupby(pd.Grouper(key="Datetime", freq=period)).mean(numeric_only=True)
-        # Set datetime to the date range
-        starts = pd.Series(smoothed.index).dt.strftime('%Y-%m-%d %H:%M')
-        ends = pd.Series(pd.DatetimeIndex(starts) + \
-                        pd.Timedelta(hours=12)).dt.strftime('%Y-%m-%d %H:%M')
-        smoothed['Datetime'] = pd.DataFrame(starts.astype(str)+' - '+\
-                                        ends.astype(str)).values
-        smoothed.index = range(len(smoothed))
-        return smoothed
 
-def period_data(df):
-        periods_file = glob.glob(f"{ResultsSubDirectory}/periods.csv")[0]
-        if not periods_file:
-            raise FileNotFoundError("Periods file not found.")
-        periods = pd.read_csv(periods_file, index_col=[0])
-        periods = periods.dropna()
-        for i in range(len(periods)):
-                start,end = periods.iloc[i]['start'],periods.iloc[i]['end']
-                selected_dates = df[(df['Datetime'] >= start) & (df['Datetime'] <= end)]
-                if i == 0:
-                        period = selected_dates.drop(['Datetime','Date','Hour'],axis=1).mean()
-                        period = period.to_frame(name=periods.iloc[i].name).transpose()
-                else:
-                        tmp = selected_dates.drop(['Datetime','Date','Hour'],axis=1).mean()
-                        tmp = tmp.to_frame(name=periods.iloc[i].name).transpose()
-                        period = pd.concat([period,tmp]) 
-        # Set datetime to the period date range
-        period['Datetime'] = (periods['start'].astype(str)+' - '+\
-                                                periods['end'].astype(str)).values
-        period['period'] = period.index
-        period.index = range(len(period))
-        return period 
+def create_plot(dataframe, zoom, title, datasource, periods=False):
+    x_axis, y_axis = dataframe['Ck'], dataframe['Ca']
+    marker_color, marker_size = dataframe['Ge'], dataframe['Ke']
 
+    if not periods:
+        start, end = map(lambda x: pd.to_datetime(x).strftime('%Y-%m-%d %H:%M'), [dataframe.index[0], dataframe.index[-1]])
+    else:
+        start, end = None, None
+        title, datasource = None, None
+
+    try:
+        lps_mixed = LPS(x_axis, y_axis, marker_color, marker_size, zoom=zoom, title=title, datasource=datasource, start=start, end=end)
+    except Exception as e:
+        raise
     
-if __name__ == "__main__":
- 
-    parser = argparse.ArgumentParser(description = "\
-Lorenz Phase Space.")
-    parser.add_argument("outfile", help = "The .csv file containing the \
-results from the main.py program.")
+    return lps_mixed.plot()
 
-    args = parser.parse_args()
-    
-    outfile = args.outfile
+def plot_LPS(dataframe, infile, results_subdirectory, figures_directory, app_logger):
+    app_logger.info("Plotting Lorenz Phase Space...")
+    infile_name = Path(infile).stem
+    title, datasource = infile_name.split('_')
 
-    # outfile = '../../SWSA-cyclones_energetic-analysis/LEC_results-q0.99/RG1-q0.99-19900288_ERA5_track-15x15/RG1-q0.99-19900288_ERA5_track-15x15.csv'
+    figures_LPS_directory = f"{figures_directory}/LPS"
+    os.makedirs(figures_LPS_directory, exist_ok=True)
 
-    ResultsSubDirectory = '/'.join(outfile.split('/')[:-1])
-    FigsDir = ResultsSubDirectory+'/Figures/LPS/'
-    check_create_folder(FigsDir)
+    # Calculate the time difference between two consecutive timestamps
+    time_difference = (dataframe.index[1] - dataframe.index[0])
 
-    system = outfile.split('/')[-1].split('_')[0]
-    datasource = outfile.split('/')[-1].split('_')[1]
+    # Convert the time difference to total seconds and then to hours
+    dt_hours = int(time_difference.total_seconds() / 3600)
 
-    df = pd.read_csv(outfile)
-    df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
+    periods_file = f"{results_subdirectory}/periods.csv"
+    try:
+        periods_df = pd.read_csv(periods_file, parse_dates=['start', 'end'], index_col=0)
+    except FileNotFoundError:
+        app_logger.error(f"Periods file not found.")
+        raise
+    except Exception as e:
+        app_logger.error(f"Error while reading periods file: {e}")
+        raise
 
-    # Set datetime to the date range
-    start = pd.to_datetime(df['Datetime'].iloc[0]).strftime('%Y-%m-%d %H:%M')
-    end = pd.to_datetime(df['Datetime'].iloc[-1]).strftime('%Y-%m-%d %H:%M')
+    # Initialize an empty DataFrame to store period means
+    period_means_df = pd.DataFrame()
 
+    # Iterate through each period and calculate means
+    for period_name, row in periods_df.iterrows():
+        start, end = row['start'], row['end']
+        df_period = dataframe.loc[start:end]
 
-    # # Plot example
-    # kwargs = {'terms':[], 'title':system, 'datasource': datasource, 'start': start, 'end': end}
-    # terms = {'Ca': df['Ca']*0, 'Ck': df['Ck']*0,  'Ge': df['Ge']*0, 'Ke': df['Ke']*0}
-    # kwargs['terms'].append(terms) 
+        # Check if the period DataFrame is not empty
+        if not df_period.empty:
+            # Calculate mean for the period
+            period_mean = df_period.mean()
+            # Add the mean to the period_means_df DataFrame
+            period_means_df = pd.concat([period_means_df, pd.DataFrame(period_mean).transpose()], ignore_index=True)
+            period_means_df.index = period_means_df.index.map(lambda x: period_name if x == period_means_df.index[-1] else x)
+        else:
+            app_logger.warning(f"No data available for the period: {period_name}")
 
-    for LPS_type in ['mixed', 'baroclinic', 'barotropic']:
-        # create_LPS_plots("example", LPS_type, zoom=False, **kwargs)
-
-        for period in ['1H']:
-                                    
-                    smoothed = smooth_data(df, period)
-
-                    if LPS_type == 'baroclinic':
-                        terms =  {'y_axis': smoothed['Ca'], 'x_axis': smoothed['Ce'],
-                                'circles_colors': smoothed['Ge'], 'circles_size': smoothed['Ke']}
-                    elif LPS_type == 'barotropic':
-                        terms = {'y_axis': smoothed['BKz'], 'x_axis': smoothed['Ck'],
-                                'circles_colors': smoothed['Ge'], 'circles_size': smoothed['Ke']}
-                    elif LPS_type == 'mixed':
-                        terms = {'y_axis': smoothed['Ca'], 'x_axis': smoothed['Ck'],
-                                'circles_colors': smoothed['Ge'], 'circles_size': smoothed['Ke']}
-                    
-                    kwargs = {'terms':[], 'title':system, 'datasource': datasource,
-                            'start': start, 'end': end}
-                    kwargs['terms'].append(terms)                      
-
-                    create_LPS_plots(f"{period}", LPS_type, zoom=False, **kwargs)
-                    create_LPS_plots(f"{period}", LPS_type, zoom=True, **kwargs)
-
-        df_periods = period_data(df)
-
-        kwargs = {'terms':[], 'title':system, 'datasource': datasource, 'start': start, 'end': end}
-        
-        if LPS_type == 'baroclinic':
-            terms =  {'y_axis': df_periods['Ca'], 'x_axis': df_periods['Ce'],
-                    'circles_colors': df_periods['Ge'], 'circles_size': df_periods['Ke']}
-        elif LPS_type == 'barotropic':
-            terms = {'y_axis': df_periods['BKz'], 'x_axis': df_periods['Ck'],
-                    'circles_colors': df_periods['Ge'], 'circles_size': df_periods['Ke']}
-        elif LPS_type == 'mixed':
-            terms = {'y_axis': df_periods['Ca'], 'x_axis': df_periods['Ck'],
-                    'circles_colors': df_periods['Ge'], 'circles_size': df_periods['Ke']}
-            
-        kwargs['terms'].append(terms) 
-
-        create_LPS_plots("periods", LPS_type, zoom=False, **kwargs)
-        create_LPS_plots("periods", LPS_type, zoom=True, **kwargs)
-
+    for zoom in [False, True]:
+        create_and_save_plot(dataframe, title, datasource, zoom, f"{dt_hours}h", figures_LPS_directory, app_logger)
+        create_and_save_plot(period_means_df, title, datasource, zoom, "periods", figures_LPS_directory, app_logger, periods=True)
+        df_daily = dataframe.resample('1D').mean()
+        create_and_save_plot(df_daily, title, datasource, zoom, "1d", figures_LPS_directory, app_logger)
