@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/03 00:47:39 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/03 08:50:56 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -504,7 +504,7 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
         figures_directory = os.path.join(results_subdirectory, 'Figures')
         plot_timeseries(results_file, figures_directory, app_logger)
         boxplot_terms(results_file, results_subdirectory, figures_directory, app_logger)
-        plot_periods(out_track, times, lat, figures_directory, results_subdirectory, app_logger)
+        plot_periods(out_track, times, lat, results_subdirectory, figures_directory, app_logger)
         plot_LPS(df, args.infile, results_subdirectory, figures_directory, app_logger)
 
 
