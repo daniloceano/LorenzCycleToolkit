@@ -84,6 +84,7 @@ def boxplot_time(dict_vertical, figures_subdirectory, app_logger):
         file_name = f'{figures_subdirectory}/vertical_timeseries_{term_type}.png'
         plt.savefig(file_name, bbox_inches='tight')
         app_logger.info(f'Figure saved in directory: {figures_subdirectory}') if app_logger else print(f'Figure saved in directory: {figures_subdirectory}')
+        plt.close('all')
 
     
 def boxplot_vertical(dict_vertical, figures_subdirectory, app_logger):
@@ -134,6 +135,7 @@ def boxplot_vertical(dict_vertical, figures_subdirectory, app_logger):
         outfile = f'{figures_subdirectory}/boxplot_vertical_levels_{term_type}.png'
         plt.savefig(outfile, bbox_inches='tight')
         app_logger.info(f'Created {outfile}') if app_logger else print(f'Created {outfile}')
+        plt.close('all')
     
 def plot_boxplot_terms(df, figures_subdirectory, app_logger):
     """
@@ -186,7 +188,7 @@ def plot_boxplot_terms(df, figures_subdirectory, app_logger):
         fname = f'boxplot_terms_{term_type}'
         plt.savefig(f'{figures_subdirectory}/{fname}.png')
         app_logger.info(f'{fname}.png created') if app_logger else print(f'{fname}.png created')
-
+        plt.close('all')
     
 def boxplot_terms(results_file, results_directory, figures_directory, app_logger=False):
     app_logger.info('Plotting boxplots...') if app_logger else print('Plotting boxplots...')
