@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/02 16:43:36 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/04 10:36:16 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -177,12 +177,12 @@ class ConversionTerms:
         self.app_logger.debug("Calculating CK...")
 
         # First term of the integral
-        DelPhi_uZA_cosphi = ((self.u_ZA / self.u_ZA["coslats"]) * self.u_ZA["coslats"]).differentiate("rlats")
+        DelPhi_uZA_cosphi = (self.u_ZA / self.u_ZA["coslats"]).differentiate("rlats")
         term1 = (self.u_ZE["coslats"] * self.u_ZE * self.v_ZE / Re) * DelPhi_uZA_cosphi
         term1 = CalcAreaAverage(term1, self.ylength, xlength=self.xlength)
 
         # Second term of the integral
-        DelPhi_vZA = (self.v_ZA * self.v_ZA["coslats"]).differentiate("rlats")
+        DelPhi_vZA = (self.v_ZA).differentiate("rlats")
         term2 = ((self.v_ZE ** 2) / Re) * DelPhi_vZA
         term2 = CalcAreaAverage(term2, self.ylength, xlength=self.xlength)
 
