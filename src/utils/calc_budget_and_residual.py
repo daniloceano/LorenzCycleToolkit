@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/27 20:36:06 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/03 22:33:44 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -128,9 +128,9 @@ def calc_residuals(df: pd.DataFrame, app_logger: logging.Logger):
 
     try:
         df['RGz'] = df['∂Az/∂t (finite diff.)'] + df['Cz'] + df['Ca'] - df['BAz']
+        df['RKz'] = df['∂Kz/∂t (finite diff.)'] - df['Cz'] - df['Ck'] - df['BKz']
         df['RGe'] = df['∂Ae/∂t (finite diff.)'] - df['Ca'] + df['Ce'] - df['BAe']
-        df['RKz'] = -df['∂Kz/∂t (finite diff.)'] + df['Cz'] + df['Ck'] + df['BKz']
-        df['RKe'] = -df['∂Ke/∂t (finite diff.)'] + df['Ce'] - df['Ck'] + df['BKe']
+        df['RKe'] = df['∂Ke/∂t (finite diff.)'] - df['Ce'] + df['Ck'] - df['BKe']
         
     except Exception as e:
         app_logger.error(f"Error in calc_residuals: {e}")
