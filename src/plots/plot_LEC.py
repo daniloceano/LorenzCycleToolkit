@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/01/03 23:31:13 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/04 13:25:12 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/04 16:00:58 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -15,8 +15,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import pandas as pd
 import numpy as np
-from src.plots.utils import read_results
-import src.plots.utils as utils
+from utils import read_results
+import utils as utils
 
 def plot_boxes(ax, data, normalized_data, positions, size):
     # Define edge width range
@@ -260,9 +260,12 @@ def plot_lorenz_cycle(results_file, figures_directory, periods_file=False, app_l
         plot_period_means(periods_file, df_results, figures_directory, app_logger)
 
 if __name__ == "__main__":
-    # Example data for testing
-    results_file = 'samples/sample_results.csv'
-    periods_file = 'samples/sample_periods.csv'
-    figures_directory = 'samples/Figures/'
-    os.makedirs(figures_directory, exist_ok=True)
-    plot_lorenz_cycle(results_file, figures_directory, periods_file)
+    # Test for Reg1-Representative_fixed
+    results_file = 'samples/Reg1-Representative_NCEP-R2_fixed/Reg1-Representative_NCEP-R2_fixed_results.csv'
+    figures_directory = 'samples/Reg1-Representative_NCEP-R2_fixed/Figures/'
+    plot_lorenz_cycle(results_file, figures_directory, periods_file='samples/Reg1-Representative_NCEP-R2_fixed/periods.csv')
+
+    # Test for Catarina_NCEP-R2_fixed
+    results_file = 'samples/Catarina_NCEP-R2_fixed/Catarina_NCEP-R2_fixed_results.csv'
+    figures_directory = 'samples/Catarina_NCEP-R2_fixed/Figures/'
+    plot_lorenz_cycle(results_file, figures_directory, periods_file='samples/Catarina_NCEP-R2_fixed/periods.csv')
