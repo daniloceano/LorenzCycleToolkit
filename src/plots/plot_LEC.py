@@ -1,297 +1,259 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jun  9 09:29:19 2022
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    plot_LEC.py                                        :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2024/01/03 23:31:13 by daniloceano       #+#    #+#              #
+#    Updated: 2024/01/04 08:47:32 by daniloceano      ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
 
-This script reads an CSV file with all terms from the Lorenz Energy Cycle 
-(as input from user) and make the deafult figures for the Lorenz energy cycle.
-The transparecy in each box is set to be proportional to the energy tendency,
-as well as the arrows are set to be proportional to the conversion rates.
-
-Created by:
-    Danilo Couto de Souza
-    Universidade de São Paulo (USP)
-    Instituto de Astornomia, Ciências Atmosféricas e Geociências
-    São Paulo - Brazil
-
-Contact:
-    danilo.oceano@gmail.com
-"""
-
+import os
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-import argparse
+from src.plots.utils import read_results
+import src.plots.utils as utils
 
-# Specs for plotting
-fs = 30
-energys = ['∂Az/∂t (finite diff.)','∂Kz/∂t (finite diff.)',
-           '∂Ae/∂t (finite diff.)', '∂Ke/∂t (finite diff.)']
-conversions = ['Ca', 'Cz', 'Ce', 'Ck']
-residuals = ['RGz', 'RKz', 'RGe', 'RKe']
-boundaries = ['BAz','BKz','BAe','BKe'] 
-cols_energy = ['#5EA4BD','#F7EF7C','#96DB6E','#F77B59'] 
-cols_conversion = ['#5C5850','#5C5850','#5C5850','#5C5850']
-cols_residual = ['#5C5850','#5C5850','#5C5850','#5C5850']
-cols_boundary =  ['#5C5850','#5C5850','#5C5850','#5C5850']
+def plot_boxes(ax, data, normalized_data, positions, size):
+    # Define edge width range
+    min_edge_width = 0
+    max_edge_width = 5
 
-def Cz(ax,value,i,width,head_width):
-    if isinstance(value, str) or (isinstance(value, float) and value > 0):
-        ax.arrow(-0.637, 0.5, 0.78, 0, head_width = head_width, width = width,
-                  length_includes_head=True,
-                  fc=cols_conversion[i],ec=cols_conversion[i],
-                  clip_on=False,transform=ax.transAxes)
-        
+    # Create energy boxes and text labels with updated terms
+    for term, pos in positions.items():
+        term_value = data[term]
+
+        # Get normalized value for the term to determine edge width
+        normalized_value = normalized_data[term]
+        # Scale edge width based on normalized value
+        edge_width = min_edge_width + (max_edge_width - min_edge_width) * normalized_value / 10
+
+        # Determine value text color based on term value
+        value_text_color = '#386641'  # Dark green for positive values
+        if term_value < 0:
+            value_text_color = '#ae2012'  # Dark red for negative values
+
+        square = patches.Rectangle((pos[0] - size / 2, pos[1] - size / 2), size, size, fill=True, color='skyblue', ec='black', linewidth=edge_width)
+        ax.add_patch(square)
+
+        # Term text in bold black
+        ax.text(pos[0], pos[1], f'{term}', ha='center', va='center', fontsize=12, color='k', fontweight='bold')
+
+        # Value text in the specified color
+        ax.text(pos[0], pos[1] - 0.06, f'{term_value:.2f}', ha='center', va='center', fontsize=12, color=value_text_color, fontweight='bold')
+     
+
+def plot_arrow(ax, start, end, color='#5C5850', size=1):
+    """Draws an arrow on the given axes from start to end point."""
+    ax.annotate('', xy=end, xytext=start,
+                arrowprops=dict(facecolor=color, edgecolor=color, width=size, headwidth=size*3, headlength=size*3))
+
+def plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, 0)):
+    # Determine text color based on term value
+    text_color = '#386641'
+    if term_value < 0:
+        text_color = '#ae2012'
+
+    mid_point = ((start[0] + end[0]) / 2 + offset[0], (start[1] + end[1]) / 2 + offset[1])
+    ax.text(mid_point[0], mid_point[1], term, ha='center', va='center', fontsize=14, color='k', fontweight='bold')
+
+    if term in ['Ce', 'RGe', 'RKe', 'BAe', 'BKe']:
+        x_offset, y_offset = 0, -0.1
     else:
-        ax.arrow(0.139, 0.5, -0.775, 0, head_width = head_width, width = width,
-          length_includes_head=True,
-          fc=cols_conversion[i],ec=cols_conversion[i],
-          clip_on=False,transform=ax.transAxes)
-    ax.text(-0.25,0.57,value,fontdict={'fontsize':fs},transform=ax.transAxes,
-            verticalalignment='center',horizontalalignment='center')
+        x_offset, y_offset = 0, 0.1
+    ax.text(mid_point[0] + x_offset, mid_point[1] + y_offset, f'{term_value:.2f}', ha='center', va='center',
+            color=text_color, fontsize=12, fontweight='bold')
 
-def Ck(ax,value,i,width,head_width):
-    if isinstance(value, str) or (isinstance(value, float) and value > 0):
-        ax.arrow(0.5, 0.952, 0, 0.52, head_width = head_width, width = width,
-                 fc=cols_conversion[i],ec=cols_conversion[i],
-                 clip_on=False,transform = ax.transAxes)
+def plot_term_value(ax, position, value, offset=(0, 0)):
+    ax.text(position[0] + offset[0], position[1] + offset[1], f'{value:.2f}', ha='center', va='center', fontsize=12)
+
+def plot_term_arrows_and_text(ax, size, term, data, normalized_data, positions):
+    
+    term_value = data[term]
+
+    arrow_color = '#5C5850'  # Default color
+
+    # Plot text for conversions
+    term_normalized = normalized_data.loc[term]
+
+    if term == 'Cz':
+        start = (positions['∂Az/∂t'][0] + size/2, positions['∂Az/∂t'][1]) 
+        end = (positions['∂Kz/∂t'][0] - size/2, positions['∂Kz/∂t'][1])
+        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, 0.1))
+
+    elif term == 'Ca':
+        start = (positions['∂Az/∂t'][0], positions['∂Az/∂t'][1] - size/2)
+        end = (positions['∂Ae/∂t'][0], positions['∂Ae/∂t'][1] + size/2)
+        plot_term_text_and_value(ax, start, end, term, term_value, offset=(-0.1, 0))
+
+    elif term == 'Ck':
+        start = (positions['∂Kz/∂t'][0], positions['∂Ke/∂t'][1] + size/2)
+        end = (positions['∂Ke/∂t'][0], positions['∂Kz/∂t'][1] - size/2)
+        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0.1, 0))
+
+    elif term == 'Ce':
+        start = (positions['∂Ae/∂t'][0] + size/2, positions['∂Ke/∂t'][1])
+        end = (positions['∂Ke/∂t'][0] - size/2, positions['∂Ae/∂t'][1])
+        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, -0.1))
+
+    # Plot text for residuals
+    elif term == 'RGz':
+        start = (positions['∂Az/∂t'][0], positions['∂Az/∂t'][1] + size/2)
+        end = (positions['∂Az/∂t'][0], 1)
+        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, 0.2))
+
+    elif term == 'RGe':
+        start = (positions['∂Ae/∂t'][0], positions['∂Ae/∂t'][1] - size/2)
+        end = (positions['∂Ae/∂t'][0], -1)
+        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, -0.2))
+
+    elif term == 'RKz':
+        start = (positions['∂Kz/∂t'][0], 1)
+        end = (positions['∂Kz/∂t'][0], positions['∂Kz/∂t'][1] + size/2)
+        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, 0.2))
+
+    elif term == 'RKe':
+        start = (positions['∂Ke/∂t'][0], -1)
+        end = (positions['∂Ke/∂t'][0], positions['∂Ke/∂t'][1] - size/2)
+        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, -0.2))
+
+    # Plot text for boundaries
+    elif term in ['BAz', 'BAe']:
+            refered_term = '∂Az/∂t' if term == 'BAz' else '∂Ae/∂t'
+            start = (-1, positions[refered_term][1])
+            end = (positions[refered_term][0] - size/2, positions[refered_term][1])
+            plot_term_text_and_value(ax, start, end, term, term_value, offset=(-0.23, 0)) 
+
+    elif term in ['BKz', 'BKe']:
+        refered_term = '∂Kz/∂t' if term == 'BKz' else '∂Ke/∂t'
+        start = (1, positions[refered_term][1])
+        end = (positions[refered_term][0] + size/2, positions[refered_term][1])
+        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0.23, 0)) 
+
+    if term_value < 0:
+        start_normalized, end_normalized = end, start  # Swap start and end for negative values
     else:
-        ax.arrow(0.5, 1.55, 0, -0.6, head_width = head_width,width = width,
-                  length_includes_head=True,
-              fc=cols_conversion[i],ec=cols_conversion[i],
-              clip_on=False,transform = ax.transAxes)
-    ax.text(0.55,1.25,value,fontdict={'fontsize':fs},transform=ax.transAxes,
-            verticalalignment='center',horizontalalignment='left')
+        start_normalized, end_normalized = start, end
 
-def Ca(ax,value,i,width,head_width):
-    if isinstance(value, str) or (isinstance(value, float) and value > 0):
-        ax.arrow(0.5, 0.04, 0, -0.59, head_width = head_width,width = width,
-                      fc=cols_conversion[i],ec=cols_conversion[i],
-                                length_includes_head=True,
-                      clip_on=False,transform = ax.transAxes)
-    else:
-        
-        ax.arrow(0.5, -0.55, 0, 0.59, head_width = head_width,width = width,
-                 length_includes_head=True,
-                 fc=cols_conversion[i],ec=cols_conversion[i],
-                 clip_on=False,transform = ax.transAxes)
-    ax.text(0.45,-0.26,value,fontdict={'fontsize':fs},transform = ax.transAxes,
-            verticalalignment='center',horizontalalignment='right')
+    # Plot arrow
+    plot_arrow(ax, start_normalized, end_normalized, color=arrow_color, size=term_normalized)
 
-def Ce(ax,value,i,width,head_width):
-    if isinstance(value, str) or (isinstance(value, float) and value > 0):
-        ax.arrow(0.86, 0.5, 0.78, 0, head_width = head_width, width = width,
-                  length_includes_head=True,
-                  fc=cols_conversion[i],ec=cols_conversion[i],
-                  clip_on=False,transform=ax.transAxes)
-    else:
-        ax.arrow(1.64, 0.5, -0.78, 0, head_width = head_width, width = width,
-              fc=cols_conversion[i],ec=cols_conversion[i],
-                       length_includes_head=True,
-              clip_on=False,transform=ax.transAxes)
-    ax.text(1.25,0.42,value,fontdict={'fontsize':fs},transform=ax.transAxes,
-            verticalalignment='center',horizontalalignment='center')
+    return start, end
 
-def RGz_RKz(ax,value,i,width,head_width):
-    if isinstance(value, str) or (isinstance(value, float) and value > 0):
-        ax.arrow(0.5, 1.23, 0, -0.275, head_width = head_width, width = width,
-                 length_includes_head=True,
-          fc=cols_residual[i],ec=cols_residual[i],
-          clip_on=False,transform=ax.transAxes)
-    else:
-        ax.arrow(0.5, 0.955, 0, 0.275, head_width = head_width, width = width,
-          fc=cols_residual[i],ec=cols_residual[i],
-                    length_includes_head=True,
-          clip_on=False,transform=ax.transAxes)
-    ax.text(0.5,1.27,value,fontdict={'fontsize':fs},transform=ax.transAxes,
-            verticalalignment='center',horizontalalignment='center')
+def _call_plot(data, normalized_data):
+    # Prepare data
+    conversions = utils.TERM_DETAILS['conversion']['terms']
+    residuals = utils.TERM_DETAILS['residuals']['terms']
+    boundaries = utils.TERM_DETAILS['boundary']['terms']
 
+    fig, ax = plt.subplots(figsize=(8, 8))
+    ax.set_xlim(-1, 1)
+    ax.set_ylim(-1, 1)
+    ax.axis('off')
 
-def RGe_RKe(ax,value,i,width,head_width):
-    if isinstance(value, str) or (isinstance(value, float) and value > 0):
-        ax.arrow(0.5, -0.23, 0, 0.275, head_width = head_width, width = width,
-                 length_includes_head=True,
-      fc=cols_residual[i],ec=cols_residual[i],
-      clip_on=False,transform=ax.transAxes)
-    else:
-        ax.arrow(0.5, 0.05, 0, -0.275, head_width = head_width, width = width,
-                 length_includes_head=True,
-      fc=cols_residual[i],ec=cols_residual[i],
-      clip_on=False,transform=ax.transAxes)
-    ax.text(0.5,-.28,value,fontdict={'fontsize':fs},transform=ax.transAxes,
-            verticalalignment='center',horizontalalignment='center')
+    # Define positions and size of energy boxes
+    positions = {
+        '∂Az/∂t': (-0.5, 0.5),
+        '∂Ae/∂t': (-0.5, -0.5),
+        '∂Kz/∂t': (0.5, 0.5),
+        '∂Ke/∂t': (0.5, -0.5)
+    }
+    size = 0.4
     
+    plot_boxes(ax, data, normalized_data, positions, size)
 
-def BAz_BAe(ax,value,i,width,head_width):
-     if isinstance(value, str) or (isinstance(value, float) and value > 0):
-         ax.arrow(-0.135,0.5, 0.275, 0, head_width = head_width, width = width,
-                  length_includes_head=True,
-                  fc=cols_boundary[i],ec=cols_boundary[i],
-                  clip_on=False,transform=ax.transAxes)
-     else:
-         ax.arrow(0.14,0.5, -0.275, 0, head_width = head_width, width = width,
-                  fc=cols_boundary[i],ec=cols_boundary[i],
-           length_includes_head=True,
-           clip_on=False,transform=ax.transAxes)
-     ax.text(-0.18,0.5,value,fontdict={'fontsize':fs},transform=ax.transAxes,
-            verticalalignment='center',horizontalalignment='right')
+    if type(data.name) == pd.Timestamp:
+        data.name = data.name.strftime('%Y-%m-%d')
+    ax.text(0, 0, data.name, fontsize=14, ha='center', va='center', fontweight='bold', color='black')
 
-def BKz_BKe(ax,value,i,width,head_width):
-    if isinstance(value, str) or (isinstance(value, float) and value > 0):
-        ax.arrow(1.14,0.5, -0.275, 0, head_width = head_width, width = width,
-                 length_includes_head=True,
-             fc=cols_boundary[i],ec=cols_boundary[i],
-             clip_on=False,transform=ax.transAxes)
-    else:
-        ax.arrow(0.863,0.5, 0.275, 0, head_width = head_width, width = width,
-             fc=cols_boundary[i],ec=cols_boundary[i],
-                      length_includes_head=True,
-             clip_on=False,transform=ax.transAxes)
-    ax.text(1.18,0.5,value,fontdict={'fontsize':fs},transform=ax.transAxes,
-            verticalalignment='center',horizontalalignment='left')
+    for term in conversions + residuals + boundaries:
+        start, end = plot_term_arrows_and_text(ax, size, term, data, normalized_data, positions)
 
-def plot_LEC(idata,flag, FigsDir, period=False):
-    
+def _plotter(daily_means, normalized_data_not_energy, figures_directory, app_logger=False):
+    for date, data in daily_means.iterrows():
+        # Extract the corresponding normalized data for the day
+        normalized_data = normalized_data_not_energy.loc[date]
 
-    # Adjust arrow size proportionally to the conversion rate, residual and 
-    # boundary
-    x = np.abs(idata[conversions+residuals+boundaries])
-    conversion_scaled=(x-x.to_numpy().min()
-                   )/(x.to_numpy().max()-x.to_numpy().min())
-    
-    plt.close('all')
-    fig = plt.figure(figsize=(14, 11))
-    plt.axis('off')
-    gs = gridspec.GridSpec(nrows=2, ncols=2,hspace=0.5,wspace=0.5,
-                           right=(0.89))
-    
-    if flag == 'example':
-        plt.title('(Daily mean/period)',fontsize=fs, loc='center',y=0.5,
-                  fontdict={'fontweight':'bold'})
-    elif flag == 'daily_mean':
-        plt.title(str(idata.name.date()),fontsize=fs, loc='center',y=0.5,
-              fontdict={'fontweight':'bold'})
-    elif flag == 'periods':
-        plt.title(period,fontsize=fs, loc='center',y=0.5,
-               fontdict={'fontweight':'bold'})
-    
-    i = 0
-    for row in range(2):
-        for col in range(2):
-            ax = fig.add_subplot(gs[row,col])
-            
-            if flag == 'example':
-                energy = energys[i][:7]
-                plt.text(0.5, 0.5,energy,fontdict={'fontsize':fs},
-                          transform = ax.transAxes,
-                          verticalalignment='center',horizontalalignment='center')
-                conversion = conversions[i]
-                residual = residuals[i]
-                boundary = boundaries[i]
-                alpha = 1
-                width_conversion,width_boundary,width_residual = 0.01, 0.01,0.01
-                head_conversion,head_boundary,head_residual = 0.05,0.05,0.05
-                
-            else:
-                energy = round(idata[energys[i]],1)
-                conversion = round(idata[conversions[i]],1)
-                residual = round(idata[residuals[i]],1)
-                boundary = round(idata[boundaries[i]],1)
-                plt.text(0.5, 0.5,energy,fontdict={'fontsize':fs},
-                          transform = ax.transAxes,
-                          verticalalignment='center',horizontalalignment='center')
-                
-                alpha = .9
-                width_conversion = 0.01+(0.05*conversion_scaled[conversions[i]])
-                width_boundary = 0.01+(0.05*conversion_scaled[boundaries[i]])
-                width_residual = 0.01+(0.05*conversion_scaled[residuals[i]])
-                head_conversion = 0.05+(0.07*conversion_scaled[conversions[i]])
-                head_boundary = 0.05+(0.07*conversion_scaled[boundaries[i]])
-                head_residual = 0.05+(0.07*conversion_scaled[residuals[i]])
+        # Plot the Lorenz cycle for the day
+        _call_plot(data, normalized_data)
 
-            # Draw energy budgets as boxes
-            square = plt.Rectangle((0, 0),5,5, fc=cols_energy[i],ec='k',
-                                   alpha=alpha)
-            ax.add_patch(square)
-            plt.axis("equal")
-            plt.axis('off')
-            
-            if row == 0 and col == 0: 
-                Ca(ax,conversion,i,width_conversion,head_conversion)
-                RGz_RKz(ax,residual,i,width_residual,head_residual)
-                BAz_BAe(ax,boundary,i,width_boundary,head_boundary)
-            if row == 0 and col == 1: 
-                Cz(ax,conversion,i,width_conversion,head_conversion)
-                RGz_RKz(ax,residual,i,width_residual,head_residual)
-                BKz_BKe(ax,boundary,i,width_boundary,head_boundary)
-            if row == 1 and col == 0:
-                Ce(ax,conversion,i,width_conversion,head_conversion)
-                RGe_RKe(ax,residual,i,width_residual,head_residual)
-                BAz_BAe(ax,boundary,i,width_boundary,head_boundary)
-            if row == 1 and col == 1:
-                Ck(ax,conversion,i,width_conversion,head_conversion)
-                RGe_RKe(ax,residual,i,width_residual,head_residual)
-                BKz_BKe(ax,boundary,i,width_boundary,head_boundary)
-            i+=1
-            
-    if flag == 'example':
-        plt.savefig(FigsDir + 'LEC_example.png')
-        print('Created LEC example figure')
-    elif flag == 'daily_mean':
-        datestr = idata.name.strftime("%Y-%m-%d")
-        print(f"Created LEC (daily mean) for: {datestr}")
-        plt.savefig(FigsDir + f'LEC_{datestr}.png')
-    elif flag == 'periods':
-        print(f"Created LEC for period: {period}")
-        plt.savefig(FigsDir + f'LEC_{period}.png')
-    
+        if type(data.name) == pd.Timestamp:
+            figure_name = data.name.strftime('%Y-%m-%d')
+        else:
+            figure_name = data.name
 
-def main(outfile, FigsDir):
-    
-    df = pd.read_csv(outfile, index_col=[0])
-    df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
-    # Get mean daily values
-    data = df.groupby(pd.Grouper(key="Datetime", freq="1D")).mean(
-                                                            numeric_only=True)
-    # plot example figure
-    plot_LEC(data,'example', FigsDir)
-    # plot each deaily mean
-    for t in range(len(data)):
-        idata = data.iloc[t]
-        plot_LEC(idata,'daily_mean', FigsDir)
-        
-    # plot means for each periods of the system
+        figures_subdirectory = os.path.join(figures_directory, "LEC")
+        os.makedirs(figures_subdirectory, exist_ok=True)
+        figure_path = os.path.join(figures_subdirectory, f'LEC_{figure_name}.png')
+        plt.savefig(figure_path)
+        plt.close() 
+        app_logger.info(f"Lorenz cycle plot saved to {figure_path}") if app_logger else print(f"Lorenz cycle plot saved to {figure_path}")
+
+def plot_period_means(periods_file, df_results, figures_directory, app_logger=False):
     try:
-        periods = pd.read_csv('/'.join(outfile.split('/')[:-1])+"/periods.csv",
-                          index_col=[0])
-    except:
-        print('Warning: periods file not found')
-        return
-    periods = periods.dropna()
-    for i in range(len(periods)):
-        start,end = periods.iloc[i]['start'],periods.iloc[i]['end']
-        selected_dates = df[(df['Datetime'] >= start) & (df['Datetime'] <= end)]
-        period_mean = selected_dates.drop(['Datetime','Date','Hour'],axis=1).mean(numeric_only=True)
-        period_mean = period_mean.to_frame(name=periods.iloc[i].name).transpose()
-        period_mean = period_mean.T.squeeze()
-        plot_LEC(period_mean,'periods', FigsDir, period=periods.index[i])
+        periods_df = pd.read_csv(periods_file, parse_dates=['start', 'end'], index_col=0)
+    except FileNotFoundError:
+        app_logger.error(f"Periods file not found.") if app_logger else print(f"Periods file not found.")
+        raise
+    except Exception as e:
+        app_logger.error(f"Error while reading periods file: {e}") if app_logger else print(f"Error while reading periods file: {e}")
+        raise
 
+    # Initialize an empty DataFrame to store period means
+    period_means_df = pd.DataFrame()
+
+    # Iterate through each period and calculate means
+    for period_name, row in periods_df.iterrows():
+        start, end = row['start'], row['end']
+        df_period = df_results.loc[start:end]
+
+        # Check if the period DataFrame is not empty
+        if not df_period.empty:
+            # Calculate mean for the period
+            period_mean = df_period.mean().rename(period_name)
+            # Add the mean to the period_means_df DataFrame
+            period_means_df = pd.concat([period_means_df, pd.DataFrame(period_mean).transpose()])
+
+        else:
+            app_logger.warning(f"No data available for the period: {period_name}") if app_logger else print(f"No data available for the period: {period_name}")
+    
+    # Normalize data
+    df_not_energy_periods = np.abs(period_means_df.drop(columns=['Az', 'Ae', 'Kz', 'Ke']))
+    normalized_data_not_energy_periods = ((df_not_energy_periods - df_not_energy_periods.min().min()) / (df_not_energy_periods.max().max() - df_not_energy_periods.min().min())) * 50
+    normalized_data_not_energy_periods = normalized_data_not_energy_periods.clip(lower=1.5, upper=15)
+    
+    # Plot period means
+    _plotter(period_means_df, normalized_data_not_energy_periods, figures_directory, app_logger)
+
+def plot_lorenz_cycle(results_file, figures_directory, periods_file=False, app_logger=False):
+    # Read results
+    df_results = read_results(results_file)
+
+    # Rename columns by removing "(finite diff.)"
+    df_results = df_results.rename(columns=lambda x: x.replace(' (finite diff.)', ''))
+
+    # Group data by day
+    daily_means = df_results.groupby(pd.Grouper(freq="1D")).mean(numeric_only=True)
+
+    # Normalize data
+    df_not_energy = np.abs(daily_means.drop(columns=['Az', 'Ae', 'Kz', 'Ke']))
+    normalized_data_not_energy = ((df_not_energy - df_not_energy.min().min()) / (df_not_energy.max().max() - df_not_energy.min().min())) * 50
+    normalized_data_not_energy = normalized_data_not_energy.clip(lower=1.5, upper=15)
+
+    # Call function to plot Lorenz cycle for each day
+    _plotter(daily_means, normalized_data_not_energy, figures_directory, app_logger)
+
+    if periods_file:
+        plot_period_means(periods_file, df_results, figures_directory, app_logger)
 
 if __name__ == "__main__":
- 
-    parser = argparse.ArgumentParser(description = "\
-reads an CSV file with all terms from the Lorenz Energy Cycle \
- (as input from user) and make the deafult figures for the Lorenz energy cycle\
- The arrows are set to be proportional to the conversion rates.")
-    parser.add_argument("outfile", help = "The .csv file containing the \
-results from the main.py program.")
-
-    args = parser.parse_args()
-    outfile = args.outfile
-    
-    ResultsSubDirectory = '/'.join(outfile.split('/')[:-1])
-    FigsDir = ResultsSubDirectory+'/Figures/LEC/'
-    check_create_folder(FigsDir)
-    
-    main(outfile, FigsDir)
+    # Example data for testing
+    results_file = 'samples/sample_results.csv'
+    periods_file = 'samples/sample_periods.csv'
+    figures_directory = 'samples/Figures/'
+    os.makedirs(figures_directory, exist_ok=True)
+    plot_lorenz_cycle(results_file, figures_directory, periods_file)
