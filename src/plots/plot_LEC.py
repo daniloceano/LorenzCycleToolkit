@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/01/03 23:31:13 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/04 08:47:32 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/04 13:25:12 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -47,8 +47,20 @@ def plot_boxes(ax, data, normalized_data, positions, size):
         ax.text(pos[0], pos[1] - 0.06, f'{term_value:.2f}', ha='center', va='center', fontsize=12, color=value_text_color, fontweight='bold')
      
 
-def plot_arrow(ax, start, end, color='#5C5850', size=1):
+def plot_arrow(ax, start, end, term_value, color='#5C5850'):
     """Draws an arrow on the given axes from start to end point."""
+
+    # Determine arrow size based on term value
+    for n in range(0, 10):
+        if np.abs(term_value) < 1:
+            size = 3 + np.abs(term_value)
+        elif np.abs(term_value) < 5:
+            size = 3 + np.abs(term_value)
+        elif np.abs(term_value) < 10:
+            size = 3 + np.abs(term_value)
+        else:
+            size = 15 + np.abs(term_value) * 0.1
+
     ax.annotate('', xy=end, xytext=start,
                 arrowprops=dict(facecolor=color, edgecolor=color, width=size, headwidth=size*3, headlength=size*3))
 
@@ -71,14 +83,11 @@ def plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, 0)):
 def plot_term_value(ax, position, value, offset=(0, 0)):
     ax.text(position[0] + offset[0], position[1] + offset[1], f'{value:.2f}', ha='center', va='center', fontsize=12)
 
-def plot_term_arrows_and_text(ax, size, term, data, normalized_data, positions):
+def plot_term_arrows_and_text(ax, size, term, data, positions):
     
     term_value = data[term]
 
     arrow_color = '#5C5850'  # Default color
-
-    # Plot text for conversions
-    term_normalized = normalized_data.loc[term]
 
     if term == 'Cz':
         start = (positions['∂Az/∂t'][0] + size/2, positions['∂Az/∂t'][1]) 
@@ -140,7 +149,7 @@ def plot_term_arrows_and_text(ax, size, term, data, normalized_data, positions):
         start_normalized, end_normalized = start, end
 
     # Plot arrow
-    plot_arrow(ax, start_normalized, end_normalized, color=arrow_color, size=term_normalized)
+    plot_arrow(ax, start_normalized, end_normalized, data[term], color=arrow_color)
 
     return start, end
 
@@ -171,7 +180,7 @@ def _call_plot(data, normalized_data):
     ax.text(0, 0, data.name, fontsize=14, ha='center', va='center', fontweight='bold', color='black')
 
     for term in conversions + residuals + boundaries:
-        start, end = plot_term_arrows_and_text(ax, size, term, data, normalized_data, positions)
+        start, end = plot_term_arrows_and_text(ax, size, term, data, positions)
 
 def _plotter(daily_means, normalized_data_not_energy, figures_directory, app_logger=False):
     for date, data in daily_means.iterrows():
@@ -223,9 +232,9 @@ def plot_period_means(periods_file, df_results, figures_directory, app_logger=Fa
     
     # Normalize data
     df_not_energy_periods = np.abs(period_means_df.drop(columns=['Az', 'Ae', 'Kz', 'Ke']))
-    normalized_data_not_energy_periods = ((df_not_energy_periods - df_not_energy_periods.min().min()) / (df_not_energy_periods.max().max() - df_not_energy_periods.min().min())) * 50
+    normalized_data_not_energy_periods = ((df_not_energy_periods - df_not_energy_periods.min().mean()) / (df_not_energy_periods.max().max() - df_not_energy_periods.min().min()))
     normalized_data_not_energy_periods = normalized_data_not_energy_periods.clip(lower=1.5, upper=15)
-    
+
     # Plot period means
     _plotter(period_means_df, normalized_data_not_energy_periods, figures_directory, app_logger)
 
