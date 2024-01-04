@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/03 08:50:56 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/04 10:39:12 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -338,7 +338,8 @@ def finalize_results(times, terms_dict, args, results_subdirectory, out_track, a
 
     # Save system position as a csv file for replicability
     out_track = out_track.rename(columns={'datestr':'time','central_lat':'Lat','central_lon':'Lon'})
-    output_trackfile = os.path.join(results_subdirectory, results_filename+'_trackfile')
+    out_trackfile_name = ''.join(f'{infile_name}_{method}_trackfile')
+    output_trackfile = os.path.join(results_subdirectory, out_trackfile_name)
     out_track.to_csv(output_trackfile, index=False, sep=";")
     app_logger.info(f'System track saved to {output_trackfile}')
 
@@ -493,21 +494,28 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
     results_file, df  = finalize_results(times, terms_dict, args, results_subdirectory, out_track, app_logger)
 
     if args.plots:
-        from ..plots.timeseries_terms import plot_timeseries
-        from ..plots.timeseries_zeta_and_Z import plot_min_zeta_hgt
-        from ..plots.map_box_limits import plot_box_limits
+        from glob import glob
+        
+        from ..plots.map_track import map_track
         from ..plots.plot_boxplot import boxplot_terms
-        from ..plots.plot_periods import plot_periods
+        from ..plots.plot_hovmoller import plot_hovmoller
+        from ..plots.plot_LEC import plot_lorenz_cycle
         from ..plots.plot_LPS import plot_LPS
+        from ..plots.plot_periods import plot_periods
+        from ..plots.timeseries_terms import plot_timeseries    
+        from ..plots.timeseries_zeta_and_Z import plot_min_zeta_hgt
 
         app_logger.info('Generating plots..')
         figures_directory = os.path.join(results_subdirectory, 'Figures')
+        track_file = glob(os.path.join(results_subdirectory, '*trackfile'))[0]
+        plot_min_zeta_hgt(track_file, figures_directory, app_logger)
         plot_timeseries(results_file, figures_directory, app_logger)
+        plot_hovmoller(results_file, figures_directory, app_logger)
         boxplot_terms(results_file, results_subdirectory, figures_directory, app_logger)
         plot_periods(out_track, times, lat, results_subdirectory, figures_directory, app_logger)
+        plot_lorenz_cycle(results_file, figures_directory, os.path.join(results_subdirectory, 'periods.csv'), app_logger)
         plot_LPS(df, args.infile, results_subdirectory, figures_directory, app_logger)
-
-
+        map_track(results_file, track_file, figures_directory, app_logger)
         app_logger.info('Done.')
 
 if __name__ == '__main__':

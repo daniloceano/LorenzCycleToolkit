@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:59 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/02 19:58:28 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/04 10:08:15 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -22,9 +22,6 @@ from ..analysis.boundary_terms import BoundaryTerms
 from ..analysis.generation_and_dissipation_terms import GenerationDissipationTerms
 from ..utils.box_data import BoxData
 from ..utils.calc_budget_and_residual import calc_budget_diff, calc_residuals
-from ..plots.timeseries_terms import plot_timeseries
-from ..plots.map_box_limits import plot_box_limits
-from ..plots.plot_boxplot import boxplot_terms
 
 def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirectory: str,
               app_logger: logging.Logger, args: argparse.Namespace):
@@ -143,8 +140,16 @@ def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirec
     app_logger.info(f'Results saved to {results_file}')
 
     if args.plots:
+        from ..plots.timeseries_terms import plot_timeseries
+        from ..plots.map_box_limits import plot_box_limits
+        from ..plots.plot_boxplot import boxplot_terms
+        from ..plots.plot_LEC import plot_lorenz_cycle
+        from ..plots.plot_hovmoller import plot_hovmoller
+        
         app_logger.info('Generating plots..')
         figures_directory = os.path.join(results_subdirectory, 'Figures')
         plot_timeseries(results_file, figures_directory, app_logger)
         plot_box_limits(box_limits_file, figures_directory, app_logger)
         boxplot_terms(results_file, results_subdirectory, figures_directory, app_logger)
+        plot_lorenz_cycle(results_file, figures_directory, app_logger=app_logger)
+        plot_hovmoller(results_file, figures_directory, app_logger)
