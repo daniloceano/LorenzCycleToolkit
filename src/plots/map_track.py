@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/07/05 19:48:17 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/29 18:36:08 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/04 10:40:24 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -65,7 +65,7 @@ def map_track(results_file_path, trackfile, figures_subdirectory, app_logger=Fal
     trackfile (str): Path to the track CSV file.
     figures_subdirectory (str): Directory path to save the generated plot.
     """
-    app_logger.info('Plotting track with boxes defined for computations...') if app_logger else print('Plotting track with boxes defined for computations...')
+    app_logger.info('Plotting track...') if app_logger else print('Plotting track...')
 
     track = read_track(trackfile, app_logger)
     df = read_results(results_file_path, app_logger)
@@ -82,8 +82,9 @@ def map_track(results_file_path, trackfile, figures_subdirectory, app_logger=Fal
     fig, ax = setup_figure(track_lon, track_lat)
     plot_track_data(fig, ax, df, track)
 
-    plt.savefig(os.path.join(figures_subdirectory, 'track.png'), bbox_inches='tight')
-    app_logger.info('Figure saved in directory: {}'.format(figures_subdirectory)) if app_logger else print('Figure saved in directory: {}'.format(figures_subdirectory))
+    figure_file = os.path.join(figures_subdirectory, 'track.png')
+    plt.savefig(figure_file, bbox_inches='tight')
+    app_logger.info(f'Track plot saved to {figure_file}') if app_logger else print(f'Track plot saved to {figure_file}')
 
 def setup_figure(track_lon, track_lat):
     min_lon, max_lon, min_lat, max_lat = track_lon.min(), track_lon.max(), track_lat.min(), track_lat.max()
