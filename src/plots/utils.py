@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/29 10:02:20 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/02 15:43:26 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/04 15:30:26 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -145,16 +145,15 @@ def get_data_vertical_levels(results_directory):
         data (dict): A dictionary where the keys are terms found in the CSV file names and the values are pandas DataFrames containing the data from the corresponding files.
     """
     all_terms = [term for details in TERM_DETAILS.values() for term in details['terms']]
-    files = glob(os.path.join(results_directory, '*.csv'))
+    files = [file for file in glob(os.path.join(results_directory, '*.csv')) if "results" not in file]
 
     data = {}
     for file in files:
-        term = next((t for t in all_terms if t in file), None)
-        if term:
-            try:
-                data[term] = pd.read_csv(file, header=0, index_col=0, parse_dates=True)
-            except pd.errors.ParserError as e:
-                print(f"Error reading {file}: {e}")
+        term = os.path.splitext(os.path.basename(file))[0].split('_')[0]
+        try:
+            data[term] = pd.read_csv(file, header=0, index_col=0, parse_dates=True)
+        except pd.errors.ParserError as e:
+            print(f"Error reading {file}: {e}")
     
     return data
 

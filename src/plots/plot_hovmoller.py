@@ -26,15 +26,14 @@ import matplotlib.gridspec as gridspec
 import matplotlib.colors as colors
 import matplotlib.ticker as ticker
 
-import src.plots.utils as utils
-from src.plots.utils import read_results, get_data_vertical_levels
+import utils as utils
+from utils import read_results, get_data_vertical_levels
 
 
 def _plotter(dict_vertical, figures_subdirectory, app_logger=False):
 
-    dummy_term = list(dict_vertical.keys())[0]
-    times = dict_vertical[dummy_term].index
-    levs = dict_vertical[dummy_term].columns
+    times = dict_vertical['Az'].index
+    levs = dict_vertical['Az'].columns
 
     term_details = utils.TERM_DETAILS
     all_terms = {key: [term for term in details['terms'] if term in dict_vertical]
@@ -134,6 +133,12 @@ def plot_hovmoller(results_file, figures_directory, app_logger=False):
     app_logger.info('Hovmoller diagrams created') if app_logger else print('Hovmoller diagrams created')
 
 if __name__ == "__main__":
-    results_file = 'samples/sample_results.csv'
-    figures_directory = 'samples/Figures/'
+
+    # # Test for Reg1-Representative.nc
+    # results_file = 'samples/sample_results.csv'
+    # figures_directory = 'samples/Figures/'
+    # plot_hovmoller(results_file, figures_directory)
+
+    results_file = 'samples/Catarina_NCEP-R2_fixed/Catarina_NCEP-R2_fixed_results.csv'
+    figures_directory = 'samples/Catarina_NCEP-R2_fixed/Figures/'
     plot_hovmoller(results_file, figures_directory)
