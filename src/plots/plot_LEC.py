@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/01/03 23:31:13 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/04 18:00:05 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/04 18:02:02 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -193,6 +193,8 @@ def _call_plot(data, normalized_data, plot_example=False):
 
     for term in conversions + residuals + boundaries:
         start, end = plot_term_arrows_and_text(ax, size, term, data, positions, plot_example=plot_example)
+
+    plt.tight_layout()
 
 def _plotter(daily_means, normalized_data_not_energy, figures_directory, plot_example=False, app_logger=False):
     if plot_example:
