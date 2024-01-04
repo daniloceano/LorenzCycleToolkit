@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/01/02 23:38:49 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/02 23:39:58 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/03 12:13:48 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -54,9 +54,9 @@ def plot_periods(
                 }
         
         options_low_res = {
-                    "use_filter": len(vorticity_data) // 6,
+                    "use_filter": len(vorticity_data) // 6 if len(vorticity_data) // 6 > 3 else 4,
                     "replace_endpoints_with_lowpass": 24,
-                    "use_smoothing": len(vorticity_data) // 8 | 1,
+                    "use_smoothing": len(vorticity_data) // 8 | 1 if len(vorticity_data) // 8 | 1 > 0 else 1,
                     "use_smoothing_twice": False,
                     "savgol_polynomial": 3,
                     "cutoff_low": 168,
