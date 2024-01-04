@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/01/03 23:31:13 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/04 18:02:02 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/04 18:22:50 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -42,11 +42,11 @@ def plot_boxes(ax, data, normalized_data, positions, size, plot_example=False):
 
         # Term text in bold black
         if plot_example:
-            ax.text(pos[0], pos[1], f'{term}', ha='center', va='center', fontsize=12, color='k', fontweight='bold')
+            ax.text(pos[0], pos[1], f'{term}', ha='center', va='center', fontsize=16, color='k', fontweight='bold')
 
         # Value text in the specified color
         else:
-            ax.text(pos[0], pos[1] - 0.06, f'{term_value:.2f}', ha='center', va='center', fontsize=12, color=value_text_color, fontweight='bold')
+            ax.text(pos[0], pos[1], f'{term_value:.2f}', ha='center', va='center', fontsize=16, color=value_text_color, fontweight='bold')
      
 
 def plot_arrow(ax, start, end, term_value, color='#5C5850'):
@@ -75,23 +75,33 @@ def plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, 0), pl
     mid_point = ((start[0] + end[0]) / 2 + offset[0], (start[1] + end[1]) / 2 + offset[1])
 
     if term in ['Ca', 'BAz', 'BAe']:
-        offset_x = -0.02
+        offset_x = -0.05
     elif term in ['Ck', 'BKz', 'BKe']:
-        offset_x = 0.02
+        offset_x = 0.05
     else:
         offset_x = 0
 
+    if term == 'Ce':
+        offset_y = -0.05
+    elif term == 'Cz':
+        offset_y = 0.05
+    else:
+        offset_y = 0
+
+    x_pos = mid_point[0] + offset_x
+    y_pos = mid_point[1] + offset_y
+
     # Plot term text in bold black
     if plot_example:
-        ax.text(mid_point[0] + offset_x, mid_point[1], term, ha='center', va='center', fontsize=14, color='k', fontweight='bold')
+        ax.text(x_pos, y_pos, term, ha='center', va='center', fontsize=16, color='k', fontweight='bold')
 
     # Plot value text in the specified color
     else:
-        ax.text(mid_point[0] + offset_x, mid_point[1], f'{term_value:.2f}', ha='center', va='center',
-                color=text_color, fontsize=12, fontweight='bold')
+        ax.text(x_pos, y_pos, f'{term_value:.2f}', ha='center', va='center',
+                color=text_color, fontsize=16, fontweight='bold')
 
 def plot_term_value(ax, position, value, offset=(0, 0)):
-    ax.text(position[0] + offset[0], position[1] + offset[1], f'{value:.2f}', ha='center', va='center', fontsize=12)
+    ax.text(position[0] + offset[0], position[1] + offset[1], f'{value:.2f}', ha='center', va='center', fontsize=16)
 
 def plot_term_arrows_and_text(ax, size, term, data, positions, plot_example=False):
     
@@ -189,7 +199,7 @@ def _call_plot(data, normalized_data, plot_example=False):
     if not plot_example:
         if type(data.name) == pd.Timestamp:
             data.name = data.name.strftime('%Y-%m-%d')
-        ax.text(0, 0, data.name, fontsize=14, ha='center', va='center', fontweight='bold', color='black')
+        ax.text(0, 0, data.name, fontsize=16, ha='center', va='center', fontweight='bold', color='black')
 
     for term in conversions + residuals + boundaries:
         start, end = plot_term_arrows_and_text(ax, size, term, data, positions, plot_example=plot_example)
