@@ -134,12 +134,12 @@ def plot_hovmoller(results_file, figures_directory, app_logger=False):
 
 if __name__ == "__main__":
 
-    # # Test for Reg1-Representative_fixed
-    results_file = 'samples/Reg1-Representative_fixed/Reg1-Representative_results.csv'
+    # Test for Reg1-Representative_fixed
+    results_file = 'samples/Reg1-Representative_NCEP-R2_fixed/Reg1-Representative_NCEP-R2_fixed_results.csv'
     figures_directory = 'samples/Reg1-Representative_fixed/Figures/'
     plot_hovmoller(results_file, figures_directory)
 
     # Test for Catarina_NCEP-R2_fixed
-    results_file = 'samples/Catarina_NCEP-R2_fixed/Catarina_NCEP-R2_fixed_results.csv'
+    results_file = 'samples/Catarina_NCEP-R2_fixed/Catarina_NCEP-R2_fixed/Catarina_NCEP-R2_fixed_results.csv'
     figures_directory = 'samples/Catarina_NCEP-R2_fixed/Figures/'
     plot_hovmoller(results_file, figures_directory)
