@@ -140,6 +140,6 @@ if __name__ == "__main__":
     plot_hovmoller(results_file, figures_directory)
 
     # Test for Catarina_NCEP-R2_fixed
-    results_file = 'samples/Catarina_NCEP-R2_fixed/Catarina_NCEP-R2_fixed/Catarina_NCEP-R2_fixed_results.csv'
+    results_file = 'samples/Catarina_NCEP-R2_fixed/Catarina_NCEP-R2_fixed_results.csv'
     figures_directory = 'samples/Catarina_NCEP-R2_fixed/Figures/'
     plot_hovmoller(results_file, figures_directory)
