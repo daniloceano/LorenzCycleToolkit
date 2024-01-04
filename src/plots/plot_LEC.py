@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/01/03 23:31:13 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/04 16:00:58 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/04 18:00:05 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -15,10 +15,10 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import pandas as pd
 import numpy as np
-from utils import read_results
-import utils as utils
+from src.plots.utils import read_results
+import src.plots.utils as utils
 
-def plot_boxes(ax, data, normalized_data, positions, size):
+def plot_boxes(ax, data, normalized_data, positions, size, plot_example=False):
     # Define edge width range
     min_edge_width = 0
     max_edge_width = 5
@@ -41,10 +41,12 @@ def plot_boxes(ax, data, normalized_data, positions, size):
         ax.add_patch(square)
 
         # Term text in bold black
-        ax.text(pos[0], pos[1], f'{term}', ha='center', va='center', fontsize=12, color='k', fontweight='bold')
+        if plot_example:
+            ax.text(pos[0], pos[1], f'{term}', ha='center', va='center', fontsize=12, color='k', fontweight='bold')
 
         # Value text in the specified color
-        ax.text(pos[0], pos[1] - 0.06, f'{term_value:.2f}', ha='center', va='center', fontsize=12, color=value_text_color, fontweight='bold')
+        else:
+            ax.text(pos[0], pos[1] - 0.06, f'{term_value:.2f}', ha='center', va='center', fontsize=12, color=value_text_color, fontweight='bold')
      
 
 def plot_arrow(ax, start, end, term_value, color='#5C5850'):
@@ -64,26 +66,34 @@ def plot_arrow(ax, start, end, term_value, color='#5C5850'):
     ax.annotate('', xy=end, xytext=start,
                 arrowprops=dict(facecolor=color, edgecolor=color, width=size, headwidth=size*3, headlength=size*3))
 
-def plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, 0)):
+def plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, 0), plot_example=False):
     # Determine text color based on term value
     text_color = '#386641'
     if term_value < 0:
         text_color = '#ae2012'
 
     mid_point = ((start[0] + end[0]) / 2 + offset[0], (start[1] + end[1]) / 2 + offset[1])
-    ax.text(mid_point[0], mid_point[1], term, ha='center', va='center', fontsize=14, color='k', fontweight='bold')
 
-    if term in ['Ce', 'RGe', 'RKe', 'BAe', 'BKe']:
-        x_offset, y_offset = 0, -0.1
+    if term in ['Ca', 'BAz', 'BAe']:
+        offset_x = -0.02
+    elif term in ['Ck', 'BKz', 'BKe']:
+        offset_x = 0.02
     else:
-        x_offset, y_offset = 0, 0.1
-    ax.text(mid_point[0] + x_offset, mid_point[1] + y_offset, f'{term_value:.2f}', ha='center', va='center',
-            color=text_color, fontsize=12, fontweight='bold')
+        offset_x = 0
+
+    # Plot term text in bold black
+    if plot_example:
+        ax.text(mid_point[0] + offset_x, mid_point[1], term, ha='center', va='center', fontsize=14, color='k', fontweight='bold')
+
+    # Plot value text in the specified color
+    else:
+        ax.text(mid_point[0] + offset_x, mid_point[1], f'{term_value:.2f}', ha='center', va='center',
+                color=text_color, fontsize=12, fontweight='bold')
 
 def plot_term_value(ax, position, value, offset=(0, 0)):
     ax.text(position[0] + offset[0], position[1] + offset[1], f'{value:.2f}', ha='center', va='center', fontsize=12)
 
-def plot_term_arrows_and_text(ax, size, term, data, positions):
+def plot_term_arrows_and_text(ax, size, term, data, positions, plot_example=False):
     
     term_value = data[term]
 
@@ -92,56 +102,56 @@ def plot_term_arrows_and_text(ax, size, term, data, positions):
     if term == 'Cz':
         start = (positions['∂Az/∂t'][0] + size/2, positions['∂Az/∂t'][1]) 
         end = (positions['∂Kz/∂t'][0] - size/2, positions['∂Kz/∂t'][1])
-        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, 0.1))
+        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, 0.1), plot_example=plot_example)
 
     elif term == 'Ca':
         start = (positions['∂Az/∂t'][0], positions['∂Az/∂t'][1] - size/2)
         end = (positions['∂Ae/∂t'][0], positions['∂Ae/∂t'][1] + size/2)
-        plot_term_text_and_value(ax, start, end, term, term_value, offset=(-0.1, 0))
+        plot_term_text_and_value(ax, start, end, term, term_value, offset=(-0.1, 0), plot_example=plot_example)
 
     elif term == 'Ck':
         start = (positions['∂Kz/∂t'][0], positions['∂Ke/∂t'][1] + size/2)
         end = (positions['∂Ke/∂t'][0], positions['∂Kz/∂t'][1] - size/2)
-        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0.1, 0))
+        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0.1, 0), plot_example=plot_example)
 
     elif term == 'Ce':
         start = (positions['∂Ae/∂t'][0] + size/2, positions['∂Ke/∂t'][1])
         end = (positions['∂Ke/∂t'][0] - size/2, positions['∂Ae/∂t'][1])
-        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, -0.1))
+        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, -0.1), plot_example=plot_example)
 
     # Plot text for residuals
     elif term == 'RGz':
         start = (positions['∂Az/∂t'][0], positions['∂Az/∂t'][1] + size/2)
         end = (positions['∂Az/∂t'][0], 1)
-        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, 0.2))
+        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, 0.2), plot_example=plot_example)
 
     elif term == 'RGe':
         start = (positions['∂Ae/∂t'][0], positions['∂Ae/∂t'][1] - size/2)
         end = (positions['∂Ae/∂t'][0], -1)
-        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, -0.2))
+        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, -0.2), plot_example=plot_example)
 
     elif term == 'RKz':
         start = (positions['∂Kz/∂t'][0], 1)
         end = (positions['∂Kz/∂t'][0], positions['∂Kz/∂t'][1] + size/2)
-        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, 0.2))
+        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, 0.2), plot_example=plot_example)
 
     elif term == 'RKe':
         start = (positions['∂Ke/∂t'][0], -1)
         end = (positions['∂Ke/∂t'][0], positions['∂Ke/∂t'][1] - size/2)
-        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, -0.2))
+        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, -0.2), plot_example=plot_example)
 
     # Plot text for boundaries
     elif term in ['BAz', 'BAe']:
             refered_term = '∂Az/∂t' if term == 'BAz' else '∂Ae/∂t'
             start = (-1, positions[refered_term][1])
             end = (positions[refered_term][0] - size/2, positions[refered_term][1])
-            plot_term_text_and_value(ax, start, end, term, term_value, offset=(-0.23, 0)) 
+            plot_term_text_and_value(ax, start, end, term, term_value, offset=(-0.23, 0), plot_example=plot_example) 
 
     elif term in ['BKz', 'BKe']:
         refered_term = '∂Kz/∂t' if term == 'BKz' else '∂Ke/∂t'
         start = (1, positions[refered_term][1])
         end = (positions[refered_term][0] + size/2, positions[refered_term][1])
-        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0.23, 0)) 
+        plot_term_text_and_value(ax, start, end, term, term_value, offset=(0.23, 0), plot_example=plot_example) 
 
     if term_value < 0:
         start_normalized, end_normalized = end, start  # Swap start and end for negative values
@@ -153,7 +163,7 @@ def plot_term_arrows_and_text(ax, size, term, data, positions):
 
     return start, end
 
-def _call_plot(data, normalized_data):
+def _call_plot(data, normalized_data, plot_example=False):
     # Prepare data
     conversions = utils.TERM_DETAILS['conversion']['terms']
     residuals = utils.TERM_DETAILS['residuals']['terms']
@@ -173,28 +183,21 @@ def _call_plot(data, normalized_data):
     }
     size = 0.4
     
-    plot_boxes(ax, data, normalized_data, positions, size)
+    plot_boxes(ax, data, normalized_data, positions, size, plot_example)
 
-    if type(data.name) == pd.Timestamp:
-        data.name = data.name.strftime('%Y-%m-%d')
-    ax.text(0, 0, data.name, fontsize=14, ha='center', va='center', fontweight='bold', color='black')
+    # Add title
+    if not plot_example:
+        if type(data.name) == pd.Timestamp:
+            data.name = data.name.strftime('%Y-%m-%d')
+        ax.text(0, 0, data.name, fontsize=14, ha='center', va='center', fontweight='bold', color='black')
 
     for term in conversions + residuals + boundaries:
-        start, end = plot_term_arrows_and_text(ax, size, term, data, positions)
+        start, end = plot_term_arrows_and_text(ax, size, term, data, positions, plot_example=plot_example)
 
-def _plotter(daily_means, normalized_data_not_energy, figures_directory, app_logger=False):
-    for date, data in daily_means.iterrows():
-        # Extract the corresponding normalized data for the day
-        normalized_data = normalized_data_not_energy.loc[date]
-
-        # Plot the Lorenz cycle for the day
-        _call_plot(data, normalized_data)
-
-        if type(data.name) == pd.Timestamp:
-            figure_name = data.name.strftime('%Y-%m-%d')
-        else:
-            figure_name = data.name
-
+def _plotter(daily_means, normalized_data_not_energy, figures_directory, plot_example=False, app_logger=False):
+    if plot_example:
+        _call_plot(daily_means.iloc[0], normalized_data_not_energy.iloc[0], plot_example=plot_example)
+        figure_name = "example"
         figures_subdirectory = os.path.join(figures_directory, "LEC")
         os.makedirs(figures_subdirectory, exist_ok=True)
         figure_path = os.path.join(figures_subdirectory, f'LEC_{figure_name}.png')
@@ -202,7 +205,27 @@ def _plotter(daily_means, normalized_data_not_energy, figures_directory, app_log
         plt.close() 
         app_logger.info(f"Lorenz cycle plot saved to {figure_path}") if app_logger else print(f"Lorenz cycle plot saved to {figure_path}")
 
-def plot_period_means(periods_file, df_results, figures_directory, app_logger=False):
+    else:
+        for date, data in daily_means.iterrows():
+            # Extract the corresponding normalized data for the day
+            normalized_data = normalized_data_not_energy.loc[date]
+
+            # Plot the Lorenz cycle for the day
+            _call_plot(data, normalized_data, plot_example=plot_example)
+
+            if type(data.name) == pd.Timestamp:
+                figure_name = data.name.strftime('%Y-%m-%d')
+            else:
+                figure_name = data.name
+
+            figures_subdirectory = os.path.join(figures_directory, "LEC")
+            os.makedirs(figures_subdirectory, exist_ok=True)
+            figure_path = os.path.join(figures_subdirectory, f'LEC_{figure_name}.png')
+            plt.savefig(figure_path)
+            plt.close() 
+            app_logger.info(f"Lorenz cycle plot saved to {figure_path}") if app_logger else print(f"Lorenz cycle plot saved to {figure_path}")
+
+def plot_period_means(periods_file, df_results, figures_directory, plot_example=False, app_logger=False):
     try:
         periods_df = pd.read_csv(periods_file, parse_dates=['start', 'end'], index_col=0)
     except FileNotFoundError:
@@ -236,7 +259,7 @@ def plot_period_means(periods_file, df_results, figures_directory, app_logger=Fa
     normalized_data_not_energy_periods = normalized_data_not_energy_periods.clip(lower=1.5, upper=15)
 
     # Plot period means
-    _plotter(period_means_df, normalized_data_not_energy_periods, figures_directory, app_logger)
+    _plotter(period_means_df, normalized_data_not_energy_periods, figures_directory, plot_example=plot_example, app_logger=app_logger)
 
 def plot_lorenz_cycle(results_file, figures_directory, periods_file=False, app_logger=False):
     # Read results
@@ -253,11 +276,14 @@ def plot_lorenz_cycle(results_file, figures_directory, periods_file=False, app_l
     normalized_data_not_energy = ((df_not_energy - df_not_energy.min().min()) / (df_not_energy.max().max() - df_not_energy.min().min())) * 50
     normalized_data_not_energy = normalized_data_not_energy.clip(lower=1.5, upper=15)
 
+    # Display example
+    _plotter((daily_means * 0) + 1, (daily_means * 0) + 1, figures_directory, plot_example=True, app_logger=app_logger)
+
     # Call function to plot Lorenz cycle for each day
-    _plotter(daily_means, normalized_data_not_energy, figures_directory, app_logger)
+    _plotter(daily_means, normalized_data_not_energy, figures_directory, plot_example=False, app_logger=app_logger)
 
     if periods_file:
-        plot_period_means(periods_file, df_results, figures_directory, app_logger)
+        plot_period_means(periods_file, df_results, figures_directory, app_logger=app_logger)
 
 if __name__ == "__main__":
     # Test for Reg1-Representative_fixed
