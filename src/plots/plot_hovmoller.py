@@ -26,8 +26,8 @@ import matplotlib.gridspec as gridspec
 import matplotlib.colors as colors
 import matplotlib.ticker as ticker
 
-import utils as utils
-from utils import read_results, get_data_vertical_levels
+import src.plots.utils as utils
+from src.plots.utils import read_results, get_data_vertical_levels
 
 
 def _plotter(dict_vertical, figures_subdirectory, app_logger=False):
@@ -134,11 +134,12 @@ def plot_hovmoller(results_file, figures_directory, app_logger=False):
 
 if __name__ == "__main__":
 
-    # # Test for Reg1-Representative.nc
-    # results_file = 'samples/sample_results.csv'
-    # figures_directory = 'samples/Figures/'
-    # plot_hovmoller(results_file, figures_directory)
+    # # Test for Reg1-Representative_fixed
+    results_file = 'samples/Reg1-Representative_fixed/Reg1-Representative_results.csv'
+    figures_directory = 'samples/Reg1-Representative_fixed/Figures/'
+    plot_hovmoller(results_file, figures_directory)
 
+    # Test for Catarina_NCEP-R2_fixed
     results_file = 'samples/Catarina_NCEP-R2_fixed/Catarina_NCEP-R2_fixed_results.csv'
     figures_directory = 'samples/Catarina_NCEP-R2_fixed/Figures/'
     plot_hovmoller(results_file, figures_directory)
