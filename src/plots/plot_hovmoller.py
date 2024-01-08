@@ -93,7 +93,7 @@ def get_cmap_norm_title_for_term(term, imin, imax, absmax):
     if term in utils.TERM_DETAILS['energy']['terms']:
         cmap = 'cmo.amp'
         norm = colors.Normalize(vmin=imin, vmax=imax)
-        title = f'{utils.TERM_DETAILS['energy']["label"]} ({utils.TERM_DETAILS['energy']["unit"]})'
+        title = f"{utils.TERM_DETAILS['energy']['label']} ({utils.TERM_DETAILS['energy']['unit']})"
     elif term in utils.TERM_DETAILS['conversion']['terms']:
         cmap = 'cmo.tarn'
         norm = colors.TwoSlopeNorm(vcenter=0, vmin=-absmax, vmax=absmax)
