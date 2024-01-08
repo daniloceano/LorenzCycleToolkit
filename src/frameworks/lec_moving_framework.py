@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/08 13:15:55 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/08 15:33:32 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -49,6 +49,48 @@ def create_terms_dict(args):
 
     terms = energy_terms + conversion_terms + boundary_terms + generation_dissipation_terms
     return {term: [] for term in terms}
+
+def handle_track_file(data, times, LonIndexer, LatIndexer, app_logger):
+    """
+    Handles the track file by validating its time and spatial limits against the provided dataset.
+
+    Args:
+        data (xr.Dataset): A Xarray Dataset containing the data to compute the energy cycle.
+        args (argparse.Namespace): Arguments provided to the script.
+        app_logger (logging.Logger): Logger for logging messages.
+
+    Returns:
+        pd.DataFrame: DataFrame containing the track information if the track file is valid.
+
+    Raises:
+        FileNotFoundError: If the track file is not found.
+        ValueError: If the time or spatial limits of the track file do not match the dataset.
+    """
+    trackfile = 'inputs/track'
+    try:
+        track = pd.read_csv(trackfile, parse_dates=[0], delimiter=';', index_col='time')
+
+        # Extract the time and spatial limits from the dataset
+        data_lon_max, data_lon_min = data[LonIndexer].max(), data[LonIndexer].min()
+        data_lat_max, data_lat_min = data[LatIndexer].max(), data[LatIndexer].min()
+
+        # Validate time limits
+        if track.index[0] < times.min() or track.index[-1] > times.max():
+            raise ValueError("Track time limits do not match with data time limits.")
+
+        # Validate spatial limits
+        if track['Lon'].max() > data_lon_max or track['Lon'].min() < data_lon_min:
+            raise ValueError("Track longitude limits do not match with data longitude limits.")
+        if track['Lat'].max() > data_lat_max or track['Lat'].min() < data_lat_min:
+            raise ValueError("Track latitude limits do not match with data latitude limits.")
+
+        return track
+    
+    except FileNotFoundError:
+        app_logger.error(f"Track file {trackfile} not found.")
+        raise
+    else:
+        return None
 
 def extract_wind_and_height_components(idata, variable_list_df, args):
     """
@@ -151,7 +193,9 @@ def get_position(track, limits, izeta_850, ihgt_850, iwspd_850, LatIndexer, LonI
     Returns:
         Tuple[float, float, float]: A tuple containing the values of 'min_max_zeta_850', 'min_hgt_850', and 'max_wind_850'.
     """
-    track_itime = track.iloc[-1] if args.track else None
+    # Track timestep closest to the model timestep, just in case
+    # the track file has a poorer temporal resolution
+    track_itime = track.loc[limits['datestr']].name if args.track else None
 
     central_lat = limits['central_lat']
     central_lon = limits['central_lon']
@@ -165,26 +209,38 @@ def get_position(track, limits, izeta_850, ihgt_850, iwspd_850, LatIndexer, LonI
     ihgt_850_slice = ihgt_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
     iwspd_850_slice = iwspd_850.sel({LatIndexer:slice(min_lat, max_lat), LonIndexer:slice(min_lon, max_lon)})
 
-    try:
-        min_max_zeta = float(track.loc[track_itime]['min_max_zeta_850'])
-    except AttributeError:
-        if args.zeta:
-            min_max_zeta_unformatted = izeta_850.sel(latitude=central_lat, longitude=central_lon, method='nearest')
+
+    # Check if 'min_max_zeta_850' is present and valid in the track DataFrame
+    if track is not None and 'min_max_zeta_850' in track.columns:
+        min_max_zeta = float(track.loc[track_itime, 'min_max_zeta_850'])
+    else:
+        # Fallback logic if 'min_max_zeta_850' is not available
+        if track is not None and args.zeta:
+            # When args.zeta, whe trust the vorticity from the trackfile
+            min_max_zeta_unformatted = izeta_850.sel(latitude=limits['central_lat'], longitude=limits['central_lon'], method='nearest')
         else:
+            izeta_850_slice = izeta_850.sel({LatIndexer: slice(limits['min_lat'], limits['max_lat']), LonIndexer: slice(limits['min_lon'], limits['max_lon'])})
             min_max_zeta_unformatted = izeta_850_slice.min()
-        if min_lat < 0:
+
+        if limits['min_lat'] < 0:
             min_max_zeta = float(np.nanmin(min_max_zeta_unformatted))
         else:
             min_max_zeta = float(np.nanmax(min_max_zeta_unformatted))
 
-    try:
-        min_hgt = float(track.loc[track_itime]['min_hgt_850'])
-    except AttributeError:
+    # Check if 'min_hgt_850' is present and valid in the track DataFrame
+    if track is not None and 'min_hgt_850' in track.columns and not pd.isna(track.loc[track_itime, 'min_hgt_850']):
+        min_hgt = float(track.loc[track_itime, 'min_hgt_850'])
+    else:
+        # Fallback logic if 'min_hgt_850' is not available
+        ihgt_850_slice = ihgt_850.sel({LatIndexer: slice(limits['min_lat'], limits['max_lat']), LonIndexer: slice(limits['min_lon'], limits['max_lon'])})
         min_hgt = float(ihgt_850_slice.min())
 
-    try:
-        max_wind = float(track.loc[track_itime]['max_wind_850'])
-    except AttributeError:
+    # Check if 'max_wind_850' is present and valid in the track DataFrame
+    if track is not None and 'max_wind_850' in track.columns and not pd.isna(track.loc[track_itime, 'max_wind_850']):
+        max_wind = float(track.loc[track_itime, 'max_wind_850'])
+    else:
+        # Fallback logic if 'max_wind_850' is not available
+        iwspd_850_slice = iwspd_850.sel({LatIndexer: slice(limits['min_lat'], limits['max_lat']), LonIndexer: slice(limits['min_lon'], limits['max_lon'])})
         max_wind = float(iwspd_850_slice.max())
 
     position = {
@@ -384,14 +440,11 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
         df.to_csv(file_path, index=None) 
         app_logger.info(f'{file_path} created (but still empty)')
 
-    # Track file handling
-    if args.track:
-        trackfile = 'inputs/track'
-        try:
-            track = pd.read_csv(trackfile, parse_dates=[0], delimiter=';', index_col='time')
-        except FileNotFoundError:
-            app_logger.error(f"Track file {trackfile} not found.")
-            raise
+    # Get the time array
+    times = pd.to_datetime(data[TimeName].values)
+
+    # Get the system track and check for errors
+    track = handle_track_file(data, times, LonIndexer, LatIndexer, app_logger)
 
     # Dictionary for saving system position and attributes
     results_keys = ['datestr', 'central_lat', 'central_lon', 'length', 'width',
@@ -400,14 +453,6 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
 
     # Dictionary for storing results
     terms_dict = create_terms_dict(args)
-
-    # Slice the time array to match the track file
-    times = pd.to_datetime(data[TimeName].values)
-    if args.track:
-        times = times[(times >= track.index[0]) & (times <= track.index[-1])]
-        if len(times) == 0:
-            app_logger.error("Mismatch between trackfile and data times.")
-            raise ValueError("Mismatch between trackfile and data times.")
         
     # Iterating over times
     for t in times:
