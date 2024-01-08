@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/04 10:39:12 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/08 13:15:55 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -151,7 +151,7 @@ def get_position(track, limits, izeta_850, ihgt_850, iwspd_850, LatIndexer, LonI
     Returns:
         Tuple[float, float, float]: A tuple containing the values of 'min_max_zeta_850', 'min_hgt_850', and 'max_wind_850'.
     """
-    track_itime = track.iloc[-1]
+    track_itime = track.iloc[-1] if args.track else None
 
     central_lat = limits['central_lat']
     central_lon = limits['central_lon']
@@ -167,7 +167,7 @@ def get_position(track, limits, izeta_850, ihgt_850, iwspd_850, LatIndexer, LonI
 
     try:
         min_max_zeta = float(track.loc[track_itime]['min_max_zeta_850'])
-    except KeyError:
+    except AttributeError:
         if args.zeta:
             min_max_zeta_unformatted = izeta_850.sel(latitude=central_lat, longitude=central_lon, method='nearest')
         else:
@@ -179,12 +179,12 @@ def get_position(track, limits, izeta_850, ihgt_850, iwspd_850, LatIndexer, LonI
 
     try:
         min_hgt = float(track.loc[track_itime]['min_hgt_850'])
-    except KeyError:
+    except AttributeError:
         min_hgt = float(ihgt_850_slice.min())
 
     try:
         max_wind = float(track.loc[track_itime]['max_wind_850'])
-    except KeyError:
+    except AttributeError:
         max_wind = float(iwspd_850_slice.max())
 
     position = {
@@ -446,7 +446,7 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
 
 
         # Get position of  850 hPaextreme values for current time
-        position = get_position(track, limits, izeta_850, ihgt_850, iwspd_850, LatIndexer, LonIndexer, args)
+        position = get_position(track if args.track else None, limits, izeta_850, ihgt_850, iwspd_850, LatIndexer, LonIndexer, args)
         app_logger.info(
             f"850 hPa diagnostics --> "
             f"min/max ζ: {position['min_max_zeta_850']:.2e}, "
