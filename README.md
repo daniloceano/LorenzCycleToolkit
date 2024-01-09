@@ -1,50 +1,56 @@
-# Lorenz-Cycle
+# Lorenz Energy Cycle (LEC)
 
-## What is the Lorenz Energy Cycle?
+## Overview
+The Lorenz Energy Cycle (LEC), introduced by Edward Lorenz in 1965, is an analytical framework used to estimate atmospheric energy. It categorizes energy into zonal and eddy components of Kinetic Energy (Kz and Ke, respectively) and Available Potential Energy (Az and Ae, respectively). The LEC also quantifies conversions between these forms (Ca, Ce, Cz, and Ck), along with generation and dissipation terms (Gz, Ge, Dz, and De). Originally developed for global energetics, the framework has been adapted for regional studies, incorporating calculations for energy transport across boundaries (BAz, BAe, BKz, BKe).
 
-The Lorenz Energy Cycle (LEC) is a methodology for estimating the energy in the Atmosphere designed by the mathematician and meteorologist Edward Lorenz, in 1965. On it, the energy is partitioned into zonal and eddy components of Kinectic Energy (Kz and Ke, respectively) and Available Potential Energy (Az and Ae, respectively). It is also computed the terms related to the conversion between each form of energy (Ca, Ce, Cz and Ck) and the terms related to generation/dissipation of the energy contents (Gz, Ge, Dz and De). Lorenz initial work computed the energetics for the whole globe, but later developments adapted the methodology for computing the energetics of a limited area in the atmosphere, thus requiring the computation of terms related to the transport of energy thorugh the boundaries of the limited area (BAe, BAz, BKe and BKz). Due to difficulties in accessing the frictions terms required for computing the dissipation terms, both disspiation and generation terms are often computed as residuals from the budgets equations:
+The LEC budget is described by the following equations:
 
-![image](https://user-images.githubusercontent.com/56005607/210858922-1d29f3b9-2446-422e-87c4-2dc5c4ced361.png)
+$\frac{\partial A_Z}{\partial t} = -C_Z - C_A + G_Z + B A_Z$
 
-Where:
+$\frac{\partial K_Z}{\partial t} = -C_Z + C_K - D_Z + B K_Z + B \Phi_Z$
 
-![image](https://user-images.githubusercontent.com/56005607/210859000-07af27c1-0295-4c48-bf7c-1432100bdf60.png)
+$\frac{\partial A_E}{\partial t} = C_A - C_E + G_E + B A_E$
 
-Where ε represents errors numeric errors. The complete cycle for a given period of time can be ilustred as follows:
+$\frac{\partial K_E}{\partial t} = C_E - C_K - D_E + B K_E + B \Phi_E$
 
+Due to the difficulty in measuring friction terms for dissipation, both dissipation and generation are often computed as residuals from the budget equations:
 
-![LEC_example](https://user-images.githubusercontent.com/56005607/210855570-d3272989-8871-4a20-996f-e373f73934c5.png)
+$RG_Z = G_Z + \varepsilon_{AZ}$
 
+$RG_E = G_E + \varepsilon_{AE}$
 
-## What does the program do?
+$RK_Z = B \Phi_Z - D_Z + \varepsilon_{KZ}$
 
-The Lorenz-Cycle program is designed for computing the LEC for a specific region on the atmosphere. It requires a netCDF file containing wind (zonal, meridional and vertical components), air temperature and geopotential data and can be run using two distinct frameworks:
+$RK_E = B \Phi_E - D_E + \varepsilon_{KE}$
 
-1. Fixed framewrok, where the domain is fixed in time by the file: inputs/box_limits; 
+Where ε represents numerical errors. The complete cycle, assuming all terms are positive, is depicted below:
 
-2. Moving framework, where the domain can follow a pertubation on the atmosphere. 
+<img src="https://github.com/daniloceano/lorenz-cycle/assets/56005607/d59eeb31-5cef-46ac-a841-1ba4170fafbd" width="350">
 
-More details on running the program are provided bellow.
+## Program Description
+
+The Lorenz-Cycle program calculates the LEC for specific atmospheric regions. It requires a netCDF file containing wind components, air temperature, and geopotential or geopotential height data. The program offers two frameworks:
+
+1. Fixed Framework: The domain is static, defined by inputs/box_limits.
+2. Moving Framework: The domain moves with an atmospheric perturbation.
 
 # Usage
 
 ## Fixed framework
 
-**Important!** Before running the program be sure to check the [Flags](#flags) section.
 
-First of all, you'll need a NetCDF file containing the following variables: zonal (u) and meridional (v) wind components, vertical wind speed (omega), air temperature and geopotential or geopotential height. The data is required to follow a pressure-level vertical levels.
+**Prerequisites:** Check the [Flags](#flags) section.
 
-Then, it is to necessary to delimite the computational domain using the csv text file [box_limits](inputs/box_limits), that should look like this:
+- Ensure you have a netCDF file with necessary variables (u, v, omega, air temperature, geopotential or geopotential height) on pressure-level vertical levels.
+- Define the domain in 'inputs/box_limits' as a CSV:
 
 ![image](https://user-images.githubusercontent.com/56005607/206709581-34ebe0a7-ff45-4bd4-86e0-8cce8dde91ea.png)
 
-Afterwrds, it is required to specify in the [fvars](inputs/fvars) file the how the variables are named in the NetCDF file and which units are being used. It will look like this:  
+- Specify variable names and units in 'inputs/fvars':
 
 ![image](https://user-images.githubusercontent.com/56005607/210861069-1c899cc8-860a-4212-bd44-118e308db9bd.png)
 
-Note that you should only change the colums corresponding to "Variable" and "Units". Modying the first column will make the program unable to look for the variables in the NetCDF file.
-
-Then, from the [source code folder](src) you can run, for example:
+- Execute from the source code directory:
 
 ```
 python lorenz-cycle.py path/to/infile.nc -r -e
@@ -52,73 +58,57 @@ python lorenz-cycle.py path/to/infile.nc -r -e
 
 ## Moving freamework
 
-**Important!** Before running the program be sure to check the [Flags](#flags) section.
+**Prerequisites:** Check the [Flags](#flags) section.
 
-#### Using a pre-defined domain
+#### Pre-defined domain
 
-As in the fixed framework, the first step is to have a NetCDF file containing the following variables: zonal (u) and meridional (v) wind components, vertical wind speed (omega), air temperature and geopotential or geopotential height. The data is required to follow a pressure-level vertical levels.
-
-Now, instead of delimiting the computational domain, it is required a [track file](inputs/track) containing the central position of the system of interest in different time steps. The program will then create, for each time step, a box with 15°x15° around this central point to compute the energetics terms. Optionally, the user can add the length and width columns to the track file, for using a distinct domain size than the default. The track file should look like this:
+- Follow the initial steps for the Fixed Framework.
+- Use a [track file](inputs/track_file) to define the system's center over time. Optionally, add length and width columns to adjust the domain size.
 
 ![image](https://user-images.githubusercontent.com/56005607/206721056-61fa32ce-aa5d-4f16-af28-c46ac2a9bf88.png)
 
-As in the fixed framework, it is required to specify in the [fvars](inputs/fvars) file the how the variables are named in the NetCDF file and which units are being used. See above. 
-
-Then, from the [source code folder](src) you can run, for example:
+- Execute:
 
 ```
 python lorenz-cycle.py path/to/infile.nc -r -t
 ```
 
-#### Interactively choosing the domain
+#### Interactive Domain Selection
 
-Instead of using a pre-defined domain, in this method a pop-up window will appear for the user displaying the world map and the vorticity field. For using such method, the user can run, for example:
+- For interactive map-based domain selection, run:
 
 ```
 python lorenz-cycle.py path/to/infile.nc -r -c
 ```
 
-Firstly, the user must select an area for slicing the global data, which improves visualization and processing time. To select the area, the user needs to click twice on the screen. The first click selects the top-left corner of the area, and the second click selects the bottom-right corner. The order of these clicks does not matter.
+- First, define a slice of global data to enhance visualization and processing speed.
+- Select the computational area for each timestep:
 
 ![image](https://user-images.githubusercontent.com/56005607/214921907-e19d0024-08dc-4475-ab65-c953e04e7859.png)
 
-
-After this, the pop-up window will display the vorticity data for the selected area only. For each time step, the user will be prompted to select a computational area by clicking on the screen.
+- Each timestep prompts the user to select a computational area:
 
 ![image](https://user-images.githubusercontent.com/56005607/214922008-5b7c094f-c160-4415-a528-07cc58730827.png)
 
-After finishing the computations, it will be created a [track](#auxiliary files)  file containing the domain central latitude and longitude, its length and width and the minimum vorticity and maximum windspeed inside the domain.
+## File Naming Convention
 
-## File naming system
-
-Alhtough it is not necessary to, it is advisible to use a file naming convenction such as "object-of-study_file-source.nc". For example, if you wish to compute the energetics of the Katrina Hurricane, using data from the ERA5 model, the file name should be "Katrina_ERA5.nc". May you wish to use compund names for the system, separete then using a "-", for example: "Cyclone-20100101_NCEP-R2.nc".
-
+It's recommended to use a naming convention like "subject_source.nc" for input files. For compound names, use a hyphen, e.g., "Cyclone-20100101_NCEP-R2.nc".
 
 ## Flags
 
-- -r, --residuals
+- `-r`, `--residuals`: Compute the Dissipation and Generation terms as residuals.
+- `-f`, `--fixed`: Compute the energetics for a fixed domain specified by the 'box_limits' file.
+- `-t`, `--track`: Define the domain using a track file.
+- `-c`, `--choose`: Interactively select the domain for each time step.
+- `-o`, `--outname`: Specify an output name for the results.
+- `-z`, `--zeta`: Use the vorticity from the track file instead of computing it at 850 hPa.
+- `-g`, `--geopotential`: Use geopotential data instead of geopotential height.
+- `-m`, `--mpas`: Specify this flag if working with MPAS-A data processed with MPAS-BR routines.
+- `-p`, `--plots`: Generate plots.
 
-The default behaviour for computing the energetics, and the one intended by the works of Lorenz, was to compute the dissipation terms directly by using wind stress fields. However, for many of the reanalysis data, those variables are not available for all levels of the atmosphere. Therefore, the dissipation terms might be estimated as residuals from the budget equations (see the [first section](## What is the Lorenz Energy Cycle?)).
+Ensure that the provided NetCDF file and the `fvars` configuration align with the selected flags.
 
-- -m, --moving
-
-Compute the LEC using a fixed domain (see [fixed framework](#fixed framework))
-
-- -t, --track
-
-Compute the LEC using a domain that follows the system (see [moving framework](#moving framework))
-
-- -c, --choose
-
-For each time step, interactively select the domain (see [Moving domain](#moving domain))
-
-- -o, --outname
-
-Choose a name for saving the results (optional)
-
-- -g, --geopotential
-
-Use this flag when instead of Geopotential Height, Geopotential data is provided. It is required that the FVars file is adjusted accordingly, for example:
+**Example of 'fvars' file with geopotential:**
 
 ![image](https://user-images.githubusercontent.com/56005607/210860966-713243c8-7447-4661-a33d-a988ab1055cf.png)
 
