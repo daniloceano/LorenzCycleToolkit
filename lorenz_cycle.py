@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/20 10:05:52 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/04 10:41:27 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/09 09:23:37 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -45,18 +45,17 @@ def create_arg_parser():
         argparse.ArgumentParser: The argument parser object.
     """
     parser = argparse.ArgumentParser(description="Lorenz Energy Cycle (LEC) program.")
-    parser.add_argument("infile", help="Input .nc file with temperature, geopotential, and wind components.")
+    parser.add_argument("infile", help="Input .nc file with temperature, geopotential/geopotential height, and wind components data.")
     parser.add_argument("-r", "--residuals", action='store_true', help="Compute the Dissipation and Generation terms as residuals.")
     parser.add_argument("-g", "--geopotential", action='store_true', help="Use geopotential data instead of geopotential height.")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("-f", "--fixed", action='store_true', help="Compute the energetics for a fixed domain specified by the 'box_lims' file.")
-    group.add_argument("-t", "--track", action='store_true', help="Define the box using a track file specified by the 'track' file.")
-    group.add_argument("-c", "--choose", action='store_true', help="Choose the domain for each time step by clicking on the screen.")
-    parser.add_argument("-z", "--zeta", action='store_true', help="Use this flag if the track file was created using vorticity.")
-    parser.add_argument("-m", "--mpas", action='store_true', help="for MPAS-A data processed with MPAS-BR routines")
-    parser.add_argument("-p", "--plots", action='store_true', help="wether or not to make plots.")
-    parser.add_argument("-o", "--outname", type=str, help="Choose a name for saving results.")
-    parser.add_argument("-v", "--verbosity", action='store_true', help="Increase output verbosity.")
+    group.add_argument("-f", "--fixed", action='store_true', help="Compute the energetics for a fixed domain specified by the 'box_limits' file.")
+    group.add_argument("-t", "--track", action='store_true', help="Define the domain using a track file.")
+    group.add_argument("-c", "--choose", action='store_true', help="Interactively select the domain for each time step.")
+    parser.add_argument("-z", "--zeta", action='store_true', help="Use the vorticity from the track file instead of computing it at 850 hPa.")
+    parser.add_argument("-m", "--mpas", action='store_true', help="Specify this flag if working with MPAS-A data processed with MPAS-BR routines.")
+    parser.add_argument("-p", "--plots", action='store_true', help="Generate plots.")
+    parser.add_argument("-o", "--outname", type=str, help="Specify an output name for the results.")
     return parser
 
 def setup_results_directory(args, method):
