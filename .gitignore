@@ -183,6 +183,7 @@ src/automate-MPAS.sh
 # from vscode
 src/.vscode/launch.json
 plots/.vscode/launch.json
+.vscode/launch.json
 
 # testing periods
 src/periods.png
@@ -199,11 +200,16 @@ plots/LPS_test_barotropic.png
 plots/LPS_test_mixed_zoom.png
 plots/LPS_test_mixed.png
 
+# testing figures
+samples/*.png
+
 # debug
 src/debug.py
 src/*.csv
 debug
 debug*
+samples/Figures
 
 # error log
 src/error_log.txt
+
