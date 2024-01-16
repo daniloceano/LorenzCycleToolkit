@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/20 10:05:52 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/09 09:23:37 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/16 10:34:56 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -56,6 +56,7 @@ def create_arg_parser():
     parser.add_argument("-m", "--mpas", action='store_true', help="Specify this flag if working with MPAS-A data processed with MPAS-BR routines.")
     parser.add_argument("-p", "--plots", action='store_true', help="Generate plots.")
     parser.add_argument("-o", "--outname", type=str, help="Specify an output name for the results.")
+    parser.add_argument("-v", "--verbosity", type=str, help="Logger level set to debug mode.")
     return parser
 
 def setup_results_directory(args, method):
@@ -129,7 +130,7 @@ def main():
     # # Example usage for debugging
     # print("----------------------------------------------------------------------------")
     # print("WARNING: USING EXAMPLE ARGUMENTS")
-    # args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-t', '-r', '-p'])
+    # args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-f', '-r', '-p'])
     # print("----------------------------------------------------------------------------")
 
     # Set method
@@ -149,7 +150,8 @@ def main():
     app_logger.info(f"Command line arguments: {args}")
 
     # Prepare data
-    data = prepare_data(args)
+    climet = True if args.infile == 'climet' else False
+    data = prepare_data(args, fvars='inputs/fvars', climet=climet)
     
     # Run LEC analysis
     run_lec_analysis(data, args, results_subdirectory, figures_directory, app_logger)

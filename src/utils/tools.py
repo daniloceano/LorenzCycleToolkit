@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/29 14:08:09 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/16 10:22:44 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -71,13 +71,32 @@ def convert_longitude_range(df: xr.Dataset, lon_indexer: str) -> xr.Dataset:
     df = df.sortby(df[lon_indexer])
     return df
 
-def get_data(infile: str, varlist: str) -> xr.Dataset:
+def get_climate_data():
+    import climetlab as cml
+
+    dataset_name = "era5-pressure-levels"
+    variables = ["temperature", "u_component_of_wind", "v_component_of_wind", "vertical_velocity", "geopotential"]  
+    date_range = ["2020-01-01", "2020-01-31"] 
+    pressure_levels = [500, 700, 850]  
+    area = [50, -40, 20, 60] 
+
+    # Retrieve the dataset
+    dataset = cml.load_dataset(
+        dataset_name,
+        variable=variables,
+        pressure_level=pressure_levels,
+        date_range=date_range,
+        area=area
+    )
+
+def get_data(infile: str, varlist: str, climet: bool = False) -> xr.Dataset:
     """
     Opens a NetCDF file and extracts variables specified in a CSV file.
 
     Args:
         infile (str): Path to the NetCDF file.
         varlist (str): Path to the CSV file listing variables to extract.
+        climet (bool): Whether or not to use climetlab for retrieving data.
 
     Returns:
         xr.Dataset: Dataset containing extracted variables.
@@ -102,6 +121,9 @@ def get_data(infile: str, varlist: str) -> xr.Dataset:
     LonIndexer = variable_list_df.loc["Longitude"]["Variable"]
     LatIndexer = variable_list_df.loc["Latitude"]["Variable"]
     LevelIndexer = variable_list_df.loc["Vertical Level"]["Variable"]
+
+    if climet:
+        data = get_climate_data()
 
     logging.debug("Opening input data... ")
     try:
@@ -162,19 +184,20 @@ def find_extremum_coordinates(data: xr.DataArray, lat: xr.DataArray, lon: xr.Dat
 
     return lat_values[index[0]], lon_values[index[1]]
 
-def prepare_data(args, fvars: str = 'inputs/fvars') -> xr.Dataset:
+def prepare_data(args, fvars: str = 'inputs/fvars', climet: bool = False) -> xr.Dataset:
     """
     Prepare the data for further analysis.
 
     Parameters:
         args (object): The arguments for the function.
         fvars (str): The file path to the fvars.
+        climet (bool): Whether or not to use climetlab for retrieving data.
 
     Returns:
         method (str): The method used for the analysis: fixed, track or choose.
         xr.Dataset: The prepared dataset for analysis.
     """
-    data = get_data(args.infile, fvars)
+    data = get_data(args.infile, fvars, climet)
     if args.mpas:
         data = data.drop_dims('standard_height')
     
