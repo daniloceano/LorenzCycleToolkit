@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/08 15:33:32 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/16 19:18:51 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -489,7 +489,6 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
             f"lat range: {limits['min_lat']} to {limits['max_lat']}"
             )
 
-
         # Get position of  850 hPaextreme values for current time
         position = get_position(track if args.track else None, limits, izeta_850, ihgt_850, iwspd_850, LatIndexer, LonIndexer, args)
         app_logger.info(
@@ -580,12 +579,12 @@ if __name__ == '__main__':
         verbosity=False
     )
 
-    initialize_logging()
+    app_logger = initialize_logging()
 
     varlist = "../inputs/fvars_NCEP-R2"
     variable_list_df = pd.read_csv(varlist, sep=';', index_col=0, header=0)
 
-    data, method = prepare_data(args, varlist)
+    data, method = prepare_data(args, varlist, app_logger)
 
     dTdt =  data[variable_list_df.loc['Air Temperature']['Variable']].differentiate(
                 variable_list_df.loc['Time']['Variable'],datetime_unit='s') * units('K/s')

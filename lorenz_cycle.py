@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/20 10:05:52 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/16 10:58:10 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/16 16:06:28 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -131,7 +131,7 @@ def main():
     print("----------------------------------------------------------------------------")
     print("WARNING: USING EXAMPLE ARGUMENTS")
     args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-f', '-r', '-p'])
-    args = parser.parse_args(['climet', '-f', '-r', '-p'])
+    args = parser.parse_args(['cdsapi', '-t', '-r', '-p', '-g'])
     print("----------------------------------------------------------------------------")
 
     # Set method
@@ -151,8 +151,7 @@ def main():
     app_logger.info(f"Command line arguments: {args}")
 
     # Prepare data
-    climet = True if args.infile == 'climet' else False
-    data = prepare_data(args, fvars='inputs/fvars', climet=climet)
+    data = prepare_data(args, fvars='inputs/fvars', app_logger=app_logger)
     
     # Run LEC analysis
     run_lec_analysis(data, args, results_subdirectory, figures_directory, app_logger)
