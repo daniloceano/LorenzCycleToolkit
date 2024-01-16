@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/16 10:22:44 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/16 11:10:28 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -74,20 +74,22 @@ def convert_longitude_range(df: xr.Dataset, lon_indexer: str) -> xr.Dataset:
 def get_climate_data():
     import climetlab as cml
 
-    dataset_name = "era5-pressure-levels"
-    variables = ["temperature", "u_component_of_wind", "v_component_of_wind", "vertical_velocity", "geopotential"]  
-    date_range = ["2020-01-01", "2020-01-31"] 
-    pressure_levels = [500, 700, 850]  
-    area = [50, -40, 20, 60] 
+    dataset_name = "reanalysis-era5-pressure-levels"
+    variables = ["temperature", "u_component_of_wind", "v_component_of_wind", "vertical_velocity", "geopotential"]
+    date_range = ["2020-01-01", "2020-01-31"]
+    pressure_levels = [500, 700, 850]
+    area = [50, -40, 20, 60]
 
     # Retrieve the dataset
     dataset = cml.load_dataset(
         dataset_name,
         variable=variables,
         pressure_level=pressure_levels,
-        date_range=date_range,
+        date=date_range,
         area=area
     )
+
+    print(dataset)
 
 def get_data(infile: str, varlist: str, climet: bool = False) -> xr.Dataset:
     """
