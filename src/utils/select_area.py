@@ -192,15 +192,23 @@ def draw_box_map(u, v, zeta, hgt, lat, lon, timestr):
         
     return limits
 
-def slice_domain(NetCDF_data, args, varlist):
-    
-    dfVars = pd.read_csv(varlist,sep= ';',index_col=0,header=0)
-    
+def slice_domain(NetCDF_data, args, variable_list_df):
+    """
+    Slice a NetCDF dataset based on given limits and return the sliced dataset.
+
+    Parameters:
+        NetCDF_data (xarray.Dataset): The NetCDF dataset to be sliced.
+        args (argparse.Namespace): Command-line arguments.
+        variable_list_df (pandas.DataFrame): The DataFrame containing the variable list.
+
+    Returns:
+        xarray.Dataset: The sliced NetCDF dataset.
+    """  
     # Data indexers
-    LonIndexer = dfVars.loc['Longitude']['Variable']
-    LatIndexer = dfVars.loc['Latitude']['Variable']
-    TimeIndexer = dfVars.loc['Time']['Variable']
-    LevelIndexer = dfVars.loc['Vertical Level']['Variable']
+    LonIndexer = variable_list_df.loc['Longitude']['Variable']
+    LatIndexer = variable_list_df.loc['Latitude']['Variable']
+    TimeIndexer = variable_list_df.loc['Time']['Variable']
+    LevelIndexer = variable_list_df.loc['Vertical Level']['Variable']
     
     if args.fixed:
         dfbox = pd.read_csv('inputs/box_limits',header=None,
@@ -226,10 +234,8 @@ def slice_domain(NetCDF_data, args, varlist):
         track = pd.read_csv(trackfile,parse_dates=[0],
                             delimiter=';',index_col='time')
         if 'width' in track.columns:
-            method = 'track'
             max_width, max_length  = track['width'].max(), track['length'].max()
         else:
-            method = 'track-15x15'
             max_width, max_length = 15, 15
         
         WesternLimit = track['Lon'].min() - (max_width / 2) - dx
@@ -239,9 +245,9 @@ def slice_domain(NetCDF_data, args, varlist):
         
     elif args.choose:
         iu_850 = NetCDF_data.isel({TimeIndexer:0}).sel({LevelIndexer:8500}, method='nearest'
-                                                )[dfVars.loc['Eastward Wind Component']['Variable']]
+                                    )[variable_list_df.loc['Eastward Wind Component']['Variable']]
         iv_850 = NetCDF_data.isel({TimeIndexer:0}).sel({LevelIndexer:8500}, method='nearest'
-                                                )[dfVars.loc['Northward Wind Component']['Variable']]
+                                    )[variable_list_df.loc['Northward Wind Component']['Variable']]
         zeta = vorticity(iu_850, iv_850).metpy.dequantify()
         
         lat, lon = iu_850[LatIndexer], iu_850[LonIndexer]
