@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/20 10:05:52 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/16 16:06:28 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/17 08:51:00 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -56,6 +56,7 @@ def create_arg_parser():
     parser.add_argument("-m", "--mpas", action='store_true', help="Specify this flag if working with MPAS-A data processed with MPAS-BR routines.")
     parser.add_argument("-p", "--plots", action='store_true', help="Generate plots.")
     parser.add_argument("-o", "--outname", type=str, help="Specify an output name for the results.")
+    parser.add_argument("--cdsapi", type=str, help="Use CDS API for downloading data (experimental).")
     parser.add_argument("-v", "--verbosity", type=str, help="Logger level set to debug mode.")
     return parser
 
@@ -131,7 +132,7 @@ def main():
     print("----------------------------------------------------------------------------")
     print("WARNING: USING EXAMPLE ARGUMENTS")
     args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-f', '-r', '-p'])
-    args = parser.parse_args(['cdsapi', '-t', '-r', '-p', '-g'])
+    args = parser.parse_args(['Reg1-Representative_ERA5-cdsapi', '-t', '-r', '-p', '-g', '--cdsapi'])
     print("----------------------------------------------------------------------------")
 
     # Set method
