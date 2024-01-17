@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/17 08:15:21 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/17 14:56:33 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -118,8 +118,9 @@ def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: l
     # Convert unique dates to string format for the request
     dates = track.index.strftime('%Y%m%d').unique().tolist()
     time_range = f"{dates[0]}/{dates[-1]}"
-    area = f"{max_lat+15}/{min_lon+15}/{min_lat-15}/{max_lon-15}"
-    app_logger.debug(f"Requesting data for time range: {time_range} and area: {area}")
+    area = f"{max_lat+15}/{min_lon-15}/{min_lat-15}/{max_lon+15}"
+    time_step = str(int((track.index[1] - track.index[0]).total_seconds() / 3600))
+    app_logger.debug(f"Requesting data for area: {area}, time range: {time_range} and time step: {time_step}...")
     
     # Load ERA5 data
     app_logger.info("Retrieving data from CDS API...")
@@ -132,7 +133,7 @@ def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: l
             "pressure_level":pressure_levels,
             "date": time_range,
             "area": area,
-            'time':'00/to/23/by/1',
+            'time':f'00/to/23/by/{time_step}',
             "variable":variables,
         }, args.infile # save file as passed in arguments
     )
@@ -141,7 +142,7 @@ def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: l
         raise FileNotFoundError("CDS API file not created.")
     return args.infile
 
-def get_data(args: argparse.Namespace, variable_list_df: pd.DataFrame, app_logger: logging.Logger) -> xr.Dataset:
+def get_data(args: argparse.Namespace, app_logger: logging.Logger) -> xr.Dataset:
     """
     Opens a NetCDF file and extracts variables specified in a CSV file.
 
@@ -171,10 +172,7 @@ def get_data(args: argparse.Namespace, variable_list_df: pd.DataFrame, app_logge
     app_logger.debug("Opening input data... ")
     try:
         with dask.config.set(array={'slicing': {'split_large_chunks': True}}):
-            data = convert_longitude_range(
-                xr.open_dataset(infile),
-                variable_list_df.loc['Longitude']['Variable']
-            )
+            data = xr.open_dataset(infile)
     except FileNotFoundError:
         app_logger.error("Could not open file. Check if path, fvars file, and file format (.nc) are correct.")
         raise
@@ -186,12 +184,26 @@ def get_data(args: argparse.Namespace, variable_list_df: pd.DataFrame, app_logge
     return data
 
 def process_data(data: xr.Dataset, args: argparse.Namespace, variable_list_df: pd.DataFrame, app_logger: logging.Logger) -> xr.Dataset:
-
+    """
+    Process the given data and return a modified dataset.
+    
+    Parameters:
+    - data: A dataset containing the data to be processed (type: xr.Dataset).
+    - args: An argparse.Namespace object containing the command line arguments (type: argparse.Namespace).
+    - variable_list_df: A DataFrame containing a list of variables (type: pd.DataFrame).
+    - app_logger: A logger object for logging debug messages (type: logging.Logger).
+    
+    Returns:
+    - data: A modified dataset after processing (type: xr.Dataset).
+    """
     # Select only data matching the track dates
     if args.track:
         app_logger.debug("Selecting only data matching the track dates... ")    
         track = pd.read_csv('inputs/track', parse_dates=[0], delimiter=';', index_col='time')
         data = data.sel(time=track.index.values)
+
+    else:
+        data = convert_longitude_range(data, variable_list_df.loc['Longitude']['Variable'])
 
     LonIndexer = variable_list_df.loc["Longitude"]["Variable"]
     LatIndexer = variable_list_df.loc["Latitude"]["Variable"]
@@ -224,7 +236,7 @@ def prepare_data(args, varlist: str = 'inputs/fvars', app_logger: logging.Logger
     Parameters:
         args (object): The arguments for the function.
         varlist (str): The file path to the variable list file (fvars).
-        cdsapi (bool): Whether or not to use cdsapi for retrieving data.
+        app_logger (logging.Logger): The logger for the application.
 
     Returns:
         method (str): The method used for the analysis: fixed, track or choose.
@@ -244,7 +256,7 @@ def prepare_data(args, varlist: str = 'inputs/fvars', app_logger: logging.Logger
     app_logger.debug("List of variables found:\n" + str(variable_list_df))
 
 
-    data = get_data(args, variable_list_df, app_logger)
+    data = get_data(args, app_logger)
     processed_data = process_data(data, args, variable_list_df, app_logger)
     sliced_data = slice_domain(processed_data, args, variable_list_df)
     return sliced_data
