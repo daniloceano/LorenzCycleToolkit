@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/17 14:56:33 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/18 08:21:32 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -138,7 +138,7 @@ def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: l
         }, args.infile # save file as passed in arguments
     )
 
-    if not os.path.exists("cdsapi.nc"):
+    if not os.path.exists(args.infile):
         raise FileNotFoundError("CDS API file not created.")
     return args.infile
 
