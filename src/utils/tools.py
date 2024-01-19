@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/18 08:21:32 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/19 10:10:20 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -257,6 +257,12 @@ def prepare_data(args, varlist: str = 'inputs/fvars', app_logger: logging.Logger
 
 
     data = get_data(args, app_logger)
+
+    # Check if variable_list_df matches the data
+    if not set(variable_list_df['Variable']).issubset(set(data.variables)):
+        app_logger.error("The variable list does not match the data. Check if the 'fvar' text file is correct.")
+        raise ValueError("'fvar' text file does not match the data.")
+    
     processed_data = process_data(data, args, variable_list_df, app_logger)
     sliced_data = slice_domain(processed_data, args, variable_list_df)
     return sliced_data
