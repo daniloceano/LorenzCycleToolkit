@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/19 10:10:20 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/19 10:13:38 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -200,7 +200,8 @@ def process_data(data: xr.Dataset, args: argparse.Namespace, variable_list_df: p
     if args.track:
         app_logger.debug("Selecting only data matching the track dates... ")    
         track = pd.read_csv('inputs/track', parse_dates=[0], delimiter=';', index_col='time')
-        data = data.sel(time=track.index.values)
+        TimeIndexer = variable_list_df.loc["Time"]["Variable"]
+        data = data.sel({TimeIndexer:track.index.values})
 
     else:
         data = convert_longitude_range(data, variable_list_df.loc['Longitude']['Variable'])
