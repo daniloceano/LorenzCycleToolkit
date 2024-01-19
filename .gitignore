@@ -213,3 +213,5 @@ samples/Figures
 # error log
 src/error_log.txt
 
+# Files created by cdsapi
+*cdsapi*.nc

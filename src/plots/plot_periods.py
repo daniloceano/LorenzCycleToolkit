@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/01/02 23:38:49 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/03 12:13:48 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/18 16:13:37 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -47,7 +47,7 @@ def plot_periods(
                     "use_filter": 'auto',
                     "replace_endpoints_with_lowpass": 24,
                     "use_smoothing": 'auto',
-                    "use_smoothing_twice": 'auto',
+                    "use_smoothing_twice": False,
                     "savgol_polynomial": 3,
                     "cutoff_low": 168,
                     "cutoff_high": 48
