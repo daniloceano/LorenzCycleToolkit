@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/20 10:05:52 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/17 14:59:04 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/19 10:04:41 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -126,14 +126,14 @@ def main():
     
     # Parse command line arguments
     parser = create_arg_parser()
-    # args = parser.parse_args()
+    args = parser.parse_args()
 
     # Example usage for debugging
-    print("----------------------------------------------------------------------------")
-    print("WARNING: USING EXAMPLE ARGUMENTS")
+    # print("----------------------------------------------------------------------------")
+    # print("WARNING: USING EXAMPLE ARGUMENTS")
     # args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-f', '-r', '-p'])
-    args = parser.parse_args(['Reg1-Representative_ERA5-cdsapi.nc', '-t', '-r', '-p', '-g', '-v', '--cdsapi'])
-    print("----------------------------------------------------------------------------")
+    # args = parser.parse_args(['Reg1-Representative_ERA5-cdsapi.nc', '-t', '-r', '-p', '-g', '-v', '--cdsapi'])
+    # print("----------------------------------------------------------------------------")
 
     # Set method
     if args.fixed:
