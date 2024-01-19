@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/16 19:18:51 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/19 15:41:35 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -536,6 +536,11 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
 
     # Finalize and process results
     results_file, df  = finalize_results(times, terms_dict, args, results_subdirectory, out_track, app_logger)
+
+    if args.cdsapi:
+        app_logger.info('Deleting files from CDS...')
+        os.remove(args.infile)
+        app_logger.info('Done.')
 
     if args.plots:
         from glob import glob
