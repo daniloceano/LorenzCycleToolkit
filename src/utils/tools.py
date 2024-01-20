@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/19 10:13:38 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/20 14:47:01 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -20,14 +20,17 @@ import argparse
 from metpy.units import units
 from .select_area import slice_domain
 
-def initialize_logging(results_subdirectory, verbose=False):
+def initialize_logging(results_subdirectory, args):
     """
     Initializes the logging configuration for the application.
 
     Args:
         results_subdirectory (str): Directory path to save the log file.
-        verbose (bool): Flag to set logging level to DEBUG for detailed logging.
+        args (object): The argparse object containing the command line arguments.
     """
+
+    verbose = True if args.verbosity else False
+
     # Set root logger to higher severity level (INFO or ERROR)
     root_log_level = logging.ERROR if not verbose else logging.INFO
     logging.basicConfig(level=root_log_level, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -39,7 +42,8 @@ def initialize_logging(results_subdirectory, verbose=False):
     app_logger.propagate = False  # Prevent the logger from propagating messages to the root logger
 
     # Create file handler for saving logs
-    log_file = os.path.join(results_subdirectory, 'log.txt')
+    log_file_name = f'log.{os.path.basename(args.infile).split(".")[0]}'
+    log_file = os.path.join(results_subdirectory, log_file_name)
     file_handler = logging.FileHandler(log_file, mode='w')
     file_handler.setLevel(app_log_level)
     file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')

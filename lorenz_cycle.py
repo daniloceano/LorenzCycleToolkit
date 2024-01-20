@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/20 10:05:52 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/19 10:04:41 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/20 14:47:10 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -131,7 +131,7 @@ def main():
     # Example usage for debugging
     # print("----------------------------------------------------------------------------")
     # print("WARNING: USING EXAMPLE ARGUMENTS")
-    # args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-f', '-r', '-p'])
+    # # args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-f', '-r', '-p'])
     # args = parser.parse_args(['Reg1-Representative_ERA5-cdsapi.nc', '-t', '-r', '-p', '-g', '-v', '--cdsapi'])
     # print("----------------------------------------------------------------------------")
 
@@ -147,7 +147,7 @@ def main():
     results_subdirectory, figures_directory = setup_results_directory(args, method)
 
     # Initialize logging
-    app_logger = initialize_logging(results_subdirectory, args.verbosity)
+    app_logger = initialize_logging(results_subdirectory, args)
     app_logger.info("Starting LEC analysis")
     app_logger.info(f"Command line arguments: {args}")
 
