@@ -263,7 +263,7 @@ def slice_domain(NetCDF_data, args, variable_list_df):
     
     return NetCDF_data
 
-def plot_domain_attributes(data850, limits, FigsDirectory):
+def plot_domain_attributes(data850, limits, position, figures_directory):
 
     time = limits['datestr']
     central_lon, central_lat = limits['central_lon'], limits['central_lat']
@@ -293,11 +293,11 @@ def plot_domain_attributes(data850, limits, FigsDirectory):
     
     # Plot central point, mininum vorticity, minimum hgt and maximum wind
     ax.scatter(central_lon, central_lat,  marker='o', c='#31332e', s=100, zorder=4)
-    ax.scatter(data850['min_max_zeta']['longitude'], data850['min_max_zeta']['latitude'],
+    ax.scatter(position['min_max_zeta_850']['longitude'], position['min_max_zeta_850']['latitude'],
                 marker='s', c='#31332e', s=100, zorder=4, label='min/max zeta')
-    ax.scatter(data850['min_hgt']['longitude'], data850['min_hgt']['latitude'],
+    ax.scatter(position['min_hgt_850']['longitude'], position['min_hgt_850']['latitude'],
                  marker='x', c='#31332e', s=100, zorder=4, label='min hgt')
-    ax.scatter(data850['max_wind']['longitude'], data850['max_wind']['latitude'],
+    ax.scatter(position['max_wind_850']['longitude'], position['max_wind_850']['latitude'],
                  marker='^', c='#31332e', s=100, zorder=4, label='max wind')
     
     plt.legend(loc='upper left', frameon=True, fontsize=14, bbox_to_anchor=(1.1,1.2))
@@ -310,7 +310,7 @@ def plot_domain_attributes(data850, limits, FigsDirectory):
     # Add title
     plt.title('Box defined for computations\n', fontsize=22)
 
-    plot_zeta(ax, data850['min_max_zeta']['data'], data850['lat'], data850['lon'], data850['min_hgt']['data'])
+    plot_zeta(ax, data850['izeta_850'], data850['lat'], data850['lon'], data850['izeta_850'])
     ax.add_feature(COASTLINE,edgecolor='#283618',linewidth=1)
     ax.add_feature(BORDERS,edgecolor='#283618',linewidth=1)
     _ = ax.add_feature(cfeature.NaturalEarthFeature('physical',
@@ -327,7 +327,7 @@ def plot_domain_attributes(data850, limits, FigsDirectory):
     _ = ax.add_feature(cities, edgecolor='#283618',linewidth=1)
 
     # Save figure
-    boxes_directory = os.path.join(FigsDirectory, 'boxes')
+    boxes_directory = os.path.join(figures_directory, 'boxes')
     os.makedirs(boxes_directory, exist_ok=True)
     filename = os.path.join(boxes_directory, f'box_{time}.png')
     plt.savefig(filename)
