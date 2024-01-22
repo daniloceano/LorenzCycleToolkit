@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/01/02 23:38:49 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/18 16:13:37 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/22 15:24:01 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -22,7 +22,8 @@ def plot_periods(
           lat: xr.DataArray,
           results_subdirectory: str,
           figures_directory: str,
-          app_logger: logging.Logger):
+          app_logger: logging.Logger,
+          processed_vorticity: bool=False,):
         """
         Calls the cyclophaser function to determine the life cycle periods.
 
@@ -71,6 +72,15 @@ def plot_periods(
         else:
             options = options_low_res
             app_logger.info(f"Using low resolution options for cyclophaser (dx = {dx}): %s", options)
+
+        # If vorticity is given and the information is on trackfile, it means that it is already processed
+        if processed_vorticity:
+            options = {
+                    "use_filter": False,
+                    "use_smoothing": len(vorticity_data) // 8 | 1 if len(vorticity_data) // 8 | 1 > 0 else 1,
+                    "use_smoothing_twice": False,
+                }
+            app_logger.info("Vorticity already processed, using low resolution options for cyclophaser: %s", options)
 
         periods_args = {
             "plot": os.path.join(periods_figure_directory, 'periods'),
