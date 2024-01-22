@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/16 19:18:51 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/22 15:59:24 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -119,7 +119,7 @@ def extract_wind_and_height_components(idata, variable_list_df, args):
 
     return iu, iv, ihgt
 
-def get_limits(args, t, data850, iu_850, iv_850, track=None):
+def get_limits(args, t, data850, track=None):
     """
     Determine the central position of the system at a specific time and the box dimensions.
     This function calculates the central latitude and longitude, as well as the dimensions
@@ -149,8 +149,10 @@ def get_limits(args, t, data850, iu_850, iv_850, track=None):
 
     elif args.choose:
         # For the 'choose' option, interactively determine the box limits
-        izeta_850, ihgt_850, = data850['min_max_zeta']['data'], data850['min_hgt']['data']
-        limits = draw_box_map(iu_850, iv_850, izeta_850, ihgt_850, data850['lat'], data850['lon'], t)
+        izeta_850, ihgt_850, = data850['izeta_850'], data850['ihgt_850']
+        iu_850, iv_850 = data850['iu_850'], data850['iv_850']
+        lat, lon = data850['lat'], data850['lon']
+        limits = draw_box_map(iu_850, iv_850, izeta_850, ihgt_850, lat, lon, t)
         central_lat, central_lon = (limits['max_lat'] + limits['min_lat']) / 2, (limits['max_lon'] + limits['min_lon']) / 2
         width, length = limits['max_lon'] - limits['min_lon'], limits['max_lat'] - limits['min_lat']
 
@@ -215,10 +217,14 @@ def get_position(track, limits, izeta_850, ihgt_850, iwspd_850, LatIndexer, LonI
         min_max_zeta = float(track.loc[track_itime, 'min_max_zeta_850'])
     else:
         # Fallback logic if 'min_max_zeta_850' is not available
-        if track is not None and args.zeta:
-            # When args.zeta, whe trust the vorticity from the trackfile
+        if track is not None and args.zeta and 'min_max_zeta_850' not in track.columns:
+            # When args.zeta, whe trust the vorticity from the trackfile. If 'min_max_zeta_850' is not available, we need to calculate it
             min_max_zeta_unformatted = izeta_850.sel(latitude=limits['central_lat'], longitude=limits['central_lon'], method='nearest')
+        elif track is not None and args.zeta and 'min_max_zeta_850' in track.columns:
+            # When args.zeta, whe trust the vorticity from the trackfile. If 'min_max_zeta_850' is available, we use it
+            min_max_zeta_unformatted = track.loc[track_itime, 'min_max_zeta_850']
         else:
+            # When not args.zeta, we need to find the min vorticity in the box and calculate it
             izeta_850_slice = izeta_850.sel({LatIndexer: slice(limits['min_lat'], limits['max_lat']), LonIndexer: slice(limits['min_lon'], limits['max_lon'])})
             min_max_zeta_unformatted = izeta_850_slice.min()
 
@@ -243,55 +249,28 @@ def get_position(track, limits, izeta_850, ihgt_850, iwspd_850, LatIndexer, LonI
         iwspd_850_slice = iwspd_850.sel({LatIndexer: slice(limits['min_lat'], limits['max_lat']), LonIndexer: slice(limits['min_lon'], limits['max_lon'])})
         max_wind = float(iwspd_850_slice.max())
 
+    # Find extremum coordinates
+    lat_slice, lon_slice = izeta_850_slice[LatIndexer], izeta_850_slice[LonIndexer]
+    min_max_zeta_lat, min_max_zeta_lon = find_extremum_coordinates(izeta_850_slice, lat_slice, lon_slice, 'min_max_zeta')
+    min_hgt_lat, min_hgt_lon = find_extremum_coordinates(ihgt_850_slice, lat_slice, lon_slice, 'min_hgt')
+    max_wind_lat, max_wind_lon = find_extremum_coordinates(iwspd_850_slice, lat_slice, lon_slice, 'max_wind')
+
     position = {
-        'min_max_zeta_850': min_max_zeta,
-        'min_hgt_850': min_hgt,
-        'max_wind_850': max_wind
+        'min_max_zeta_850': {'latitude': min_max_zeta_lat, 'longitude': min_max_zeta_lon, 'value': min_max_zeta},
+        'min_hgt_850': {'latitude': min_hgt_lat, 'longitude': min_hgt_lon, 'value': min_hgt},
+        'max_wind_850': {'latitude': max_wind_lat, 'longitude': max_wind_lon, 'value': max_wind}
     }
 
     return position
 
-def construct_data850(izeta_850, ihgt_850, iwspd_850, lat, lon):
-    """
-    Construct a dictionary with key meteorological features at 850 hPa and their corresponding
-    latitude, longitude, and data.
-
-    Args:
-        izeta_850 (xr.DataArray): Vorticity data at 850 hPa.
-        ight_850 (xr.DataArray): Geopotential height data at 850 hPa.
-        iwspd_850 (xr.DataArray): Wind speed data at 850 hPa.
-        lat (xr.DataArray): Latitude data array.
-        lon (xr.DataArray): Longitude data array.
-
-    Returns:
-        dict: Dictionary containing meteorological features at 850 hPa with their coordinates and data.
-    """
-    # Find extremum coordinates for each feature
-    min_max_zeta_lat, min_max_zeta_lon = find_extremum_coordinates(izeta_850, lat, lon, 'min_max_zeta')
-    min_hgt_lat, min_hgt_lon = find_extremum_coordinates(ihgt_850, lat, lon, 'min_hgt')
-    max_wind_lat, max_wind_lon = find_extremum_coordinates(iwspd_850, lat, lon, 'max_wind')
-
-    data850 = {
-        'min_max_zeta': {
-            'latitude': min_max_zeta_lat,
-            'longitude': min_max_zeta_lon,
-            'data': izeta_850
-        },
-        'min_hgt': {
-            'latitude': min_hgt_lat,
-            'longitude': min_hgt_lon,
-            'data': ihgt_850
-        },
-        'max_wind': {
-            'latitude': max_wind_lat,
-            'longitude': max_wind_lon,
-            'data': iwspd_850
-        },
-        'lat': lat,
-        'lon': lon,
-    }
-
-    return data850 
+def flatten_position(position):
+    """Flatten the position dictionary to include latitude, longitude, and value as separate keys."""
+    flattened = {}
+    for key, value in position.items():
+        flattened[f"{key}_lat"] = value['latitude']
+        flattened[f"{key}_lon"] = value['longitude']
+        flattened[f"{key}"] = value['value']
+    return flattened
 
 def compute_and_store_terms(box_obj, terms_dict, app_logger):
     """
@@ -478,10 +457,12 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
         # Compute wind speed and vorticity at 850 hPa
         iwspd_850, izeta_850 = wind_speed(iu_850, iv_850), vorticity(iu_850, iv_850).metpy.dequantify()
         lat, lon = idata[LatIndexer], idata[LonIndexer]
-        data850 = construct_data850(izeta_850, ihgt_850, iwspd_850, lat, lon)
+        # data850 = construct_data850(izeta_850, ihgt_850, iwspd_850, lat, lon)
+        data850 = {'izeta_850': izeta_850, 'ihgt_850': ihgt_850, 'iwspd_850': iwspd_850,
+                    'iu_850': iu_850, 'iv_850': iv_850, 'lat': lat, 'lon': lon}
 
         # Get box attributes for current time
-        limits = get_limits(args, t, data850, iu_850, iv_850, track if args.track else None)
+        limits = get_limits(args, t, data850, track if args.track else None)
         app_logger.info(
             f"central lat: {limits['central_lat']}, central lon: {limits['central_lon']}, "
             f"size: {limits['length']} x {limits['width']}, "
@@ -493,13 +474,19 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
         position = get_position(track if args.track else None, limits, izeta_850, ihgt_850, iwspd_850, LatIndexer, LonIndexer, args)
         app_logger.info(
             f"850 hPa diagnostics --> "
-            f"min/max ζ: {position['min_max_zeta_850']:.2e}, "
-            f"min geopotential height: {position['min_hgt_850']:.0f}, "
-            f"max wind speed: {position['max_wind_850']:.4f}"
+            f"min/max ζ: {position['min_max_zeta_850']['value']:.2e}, "
+            f"min geopotential height: {position['min_hgt_850']['value']:.0f}, "
+            f"max wind speed: {position['max_wind_850']['value']:.2f}"
         )
+        app_logger.info(
+            f"850 hPa positions (lat/lon) --> "
+            f"min/max ζ: {position['min_max_zeta_850']['latitude']:.2f}, {position['min_max_zeta_850']['longitude']:.2f}, "
+            f"min geopotential height: {position['min_hgt_850']['latitude']:.2f}, {position['min_hgt_850']['longitude']:.2f}, "
+            f"max wind speed: {position['max_wind_850']['latitude']:.2f}, {position['max_wind_850']['longitude']:.2f}")
 
         # Store results
-        limits_and_position = {**limits, **position}
+        flattened_position = flatten_position(position)
+        limits_and_position = {**limits, **flattened_position}
         new_entry = pd.DataFrame([limits_and_position], index=[t.strftime('%Y-%m-%d-%H%M')])
         if out_track.empty:
             out_track = new_entry
@@ -507,7 +494,7 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
             out_track = pd.concat([out_track, new_entry], ignore_index=True)
 
         # Save figure with the domain box, extreme values, vorticity and geopotential height
-        plot_domain_attributes(data850, limits, figures_directory)
+        plot_domain_attributes(data850, limits, position, figures_directory)
 
         # Create box object
         app_logger.info("Creating box object...")
@@ -552,14 +539,22 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
         app_logger.info('Generating plots..')
         figures_directory = os.path.join(results_subdirectory, 'Figures')
         track_file = glob(os.path.join(results_subdirectory, '*trackfile'))[0]
+
+        # Basic diagnostics plots
         plot_min_zeta_hgt(track_file, figures_directory, app_logger)
         plot_timeseries(results_file, figures_directory, app_logger)
         plot_hovmoller(results_file, figures_directory, app_logger)
         boxplot_terms(results_file, results_subdirectory, figures_directory, app_logger)
-        plot_periods(out_track, times, lat, results_subdirectory, figures_directory, app_logger)
+
+        # Determine periods: if vorticity is already processed, don't filter the series
+        processed_vorticity = True if args.zeta and 'min_max_zeta_850' in track.columns else False
+        plot_periods(out_track, times, lat, results_subdirectory, figures_directory, app_logger, processed_vorticity=processed_vorticity)
+
+        # Use found periods for other plots
         plot_lorenz_cycle(results_file, figures_directory, os.path.join(results_subdirectory, 'periods.csv'), app_logger)
         plot_LPS(df, args.infile, results_subdirectory, figures_directory, app_logger)
         map_track(results_file, track_file, figures_directory, app_logger)
+
         app_logger.info('Done.')
 
 if __name__ == '__main__':
