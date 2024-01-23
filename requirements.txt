@@ -13,11 +13,12 @@ cloudpickle==3.0.0
 cmocean==3.0.3
 contourpy==1.2.0
 cycler==0.12.1
+cyclophaser==1.6.0
 dask==2024.1.0
 eccodes==1.6.1
 ecmwf-api-client==1.6.3
 ecmwf-opendata==0.2.0
-ecmwflibs==0.5.5
+ecmwflibs==0.5.3
 entrypoints==0.4
 filelock==3.13.1
 findlibs==0.0.5
@@ -26,9 +27,11 @@ fsspec==2023.12.2
 idna==3.6
 imageio==2.33.1
 importlib-metadata==7.0.1
+importlib-resources==6.1.1
 Jinja2==3.1.3
 kiwisolver==1.4.5
 locket==1.0.0
+lorenz-phase-space==0.0.9
 lru-dict==1.3.0
 Magics==1.5.8
 Markdown==3.5.2
