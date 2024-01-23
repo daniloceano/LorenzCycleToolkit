@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/23 10:33:37 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/23 10:39:05 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -182,25 +182,37 @@ def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: l
     # Calculate midpoint of time range
     midpoint = track.index[len(track.index) // 2]
 
-    # Define two time ranges
-    first_half = track.index[0].strftime('%Y%m%d') + '/' + midpoint.strftime('%Y%m%d')
-    second_half = midpoint.strftime('%Y%m%d') + '/' + track.index[-1].strftime('%Y%m%d')
+    # Calculate quarter time points
+    quarter_len = len(track.index) // 4
+    first_quarter_end = track.index[quarter_len - 1]
+    second_quarter_end = track.index[2 * quarter_len - 1]
+    third_quarter_end = track.index[3 * quarter_len - 1]
+
+    # Define four time ranges
+    time_ranges = [
+        track.index[0].strftime('%Y%m%d') + '/' + first_quarter_end.strftime('%Y%m%d'),
+        first_quarter_end.strftime('%Y%m%d') + '/' + second_quarter_end.strftime('%Y%m%d'),
+        second_quarter_end.strftime('%Y%m%d') + '/' + third_quarter_end.strftime('%Y%m%d'),
+        third_quarter_end.strftime('%Y%m%d') + '/' + track.index[-1].strftime('%Y%m%d')
+    ]
 
     area = f"{max_lat}/{min_lon}/{min_lat}/{max_lon}"
 
     # Retrieve data in parallel
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        future_first_half = executor.submit(retrieve_cds_data, first_half, pressure_levels, variables, area, "first_half.nc")
-        future_second_half = executor.submit(retrieve_cds_data, second_half, pressure_levels, variables, area, "second_half.nc")
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        future_results = [executor.submit(retrieve_cds_data, tr, pressure_levels, variables, area, f"part_{i}.nc") for i, tr in enumerate(time_ranges)]
+        files = [future.result() for future in future_results]
 
-        file_first_half = future_first_half.result()
-        file_second_half = future_second_half.result()
+    # Merge the datasets
+    datasets = []
+    for file in files:
+        if os.path.exists(file):
+            datasets.append(xr.open_dataset(file))
+        else:
+            raise FileNotFoundError(f"Error in retrieving CDS API data: {file} not found.")
 
-    # Merge the two datasets
-    if os.path.exists(file_first_half) and os.path.exists(file_second_half):
-        data_first_half = xr.open_dataset(file_first_half)
-        data_second_half = xr.open_dataset(file_second_half)
-        merged_data = xr.concat([data_first_half, data_second_half], dim='time')
+    if datasets:
+        merged_data = xr.concat(datasets, dim='time')
         merged_data.to_netcdf(args.infile)
         return args.infile
     else:
