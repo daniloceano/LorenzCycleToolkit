@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/01/02 23:38:49 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/23 09:09:24 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/23 09:10:11 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -80,7 +80,7 @@ def plot_periods(
                     "use_smoothing": "auto",
                     "use_smoothing_twice": "auto",
                 }
-            app_logger.info("Vorticity already processed, using low resolution options for cyclophaser: %s", options)
+            app_logger.info("Vorticity already processed, using default smoothing options for cyclophaser: %s", options)
 
         periods_args = {
             "plot": os.path.join(periods_figure_directory, 'periods'),
