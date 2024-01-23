@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/20 14:47:01 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/22 23:04:16 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -167,7 +167,7 @@ def get_data(args: argparse.Namespace, app_logger: logging.Logger) -> xr.Dataset
     if args.cdsapi:
         if not os.path.exists(infile):
             app_logger.debug("CDS API data not found. Attempting to retrieve data from CDS API...")
-            track = pd.read_csv('inputs/track', parse_dates=[0], delimiter=';', index_col='time')
+            track = pd.read_csv(args.cdsapi, parse_dates=[0], delimiter=';', index_col='time')
             infile = get_cdsapi_data(args, track, app_logger)
             app_logger.debug(f"CDS API data: {infile}")
         else:
@@ -202,8 +202,9 @@ def process_data(data: xr.Dataset, args: argparse.Namespace, variable_list_df: p
     """
     # Select only data matching the track dates
     if args.track:
-        app_logger.debug("Selecting only data matching the track dates... ")    
-        track = pd.read_csv('inputs/track', parse_dates=[0], delimiter=';', index_col='time')
+        app_logger.debug("Selecting only data matching the track dates... ")
+        track_file = args.cdsapi if args.cdsapi else 'inputs/track'   
+        track = pd.read_csv(track_file, parse_dates=[0], delimiter=';', index_col='time')
         TimeIndexer = variable_list_df.loc["Time"]["Variable"]
         data = data.sel({TimeIndexer:track.index.values})
 

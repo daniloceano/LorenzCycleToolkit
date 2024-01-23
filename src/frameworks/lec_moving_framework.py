@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/22 15:59:24 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/22 23:06:52 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -50,12 +50,15 @@ def create_terms_dict(args):
     terms = energy_terms + conversion_terms + boundary_terms + generation_dissipation_terms
     return {term: [] for term in terms}
 
-def handle_track_file(data, times, LonIndexer, LatIndexer, app_logger):
+def handle_track_file(data, times, LonIndexer, LatIndexer, args, app_logger):
     """
     Handles the track file by validating its time and spatial limits against the provided dataset.
 
     Args:
         data (xr.Dataset): A Xarray Dataset containing the data to compute the energy cycle.
+        times (pd.DatetimeIndex): The time series of the dataset.
+        LonIndexer (str): The name of the longitude coordinate in the dataset.
+        LatIndexer (str): The name of the latitude coordinate in the dataset.
         args (argparse.Namespace): Arguments provided to the script.
         app_logger (logging.Logger): Logger for logging messages.
 
@@ -66,7 +69,10 @@ def handle_track_file(data, times, LonIndexer, LatIndexer, app_logger):
         FileNotFoundError: If the track file is not found.
         ValueError: If the time or spatial limits of the track file do not match the dataset.
     """
-    trackfile = 'inputs/track'
+    if args.cdsapi:
+        trackfile =  args.cdsapi
+    else:
+        trackfile = 'inputs/track'
     try:
         track = pd.read_csv(trackfile, parse_dates=[0], delimiter=';', index_col='time')
 
@@ -423,7 +429,7 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
     times = pd.to_datetime(data[TimeName].values)
 
     # Get the system track and check for errors
-    track = handle_track_file(data, times, LonIndexer, LatIndexer, app_logger)
+    track = handle_track_file(data, times, LonIndexer, LatIndexer, args, app_logger)
 
     # Dictionary for saving system position and attributes
     results_keys = ['datestr', 'central_lat', 'central_lon', 'length', 'width',
