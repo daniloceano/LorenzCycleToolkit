@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/20 10:05:52 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/22 23:13:21 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/22 23:46:01 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -56,7 +56,8 @@ def create_arg_parser():
     parser.add_argument("-m", "--mpas", action='store_true', help="Specify this flag if working with MPAS-A data processed with MPAS-BR routines.")
     parser.add_argument("-p", "--plots", action='store_true', help="Generate plots.")
     parser.add_argument("-v", "--verbosity", action='store_true', help="Logger level set to debug mode.")
-    parser.add_argument("--cdsapi", type=str, help="Use CDS API for downloading data and specify path to trackfile (experimental).")
+    parser.add_argument("--cdsapi", action='store_true', help="Use CDS API for downloading data (experimental).")
+    parser.add_argument("--trackfile", type=str, default='inputs/track', help="Specify a custom track file. Default is 'inputs/track'.")
     parser.add_argument("-o", "--outname", type=str, help="Specify an output name for the results.")
     return parser
 
@@ -131,7 +132,7 @@ def main():
     # Example usage for debugging
     # print("----------------------------------------------------------------------------")
     # print("WARNING: USING EXAMPLE ARGUMENTS")
-    # args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-t', '-r', '-p'])
+    # args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-t', '-r', '-p', '-v'])
     # # args = parser.parse_args(['Reg1-Representative_ERA5-cdsapi.nc', '-t', '-r', '-p', '-g', '-v', '--cdsapi'])
     # print("----------------------------------------------------------------------------")
 

@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/22 23:06:52 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/22 23:45:08 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -69,10 +69,10 @@ def handle_track_file(data, times, LonIndexer, LatIndexer, args, app_logger):
         FileNotFoundError: If the track file is not found.
         ValueError: If the time or spatial limits of the track file do not match the dataset.
     """
-    if args.cdsapi:
-        trackfile =  args.cdsapi
-    else:
-        trackfile = 'inputs/track'
+    
+    trackfile = args.trackfile
+    app_logger.debug(f"Using track file: {trackfile}")
+
     try:
         track = pd.read_csv(trackfile, parse_dates=[0], delimiter=';', index_col='time')
 
