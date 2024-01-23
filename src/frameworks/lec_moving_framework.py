@@ -530,6 +530,11 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
     # Finalize and process results
     results_file, df  = finalize_results(times, terms_dict, args, results_subdirectory, out_track, app_logger)
 
+    if args.cdsapi:
+        app_logger.info('Deleting files from CDS...')
+        os.remove(args.infile)
+        app_logger.info('Done.')
+
     if args.plots:
         from glob import glob
         
