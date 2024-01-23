@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/23 10:31:28 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/23 10:33:37 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -165,7 +165,7 @@ def retrieve_cds_data(time_range, pressure_levels, variables, area, file_name):
     )
     return file_name
 
-def get_cdsapi_data_half(args: argparse.Namespace, track: pd.DataFrame, app_logger: logging.Logger) -> xr.Dataset:
+def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: logging.Logger) -> xr.Dataset:
 
     # Extract bounding box (lat/lon limits) from track
     min_lat, max_lat = track['Lat'].min(), track['Lat'].max()
