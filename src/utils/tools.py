@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/22 23:42:34 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/23 10:20:05 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -124,6 +124,7 @@ def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: l
     time_range = f"{dates[0]}/{dates[-1]}"
     area = f"{max_lat+15}/{min_lon-15}/{min_lat-15}/{max_lon+15}"
     time_step = str(int((track.index[1] - track.index[0]).total_seconds() / 3600))
+    time_step = "3" if time_step == '1' else time_step
     app_logger.debug(f"Requesting data for area: {area}, time range: {time_range} and time step: {time_step}...")
     
     # Load ERA5 data
