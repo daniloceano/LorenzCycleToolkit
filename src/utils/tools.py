@@ -6,17 +6,19 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/23 10:20:05 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/23 10:31:28 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 import os
 import dask
 import logging
+import cdsapi
 import xarray as xr
 import pandas as pd
 import numpy as np
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from metpy.units import units
 from .select_area import slice_domain
 
@@ -103,8 +105,67 @@ def find_extremum_coordinates(data: xr.DataArray, lat: xr.DataArray, lon: xr.Dat
 
     return lat_values[index[0]], lon_values[index[1]]
 
-def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: logging.Logger) -> xr.Dataset:
-    import cdsapi
+# def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: logging.Logger) -> xr.Dataset:
+#     import cdsapi
+
+#     # Extract bounding box (lat/lon limits) from track
+#     min_lat, max_lat = track['Lat'].min(), track['Lat'].max()
+#     min_lon, max_lon = track['Lon'].min(), track['Lon'].max()
+
+#     pressure_levels = ['1', '2', '3', '5', '7', '10', '20', '30', '50', '70',
+#                        '100', '125', '150', '175', '200', '225', '250', '300', '350',
+#                        '400', '450', '500', '550', '600', '650', '700', '750', '775',
+#                        '800', '825', '850', '875', '900', '925', '950', '975', '1000']
+    
+#     variables = ["u_component_of_wind", "v_component_of_wind", "temperature",
+#                  "vertical_velocity", "geopotential"]
+    
+
+#     # Convert unique dates to string format for the request
+#     dates = track.index.strftime('%Y%m%d').unique().tolist()
+#     time_range = f"{dates[0]}/{dates[-1]}"
+#     area = f"{max_lat+15}/{min_lon-15}/{min_lat-15}/{max_lon+15}"
+#     time_step = str(int((track.index[1] - track.index[0]).total_seconds() / 3600))
+#     time_step = "3" if time_step == '1' else time_step
+#     app_logger.debug(f"Requesting data for area: {area}, time range: {time_range} and time step: {time_step}...")
+    
+#     # Load ERA5 data
+#     app_logger.info("Retrieving data from CDS API...")
+#     c = cdsapi.Client()
+#     c.retrieve(
+#         "reanalysis-era5-pressure-levels",
+#         {
+#             "product_type":"reanalysis",
+#             "format": "netcdf",
+#             "pressure_level":pressure_levels,
+#             "date": time_range,
+#             "area": area,
+#             'time':f'00/to/23/by/{time_step}',
+#             "variable":variables,
+#         }, args.infile # save file as passed in arguments
+#     )
+
+#     if not os.path.exists(args.infile):
+#         raise FileNotFoundError("CDS API file not created.")
+#     return args.infile
+
+def retrieve_cds_data(time_range, pressure_levels, variables, area, file_name):
+    c = cdsapi.Client()
+    c.retrieve(
+        "reanalysis-era5-pressure-levels",
+        {
+            "product_type": "reanalysis",
+            "format": "netcdf",
+            "pressure_level": pressure_levels,
+            "date": time_range,
+            "area": area,
+            'time': '00/to/23/by/1',
+            "variable": variables,
+        }, file_name
+    )
+    return file_name
+
+def get_cdsapi_data_half(args: argparse.Namespace, track: pd.DataFrame, app_logger: logging.Logger) -> xr.Dataset:
 
     # Extract bounding box (lat/lon limits) from track
     min_lat, max_lat = track['Lat'].min(), track['Lat'].max()
@@ -118,34 +179,33 @@ def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: l
     variables = ["u_component_of_wind", "v_component_of_wind", "temperature",
                  "vertical_velocity", "geopotential"]
     
+    # Calculate midpoint of time range
+    midpoint = track.index[len(track.index) // 2]
 
-    # Convert unique dates to string format for the request
-    dates = track.index.strftime('%Y%m%d').unique().tolist()
-    time_range = f"{dates[0]}/{dates[-1]}"
-    area = f"{max_lat+15}/{min_lon-15}/{min_lat-15}/{max_lon+15}"
-    time_step = str(int((track.index[1] - track.index[0]).total_seconds() / 3600))
-    time_step = "3" if time_step == '1' else time_step
-    app_logger.debug(f"Requesting data for area: {area}, time range: {time_range} and time step: {time_step}...")
-    
-    # Load ERA5 data
-    app_logger.info("Retrieving data from CDS API...")
-    c = cdsapi.Client()
-    c.retrieve(
-        "reanalysis-era5-pressure-levels",
-        {
-            "product_type":"reanalysis",
-            "format": "netcdf",
-            "pressure_level":pressure_levels,
-            "date": time_range,
-            "area": area,
-            'time':f'00/to/23/by/{time_step}',
-            "variable":variables,
-        }, args.infile # save file as passed in arguments
-    )
+    # Define two time ranges
+    first_half = track.index[0].strftime('%Y%m%d') + '/' + midpoint.strftime('%Y%m%d')
+    second_half = midpoint.strftime('%Y%m%d') + '/' + track.index[-1].strftime('%Y%m%d')
 
-    if not os.path.exists(args.infile):
-        raise FileNotFoundError("CDS API file not created.")
-    return args.infile
+    area = f"{max_lat}/{min_lon}/{min_lat}/{max_lon}"
+
+    # Retrieve data in parallel
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        future_first_half = executor.submit(retrieve_cds_data, first_half, pressure_levels, variables, area, "first_half.nc")
+        future_second_half = executor.submit(retrieve_cds_data, second_half, pressure_levels, variables, area, "second_half.nc")
+
+        file_first_half = future_first_half.result()
+        file_second_half = future_second_half.result()
+
+    # Merge the two datasets
+    if os.path.exists(file_first_half) and os.path.exists(file_second_half):
+        data_first_half = xr.open_dataset(file_first_half)
+        data_second_half = xr.open_dataset(file_second_half)
+        merged_data = xr.concat([data_first_half, data_second_half], dim='time')
+        merged_data.to_netcdf(args.infile)
+        return args.infile
+    else:
+        raise FileNotFoundError("Error in retrieving CDS API data.")
+
 
 def get_data(args: argparse.Namespace, app_logger: logging.Logger) -> xr.Dataset:
     """
