@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/01/02 23:38:49 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/22 15:24:01 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/23 09:09:24 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -57,7 +57,7 @@ def plot_periods(
         options_low_res = {
                     "use_filter": len(vorticity_data) // 6 if len(vorticity_data) // 6 > 3 else 4,
                     "replace_endpoints_with_lowpass": 24,
-                    "use_smoothing": len(vorticity_data) // 8 | 1 if len(vorticity_data) // 8 | 1 > 0 else 1,
+                    "use_smoothing": len(vorticity_data) // 8 | 1 if len(vorticity_data) // 8 | 1 > 3 else 3,
                     "use_smoothing_twice": False,
                     "savgol_polynomial": 3,
                     "cutoff_low": 168,
@@ -77,8 +77,8 @@ def plot_periods(
         if processed_vorticity:
             options = {
                     "use_filter": False,
-                    "use_smoothing": len(vorticity_data) // 8 | 1 if len(vorticity_data) // 8 | 1 > 0 else 1,
-                    "use_smoothing_twice": False,
+                    "use_smoothing": "auto",
+                    "use_smoothing_twice": "auto",
                 }
             app_logger.info("Vorticity already processed, using low resolution options for cyclophaser: %s", options)
 
