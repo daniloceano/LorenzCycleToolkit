@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/22 23:45:08 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/24 09:00:18 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -500,7 +500,8 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
             out_track = pd.concat([out_track, new_entry], ignore_index=True)
 
         # Save figure with the domain box, extreme values, vorticity and geopotential height
-        plot_domain_attributes(data850, limits, position, figures_directory)
+        if args.plots:
+            plot_domain_attributes(data850, limits, position, figures_directory)
 
         # Create box object
         app_logger.info("Creating box object...")
