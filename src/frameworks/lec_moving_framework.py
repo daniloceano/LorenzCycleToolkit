@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/24 09:00:18 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/25 13:48:26 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -80,15 +80,21 @@ def handle_track_file(data, times, LonIndexer, LatIndexer, args, app_logger):
         data_lon_max, data_lon_min = data[LonIndexer].max(), data[LonIndexer].min()
         data_lat_max, data_lat_min = data[LatIndexer].max(), data[LatIndexer].min()
 
+        app_logger.debug(f"Data spatial limits --> lon_min: {data_lon_min} - lon_max: {data_lon_max}, lat_min: {data_lat_min} - lat_max: {data_lat_max}")
+        app_logger.debug(f"Track spatial limits --> lon_min: {track['Lon'].min()} - lon_max: {track['Lon'].max()}, lat_min: {track['Lat'].min()} - lat_max: {track['Lat'].max()}")
+
         # Validate time limits
         if track.index[0] < times.min() or track.index[-1] > times.max():
+            app_logger.error("Track time limits do not match with data time limits.")
             raise ValueError("Track time limits do not match with data time limits.")
 
         # Validate spatial limits
         if track['Lon'].max() > data_lon_max or track['Lon'].min() < data_lon_min:
-            raise ValueError("Track longitude limits do not match with data longitude limits.")
+            app_logger.error("Track longitude limits do not match with data longitude limits: {} > {} or {} < {}".format(track['Lon'].max(), data_lon_max, track['Lon'].min(), data_lon_min))
+            raise ValueError("Track longitude limits do not match with data longitude limits: {} > {} or {} < {}".format(track['Lon'].max(), data_lon_max, track['Lon'].min(), data_lon_min))
         if track['Lat'].max() > data_lat_max or track['Lat'].min() < data_lat_min:
-            raise ValueError("Track latitude limits do not match with data latitude limits.")
+            app_logger.error("Track latitude limits do not match with data latitude limits: {} > {} or {} < {}".format(track['Lat'].max(), data_lat_max, track['Lat'].min(), data_lat_min))
+            raise ValueError("Track latitude limits do not match with data latitude limits: {} > {} or {} < {}".format(track['Lat'].max(), data_lat_max, track['Lat'].min(), data_lat_min))
 
         return track
     
