@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/25 13:48:26 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/25 15:22:11 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -76,33 +76,37 @@ def handle_track_file(data, times, LonIndexer, LatIndexer, args, app_logger):
     try:
         track = pd.read_csv(trackfile, parse_dates=[0], delimiter=';', index_col='time')
 
-        # Extract the time and spatial limits from the dataset
-        data_lon_max, data_lon_min = data[LonIndexer].max(), data[LonIndexer].min()
-        data_lat_max, data_lat_min = data[LatIndexer].max(), data[LatIndexer].min()
+        data_lon_max, data_lon_min = float(data[LonIndexer].max()), float(data[LonIndexer].min())
+        data_lat_max, data_lat_min = float(data[LatIndexer].max()), float(data[LatIndexer].min())
 
-        app_logger.debug(f"Data spatial limits --> lon_min: {data_lon_min} - lon_max: {data_lon_max}, lat_min: {data_lat_min} - lat_max: {data_lat_max}")
-        app_logger.debug(f"Track spatial limits --> lon_min: {track['Lon'].min()} - lon_max: {track['Lon'].max()}, lat_min: {track['Lat'].min()} - lat_max: {track['Lat'].max()}")
+        app_logger.debug(f"Data spatial limits --> lon_min: {data_lon_min:.2f}, lon_max: {data_lon_max:.2f}, lat_min: {data_lat_min:.2f}, lat_max: {data_lat_max:.2f}")
+        app_logger.debug(f"Track spatial limits --> lon_min: {track['Lon'].min():.2f}, lon_max: {track['Lon'].max():.2f}, lat_min: {track['Lat'].min():.2f}, lat_max: {track['Lat'].max():.2f}")
 
-        # Validate time limits
         if track.index[0] < times.min() or track.index[-1] > times.max():
             app_logger.error("Track time limits do not match with data time limits.")
             raise ValueError("Track time limits do not match with data time limits.")
 
-        # Validate spatial limits
-        if track['Lon'].max() > data_lon_max or track['Lon'].min() < data_lon_min:
-            app_logger.error("Track longitude limits do not match with data longitude limits: {} > {} or {} < {}".format(track['Lon'].max(), data_lon_max, track['Lon'].min(), data_lon_min))
-            raise ValueError("Track longitude limits do not match with data longitude limits: {} > {} or {} < {}".format(track['Lon'].max(), data_lon_max, track['Lon'].min(), data_lon_min))
-        if track['Lat'].max() > data_lat_max or track['Lat'].min() < data_lat_min:
-            app_logger.error("Track latitude limits do not match with data latitude limits: {} > {} or {} < {}".format(track['Lat'].max(), data_lat_max, track['Lat'].min(), data_lat_min))
-            raise ValueError("Track latitude limits do not match with data latitude limits: {} > {} or {} < {}".format(track['Lat'].max(), data_lat_max, track['Lat'].min(), data_lat_min))
+        # Check longitude limits
+        if track['Lon'].max() > data_lon_max:
+            app_logger.error(f"Track file longitude max limit ({track['Lon'].max():.2f}) exceeds data max longitude limit ({data_lon_max:.2f}).")
+            raise ValueError(f"Track file longitude max limit ({track['Lon'].max():.2f}) exceeds data max longitude limit ({data_lon_max:.2f}).")
+        if track['Lon'].min() < data_lon_min:
+            app_logger.error(f"Track file longitude min limit ({track['Lon'].min():.2f}) is below data min longitude limit ({data_lon_min:.2f}).")
+            raise ValueError(f"Track file longitude min limit ({track['Lon'].min():.2f}) is below data min longitude limit ({data_lon_min:.2f}).")
+
+        # Check latitude limits
+        if track['Lat'].max() > data_lat_max:
+            app_logger.error(f"Track file latitude max limit ({track['Lat'].max():.2f}) exceeds data max latitude limit ({data_lat_max:.2f}).")
+            raise ValueError(f"Track file latitude max limit ({track['Lat'].max():.2f}) exceeds data max latitude limit ({data_lat_max:.2f}).")
+        if track['Lat'].min() < data_lat_min:
+            app_logger.error(f"Track file latitude min limit ({track['Lat'].min():.2f}) is below data min latitude limit ({data_lat_min:.2f}).")
+            raise ValueError(f"Track file latitude min limit ({track['Lat'].min():.2f}) is below data min latitude limit ({data_lat_min:.2f}).")
 
         return track
     
     except FileNotFoundError:
         app_logger.error(f"Track file {trackfile} not found.")
         raise
-    else:
-        return None
 
 def extract_wind_and_height_components(idata, variable_list_df, args):
     """
