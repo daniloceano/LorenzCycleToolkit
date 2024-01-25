@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/24 09:18:45 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/25 11:45:38 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -105,67 +105,8 @@ def find_extremum_coordinates(data: xr.DataArray, lat: xr.DataArray, lon: xr.Dat
 
     return lat_values[index[0]], lon_values[index[1]]
 
-# def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: logging.Logger) -> xr.Dataset:
-#     import cdsapi
-
-#     # Extract bounding box (lat/lon limits) from track
-#     min_lat, max_lat = track['Lat'].min(), track['Lat'].max()
-#     min_lon, max_lon = track['Lon'].min(), track['Lon'].max()
-
-#     pressure_levels = ['1', '2', '3', '5', '7', '10', '20', '30', '50', '70',
-#                        '100', '125', '150', '175', '200', '225', '250', '300', '350',
-#                        '400', '450', '500', '550', '600', '650', '700', '750', '775',
-#                        '800', '825', '850', '875', '900', '925', '950', '975', '1000']
-    
-#     variables = ["u_component_of_wind", "v_component_of_wind", "temperature",
-#                  "vertical_velocity", "geopotential"]
-    
-
-#     # Convert unique dates to string format for the request
-#     dates = track.index.strftime('%Y%m%d').unique().tolist()
-#     time_range = f"{dates[0]}/{dates[-1]}"
-#     area = f"{max_lat+15}/{min_lon-15}/{min_lat-15}/{max_lon+15}"
-#     time_step = str(int((track.index[1] - track.index[0]).total_seconds() / 3600))
-#     time_step = "1" if time_step == '1' else time_step
-#     app_logger.debug(f"Requesting data for area: {area}, time range: {time_range} and time step: {time_step}...")
-    
-#     # Load ERA5 data
-#     app_logger.info("Retrieving data from CDS API...")
-#     c = cdsapi.Client()
-#     c.retrieve(
-#         "reanalysis-era5-pressure-levels",
-#         {
-#             "product_type":"reanalysis",
-#             "format": "netcdf",
-#             "pressure_level":pressure_levels,
-#             "date": time_range,
-#             "area": area,
-#             'time':f'00/to/23/by/{time_step}',
-#             "variable":variables,
-#         }, args.infile # save file as passed in arguments
-#     )
-
-#     if not os.path.exists(args.infile):
-#         raise FileNotFoundError("CDS API file not created.")
-#     return args.infile
-
-def retrieve_cds_data(time_range, pressure_levels, variables, area, file_name):
-    c = cdsapi.Client()
-    c.retrieve(
-        "reanalysis-era5-pressure-levels",
-        {
-            "product_type": "reanalysis",
-            "format": "netcdf",
-            "pressure_level": pressure_levels,
-            "date": time_range,
-            "area": area,
-            'time': '00/to/23/by/3',
-            "variable": variables,
-        }, file_name
-    )
-    return file_name
-
 def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: logging.Logger) -> xr.Dataset:
+    import cdsapi
 
     # Extract bounding box (lat/lon limits) from track
     min_lat, max_lat = track['Lat'].min(), track['Lat'].max()
@@ -179,35 +120,94 @@ def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: l
     variables = ["u_component_of_wind", "v_component_of_wind", "temperature",
                  "vertical_velocity", "geopotential"]
     
-    # Calculate time points for each part
-    part_len = len(track.index) // 10
-    time_ranges = []
-    for i in range(10):
-        start_time = track.index[i * part_len]
-        end_time = track.index[min((i + 1) * part_len - 1, len(track.index) - 1)]
-        time_ranges.append(start_time.strftime('%Y%m%d') + '/' + end_time.strftime('%Y%m%d'))
 
-    area = f"{max_lat}/{min_lon}/{min_lat}/{max_lon}"
+    # Convert unique dates to string format for the request
+    dates = track.index.strftime('%Y%m%d').unique().tolist()
+    time_range = f"{dates[0]}/{dates[-1]}"
+    area = f"{max_lat+15}/{min_lon-15}/{min_lat-15}/{max_lon+15}"
+    time_step = str(int((track.index[1] - track.index[0]).total_seconds() / 3600))
+    time_step = "1" if time_step == '1' else time_step
+    app_logger.debug(f"Requesting data for area: {area}, time range: {time_range} and time step: {time_step}...")
+    
+    # Load ERA5 data
+    app_logger.info("Retrieving data from CDS API...")
+    c = cdsapi.Client()
+    c.retrieve(
+        "reanalysis-era5-pressure-levels",
+        {
+            "product_type":"reanalysis",
+            "format": "netcdf",
+            "pressure_level":pressure_levels,
+            "date": time_range,
+            "area": area,
+            'time':f'00/to/23/by/{time_step}',
+            "variable":variables,
+        }, args.infile # save file as passed in arguments
+    )
 
-    # Retrieve data in parallel
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        future_results = [executor.submit(retrieve_cds_data, tr, pressure_levels, variables, area, f"part_{i}.nc") for i, tr in enumerate(time_ranges)]
-        files = [future.result() for future in future_results]
+    if not os.path.exists(args.infile):
+        raise FileNotFoundError("CDS API file not created.")
+    return args.infile
 
-    # Merge the datasets
-    datasets = []
-    for file in files:
-        if os.path.exists(file):
-            datasets.append(xr.open_dataset(file))
-        else:
-            raise FileNotFoundError(f"Error in retrieving CDS API data: {file} not found.")
+# def retrieve_cds_data(time_range, pressure_levels, variables, area, file_name):
+#     c = cdsapi.Client()
+#     c.retrieve(
+#         "reanalysis-era5-pressure-levels",
+#         {
+#             "product_type": "reanalysis",
+#             "format": "netcdf",
+#             "pressure_level": pressure_levels,
+#             "date": time_range,
+#             "area": area,
+#             'time': '00/to/23/by/3',
+#             "variable": variables,
+#         }, file_name
+#     )
+#     return file_name
 
-    if datasets:
-        merged_data = xr.concat(datasets, dim='time')
-        merged_data.to_netcdf(args.infile)
-        return args.infile
-    else:
-        raise FileNotFoundError("Error in retrieving CDS API data.")
+# def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: logging.Logger) -> xr.Dataset:
+
+#     # Extract bounding box (lat/lon limits) from track
+#     min_lat, max_lat = track['Lat'].min(), track['Lat'].max()
+#     min_lon, max_lon = track['Lon'].min(), track['Lon'].max()
+
+#     pressure_levels = ['1', '2', '3', '5', '7', '10', '20', '30', '50', '70',
+#                        '100', '125', '150', '175', '200', '225', '250', '300', '350',
+#                        '400', '450', '500', '550', '600', '650', '700', '750', '775',
+#                        '800', '825', '850', '875', '900', '925', '950', '975', '1000']
+    
+#     variables = ["u_component_of_wind", "v_component_of_wind", "temperature",
+#                  "vertical_velocity", "geopotential"]
+    
+#     # Calculate time points for each part
+#     part_len = len(track.index) // 10
+#     time_ranges = []
+#     for i in range(10):
+#         start_time = track.index[i * part_len]
+#         end_time = track.index[min((i + 1) * part_len - 1, len(track.index) - 1)]
+#         time_ranges.append(start_time.strftime('%Y%m%d') + '/' + end_time.strftime('%Y%m%d'))
+
+#     area = f"{max_lat}/{min_lon}/{min_lat}/{max_lon}"
+
+#     # Retrieve data in parallel
+#     with ThreadPoolExecutor(max_workers=10) as executor:
+#         future_results = [executor.submit(retrieve_cds_data, tr, pressure_levels, variables, area, f"part_{i}.nc") for i, tr in enumerate(time_ranges)]
+#         files = [future.result() for future in future_results]
+
+#     # Merge the datasets
+#     datasets = []
+#     for file in files:
+#         if os.path.exists(file):
+#             datasets.append(xr.open_dataset(file))
+#         else:
+#             raise FileNotFoundError(f"Error in retrieving CDS API data: {file} not found.")
+
+#     if datasets:
+#         merged_data = xr.concat(datasets, dim='time')
+#         merged_data.to_netcdf(args.infile)
+#         return args.infile
+#     else:
+#         raise FileNotFoundError("Error in retrieving CDS API data.")
 
 def get_data(args: argparse.Namespace, app_logger: logging.Logger) -> xr.Dataset:
     """
