@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/25 13:44:43 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/25 17:42:00 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -107,10 +107,20 @@ def find_extremum_coordinates(data: xr.DataArray, lat: xr.DataArray, lon: xr.Dat
 
 def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: logging.Logger) -> xr.Dataset:
     import cdsapi
+    import math
 
     # Extract bounding box (lat/lon limits) from track
     min_lat, max_lat = track['Lat'].min(), track['Lat'].max()
     min_lon, max_lon = track['Lon'].min(), track['Lon'].max()
+
+    # Apply a 15-degree buffer and round to nearest integer
+    buffered_max_lat = math.ceil(max_lat + 15)
+    buffered_min_lon = math.floor(min_lon - 15)
+    buffered_min_lat = math.floor(min_lat - 15)
+    buffered_max_lon = math.ceil(max_lon + 15)
+
+    # Define the area for the request
+    area = f"{buffered_max_lat}/{buffered_min_lon}/{buffered_min_lat}/{buffered_max_lon}" # North, West, South, East.
 
     pressure_levels = ['1', '2', '3', '5', '7', '10', '20', '30', '50', '70',
                        '100', '125', '150', '175', '200', '225', '250', '300', '350',
@@ -124,24 +134,26 @@ def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: l
     # Convert unique dates to string format for the request
     dates = track.index.strftime('%Y%m%d').unique().tolist()
     time_range = f"{dates[0]}/{dates[-1]}"
-    area = f"{max_lat+15}/{min_lon-15}/{min_lat-15}/{max_lon+15}" # North, West, South, East.
     time_step = str(int((track.index[1] - track.index[0]).total_seconds() / 3600))
-    time_step = "1" if time_step == '1' else time_step
-    app_logger.debug(f"Requesting data for area: {area}, time range: {time_range} and time step: {time_step}...")
-    
+
+    # Log track file bounds and requested data bounds
+    app_logger.debug(f"Track File Limits: max_lon (east): {max_lon}, min_lon (west): {min_lon}, max_lat (north): {max_lat}, min_lat (south): {min_lat}")
+    app_logger.debug(f"Buffered Data Bounds: max_lon (east): {buffered_max_lon}, min_lon (west): {buffered_min_lon}, max_lat (north): {buffered_max_lat}, min_lat (south): {buffered_min_lat}")
+    app_logger.debug(f"Requesting data for time range: {time_range}, and time step: {time_step}...")
+
     # Load ERA5 data
     app_logger.info("Retrieving data from CDS API...")
     c = cdsapi.Client()
     c.retrieve(
         "reanalysis-era5-pressure-levels",
         {
-            "product_type":"reanalysis",
+            "product_type": "reanalysis",
             "format": "netcdf",
-            "pressure_level":pressure_levels,
+            "pressure_level": pressure_levels,
             "date": time_range,
             "area": area,
-            'time':f'00/to/23/by/{time_step}',
-            "variable":variables,
+            'time': f'00/to/23/by/{time_step}',
+            "variable": variables,
         }, args.infile # save file as passed in arguments
     )
 
