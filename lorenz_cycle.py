@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/20 10:05:52 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/22 23:46:01 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/26 09:25:19 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -132,8 +132,8 @@ def main():
     # Example usage for debugging
     # print("----------------------------------------------------------------------------")
     # print("WARNING: USING EXAMPLE ARGUMENTS")
-    # args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-t', '-r', '-p', '-v'])
-    # # args = parser.parse_args(['Reg1-Representative_ERA5-cdsapi.nc', '-t', '-r', '-p', '-g', '-v', '--cdsapi'])
+    # # args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-t', '-r', '-p', '-v'])
+    # args = parser.parse_args(['19851079_ERA5.nc', '-t', '-r', '-p', '-g', '-v', '--cdsapi', '--trackfile', 'inputs/track_19851079.csv'])
     # print("----------------------------------------------------------------------------")
 
     # Set method
