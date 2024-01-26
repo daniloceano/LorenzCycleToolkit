@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/25 17:42:00 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/26 09:24:26 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -120,7 +120,7 @@ def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: l
     buffered_max_lon = math.ceil(max_lon + 15)
 
     # Define the area for the request
-    area = f"{buffered_max_lat}/{buffered_min_lon}/{buffered_min_lat}/{buffered_max_lon}" # North, West, South, East.
+    area = f"{buffered_max_lat}/{buffered_min_lon}/{buffered_min_lat}/{buffered_max_lon}" # North, West, South, East. Nort/West/Sout/East
 
     pressure_levels = ['1', '2', '3', '5', '7', '10', '20', '30', '50', '70',
                        '100', '125', '150', '175', '200', '225', '250', '300', '350',
@@ -137,8 +137,8 @@ def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: l
     time_step = str(int((track.index[1] - track.index[0]).total_seconds() / 3600))
 
     # Log track file bounds and requested data bounds
-    app_logger.debug(f"Track File Limits: max_lon (east): {max_lon}, min_lon (west): {min_lon}, max_lat (north): {max_lat}, min_lat (south): {min_lat}")
-    app_logger.debug(f"Buffered Data Bounds: max_lon (east): {buffered_max_lon}, min_lon (west): {buffered_min_lon}, max_lat (north): {buffered_max_lat}, min_lat (south): {buffered_min_lat}")
+    app_logger.debug(f"Track File Limits: max_lon (east):  min_lon (west): {min_lon}, max_lon (west): {max_lon}, min_lat (south): {min_lat}, max_lat (north): {max_lat}")
+    app_logger.debug(f"Buffered Data Bounds: min_lon (west): {buffered_min_lon}, max_lon (east): {buffered_max_lon}, min_lat (south): {buffered_min_lat}, max_lat (north): {buffered_max_lat}")
     app_logger.debug(f"Requesting data for time range: {time_range}, and time step: {time_step}...")
 
     # Load ERA5 data
