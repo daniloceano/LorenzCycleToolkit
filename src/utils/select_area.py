@@ -230,7 +230,7 @@ def slice_domain(NetCDF_data, args, variable_list_df):
         dx, dy  = (NetCDF_data[LonIndexer][1] - NetCDF_data[LonIndexer][0],
               NetCDF_data[LatIndexer][1] - NetCDF_data[LatIndexer][0])
         
-        trackfile = 'inputs/track'
+        trackfile = args.trackfile if args.trackfile else 'inputs/track'
         track = pd.read_csv(trackfile,parse_dates=[0],
                             delimiter=';',index_col='time')
         if 'width' in track.columns:
