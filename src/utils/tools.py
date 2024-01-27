@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/26 09:24:26 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/27 09:58:36 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -135,6 +135,7 @@ def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: l
     dates = track.index.strftime('%Y%m%d').unique().tolist()
     time_range = f"{dates[0]}/{dates[-1]}"
     time_step = str(int((track.index[1] - track.index[0]).total_seconds() / 3600))
+    time_step = '3' if time_step < '3' else time_step
 
     # Log track file bounds and requested data bounds
     app_logger.debug(f"Track File Limits: max_lon (east):  min_lon (west): {min_lon}, max_lon (west): {max_lon}, min_lat (south): {min_lat}, max_lat (north): {max_lat}")
