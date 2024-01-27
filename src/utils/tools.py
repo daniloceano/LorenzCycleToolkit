@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/27 09:58:36 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/27 13:07:58 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -282,6 +282,10 @@ def process_data(data: xr.Dataset, args: argparse.Namespace, variable_list_df: p
         track_file = args.trackfile   
         track = pd.read_csv(track_file, parse_dates=[0], delimiter=';', index_col='time')
         TimeIndexer = variable_list_df.loc["Time"]["Variable"]
+        # If using CDS API, resample track to data time step
+        if args.cdsapi:
+            time_delta = int(data[TimeIndexer][1].dt.hour - data[TimeIndexer][0].dt.hour)
+            track = track[track.index.hour % time_delta == 0]
         data = data.sel({TimeIndexer:track.index.values})
 
     else:

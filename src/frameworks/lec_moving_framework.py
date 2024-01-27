@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/25 15:22:11 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/01/27 13:07:58 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -50,7 +50,7 @@ def create_terms_dict(args):
     terms = energy_terms + conversion_terms + boundary_terms + generation_dissipation_terms
     return {term: [] for term in terms}
 
-def handle_track_file(data, times, LonIndexer, LatIndexer, args, app_logger):
+def handle_track_file(data, times, LonIndexer, LatIndexer, TimeIndexer, args, app_logger):
     """
     Handles the track file by validating its time and spatial limits against the provided dataset.
 
@@ -73,9 +73,13 @@ def handle_track_file(data, times, LonIndexer, LatIndexer, args, app_logger):
     trackfile = args.trackfile
     app_logger.debug(f"Using track file: {trackfile}")
 
-    try:
-        track = pd.read_csv(trackfile, parse_dates=[0], delimiter=';', index_col='time')
+    track = pd.read_csv(trackfile, parse_dates=[0], delimiter=';', index_col='time')
 
+    if args.cdsapi:
+        time_delta = int(data[TimeIndexer][1].dt.hour - data[TimeIndexer][0].dt.hour)
+        track = track[track.index.hour % time_delta == 0]
+
+    try:
         data_lon_max, data_lon_min = float(data[LonIndexer].max()), float(data[LonIndexer].min())
         data_lat_max, data_lat_min = float(data[LatIndexer].max()), float(data[LatIndexer].min())
 
@@ -439,7 +443,7 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
     times = pd.to_datetime(data[TimeName].values)
 
     # Get the system track and check for errors
-    track = handle_track_file(data, times, LonIndexer, LatIndexer, args, app_logger)
+    track = handle_track_file(data, times, LonIndexer, LatIndexer, TimeName, args, app_logger)
 
     # Dictionary for saving system position and attributes
     results_keys = ['datestr', 'central_lat', 'central_lon', 'length', 'width',
