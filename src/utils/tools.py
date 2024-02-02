@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/02/02 09:36:23 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/02/02 12:30:29 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -144,7 +144,7 @@ def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: l
 
     # Load ERA5 data
     app_logger.info("Retrieving data from CDS API...")
-    c = cdsapi.Client(timeout=600, quiet=False, debug=True)
+    c = cdsapi.Client(timeout=600)
     c.retrieve(
         "reanalysis-era5-pressure-levels",
         {
