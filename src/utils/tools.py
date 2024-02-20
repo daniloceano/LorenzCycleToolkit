@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/02/02 12:30:29 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/02/20 17:40:13 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -228,7 +228,7 @@ def process_data(data: xr.Dataset, args: argparse.Namespace, variable_list_df: p
             track = track[track.index.hour % time_delta == 0]
         data = data.sel({TimeIndexer:track.index.values})
 
-    else:
+    if data[variable_list_df.loc["Longitude"]["Variable"]].min() < -180 or data[variable_list_df.loc["Longitude"]["Variable"]].max() > 180:
         data = convert_longitude_range(data, variable_list_df.loc['Longitude']['Variable'])
 
     LonIndexer = variable_list_df.loc["Longitude"]["Variable"]
