@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/01/03 23:31:13 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/04 18:22:50 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/02/20 18:11:16 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -131,13 +131,13 @@ def plot_term_arrows_and_text(ax, size, term, data, positions, plot_example=Fals
 
     # Plot text for residuals
     elif term == 'RGz':
-        start = (positions['∂Az/∂t'][0], positions['∂Az/∂t'][1] + size/2)
-        end = (positions['∂Az/∂t'][0], 1)
+        start = (positions['∂Az/∂t'][0], 1)
+        end = (positions['∂Az/∂t'][0], positions['∂Az/∂t'][1] + size/2)
         plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, 0.2), plot_example=plot_example)
 
     elif term == 'RGe':
-        start = (positions['∂Ae/∂t'][0], positions['∂Ae/∂t'][1] - size/2)
-        end = (positions['∂Ae/∂t'][0], -1)
+        start = (positions['∂Ae/∂t'][0], -1)
+        end = (positions['∂Ae/∂t'][0], positions['∂Ae/∂t'][1] - size/2)
         plot_term_text_and_value(ax, start, end, term, term_value, offset=(0, -0.2), plot_example=plot_example)
 
     elif term == 'RKz':
