@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/27 13:07:58 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/02/20 17:43:56 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -74,6 +74,10 @@ def handle_track_file(data, times, LonIndexer, LatIndexer, TimeIndexer, args, ap
     app_logger.debug(f"Using track file: {trackfile}")
 
     track = pd.read_csv(trackfile, parse_dates=[0], delimiter=';', index_col='time')
+
+    # Remove timezone information from track index if it's tz-aware
+    if track.index.tz is not None:
+        track.index = track.index.tz_localize(None)
 
     if args.cdsapi:
         time_delta = int(data[TimeIndexer][1].dt.hour - data[TimeIndexer][0].dt.hour)
