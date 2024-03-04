@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/03/04 15:30:30 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/03/04 16:01:20 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -458,10 +458,10 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
     # Dictionary for storing results
     terms_dict = create_terms_dict(args)
 
-    # For debugging
-    track = track[:5]
-    times = times[:5]
-    data = data.isel({TimeName:slice(0,5)})
+    # # For debugging
+    # track = track[:5]
+    # times = times[:5]
+    # data = data.isel({TimeName:slice(0,5)})
         
     # Iterating over times
     for t in times:
