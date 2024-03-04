@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/20 10:05:52 by daniloceano       #+#    #+#              #
-#    Updated: 2024/02/20 18:11:31 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/03/04 15:09:40 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -129,12 +129,12 @@ def main():
     parser = create_arg_parser()
     args = parser.parse_args()
 
-    # # Example usage for debugging
-    # print("----------------------------------------------------------------------------")
-    # print("WARNING: USING EXAMPLE ARGUMENTS")
-    # # args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-t', '-r', '-p', '-v'])
-    # args = parser.parse_args(['/home/daniloceano/Documents/Programs_and_scripts/data_etc/netCDF_files/Akara_GFS.nc', '-t', '-r', '-p', '-v'])
-    # print("----------------------------------------------------------------------------")
+    # Example usage for debugging
+    print("----------------------------------------------------------------------------")
+    print("WARNING: USING EXAMPLE ARGUMENTS")
+    # args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-t', '-r', '-p', '-v'])
+    # args = parser.parse_args(['/Users/danilocoutodesouza/Documents/Programs_and_scripts/nc_data/akara.1.1.nc', '-c', '-r', '-p', '-v'])
+    print("----------------------------------------------------------------------------")
 
     # Set method
     if args.fixed:

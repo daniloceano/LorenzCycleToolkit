@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/02/20 17:43:56 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/03/04 15:09:24 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -447,7 +447,8 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
     times = pd.to_datetime(data[TimeName].values)
 
     # Get the system track and check for errors
-    track = handle_track_file(data, times, LonIndexer, LatIndexer, TimeName, args, app_logger)
+    if args.track :
+        track = handle_track_file(data, times, LonIndexer, LatIndexer, TimeName, args, app_logger)
 
     # Dictionary for saving system position and attributes
     results_keys = ['datestr', 'central_lat', 'central_lon', 'length', 'width',
