@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/06/14 16:32:27 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/03 00:46:23 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/03/04 15:56:06 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -14,46 +14,52 @@ import os
 import pandas as pd
 from pathlib import Path
 import logging
-from lorenz_phase_space.LPS import LorenzPhaseSpace as LPS
+from lorenz_phase_space.phase_diagrams import Visualizer
+import matplotlib.pyplot as plt
 
 def create_and_save_plot(
         dataframe: pd.DataFrame,
         title: str,
-        datasource: str,
         zoom: bool,
         plot_type: str,
         figures_dir: Path,
-        app_logger: logging.Logger,
-        periods: bool = False
+        app_logger: logging.Logger
     ):
+
+    x_min, x_max = dataframe['Ck'].min(), dataframe['Ck'].max()
+    y_min, y_max = dataframe['Ca'].min(), dataframe['Ca'].max()
+    color_min, color_max = dataframe['Ge'].min(), dataframe['Ge'].max()
+    size_min, size_max = dataframe['Ke'].min(), dataframe['Ke'].max()
+
+    # Initialize the Visualizer with or without zoom
+    lps = Visualizer(LPS_type='mixed', zoom=zoom,
+                    x_limits=[x_min, x_max],
+                    y_limits=[y_min, y_max],
+                    color_limits=[color_min, color_max],
+                    marker_limits=[size_min, size_max]
+                    )
+
+    # Plot the data
+    lps.plot_data(
+        x_axis=dataframe['Ck'].values,
+        y_axis=dataframe['Ca'].values,
+        marker_color=dataframe['Ge'].values,
+        marker_size=dataframe['Ke'].values
+    )
+
+    plt.text(0, 1, title, va='bottom', ha='left', fontsize=14, fontweight='bold',
+             color='gray', transform=plt.gca().transAxes)
+
+    # Construct filename and save the plot
     suffix = f"_{plot_type}_zoom" if zoom else f"_{plot_type}"
-    fig, _ = create_plot(dataframe, zoom, title, datasource, periods)
     file_path = os.path.join(figures_dir, f"LPS{suffix}.png")
-    fig.savefig(file_path, dpi=300)
+    plt.savefig(file_path, dpi=300)
+    plt.close()  # Close the plot to free memory
     app_logger.info(f"LPS plot saved to {file_path}")
-
-
-def create_plot(dataframe, zoom, title, datasource, periods=False):
-    x_axis, y_axis = dataframe['Ck'], dataframe['Ca']
-    marker_color, marker_size = dataframe['Ge'], dataframe['Ke']
-
-    if not periods:
-        start, end = map(lambda x: pd.to_datetime(x).strftime('%Y-%m-%d %H:%M'), [dataframe.index[0], dataframe.index[-1]])
-    else:
-        start, end = None, None
-        title, datasource = None, None
-
-    try:
-        lps_mixed = LPS(x_axis, y_axis, marker_color, marker_size, zoom=zoom, title=title, datasource=datasource, start=start, end=end)
-    except Exception as e:
-        raise
-    
-    return lps_mixed.plot()
 
 def plot_LPS(dataframe, infile, results_subdirectory, figures_directory, app_logger):
     app_logger.info("Plotting Lorenz Phase Space...")
     infile_name = Path(infile).stem
-    title, datasource = infile_name.split('_')
 
     figures_LPS_directory = f"{figures_directory}/LPS"
     os.makedirs(figures_LPS_directory, exist_ok=True)
@@ -92,8 +98,11 @@ def plot_LPS(dataframe, infile, results_subdirectory, figures_directory, app_log
         else:
             app_logger.warning(f"No data available for the period: {period_name}")
 
+    title, datasource = infile_name.split('_')
+    figure_title = f"System: {title}\nDatasource: {datasource}\nStart: {dataframe.index[0].strftime('%Y-%m-%d %HZ')}\nEnd: {dataframe.index[-1].strftime('%Y-%m-%d %HZ')}"
+
     for zoom in [False, True]:
-        create_and_save_plot(dataframe, title, datasource, zoom, f"{dt_hours}h", figures_LPS_directory, app_logger)
-        create_and_save_plot(period_means_df, title, datasource, zoom, "periods", figures_LPS_directory, app_logger, periods=True)
+        create_and_save_plot(dataframe, figure_title, zoom, f"{dt_hours}h", figures_LPS_directory, app_logger)
+        create_and_save_plot(period_means_df, figure_title, zoom, "periods", figures_LPS_directory, app_logger)
         df_daily = dataframe.resample('1D').mean()
-        create_and_save_plot(df_daily, title, datasource, zoom, "1d", figures_LPS_directory, app_logger)
+        create_and_save_plot(df_daily, figure_title, zoom, "1d", figures_LPS_directory, app_logger)

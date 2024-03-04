@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/03/04 15:09:24 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/03/04 15:30:30 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -457,6 +457,11 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
 
     # Dictionary for storing results
     terms_dict = create_terms_dict(args)
+
+    # For debugging
+    track = track[:5]
+    times = times[:5]
+    data = data.isel({TimeName:slice(0,5)})
         
     # Iterating over times
     for t in times:
@@ -572,6 +577,7 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
         track_file = glob(os.path.join(results_subdirectory, '*trackfile'))[0]
 
         # Basic diagnostics plots
+        map_track(results_file, track_file, figures_directory, app_logger)
         plot_min_zeta_hgt(track_file, figures_directory, app_logger)
         plot_timeseries(results_file, figures_directory, app_logger)
         plot_hovmoller(results_file, figures_directory, app_logger)
@@ -584,7 +590,6 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
         # Use found periods for other plots
         plot_lorenz_cycle(results_file, figures_directory, os.path.join(results_subdirectory, 'periods.csv'), app_logger)
         plot_LPS(df, args.infile, results_subdirectory, figures_directory, app_logger)
-        map_track(results_file, track_file, figures_directory, app_logger)
 
         app_logger.info('Done.')
 
