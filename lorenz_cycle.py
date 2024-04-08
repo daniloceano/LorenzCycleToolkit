@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/20 10:05:52 by daniloceano       #+#    #+#              #
-#    Updated: 2024/03/04 15:56:15 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/04/08 18:58:19 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -131,7 +131,7 @@ def main():
 
     # Example usage for debugging
     print("----------------------------------------------------------------------------")
-    print("WARNING: USING EXAMPLE ARGUMENTS")
+    # print("WARNING: USING EXAMPLE ARGUMENTS")
     # args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-t', '-r', '-p', '-v'])
     # args = parser.parse_args(['/Users/danilocoutodesouza/Documents/Programs_and_scripts/nc_data/akara.1.1.nc', '-c', '-r', '-p', '-v'])
     print("----------------------------------------------------------------------------")
