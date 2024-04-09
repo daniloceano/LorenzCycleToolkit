@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/20 10:05:52 by daniloceano       #+#    #+#              #
-#    Updated: 2024/04/09 15:13:41 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/04/09 15:44:55 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -127,15 +127,15 @@ def main():
     
     # Parse command line arguments
     parser = create_arg_parser()
-    # args = parser.parse_args()
+    args = parser.parse_args()
 
     # Example usage for debugging
     print("----------------------------------------------------------------------------")
     # print("WARNING: USING EXAMPLE ARGUMENTS")
     # args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-t', '-r', '-p', '-v'])
-    args = parser.parse_args(['20080518.nc', '-t', '-r', '-p', '-v', '-g', '--cdsapi', '--trackfile',
-                             '/home/daniloceano//Documents/Programs_and_scripts//SWSA-cyclones_energetic-analysis/tracks_LEC-format/BY_RG/0.999/RG3/track_20080518'])
-    print("----------------------------------------------------------------------------")
+    # args = parser.parse_args(['20080518.nc', '-t', '-r', '-p', '-v', '-g', '--cdsapi', '--trackfile',
+    #                          '/home/daniloceano//Documents/Programs_and_scripts//SWSA-cyclones_energetic-analysis/tracks_LEC-format/BY_RG/0.999/RG3/track_20080518'])
+    # print("----------------------------------------------------------------------------")
 
     # Set method
     if args.fixed:
