@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:59 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/04 10:08:15 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/05/03 16:11:03 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -45,7 +45,7 @@ def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirec
     """
     logging.info('--- Computing energetics using fixed framework ---')
     
-    box_limits_file = 'inputs/box_limits'
+    box_limits_file = args.box_limits
     dfbox = pd.read_csv(box_limits_file, header=None, delimiter=';', index_col=0)
     min_lon, max_lon = dfbox.loc['min_lon'].iloc[0], dfbox.loc['max_lon'].iloc[0]
     min_lat, max_lat = dfbox.loc['min_lat'].iloc[0], dfbox.loc['max_lat'].iloc[0]

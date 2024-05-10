@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/03/04 16:01:20 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/04/09 10:39:14 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -80,7 +80,7 @@ def handle_track_file(data, times, LonIndexer, LatIndexer, TimeIndexer, args, ap
         track.index = track.index.tz_localize(None)
 
     if args.cdsapi:
-        time_delta = int(data[TimeIndexer][1].dt.hour - data[TimeIndexer][0].dt.hour)
+        time_delta = int((data[TimeIndexer][1] - data[TimeIndexer][0]) / np.timedelta64(1, 'h'))
         track = track[track.index.hour % time_delta == 0]
 
     try:

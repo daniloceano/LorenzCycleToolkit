@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/02/20 17:40:13 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/04/09 15:13:27 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -18,7 +18,7 @@ import xarray as xr
 import pandas as pd
 import numpy as np
 import argparse
-from concurrent.futures import ThreadPoolExecutor
+from datetime import timedelta
 from metpy.units import units
 from .select_area import slice_domain
 
@@ -130,9 +130,25 @@ def get_cdsapi_data(args: argparse.Namespace, track: pd.DataFrame, app_logger: l
     variables = ["u_component_of_wind", "v_component_of_wind", "temperature",
                  "vertical_velocity", "geopotential"]
     
+    # Assuming your data resolution is 3 hours and your service updates at 00, 03, 06, ..., 21 hours
+    data_time_slots = ['00', '03', '06', '09', '12', '15', '18', '21']
+    
+    # Convert track index to DatetimeIndex and find the last date & time
+    track_datetime_index = pd.DatetimeIndex(track.index)
+    last_track_timestamp = track_datetime_index.max()
+    
+    # Calculate if the additional day is needed by comparing last track timestamp with the last possible data timestamp for that day
+    last_possible_data_timestamp_for_day = pd.Timestamp(f"{last_track_timestamp.strftime('%Y-%m-%d')} 21:00:00")
+    need_additional_day = last_track_timestamp > last_possible_data_timestamp_for_day
+    
+    # Include additional day in dates if needed
+    dates = track_datetime_index.strftime('%Y%m%d').unique()
+    if need_additional_day:
+        additional_day = (last_track_timestamp + timedelta(days=1)).strftime('%Y%m%d')
+        dates = np.append(dates, additional_day)
 
     # Convert unique dates to string format for the request
-    dates = track.index.strftime('%Y%m%d').unique().tolist()
+    # dates = track.index.strftime('%Y%m%d').unique().tolist()
     time_range = f"{dates[0]}/{dates[-1]}"
     time_step = str(int((track.index[1] - track.index[0]).total_seconds() / 3600))
     time_step = '3' if time_step < '3' else time_step
@@ -224,7 +240,7 @@ def process_data(data: xr.Dataset, args: argparse.Namespace, variable_list_df: p
         TimeIndexer = variable_list_df.loc["Time"]["Variable"]
         # If using CDS API, resample track to data time step
         if args.cdsapi:
-            time_delta = int(data[TimeIndexer][1].dt.hour - data[TimeIndexer][0].dt.hour)
+            time_delta = int((data[TimeIndexer][1] - data[TimeIndexer][0]) / np.timedelta64(1, 'h'))
             track = track[track.index.hour % time_delta == 0]
         data = data.sel({TimeIndexer:track.index.values})
 

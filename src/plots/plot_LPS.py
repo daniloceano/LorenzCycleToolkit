@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/06/14 16:32:27 by daniloceano       #+#    #+#              #
-#    Updated: 2024/03/04 15:56:06 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/04/09 15:18:27 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -97,8 +97,11 @@ def plot_LPS(dataframe, infile, results_subdirectory, figures_directory, app_log
             period_means_df.index = period_means_df.index.map(lambda x: period_name if x == period_means_df.index[-1] else x)
         else:
             app_logger.warning(f"No data available for the period: {period_name}")
-
-    title, datasource = infile_name.split('_')
+    
+    try:
+        title, datasource = infile_name.split('_')
+    except ValueError:
+        title, datasource = infile_name, 'unknown'
     figure_title = f"System: {title}\nDatasource: {datasource}\nStart: {dataframe.index[0].strftime('%Y-%m-%d %HZ')}\nEnd: {dataframe.index[-1].strftime('%Y-%m-%d %HZ')}"
 
     for zoom in [False, True]:
