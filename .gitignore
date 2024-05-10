@@ -215,3 +215,6 @@ src/error_log.txt
 
 # Files created by cdsapi
 *cdsapi*.nc
+
+# Others
+src/plots/.vscode/settings.json

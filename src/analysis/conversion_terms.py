@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/04 10:36:16 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/05/10 13:46:28 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -121,10 +121,10 @@ class ConversionTerms:
         term2 = CalcAreaAverage(term2, self.ylength, xlength=self.xlength) / self.sigma_AA
 
         # Process the integral and save the result
-        function = term1 + term2
+        function = - (term1 + term2)
         function = self._handle_nans(function)
         self._save_vertical_levels(function, 'Ca')
-        Ca = - function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
+        Ca = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
         self._convert_units(Ca, 'Ca')
         
         self.app_logger.debug("Done.")
@@ -163,10 +163,10 @@ class ConversionTerms:
         term2 = CalcAreaAverage(omega_tair_product, self.ylength)
 
         # Process the integral and save the result
-        function = term1 * term2
+        function = - (term1 * term2)
         function = self._handle_nans(function)
         self._save_vertical_levels(function, 'Cz')
-        Cz = - function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
+        Cz = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
         self._convert_units(Cz, 'Cz')
 
         self.app_logger.debug("Done.")
