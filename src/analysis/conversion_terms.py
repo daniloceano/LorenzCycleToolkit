@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2024/05/10 13:46:28 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/05/14 19:20:23 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -139,10 +139,10 @@ class ConversionTerms:
         omega_tair_product = self.omega_ZE * self.tair_ZE
 
         # Second term of the integral
-        term2 = - CalcAreaAverage(omega_tair_product, self.ylength, xlength=self.xlength)
+        term2 = CalcAreaAverage(omega_tair_product, self.ylength, xlength=self.xlength)
 
         # Process the integral and save the result
-        function = term1 * term2
+        function = - (term1 * term2)
         function = self._handle_nans(function)
         self._save_vertical_levels(function, 'Ce')
         Ce = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
