@@ -218,3 +218,5 @@ src/error_log.txt
 
 # Others
 src/plots/.vscode/settings.json
+*.nc
+

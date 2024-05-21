@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/20 10:05:52 by daniloceano       #+#    #+#              #
-#    Updated: 2024/05/03 16:07:20 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/05/21 18:00:05 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -133,11 +133,12 @@ def main():
 
     else:
         # Example usage for debugging
+        parser = create_arg_parser()
         print("----------------------------------------------------------------------------")
         print("WARNING: USING EXAMPLE ARGUMENTS")
-        args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-t', '-r', '-p', '-v'])
-        args = parser.parse_args(['20080518.nc', '-t', '-r', '-p', '-v', '-g', '--cdsapi', '--trackfile',
-                                 '/home/daniloceano//Documents/Programs_and_scripts//SWSA-cyclones_energetic-analysis/tracks_LEC-format/BY_RG/0.999/RG3/track_20080518'])
+        # args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-t', '-r', '-p', '-v'])
+        args = parser.parse_args(['20070536_ERA5_sliced.nc', '-t', '-r', '-p', '-v', '-g', '--cdsapi', '--trackfile',
+                                 'inputs/track_20070536.csv'])
         print("----------------------------------------------------------------------------")
 
     # Set method
