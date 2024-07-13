@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/02 16:43:48 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/13 11:53:59 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -102,7 +102,7 @@ class EnergyContents:
         function = self._handle_nans(function)
         self._save_vertical_levels(function, 'Az')
         Az = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
-        self._convert_units(Az, 'Az')
+        Az = self._convert_units(Az, 'Az')
         Az = Az.metpy.dequantify()
         self.app_logger.debug('Ok.')
         return Az
@@ -115,7 +115,7 @@ class EnergyContents:
         function = self._handle_nans(function)
         self._save_vertical_levels(function, 'Ae')
         Ae = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
-        self._convert_units(Ae, 'Ae')
+        Ae = self._convert_units(Ae, 'Ae')
         Ae = Ae.metpy.dequantify()
         self.app_logger.debug('Ok.')
         return Ae
@@ -127,7 +127,7 @@ class EnergyContents:
         function = self._handle_nans(function)
         self._save_vertical_levels(function, 'Kz')
         Kz = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units / (2 * g)
-        self._convert_units(Kz, 'Kz')
+        Kz = self._convert_units(Kz, 'Kz')
         Kz = Kz.metpy.dequantify()
         self.app_logger.debug('Ok.')
         return Kz
@@ -139,7 +139,7 @@ class EnergyContents:
         function = self._handle_nans(function)
         self._save_vertical_levels(function, 'Ke')
         Ke = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units / (2 * g)
-        self._convert_units(Ke, 'Ke')
+        Ke = self._convert_units(Ke, 'Ke')
         Ke = Ke.metpy.dequantify()
         self.app_logger.debug('Ok.')
         return Ke

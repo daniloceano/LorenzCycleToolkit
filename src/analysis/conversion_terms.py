@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2024/05/14 19:20:23 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/13 11:52:45 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -114,18 +114,20 @@ class ConversionTerms:
         DelPhi_tairAE = (self.tair_AE * self.tair_AE["coslats"]).differentiate("rlats")
         term1 = (self.v_ZE * self.tair_ZE * DelPhi_tairAE) / (2 * Re * self.sigma_AA)
         term1 = CalcAreaAverage(term1, self.ylength, xlength=self.xlength)
+        self._save_vertical_levels(term1, 'Ca_1')
 
         # Second term of the integral
         DelPres_tairAE = (self.tair_AE).differentiate(self.VerticalCoordIndexer) / self.PressureData.metpy.units
         term2 = (self.omega_ZE * self.tair_ZE) * DelPres_tairAE
         term2 = CalcAreaAverage(term2, self.ylength, xlength=self.xlength) / self.sigma_AA
+        self._save_vertical_levels(term2, 'Ca_2')
 
         # Process the integral and save the result
         function = - (term1 + term2)
         function = self._handle_nans(function)
         self._save_vertical_levels(function, 'Ca')
         Ca = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
-        self._convert_units(Ca, 'Ca')
+        Ca = self._convert_units(Ca, 'Ca')
         
         self.app_logger.debug("Done.")
         return Ca
@@ -146,7 +148,7 @@ class ConversionTerms:
         function = self._handle_nans(function)
         self._save_vertical_levels(function, 'Ce')
         Ce = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
-        self._convert_units(Ce, 'Ce')
+        Ce = self._convert_units(Ce, 'Ce')
 
         self.app_logger.debug("Done.")
         return Ce
@@ -167,7 +169,7 @@ class ConversionTerms:
         function = self._handle_nans(function)
         self._save_vertical_levels(function, 'Cz')
         Cz = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
-        self._convert_units(Cz, 'Cz')
+        Cz = self._convert_units(Cz, 'Cz')
 
         self.app_logger.debug("Done.")
         return Cz
@@ -205,7 +207,7 @@ class ConversionTerms:
         function = self._handle_nans(function)
         self._save_vertical_levels(function, 'Ck')
         Ck = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units / g
-        self._convert_units(Ck, 'Ck')
+        Ck = self._convert_units(Ck, 'Ck')
 
         self.app_logger.debug("Done.")
         return Ck
