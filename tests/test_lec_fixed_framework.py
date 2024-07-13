@@ -48,7 +48,7 @@ class TestLECFixedFramework(unittest.TestCase):
         )
 
         # Mock DataFrame for variable_list_df
-        varlist = "inputs/fvars_NCEP-R2"
+        varlist = "inputs/namelist_NCEP-R2"
         self.variable_list_df = pd.read_csv(varlist, sep=';', index_col=0, header=0)
 
         # Create a mock xarray Dataset for data

@@ -210,7 +210,7 @@ def get_data(args: argparse.Namespace, app_logger: logging.Logger) -> xr.Dataset
         with dask.config.set(array={'slicing': {'split_large_chunks': True}}):
             data = xr.open_dataset(infile)
     except FileNotFoundError:
-        app_logger.error("Could not open file. Check if path, fvars file, and file format (.nc) are correct.")
+        app_logger.error("Could not open file. Check if path, namelist file, and file format (.nc) are correct.")
         raise
     except Exception as e:
         app_logger.exception("An exception occurred: {}".format(e))
@@ -271,13 +271,13 @@ def process_data(data: xr.Dataset, args: argparse.Namespace, variable_list_df: p
     app_logger.debug("Data opened successfully.")
     return data
 
-def prepare_data(args, varlist: str = 'inputs/fvars', app_logger: logging.Logger = None) -> xr.Dataset:
+def prepare_data(args, varlist: str = 'inputs/namelist', app_logger: logging.Logger = None) -> xr.Dataset:
     """
     Prepare the data for further analysis.
 
     Parameters:
         args (object): The arguments for the function.
-        varlist (str): The file path to the variable list file (fvars).
+        varlist (str): The file path to the variable list file (namelist).
         app_logger (logging.Logger): The logger for the application.
 
     Returns:

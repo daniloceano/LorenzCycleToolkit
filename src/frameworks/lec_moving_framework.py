@@ -616,7 +616,7 @@ if __name__ == '__main__':
 
     app_logger = initialize_logging()
 
-    varlist = "../inputs/fvars_NCEP-R2"
+    varlist = "../inputs/namelist_NCEP-R2"
     variable_list_df = pd.read_csv(varlist, sep=';', index_col=0, header=0)
 
     data, method = prepare_data(args, varlist, app_logger)

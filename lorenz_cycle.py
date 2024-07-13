@@ -100,7 +100,7 @@ def run_lec_analysis(data, args, results_subdirectory, figures_directory, app_lo
     """
     start_time = time.time()
 
-    variable_list_df = pd.read_csv("inputs/fvars", sep=';', index_col=0, header=0)
+    variable_list_df = pd.read_csv("inputs/namelist", sep=';', index_col=0, header=0)
 
     if args.fixed:
         lec_fixed(data, variable_list_df, results_subdirectory, app_logger, args)
@@ -158,7 +158,7 @@ def main():
     app_logger.info(f"Command line arguments: {args}")
 
     # Prepare data
-    data = prepare_data(args, 'inputs/fvars', app_logger)
+    data = prepare_data(args, 'inputs/namelist', app_logger)
     
     # Run LEC analysis
     run_lec_analysis(data, args, results_subdirectory, figures_directory, app_logger)
