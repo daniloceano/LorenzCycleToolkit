@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/04/09 10:39:14 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/13 13:44:33 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -435,7 +435,11 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
     PressureData = data[VerticalCoordIndexer]
     
     # Create csv files for storing vertical results
-    for term in ['Az', 'Ae', 'Kz', 'Ke', 'Cz', 'Ca', 'Ck', 'Ce', 'Ge', 'Gz']:
+    for term in ['Az', 'Ae', 'Kz', 'Ke', 'Ge', 'Gz',
+                 'Cz_1', 'Cz_2',
+                 'Ca_1', 'Ca_2',
+                 'Ce_1', 'Ce_2',
+                 'Ck_1', 'Ck_2', 'Ck_3', 'Ck_4', 'Ck_5']:
         columns = [TimeName] + [float(i) for i in PressureData.values]
         df = pd.DataFrame(columns=columns)
         file_name = term + '_' + VerticalCoordIndexer + '.csv'

@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2024/07/13 11:52:45 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/13 13:31:51 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -125,7 +125,6 @@ class ConversionTerms:
         # Process the integral and save the result
         function = - (term1 + term2)
         function = self._handle_nans(function)
-        self._save_vertical_levels(function, 'Ca')
         Ca = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
         Ca = self._convert_units(Ca, 'Ca')
         
@@ -138,15 +137,16 @@ class ConversionTerms:
 
         # First term of the integral
         term1 = Rd / (self.PressureData * g)
-        omega_tair_product = self.omega_ZE * self.tair_ZE
+        self._save_vertical_levels(term1, 'Ce_1')
 
         # Second term of the integral
+        omega_tair_product = self.omega_ZE * self.tair_ZE
         term2 = CalcAreaAverage(omega_tair_product, self.ylength, xlength=self.xlength)
+        self._save_vertical_levels(term2, 'Ce_2')
 
         # Process the integral and save the result
         function = - (term1 * term2)
         function = self._handle_nans(function)
-        self._save_vertical_levels(function, 'Ce')
         Ce = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
         Ce = self._convert_units(Ce, 'Ce')
 
@@ -160,14 +160,15 @@ class ConversionTerms:
         # First term of the integral
         term1 = Rd / (self.PressureData * g)
         omega_tair_product = self.omega_AE * self.tair_AE
+        self._save_vertical_levels(term1, 'Cz_1')
 
         # Second term of the integral
         term2 = CalcAreaAverage(omega_tair_product, self.ylength)
+        self._save_vertical_levels(term2, 'Cz_2')
 
         # Process the integral and save the result
         function = - (term1 * term2)
         function = self._handle_nans(function)
-        self._save_vertical_levels(function, 'Cz')
         Cz = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
         Cz = self._convert_units(Cz, 'Cz')
 
@@ -182,30 +183,34 @@ class ConversionTerms:
         DelPhi_uZA_cosphi = (self.u_ZA / self.u_ZA["coslats"]).differentiate("rlats")
         term1 = (self.u_ZE["coslats"] * self.u_ZE * self.v_ZE / Re) * DelPhi_uZA_cosphi
         term1 = CalcAreaAverage(term1, self.ylength, xlength=self.xlength)
+        self._save_vertical_levels(term1, 'Ck_1')
 
         # Second term of the integral
         DelPhi_vZA = (self.v_ZA).differentiate("rlats")
         term2 = ((self.v_ZE ** 2) / Re) * DelPhi_vZA
         term2 = CalcAreaAverage(term2, self.ylength, xlength=self.xlength)
+        self._save_vertical_levels(term2, 'Ck_2')
 
         # Third term of the integral
         term3 = (self.tan_lats * (self.u_ZE ** 2) * self.v_ZA) / Re
         term3 = CalcAreaAverage(term3, self.ylength, xlength=self.xlength)
+        self._save_vertical_levels(term3, 'Ck_3')
 
         # Fourth term of the integral
         DelPres_uZAp = self.u_ZA.differentiate(self.VerticalCoordIndexer) / self.PressureData.metpy.units
         term4 = self.omega_ZE * self.u_ZE * DelPres_uZAp
         term4 = CalcAreaAverage(term4, self.ylength, xlength=self.xlength)
+        self._save_vertical_levels(term4, 'Ck_4')
 
         # Fifth term of the integral
         DelPres_vZAp = self.u_ZA.differentiate(self.VerticalCoordIndexer) / self.PressureData.metpy.units
         term5 = self.omega_ZE * self.v_ZE * DelPres_vZAp
         term5 = CalcAreaAverage(term5, self.ylength, xlength=self.xlength)
+        self._save_vertical_levels(term5, 'Ck_5')
 
         # Process the integral and save the result
         function = term1 + term2 + term3 + term4 + term5
         function = self._handle_nans(function)
-        self._save_vertical_levels(function, 'Ck')
         Ck = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units / g
         Ck = self._convert_units(Ck, 'Ck')
 
@@ -253,8 +258,10 @@ class ConversionTerms:
         """Save computed energy data to a CSV file."""
         df = function.to_dataframe(name=variable_name)
         df.reset_index(inplace=True)
+
         if self.method == 'fixed':
             df = df.pivot(index=self.TimeName, columns=self.VerticalCoordIndexer)
+
         else:
             df.set_index(self.TimeName, inplace=True)
             df.index = df.index.strftime('%Y-%m-%d %H:%M:%S')
