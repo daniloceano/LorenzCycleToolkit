@@ -19,6 +19,7 @@ cyclophaser==1.7.3
 dask==2024.7.0
 eccodes==1.7.1
 findlibs==0.0.5
+flake8==7.1.0
 flexcache==0.3
 flexparser==0.3.1
 fonttools==4.53.1
@@ -33,6 +34,7 @@ kiwisolver==1.4.5
 locket==1.0.0
 lorenz-phase-space==1.2.4
 matplotlib==3.9.1
+mccabe==0.7.0
 MetPy==1.6.2
 multiurl==0.3.1
 netCDF4==1.7.1.post1
