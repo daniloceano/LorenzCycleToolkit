@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2024/07/13 13:31:51 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/14 12:57:40 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -125,6 +125,7 @@ class ConversionTerms:
         # Process the integral and save the result
         function = - (term1 + term2)
         function = self._handle_nans(function)
+        self._save_vertical_levels(function, 'Ca')
         Ca = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
         Ca = self._convert_units(Ca, 'Ca')
         
@@ -147,6 +148,7 @@ class ConversionTerms:
         # Process the integral and save the result
         function = - (term1 * term2)
         function = self._handle_nans(function)
+        self._save_vertical_levels(function, 'Ce')
         Ce = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
         Ce = self._convert_units(Ce, 'Ce')
 
@@ -159,19 +161,20 @@ class ConversionTerms:
 
         # First term of the integral
         term1 = Rd / (self.PressureData * g)
-        omega_tair_product = self.omega_AE * self.tair_AE
         self._save_vertical_levels(term1, 'Cz_1')
 
         # Second term of the integral
+        omega_tair_product = self.omega_AE * self.tair_AE
         term2 = CalcAreaAverage(omega_tair_product, self.ylength)
         self._save_vertical_levels(term2, 'Cz_2')
 
         # Process the integral and save the result
         function = - (term1 * term2)
         function = self._handle_nans(function)
+        self._save_vertical_levels(function, 'Cz')
         Cz = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
         Cz = self._convert_units(Cz, 'Cz')
-
+        
         self.app_logger.debug("Done.")
         return Cz
         
@@ -211,6 +214,7 @@ class ConversionTerms:
         # Process the integral and save the result
         function = term1 + term2 + term3 + term4 + term5
         function = self._handle_nans(function)
+        self._save_vertical_levels(function, 'Ck')
         Ck = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units / g
         Ck = self._convert_units(Ck, 'Ck')
 
@@ -260,7 +264,10 @@ class ConversionTerms:
         df.reset_index(inplace=True)
 
         if self.method == 'fixed':
-            df = df.pivot(index=self.TimeName, columns=self.VerticalCoordIndexer)
+            if self.TimeName not in function.dims:
+                df = df.T
+            else:
+                df = df.pivot(index=self.TimeName, columns=self.VerticalCoordIndexer)
 
         else:
             df.set_index(self.TimeName, inplace=True)

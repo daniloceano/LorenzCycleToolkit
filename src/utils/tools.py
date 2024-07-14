@@ -290,10 +290,10 @@ def prepare_data(args, varlist: str = 'inputs/namelist', app_logger: logging.Log
     try:
         variable_list_df = pd.read_csv(varlist, sep=';', index_col=0, header=0)
     except FileNotFoundError:
-        app_logger.error("The 'fvar' text file could not be found.")
+        app_logger.error("The 'namelist' text file could not be found.")
         raise
     except pd.errors.EmptyDataError:
-        app_logger.error("The 'fvar' text file is empty.")
+        app_logger.error("The 'namelist' text file is empty.")
         raise
     app_logger.debug("List of variables found:\n" + str(variable_list_df))
 
@@ -302,8 +302,8 @@ def prepare_data(args, varlist: str = 'inputs/namelist', app_logger: logging.Log
 
     # Check if variable_list_df matches the data
     if not set(variable_list_df['Variable']).issubset(set(data.variables)):
-        app_logger.error("The variable list does not match the data. Check if the 'fvar' text file is correct.")
-        raise ValueError("'fvar' text file does not match the data.")
+        app_logger.error("The variable list does not match the data. Check if the 'namelist' text file is correct.")
+        raise ValueError("'namelist' text file does not match the data.")
     
     processed_data = process_data(data, args, variable_list_df, app_logger)
     sliced_data = slice_domain(processed_data, args, variable_list_df)

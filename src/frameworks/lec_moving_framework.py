@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/07/13 13:44:33 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/14 13:04:36 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -130,15 +130,17 @@ def extract_wind_and_height_components(idata, variable_list_df, args):
     """
     u_var = variable_list_df.loc['Eastward Wind Component']['Variable']
     v_var = variable_list_df.loc['Northward Wind Component']['Variable']
-    geopotential_var = variable_list_df.loc['Geopotential Height']['Variable'] if not args.geopotential else variable_list_df.loc['Geopotential']['Variable']
-
+    if 'Geopotential Height' in variable_list_df.index:
+        geopotential_var = variable_list_df.loc['Geopotential Height']['Variable']
+    else:
+        geopotential_var = variable_list_df.loc['Geopotential']['Variable']
     iu = (idata[u_var].compute() * units(variable_list_df.loc['Eastward Wind Component']['Units']).to('m/s'))
     iv = (idata[v_var].compute() * units(variable_list_df.loc['Northward Wind Component']['Units']).to('m/s'))
     ihgt = (idata[geopotential_var].compute() * units(
         variable_list_df[variable_list_df['Variable'] == geopotential_var]['Units'].iloc[0])
         )
     
-    if args.geopotential:
+    if 'Geopotential' in variable_list_df.index:
         ihgt = (ihgt / g).metpy.convert_units('gpm')
 
     return iu, iv, ihgt
@@ -436,10 +438,10 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
     
     # Create csv files for storing vertical results
     for term in ['Az', 'Ae', 'Kz', 'Ke', 'Ge', 'Gz',
-                 'Cz_1', 'Cz_2',
-                 'Ca_1', 'Ca_2',
-                 'Ce_1', 'Ce_2',
-                 'Ck_1', 'Ck_2', 'Ck_3', 'Ck_4', 'Ck_5']:
+                 'Cz', 'Cz_1', 'Cz_2',
+                 'Ca', 'Ca_1', 'Ca_2',
+                 'Ce', 'Ce_1', 'Ce_2',
+                 'Ck', 'Ck_1', 'Ck_2', 'Ck_3', 'Ck_4', 'Ck_5']:
         columns = [TimeName] + [float(i) for i in PressureData.values]
         df = pd.DataFrame(columns=columns)
         file_name = term + '_' + VerticalCoordIndexer + '.csv'

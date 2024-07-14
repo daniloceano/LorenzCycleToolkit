@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/06/14 16:32:27 by daniloceano       #+#    #+#              #
-#    Updated: 2024/04/09 15:18:27 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/14 12:35:24 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -75,10 +75,10 @@ def plot_LPS(dataframe, infile, results_subdirectory, figures_directory, app_log
         periods_df = pd.read_csv(periods_file, parse_dates=['start', 'end'], index_col=0)
     except FileNotFoundError:
         app_logger.error(f"Periods file not found.")
-        raise
+        return
     except Exception as e:
         app_logger.error(f"Error while reading periods file: {e}")
-        raise
+        return
 
     # Initialize an empty DataFrame to store period means
     period_means_df = pd.DataFrame()

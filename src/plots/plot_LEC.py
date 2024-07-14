@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/01/03 23:31:13 by daniloceano       #+#    #+#              #
-#    Updated: 2024/02/20 18:11:16 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/14 12:34:40 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -242,10 +242,10 @@ def plot_period_means(periods_file, df_results, figures_directory, plot_example=
         periods_df = pd.read_csv(periods_file, parse_dates=['start', 'end'], index_col=0)
     except FileNotFoundError:
         app_logger.error(f"Periods file not found.") if app_logger else print(f"Periods file not found.")
-        raise
+        return
     except Exception as e:
         app_logger.error(f"Error while reading periods file: {e}") if app_logger else print(f"Error while reading periods file: {e}")
-        raise
+        return
 
     # Initialize an empty DataFrame to store period means
     period_means_df = pd.DataFrame()

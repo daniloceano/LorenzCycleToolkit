@@ -211,20 +211,11 @@ def slice_domain(NetCDF_data, args, variable_list_df):
     LevelIndexer = variable_list_df.loc['Vertical Level']['Variable']
     
     if args.fixed:
-        dfbox = pd.read_csv('inputs/box_limits',header=None,
-                            delimiter=';',index_col=0)
-        WesternLimit = float(NetCDF_data[LonIndexer].sel(
-            {LonIndexer:float(dfbox.loc['min_lon'].values)},
-            method='nearest'))
-        EasternLimit =float(NetCDF_data[LonIndexer].sel(
-            {LonIndexer:float(dfbox.loc['max_lon'].values)},
-            method='nearest'))
-        SouthernLimit =float(NetCDF_data[LatIndexer].sel(
-            {LatIndexer:float(dfbox.loc['min_lat'].values)},
-            method='nearest'))
-        NorthernLimit =float(NetCDF_data[LatIndexer].sel(
-            {LatIndexer:float(dfbox.loc['max_lat'].values)},
-            method='nearest'))
+        dfbox = pd.read_csv('inputs/box_limits',header=None, delimiter=';',index_col=0)
+        WesternLimit = float(NetCDF_data[LonIndexer].sel({LonIndexer: float(dfbox.loc['min_lon'].values[0])}, method='nearest'))
+        EasternLimit = float(NetCDF_data[LonIndexer].sel({LonIndexer: float(dfbox.loc['max_lon'].values[0])}, method='nearest'))
+        SouthernLimit = float(NetCDF_data[LatIndexer].sel({LatIndexer: float(dfbox.loc['min_lat'].values[0])}, method='nearest'))
+        NorthernLimit = float(NetCDF_data[LatIndexer].sel({LatIndexer: float(dfbox.loc['max_lat'].values[0])}, method='nearest'))
         
     elif args.track:
         dx, dy  = (NetCDF_data[LonIndexer][1] - NetCDF_data[LonIndexer][0],

@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:59 by daniloceano       #+#    #+#              #
-#    Updated: 2024/07/13 13:44:32 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/14 13:04:10 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -75,10 +75,10 @@ def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirec
     app_logger.info(f'Bounding box: min_lon={min_lon}, max_lon={max_lon}, min_lat={min_lat}, max_lat={max_lat}')
     
     for term in ['Az', 'Ae', 'Kz', 'Ke', 'Ge', 'Gz',
-                 'Cz_1', 'Cz_2',
-                 'Ca_1', 'Ca_2',
-                 'Ce_1', 'Ce_2',
-                 'Ck_1', 'Ck_2', 'Ck_3', 'Ck_4', 'Ck_5']:
+                 'Cz', 'Cz_1', 'Cz_2',
+                 'Ca', 'Ca_1', 'Ca_2',
+                 'Ce', 'Ce_1', 'Ce_2',
+                 'Ck', 'Ck_1', 'Ck_2', 'Ck_3', 'Ck_4', 'Ck_5']:
         columns = [TimeName] + [float(i)/100 for i in pres.values]
         output_path = Path(results_subdirectory, f'{term}_{VerticalCoordIndexer}.csv')
         pd.DataFrame(columns=columns).to_csv(output_path, index=None)
@@ -155,5 +155,6 @@ def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirec
         plot_timeseries(results_file, figures_directory, app_logger)
         plot_box_limits(box_limits_file, figures_directory, app_logger)
         boxplot_terms(results_file, results_subdirectory, figures_directory, app_logger)
-        plot_lorenz_cycle(results_file, figures_directory, app_logger=app_logger)
         plot_hovmoller(results_file, figures_directory, app_logger)
+        plot_lorenz_cycle(results_file, figures_directory, app_logger=app_logger)
+        
