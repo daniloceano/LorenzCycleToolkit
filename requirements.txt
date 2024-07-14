@@ -1,58 +1,57 @@
 appdirs==1.4.4
 attrs==23.2.0
-Bottleneck @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_e7wwl52wn1/croot/bottleneck_1709075893359/work
 cads-api-client==1.1.0
 Cartopy==0.23.0
 cdsapi==0.7.0
 certifi==2024.7.4
-cftime @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/cftime_1699244683615/work
+cftime==1.6.3
 charset-normalizer==3.3.2
 click==8.1.7
 cloudpickle==3.0.0
 cmocean==4.0.3
-contourpy @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/contourpy_1701814001737/work
-cycler @ file:///tmp/build/80754af9/cycler_1637851556182/work
+contourpy==1.0.7
+cycler==0.11.0
 cyclophaser==1.7.3
 dask==2024.7.0
 flexcache==0.3
 flexparser==0.3.1
-fonttools @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_60c8ux4mkl/croot/fonttools_1713551354374/work
+fonttools==4.30.0
 fsspec==2024.6.1
 idna==3.7
-kiwisolver @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/kiwisolver_1699239145780/work
+kiwisolver==1.4.5
 locket==1.0.0
 lorenz-phase-space==1.2.4
-matplotlib @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_a8crvoz7ca/croot/matplotlib-suite_1713336381679/work
+matplotlib==3.7.2
 MetPy==1.6.2
 multiurl==0.3.1
-netCDF4 @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/netcdf4_1699259148731/work
-numexpr @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/numexpr_1699237935415/work
-numpy @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_a51i_mbs7m/croot/numpy_and_numpy_base_1708638620867/work/dist/numpy-1.26.4-cp312-cp312-macosx_11_0_arm64.whl#sha256=37afb6b734a197702d848df93bd67c10b52f6467d56e518950d84b6b1c949d27
-packaging @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_81ri4yfpjw/croot/packaging_1720101866878/work
-pandas @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_b53hgou29t/croot/pandas_1718308972393/work/dist/pandas-2.2.2-cp312-cp312-macosx_11_0_arm64.whl#sha256=1956b71d1baac8b370fd9deac6100aadefda112447dca816a81ecbf3ea4eb3e6
+netCDF4==1.6.3
+numexpr==2.8.4
+numpy==1.26.4
+packaging==24.1
+pandas==2.2.2
 partd==1.4.2
-pillow @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_bdozlpra65/croot/pillow_1714398852206/work
+pillow==10.0.0
 Pint==0.24.3
 platformdirs==4.2.2
 pooch==1.8.2
-pyparsing @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/pyparsing_1699239441347/work
+pyparsing==3.1.1
 pyproj==3.6.1
 pyshp==2.3.1
-python-dateutil @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_66ud1l42_h/croot/python-dateutil_1716495741162/work
-pytz @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_a4b76c83ik/croot/pytz_1713974318928/work
+python-dateutil==2.8.2
+pytz==2024.3
 PyYAML==6.0.1
 requests==2.32.3
-scipy @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_b9t0odioph/croot/scipy_1717521487325/work/dist/scipy-1.13.1-cp312-cp312-macosx_11_0_arm64.whl#sha256=79bc68b8b51505a63d293435b261c75d43ce266b063378b789d9805b3a33fcc0
+scipy==1.13.1
 setuptools==69.5.1
 shapely==2.0.5
-six @ file:///tmp/build/80754af9/six_1644875935023/work
+six==1.16.0
 toolz==0.12.1
-tornado @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_a4w03z48br/croot/tornado_1718740114858/work
+tornado==6.3.3
 tqdm==4.66.4
 traitlets==5.14.3
 typing_extensions==4.12.2
-tzdata @ file:///croot/python-tzdata_1690578112552/work
-unicodedata2 @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_a3epjto7gs/croot/unicodedata2_1713212955584/work
+tzdata==2023.3
+unicodedata2==14.0.0
 urllib3==2.2.2
 wheel==0.43.0
-xarray @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/xarray_1699240726099/work
+xarray==2023.7.0
