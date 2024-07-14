@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/26 16:08:15 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/14 12:25:53 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -185,7 +185,7 @@ class BoxData:
 
     def _process_geopotential_data(self, data, variable_list_df):
         """Extract and process geopotential or geopotential height data."""
-        if self.args.geopotential:
+        if 'Geopotential' in variable_list_df.index:
             self.geopt = self._extract_data(data, variable_list_df, 'Geopotential', 'm**2/s**2')
         else:
             self.geopt = self._extract_and_convert_geopotential_height(data, variable_list_df)

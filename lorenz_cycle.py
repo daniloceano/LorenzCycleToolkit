@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/04/20 10:05:52 by daniloceano       #+#    #+#              #
-#    Updated: 2024/07/13 11:47:40 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/14 12:46:56 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -47,7 +47,6 @@ def create_arg_parser():
     parser = argparse.ArgumentParser(description="Lorenz Energy Cycle (LEC) program.")
     parser.add_argument("infile", help="Input .nc file with temperature, geopotential/geopotential height, and wind components data.")
     parser.add_argument("-r", "--residuals", action='store_true', help="Compute the Dissipation and Generation terms as residuals.")
-    parser.add_argument("-g", "--geopotential", action='store_true', help="Use geopotential data instead of geopotential height.")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-f", "--fixed", action='store_true', help="Compute the energetics for a fixed domain specified by the 'box_limits' file.")
     group.add_argument("-t", "--track", action='store_true', help="Define the domain using a track file.")
@@ -100,7 +99,7 @@ def run_lec_analysis(data, args, results_subdirectory, figures_directory, app_lo
     """
     start_time = time.time()
 
-    variable_list_df = pd.read_csv("inputs/fvars", sep=';', index_col=0, header=0)
+    variable_list_df = pd.read_csv("inputs/namelist", sep=';', index_col=0, header=0)
 
     if args.fixed:
         lec_fixed(data, variable_list_df, results_subdirectory, app_logger, args)
@@ -136,7 +135,10 @@ def main():
         parser = create_arg_parser()
         print("----------------------------------------------------------------------------")
         print("WARNING: USING EXAMPLE ARGUMENTS")
-        args = parser.parse_args(['samples/Reg1-Representative_NCEP-R2.nc', '-t', '-r', '-p', '-v'])
+        import shutil
+        shutil.copy('inputs/namelist_NCEP-R2', 'inputs/namelist')
+        shutil.copy('inputs/track_testdata_NCEP-R2', 'inputs/track')
+        args = parser.parse_args(['samples/testdata_NCEP-R2.nc', '-t', '-r', '-p', '-v'])
         # args = parser.parse_args(['20070536_ERA5_sliced.nc', '-t', '-r', '-p', '-v', '-g', '--cdsapi', '--trackfile',
                                  #'inputs/track_20070536.csv'])
         print("----------------------------------------------------------------------------")
@@ -158,7 +160,7 @@ def main():
     app_logger.info(f"Command line arguments: {args}")
 
     # Prepare data
-    data = prepare_data(args, 'inputs/fvars', app_logger)
+    data = prepare_data(args, 'inputs/namelist', app_logger)
     
     # Run LEC analysis
     run_lec_analysis(data, args, results_subdirectory, figures_directory, app_logger)

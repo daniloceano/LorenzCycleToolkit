@@ -210,7 +210,7 @@ def get_data(args: argparse.Namespace, app_logger: logging.Logger) -> xr.Dataset
         with dask.config.set(array={'slicing': {'split_large_chunks': True}}):
             data = xr.open_dataset(infile)
     except FileNotFoundError:
-        app_logger.error("Could not open file. Check if path, fvars file, and file format (.nc) are correct.")
+        app_logger.error("Could not open file. Check if path, namelist file, and file format (.nc) are correct.")
         raise
     except Exception as e:
         app_logger.exception("An exception occurred: {}".format(e))
@@ -271,13 +271,13 @@ def process_data(data: xr.Dataset, args: argparse.Namespace, variable_list_df: p
     app_logger.debug("Data opened successfully.")
     return data
 
-def prepare_data(args, varlist: str = 'inputs/fvars', app_logger: logging.Logger = None) -> xr.Dataset:
+def prepare_data(args, varlist: str = 'inputs/namelist', app_logger: logging.Logger = None) -> xr.Dataset:
     """
     Prepare the data for further analysis.
 
     Parameters:
         args (object): The arguments for the function.
-        varlist (str): The file path to the variable list file (fvars).
+        varlist (str): The file path to the variable list file (namelist).
         app_logger (logging.Logger): The logger for the application.
 
     Returns:
@@ -290,10 +290,10 @@ def prepare_data(args, varlist: str = 'inputs/fvars', app_logger: logging.Logger
     try:
         variable_list_df = pd.read_csv(varlist, sep=';', index_col=0, header=0)
     except FileNotFoundError:
-        app_logger.error("The 'fvar' text file could not be found.")
+        app_logger.error("The 'namelist' text file could not be found.")
         raise
     except pd.errors.EmptyDataError:
-        app_logger.error("The 'fvar' text file is empty.")
+        app_logger.error("The 'namelist' text file is empty.")
         raise
     app_logger.debug("List of variables found:\n" + str(variable_list_df))
 
@@ -302,8 +302,8 @@ def prepare_data(args, varlist: str = 'inputs/fvars', app_logger: logging.Logger
 
     # Check if variable_list_df matches the data
     if not set(variable_list_df['Variable']).issubset(set(data.variables)):
-        app_logger.error("The variable list does not match the data. Check if the 'fvar' text file is correct.")
-        raise ValueError("'fvar' text file does not match the data.")
+        app_logger.error("The variable list does not match the data. Check if the 'namelist' text file is correct.")
+        raise ValueError("'namelist' text file does not match the data.")
     
     processed_data = process_data(data, args, variable_list_df, app_logger)
     sliced_data = slice_domain(processed_data, args, variable_list_df)

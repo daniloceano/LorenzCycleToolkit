@@ -72,7 +72,7 @@ def StaticStability(TemperatureData,PressureData,VerticalCoordIndexer,
     sigma_AA_filtered = sigma_AA_filtered*units_sigma
 
     logging.debug("Ok.")
-    return sigma_AA_filtered.drop("coslats", errors='ignore')
+    return sigma_AA_filtered.drop_vars("coslats", errors='ignore')
 
 def AdiabaticHEating(TemperatureData, PressureData, OmegaData,
                       UWindComponentData,VWindComponentData,

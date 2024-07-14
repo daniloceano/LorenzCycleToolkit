@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/29 10:02:20 by daniloceano       #+#    #+#              #
-#    Updated: 2024/01/04 15:30:26 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/14 12:59:16 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -17,6 +17,7 @@ import cartopy
 import cartopy.feature as cfeature
 from cartopy.feature import NaturalEarthFeature, COASTLINE
 from cartopy.feature import BORDERS
+import re 
 
 # Global constants for plotting
 TERM_DETAILS = {
@@ -84,7 +85,9 @@ def read_results(results_file_path, app_logger=False):
         pandas.DataFrame or None: The DataFrame containing the results, or None if an error occurs.
     """
     try:
-        df = pd.read_csv(results_file_path, parse_dates={'Datetime': [0]}, index_col=[0])
+        df = pd.read_csv(results_file_path, index_col=[0])
+        df['Datetime'] = pd.to_datetime(df.index)
+        df.set_index('Datetime', inplace=True)
         return df
     except FileNotFoundError:
         app_logger.error(f'Error: File {results_file_path} was not found.') if app_logger else print(f'Error: File {results_file_path} was not found.')
@@ -146,6 +149,8 @@ def get_data_vertical_levels(results_directory):
     """
     all_terms = [term for details in TERM_DETAILS.values() for term in details['terms']]
     files = [file for file in glob(os.path.join(results_directory, '*.csv')) if "results" not in file]
+    # Remove files for split terms
+    files = [file for file in files if not re.search(r'_[0-9]', os.path.basename(file)) and "results" not in file]
 
     data = {}
     for file in files:
