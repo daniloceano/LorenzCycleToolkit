@@ -1,73 +1,58 @@
+appdirs==1.4.4
 attrs==23.2.0
-branca==0.7.0
-Cartopy==0.22.0
-cdsapi==0.6.1
-certifi==2023.11.17
-cffi==1.16.0
-cfgrib==0.9.10.4
-cftime==1.6.3
+Bottleneck @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_e7wwl52wn1/croot/bottleneck_1709075893359/work
+cads-api-client==1.1.0
+Cartopy==0.23.0
+cdsapi==0.7.0
+certifi==2024.7.4
+cftime @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/cftime_1699244683615/work
 charset-normalizer==3.3.2
 click==8.1.7
-climetlab==0.19.2
 cloudpickle==3.0.0
-cmocean==3.0.3
-contourpy==1.2.0
-cycler==0.12.1
-cyclophaser==1.6.0
-dask==2024.1.0
-eccodes==1.6.1
-ecmwf-api-client==1.6.3
-ecmwf-opendata==0.2.0
-ecmwflibs==0.5.3
-entrypoints==0.4
-filelock==3.13.1
-findlibs==0.0.5
-fonttools==4.47.2
-fsspec==2023.12.2
-idna==3.6
-imageio==2.33.1
-importlib-metadata==7.0.1
-importlib-resources==6.1.1
-Jinja2==3.1.3
-kiwisolver==1.4.5
+cmocean==4.0.3
+contourpy @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/contourpy_1701814001737/work
+cycler @ file:///tmp/build/80754af9/cycler_1637851556182/work
+cyclophaser==1.7.3
+dask==2024.7.0
+flexcache==0.3
+flexparser==0.3.1
+fonttools @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_60c8ux4mkl/croot/fonttools_1713551354374/work
+fsspec==2024.6.1
+idna==3.7
+kiwisolver @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/kiwisolver_1699239145780/work
 locket==1.0.0
-lorenz-phase-space==0.0.9
-lru-dict==1.3.0
-Magics==1.5.8
-Markdown==3.5.2
-MarkupSafe==2.1.3
-matplotlib==3.8.2
-MetPy==1.6.1
-multiurl==0.2.3.2
-netCDF4==1.6.5
-numpngw==0.1.3
-numpy==1.26.3
-packaging==23.2
-pandas==2.1.4
-partd==1.4.1
-pdbufr==0.11.0
-pillow==10.2.0
-Pint==0.23
-platformdirs==4.1.0
-pooch==1.8.0
-pycparser==2.21
-pyodc==1.3.0
-pyparsing==3.1.1
+lorenz-phase-space==1.2.4
+matplotlib @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_a8crvoz7ca/croot/matplotlib-suite_1713336381679/work
+MetPy==1.6.2
+multiurl==0.3.1
+netCDF4 @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/netcdf4_1699259148731/work
+numexpr @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/numexpr_1699237935415/work
+numpy @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_a51i_mbs7m/croot/numpy_and_numpy_base_1708638620867/work/dist/numpy-1.26.4-cp312-cp312-macosx_11_0_arm64.whl#sha256=37afb6b734a197702d848df93bd67c10b52f6467d56e518950d84b6b1c949d27
+packaging @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_81ri4yfpjw/croot/packaging_1720101866878/work
+pandas @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_b53hgou29t/croot/pandas_1718308972393/work/dist/pandas-2.2.2-cp312-cp312-macosx_11_0_arm64.whl#sha256=1956b71d1baac8b370fd9deac6100aadefda112447dca816a81ecbf3ea4eb3e6
+partd==1.4.2
+pillow @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_bdozlpra65/croot/pillow_1714398852206/work
+Pint==0.24.3
+platformdirs==4.2.2
+pooch==1.8.2
+pyparsing @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/pyparsing_1699239441347/work
 pyproj==3.6.1
 pyshp==2.3.1
-python-dateutil==2.8.2
-pytz==2023.3.post1
+python-dateutil @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_66ud1l42_h/croot/python-dateutil_1716495741162/work
+pytz @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_a4b76c83ik/croot/pytz_1713974318928/work
 PyYAML==6.0.1
-requests==2.31.0
-scipy==1.11.4
-shapely==2.0.2
-six==1.16.0
-termcolor==2.4.0
-toolz==0.12.0
-tqdm==4.66.1
-traitlets==5.14.1
-typing_extensions==4.9.0
-tzdata==2023.4
-urllib3==2.1.0
-xarray==2023.12.0
-zipp==3.17.0
+requests==2.32.3
+scipy @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_b9t0odioph/croot/scipy_1717521487325/work/dist/scipy-1.13.1-cp312-cp312-macosx_11_0_arm64.whl#sha256=79bc68b8b51505a63d293435b261c75d43ce266b063378b789d9805b3a33fcc0
+setuptools==69.5.1
+shapely==2.0.5
+six @ file:///tmp/build/80754af9/six_1644875935023/work
+toolz==0.12.1
+tornado @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_a4w03z48br/croot/tornado_1718740114858/work
+tqdm==4.66.4
+traitlets==5.14.3
+typing_extensions==4.12.2
+tzdata @ file:///croot/python-tzdata_1690578112552/work
+unicodedata2 @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_a3epjto7gs/croot/unicodedata2_1713212955584/work
+urllib3==2.2.2
+wheel==0.43.0
+xarray @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/xarray_1699240726099/work
