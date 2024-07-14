@@ -1,47 +1,47 @@
-2024-01-04 14:54:59,588 - lorenz_cycle - INFO - Starting LEC analysis
-2024-01-04 14:54:59,588 - lorenz_cycle - INFO - Command line arguments: Namespace(infile='samples/Catarina_NCEP-R2.nc', residuals=True, geopotential=False, fixed=True, track=False, choose=False, zeta=False, mpas=False, plots=True, outname=None, verbosity=False)
-2024-01-04 14:54:59,936 - lorenz_cycle - INFO - Bounding box: min_lon=-55, max_lon=-36, min_lat=-35, max_lat=-20
-2024-01-04 14:55:00,875 - lorenz_cycle - INFO - Computed energy contents
-2024-01-04 14:55:01,452 - lorenz_cycle - INFO - Computed conversion terms
-2024-01-04 14:55:02,567 - lorenz_cycle - INFO - Computed boundary terms
-2024-01-04 14:55:02,661 - lorenz_cycle - INFO - Computed generation dissipation terms
-2024-01-04 14:55:02,663 - lorenz_cycle - INFO - Computed budget and residuals
-2024-01-04 14:55:02,665 - lorenz_cycle - INFO - Results saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Catarina_NCEP-R2_fixed_results.csv
-2024-01-04 14:55:02,667 - lorenz_cycle - INFO - Generating plots..
-2024-01-04 14:55:02,667 - lorenz_cycle - INFO - Plotting timeseries...
-2024-01-04 14:55:02,871 - lorenz_cycle - INFO - Figure saved for energy in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/timeseries
-2024-01-04 14:55:02,969 - lorenz_cycle - INFO - Figure saved for conversion in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/timeseries
-2024-01-04 14:55:03,046 - lorenz_cycle - INFO - Figure saved for boundary in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/timeseries
-2024-01-04 14:55:03,119 - lorenz_cycle - INFO - Figure saved for budget_diff in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/timeseries
-2024-01-04 14:55:03,191 - lorenz_cycle - INFO - Figure saved for residuals in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/timeseries
-2024-01-04 14:55:03,256 - lorenz_cycle - INFO - Figure saved for generation_dissipation in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/timeseries
-2024-01-04 14:55:03,327 - lorenz_cycle - INFO - Figure saved for comparing_generation in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/timeseries
-2024-01-04 14:55:03,392 - lorenz_cycle - INFO - Figure saved for comparing_dissipation in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/timeseries
-2024-01-04 14:55:03,392 - lorenz_cycle - INFO - Plotting box limits on map...
-2024-01-04 14:55:03,727 - lorenz_cycle - INFO - Figure saved in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures
-2024-01-04 14:55:03,727 - lorenz_cycle - INFO - Plotting boxplots...
-2024-01-04 14:55:03,737 - lorenz_cycle - INFO - Creating boxplot for each time
-2024-01-04 14:55:04,255 - lorenz_cycle - INFO - Figure saved in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/boxplots
-2024-01-04 14:55:04,506 - lorenz_cycle - INFO - Figure saved in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/boxplots
-2024-01-04 14:55:04,506 - lorenz_cycle - INFO - Creating boxplot for each vertical level
-2024-01-04 14:55:04,857 - lorenz_cycle - INFO - Created ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/boxplots/boxplot_vertical_levels_energy.png
-2024-01-04 14:55:05,044 - lorenz_cycle - INFO - Created ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/boxplots/boxplot_vertical_levels_conversion.png
-2024-01-04 14:55:05,044 - lorenz_cycle - INFO - Creating boxplot for each term
-2024-01-04 14:55:05,100 - lorenz_cycle - INFO - boxplot_terms_energy.png created
-2024-01-04 14:55:05,153 - lorenz_cycle - INFO - boxplot_terms_conversion.png created
-2024-01-04 14:55:05,210 - lorenz_cycle - INFO - boxplot_terms_boundary.png created
-2024-01-04 14:55:05,271 - lorenz_cycle - INFO - boxplot_terms_budget_diff.png created
-2024-01-04 14:55:05,327 - lorenz_cycle - INFO - boxplot_terms_residuals.png created
-2024-01-04 14:55:05,370 - lorenz_cycle - INFO - boxplot_terms_generation_dissipation.png created
-2024-01-04 14:55:05,430 - lorenz_cycle - INFO - boxplot_terms_comparing_generation.png created
-2024-01-04 14:55:05,475 - lorenz_cycle - INFO - boxplot_terms_comparing_dissipation.png created
-2024-01-04 14:55:05,528 - lorenz_cycle - INFO - Lorenz cycle plot saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/LEC/LEC_2004-03-21.png
-2024-01-04 14:55:05,572 - lorenz_cycle - INFO - Lorenz cycle plot saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/LEC/LEC_2004-03-22.png
-2024-01-04 14:55:05,615 - lorenz_cycle - INFO - Lorenz cycle plot saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/LEC/LEC_2004-03-23.png
-2024-01-04 14:55:05,714 - lorenz_cycle - INFO - Lorenz cycle plot saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/LEC/LEC_2004-03-24.png
-2024-01-04 14:55:05,755 - lorenz_cycle - INFO - Lorenz cycle plot saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/LEC/LEC_2004-03-25.png
-2024-01-04 14:55:05,795 - lorenz_cycle - INFO - Lorenz cycle plot saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/LEC/LEC_2004-03-26.png
-2024-01-04 14:55:05,835 - lorenz_cycle - INFO - Lorenz cycle plot saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/LEC/LEC_2004-03-27.png
-2024-01-04 14:55:05,875 - lorenz_cycle - INFO - Lorenz cycle plot saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/LEC/LEC_2004-03-28.png
-2024-01-04 14:55:05,915 - lorenz_cycle - INFO - Lorenz cycle plot saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/LEC/LEC_2004-03-29.png
-2024-01-04 14:55:05,924 - lorenz_cycle - INFO - Creating hovmoller diagrams
+2024-01-04 14:54:59,588 - lorenzcycletoolkit - INFO - Starting LEC analysis
+2024-01-04 14:54:59,588 - lorenzcycletoolkit - INFO - Command line arguments: Namespace(infile='samples/Catarina_NCEP-R2.nc', residuals=True, geopotential=False, fixed=True, track=False, choose=False, zeta=False, mpas=False, plots=True, outname=None, verbosity=False)
+2024-01-04 14:54:59,936 - lorenzcycletoolkit - INFO - Bounding box: min_lon=-55, max_lon=-36, min_lat=-35, max_lat=-20
+2024-01-04 14:55:00,875 - lorenzcycletoolkit - INFO - Computed energy contents
+2024-01-04 14:55:01,452 - lorenzcycletoolkit - INFO - Computed conversion terms
+2024-01-04 14:55:02,567 - lorenzcycletoolkit - INFO - Computed boundary terms
+2024-01-04 14:55:02,661 - lorenzcycletoolkit - INFO - Computed generation dissipation terms
+2024-01-04 14:55:02,663 - lorenzcycletoolkit - INFO - Computed budget and residuals
+2024-01-04 14:55:02,665 - lorenzcycletoolkit - INFO - Results saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Catarina_NCEP-R2_fixed_results.csv
+2024-01-04 14:55:02,667 - lorenzcycletoolkit - INFO - Generating plots..
+2024-01-04 14:55:02,667 - lorenzcycletoolkit - INFO - Plotting timeseries...
+2024-01-04 14:55:02,871 - lorenzcycletoolkit - INFO - Figure saved for energy in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/timeseries
+2024-01-04 14:55:02,969 - lorenzcycletoolkit - INFO - Figure saved for conversion in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/timeseries
+2024-01-04 14:55:03,046 - lorenzcycletoolkit - INFO - Figure saved for boundary in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/timeseries
+2024-01-04 14:55:03,119 - lorenzcycletoolkit - INFO - Figure saved for budget_diff in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/timeseries
+2024-01-04 14:55:03,191 - lorenzcycletoolkit - INFO - Figure saved for residuals in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/timeseries
+2024-01-04 14:55:03,256 - lorenzcycletoolkit - INFO - Figure saved for generation_dissipation in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/timeseries
+2024-01-04 14:55:03,327 - lorenzcycletoolkit - INFO - Figure saved for comparing_generation in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/timeseries
+2024-01-04 14:55:03,392 - lorenzcycletoolkit - INFO - Figure saved for comparing_dissipation in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/timeseries
+2024-01-04 14:55:03,392 - lorenzcycletoolkit - INFO - Plotting box limits on map...
+2024-01-04 14:55:03,727 - lorenzcycletoolkit - INFO - Figure saved in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures
+2024-01-04 14:55:03,727 - lorenzcycletoolkit - INFO - Plotting boxplots...
+2024-01-04 14:55:03,737 - lorenzcycletoolkit - INFO - Creating boxplot for each time
+2024-01-04 14:55:04,255 - lorenzcycletoolkit - INFO - Figure saved in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/boxplots
+2024-01-04 14:55:04,506 - lorenzcycletoolkit - INFO - Figure saved in directory: ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/boxplots
+2024-01-04 14:55:04,506 - lorenzcycletoolkit - INFO - Creating boxplot for each vertical level
+2024-01-04 14:55:04,857 - lorenzcycletoolkit - INFO - Created ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/boxplots/boxplot_vertical_levels_energy.png
+2024-01-04 14:55:05,044 - lorenzcycletoolkit - INFO - Created ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/boxplots/boxplot_vertical_levels_conversion.png
+2024-01-04 14:55:05,044 - lorenzcycletoolkit - INFO - Creating boxplot for each term
+2024-01-04 14:55:05,100 - lorenzcycletoolkit - INFO - boxplot_terms_energy.png created
+2024-01-04 14:55:05,153 - lorenzcycletoolkit - INFO - boxplot_terms_conversion.png created
+2024-01-04 14:55:05,210 - lorenzcycletoolkit - INFO - boxplot_terms_boundary.png created
+2024-01-04 14:55:05,271 - lorenzcycletoolkit - INFO - boxplot_terms_budget_diff.png created
+2024-01-04 14:55:05,327 - lorenzcycletoolkit - INFO - boxplot_terms_residuals.png created
+2024-01-04 14:55:05,370 - lorenzcycletoolkit - INFO - boxplot_terms_generation_dissipation.png created
+2024-01-04 14:55:05,430 - lorenzcycletoolkit - INFO - boxplot_terms_comparing_generation.png created
+2024-01-04 14:55:05,475 - lorenzcycletoolkit - INFO - boxplot_terms_comparing_dissipation.png created
+2024-01-04 14:55:05,528 - lorenzcycletoolkit - INFO - Lorenz cycle plot saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/LEC/LEC_2004-03-21.png
+2024-01-04 14:55:05,572 - lorenzcycletoolkit - INFO - Lorenz cycle plot saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/LEC/LEC_2004-03-22.png
+2024-01-04 14:55:05,615 - lorenzcycletoolkit - INFO - Lorenz cycle plot saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/LEC/LEC_2004-03-23.png
+2024-01-04 14:55:05,714 - lorenzcycletoolkit - INFO - Lorenz cycle plot saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/LEC/LEC_2004-03-24.png
+2024-01-04 14:55:05,755 - lorenzcycletoolkit - INFO - Lorenz cycle plot saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/LEC/LEC_2004-03-25.png
+2024-01-04 14:55:05,795 - lorenzcycletoolkit - INFO - Lorenz cycle plot saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/LEC/LEC_2004-03-26.png
+2024-01-04 14:55:05,835 - lorenzcycletoolkit - INFO - Lorenz cycle plot saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/LEC/LEC_2004-03-27.png
+2024-01-04 14:55:05,875 - lorenzcycletoolkit - INFO - Lorenz cycle plot saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/LEC/LEC_2004-03-28.png
+2024-01-04 14:55:05,915 - lorenzcycletoolkit - INFO - Lorenz cycle plot saved to ../LEC_Results/Catarina_NCEP-R2_fixed/Figures/LEC/LEC_2004-03-29.png
+2024-01-04 14:55:05,924 - lorenzcycletoolkit - INFO - Creating hovmoller diagrams

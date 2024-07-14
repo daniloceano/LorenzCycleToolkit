@@ -147,7 +147,7 @@ def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirec
         from ..plots.timeseries_terms import plot_timeseries
         from ..plots.map_box_limits import plot_box_limits
         from ..plots.plot_boxplot import boxplot_terms
-        from ..plots.plot_LEC import plot_lorenz_cycle
+        from ..plots.plot_LEC import plot_lorenzcycletoolkit
         from ..plots.plot_hovmoller import plot_hovmoller
         
         app_logger.info('Generating plots..')
@@ -156,5 +156,5 @@ def lec_fixed(data: xr.Dataset, variable_list_df: pd.DataFrame, results_subdirec
         plot_box_limits(box_limits_file, figures_directory, app_logger)
         boxplot_terms(results_file, results_subdirectory, figures_directory, app_logger)
         plot_hovmoller(results_file, figures_directory, app_logger)
-        plot_lorenz_cycle(results_file, figures_directory, app_logger=app_logger)
+        plot_lorenzcycletoolkit(results_file, figures_directory, app_logger=app_logger)
         

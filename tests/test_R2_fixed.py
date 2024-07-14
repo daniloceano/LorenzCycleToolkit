@@ -1,5 +1,5 @@
 import shutil
-from lorenz_cycle import create_arg_parser, initialize_logging, prepare_data, setup_results_directory, run_lec_analysis
+from lorenzcycletoolkit import create_arg_parser, initialize_logging, prepare_data, setup_results_directory, run_lec_analysis
 
 def test_example_args(monkeypatch):
 
@@ -7,7 +7,7 @@ def test_example_args(monkeypatch):
     shutil.copy('inputs/box_limits_Reg1', 'inputs/box_limits')
     shutil.copy('inputs/namelist_NCEP-R2', 'inputs/namelist')
 
-    test_args = ['lorenz_cycle.py', 'samples/testdata_NCEP-R2.nc', '-r', '-f', '-p', '-v']
+    test_args = ['lorenzcycletoolkit.py', 'samples/testdata_NCEP-R2.nc', '-r', '-f', '-p', '-v']
     monkeypatch.setattr('sys.argv', test_args)
     
     parser = create_arg_parser()

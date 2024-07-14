@@ -1,5 +1,5 @@
 import shutil
-from lorenz_cycle import create_arg_parser, initialize_logging, prepare_data, setup_results_directory, run_lec_analysis
+from lorenzcycletoolkit import create_arg_parser, initialize_logging, prepare_data, setup_results_directory, run_lec_analysis
 
 
 ## TO DO: slice nc file for smaller time steps and improve testing
@@ -9,7 +9,7 @@ def test_different_args(monkeypatch):
     shutil.copy('inputs/track_testdata_NCEP-R2', 'inputs/track')
     shutil.copy('inputs/namelist_NCEP-R2', 'inputs/namelist')
 
-    test_args = ['lorenz_cycle.py', 'samples/testdata_NCEP-R2.nc', '-r', '-t', '-p', '-v']
+    test_args = ['lorenzcycletoolkit.py', 'samples/testdata_NCEP-R2.nc', '-r', '-t', '-p', '-v']
     monkeypatch.setattr('sys.argv', test_args)
     
     parser = create_arg_parser()

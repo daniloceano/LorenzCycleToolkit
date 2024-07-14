@@ -572,7 +572,7 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
         from ..plots.map_track import map_track
         from ..plots.plot_boxplot import boxplot_terms
         from ..plots.plot_hovmoller import plot_hovmoller
-        from ..plots.plot_LEC import plot_lorenz_cycle
+        from ..plots.plot_LEC import plot_lorenzcycletoolkit
         from ..plots.plot_LPS import plot_LPS
         from ..plots.plot_periods import plot_periods
         from ..plots.timeseries_terms import plot_timeseries    
@@ -594,7 +594,7 @@ def lec_moving(data: xr.Dataset, variable_list_df: pd.DataFrame, dTdt: xr.Datase
         plot_periods(out_track, times, lat, results_subdirectory, figures_directory, app_logger, processed_vorticity=processed_vorticity)
 
         # Use found periods for other plots
-        plot_lorenz_cycle(results_file, figures_directory, os.path.join(results_subdirectory, 'periods.csv'), app_logger)
+        plot_lorenzcycletoolkit(results_file, figures_directory, os.path.join(results_subdirectory, 'periods.csv'), app_logger)
         plot_LPS(df, args.infile, results_subdirectory, figures_directory, app_logger)
 
         app_logger.info('Done.')

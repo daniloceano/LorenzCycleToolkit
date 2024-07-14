@@ -273,7 +273,7 @@ def plot_period_means(periods_file, df_results, figures_directory, plot_example=
     # Plot period means
     _plotter(period_means_df, normalized_data_not_energy_periods, figures_directory, plot_example=plot_example, app_logger=app_logger)
 
-def plot_lorenz_cycle(results_file, figures_directory, periods_file=False, app_logger=False):
+def plot_lorenzcycletoolkit(results_file, figures_directory, periods_file=False, app_logger=False):
     # Read results
     df_results = read_results(results_file)
 
@@ -301,9 +301,9 @@ if __name__ == "__main__":
     # Test for Reg1-Representative_fixed
     results_file = 'samples/Reg1-Representative_NCEP-R2_fixed/Reg1-Representative_NCEP-R2_fixed_results.csv'
     figures_directory = 'samples/Reg1-Representative_NCEP-R2_fixed/Figures/'
-    plot_lorenz_cycle(results_file, figures_directory, periods_file='samples/Reg1-Representative_NCEP-R2_fixed/periods.csv')
+    plot_lorenzcycletoolkit(results_file, figures_directory, periods_file='samples/Reg1-Representative_NCEP-R2_fixed/periods.csv')
 
     # Test for Catarina_NCEP-R2_fixed
     results_file = 'samples/Catarina_NCEP-R2_fixed/Catarina_NCEP-R2_fixed_results.csv'
     figures_directory = 'samples/Catarina_NCEP-R2_fixed/Figures/'
-    plot_lorenz_cycle(results_file, figures_directory, periods_file='samples/Catarina_NCEP-R2_fixed/periods.csv')
+    plot_lorenzcycletoolkit(results_file, figures_directory, periods_file='samples/Catarina_NCEP-R2_fixed/periods.csv')

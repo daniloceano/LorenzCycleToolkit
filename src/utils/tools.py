@@ -38,7 +38,7 @@ def initialize_logging(results_subdirectory, args):
     logging.basicConfig(level=root_log_level, format='%(asctime)s - %(levelname)s - %(message)s')
 
     # Create a separate logger for the application
-    app_logger = logging.getLogger('lorenz_cycle')
+    app_logger = logging.getLogger('lorenzcycletoolkit')
     app_log_level = logging.DEBUG if verbose else logging.INFO
     app_logger.setLevel(app_log_level)
     app_logger.propagate = False  # Prevent the logger from propagating messages to the root logger
