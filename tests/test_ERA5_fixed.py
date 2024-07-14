@@ -1,5 +1,9 @@
 import shutil
-from lorenzcycletoolkit import create_arg_parser, initialize_logging, prepare_data, setup_results_directory, run_lec_analysis
+
+from lorenzcycletoolkit import (create_arg_parser, initialize_logging,
+                                prepare_data, run_lec_analysis,
+                                setup_results_directory)
+
 
 def test_example_args(monkeypatch):
 
@@ -9,14 +13,14 @@ def test_example_args(monkeypatch):
 
     test_args = ['lorenzcycletoolkit.py', 'samples/testdata_ERA5.nc', '-r', '-f', '-p', '-v']
     monkeypatch.setattr('sys.argv', test_args)
-    
+
     parser = create_arg_parser()
     args = parser.parse_args()
-    
-    assert args.residuals == True
-    assert args.fixed == True
-    assert args.plots == True
-    assert args.verbosity == True
+
+    assert args.residuals
+    assert args.fixed
+    assert args.plots
+    assert args.verbosity
     assert args.infile == 'samples/testdata_ERA5.nc'
 
     method = 'fixed'
@@ -31,6 +35,6 @@ def test_example_args(monkeypatch):
 
     # Prepare data
     data = prepare_data(args, 'inputs/namelist', app_logger)
-    
+
     # Run LEC analysis
     run_lec_analysis(data, args, results_subdirectory, figures_directory, app_logger)

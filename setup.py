@@ -1,11 +1,15 @@
-from setuptools import setup, find_packages
 import os
 
+from setuptools import find_packages, setup
+
 # Utility function to read the requirements.txt file
+
+
 def read_requirements():
     requirements_path = os.path.join(os.path.dirname(__file__), 'requirements.txt')
     with open(requirements_path, 'r') as f:
         return f.read().splitlines()
+
 
 setup(
     name='LorenzCycleToolkit',

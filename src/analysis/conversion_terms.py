@@ -12,7 +12,7 @@
 
 """
 This script defines the ConversionTerms object. It uses the MetData object as
-an input. The built-in functions use the input data to compute the following 
+an input. The built-in functions use the input data to compute the following
 energy conversion terms of the Lorenz Energy Cycle.
 
 Created by:
@@ -26,14 +26,13 @@ Contact:
 """
 
 import logging
+
 import numpy as np
-import pandas as pd
-from metpy.constants import g
-from metpy.constants import Rd
-from metpy.constants import Re
-from metpy.units import units
+from metpy.constants import Rd, Re, g
+
 from ..utils.box_data import BoxData
 from ..utils.calc_averages import CalcAreaAverage
+
 
 class ConversionTerms:
     """
@@ -42,7 +41,7 @@ class ConversionTerms:
     Attributes:
         method (str): The computation method used ('fixed', 'track', or 'choose').
         box_obj (BoxData): The BoxData object containing meteorological data.
-    
+
     Methods:
         calc_ce: Computes the eedy energy conversion term (CE).
         calc_cz: Computes the zonal energy conversion term (CZ).
@@ -56,7 +55,7 @@ class ConversionTerms:
         Monthly Weather Review, 108(7), 954-965. Retrieved Jan 25, 2022, from:
         https://journals.ametsoc.org/view/journals/mwre/108/7/1520-0493_1980_108_0954_zaecot_2_0_co_2.xml
     """
-    
+
     def __init__(self, box_obj: BoxData, method: str, app_logger: logging.Logger):
         """Initialize the ConversionTerms object with a BoxData object and a method."""
         self._initialize_attributes(box_obj, method, app_logger)
@@ -75,12 +74,12 @@ class ConversionTerms:
         self.tan_lats = np.tan(box_obj.tair["rlats"])
         self.VerticalCoordIndexer = box_obj.VerticalCoordIndexer
         self.TimeName = box_obj.TimeName
-        
+
         # Initialize lengths for averaging
         self.xlength = box_obj.xlength
         self.ylength = box_obj.ylength
 
-        # Initialize attributes related to temperature        
+        # Initialize attributes related to temperature
         self.tair_AE = box_obj.tair_AE
         self.tair_ZE = box_obj.tair_ZE
 
@@ -104,7 +103,7 @@ class ConversionTerms:
         """
         Computes conversion between the two available potential energy forms (AZ and AE).
 
-        Note: on the first term of the integral, on Brennan et al. (1980), it is missing 
+        Note: on the first term of the integral, on Brennan et al. (1980), it is missing
         a 2 in the multiplication Re * self.sigma_AA. This is confirmed by looking to the
         paper by Muench (1965).
         """
@@ -114,70 +113,83 @@ class ConversionTerms:
         DelPhi_tairAE = (self.tair_AE * self.tair_AE["coslats"]).differentiate("rlats")
         term1 = (self.v_ZE * self.tair_ZE * DelPhi_tairAE) / (2 * Re * self.sigma_AA)
         term1 = CalcAreaAverage(term1, self.ylength, xlength=self.xlength)
-        self._save_vertical_levels(term1, 'Ca_1')
+        self._save_vertical_levels(term1, "Ca_1")
 
         # Second term of the integral
-        DelPres_tairAE = (self.tair_AE).differentiate(self.VerticalCoordIndexer) / self.PressureData.metpy.units
+        DelPres_tairAE = (self.tair_AE).differentiate(
+            self.VerticalCoordIndexer
+        ) / self.PressureData.metpy.units
         term2 = (self.omega_ZE * self.tair_ZE) * DelPres_tairAE
-        term2 = CalcAreaAverage(term2, self.ylength, xlength=self.xlength) / self.sigma_AA
-        self._save_vertical_levels(term2, 'Ca_2')
+        term2 = (
+            CalcAreaAverage(term2, self.ylength, xlength=self.xlength) / self.sigma_AA
+        )
+        self._save_vertical_levels(term2, "Ca_2")
 
         # Process the integral and save the result
-        function = - (term1 + term2)
+        function = -(term1 + term2)
         function = self._handle_nans(function)
-        self._save_vertical_levels(function, 'Ca')
-        Ca = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
-        Ca = self._convert_units(Ca, 'Ca')
-        
+        self._save_vertical_levels(function, "Ca")
+        Ca = (
+            function.integrate(self.VerticalCoordIndexer)
+            * self.PressureData.metpy.units
+        )
+        Ca = self._convert_units(Ca, "Ca")
+
         self.app_logger.debug("Done.")
         return Ca
-        
+
     def calc_ce(self):
         """Computes conversion between the two eddy energy forms (AE and KE)."""
         self.app_logger.debug("Calculating CE...")
 
         # First term of the integral
         term1 = Rd / (self.PressureData * g)
-        self._save_vertical_levels(term1, 'Ce_1')
+        self._save_vertical_levels(term1, "Ce_1")
 
         # Second term of the integral
         omega_tair_product = self.omega_ZE * self.tair_ZE
         term2 = CalcAreaAverage(omega_tair_product, self.ylength, xlength=self.xlength)
-        self._save_vertical_levels(term2, 'Ce_2')
+        self._save_vertical_levels(term2, "Ce_2")
 
         # Process the integral and save the result
-        function = - (term1 * term2)
+        function = -(term1 * term2)
         function = self._handle_nans(function)
-        self._save_vertical_levels(function, 'Ce')
-        Ce = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
-        Ce = self._convert_units(Ce, 'Ce')
+        self._save_vertical_levels(function, "Ce")
+        Ce = (
+            function.integrate(self.VerticalCoordIndexer)
+            * self.PressureData.metpy.units
+        )
+        Ce = self._convert_units(Ce, "Ce")
 
         self.app_logger.debug("Done.")
         return Ce
-    
+
     def calc_cz(self):
         """Computes conversion between the two zonal energy forms (ZE and KE)."""
         self.app_logger.debug("Calculating CZ...")
 
         # First term of the integral
         term1 = Rd / (self.PressureData * g)
-        self._save_vertical_levels(term1, 'Cz_1')
+        self._save_vertical_levels(term1, "Cz_1")
 
         # Second term of the integral
         omega_tair_product = self.omega_AE * self.tair_AE
         term2 = CalcAreaAverage(omega_tair_product, self.ylength)
-        self._save_vertical_levels(term2, 'Cz_2')
+        self._save_vertical_levels(term2, "Cz_2")
 
         # Process the integral and save the result
-        function = - (term1 * term2)
+        function = -(term1 * term2)
         function = self._handle_nans(function)
-        self._save_vertical_levels(function, 'Cz')
-        Cz = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
-        Cz = self._convert_units(Cz, 'Cz')
-        
+        self._save_vertical_levels(function, "Cz")
+        Cz = (
+            function.integrate(self.VerticalCoordIndexer)
+            * self.PressureData.metpy.units
+        )
+        Cz = self._convert_units(Cz, "Cz")
+
         self.app_logger.debug("Done.")
         return Cz
-        
+
     def calc_ck(self):
         """Computes conversion between the two eddy kinetic energy forms (KE and KZ)."""
         self.app_logger.debug("Calculating CK...")
@@ -186,41 +198,51 @@ class ConversionTerms:
         DelPhi_uZA_cosphi = (self.u_ZA / self.u_ZA["coslats"]).differentiate("rlats")
         term1 = (self.u_ZE["coslats"] * self.u_ZE * self.v_ZE / Re) * DelPhi_uZA_cosphi
         term1 = CalcAreaAverage(term1, self.ylength, xlength=self.xlength)
-        self._save_vertical_levels(term1, 'Ck_1')
+        self._save_vertical_levels(term1, "Ck_1")
 
         # Second term of the integral
         DelPhi_vZA = (self.v_ZA).differentiate("rlats")
-        term2 = ((self.v_ZE ** 2) / Re) * DelPhi_vZA
+        term2 = ((self.v_ZE**2) / Re) * DelPhi_vZA
         term2 = CalcAreaAverage(term2, self.ylength, xlength=self.xlength)
-        self._save_vertical_levels(term2, 'Ck_2')
+        self._save_vertical_levels(term2, "Ck_2")
 
         # Third term of the integral
-        term3 = (self.tan_lats * (self.u_ZE ** 2) * self.v_ZA) / Re
+        term3 = (self.tan_lats * (self.u_ZE**2) * self.v_ZA) / Re
         term3 = CalcAreaAverage(term3, self.ylength, xlength=self.xlength)
-        self._save_vertical_levels(term3, 'Ck_3')
+        self._save_vertical_levels(term3, "Ck_3")
 
         # Fourth term of the integral
-        DelPres_uZAp = self.u_ZA.differentiate(self.VerticalCoordIndexer) / self.PressureData.metpy.units
+        DelPres_uZAp = (
+            self.u_ZA.differentiate(self.VerticalCoordIndexer)
+            / self.PressureData.metpy.units
+        )
         term4 = self.omega_ZE * self.u_ZE * DelPres_uZAp
         term4 = CalcAreaAverage(term4, self.ylength, xlength=self.xlength)
-        self._save_vertical_levels(term4, 'Ck_4')
+        self._save_vertical_levels(term4, "Ck_4")
 
         # Fifth term of the integral
-        DelPres_vZAp = self.u_ZA.differentiate(self.VerticalCoordIndexer) / self.PressureData.metpy.units
+        DelPres_vZAp = (
+            self.u_ZA.differentiate(self.VerticalCoordIndexer)
+            / self.PressureData.metpy.units
+        )
         term5 = self.omega_ZE * self.v_ZE * DelPres_vZAp
         term5 = CalcAreaAverage(term5, self.ylength, xlength=self.xlength)
-        self._save_vertical_levels(term5, 'Ck_5')
+        self._save_vertical_levels(term5, "Ck_5")
 
         # Process the integral and save the result
         function = term1 + term2 + term3 + term4 + term5
         function = self._handle_nans(function)
-        self._save_vertical_levels(function, 'Ck')
-        Ck = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units / g
-        Ck = self._convert_units(Ck, 'Ck')
+        self._save_vertical_levels(function, "Ck")
+        Ck = (
+            function.integrate(self.VerticalCoordIndexer)
+            * self.PressureData.metpy.units
+            / g
+        )
+        Ck = self._convert_units(Ck, "Ck")
 
         self.app_logger.debug("Done.")
         return Ck
-    
+
     def _handle_nans(self, function):
         """
         If there are any, interpolate them and drop any remaining NaN values.
@@ -233,11 +255,14 @@ class ConversionTerms:
             None
         """
         if np.isnan(function).any():
-            function = function.interpolate_na(dim=self.VerticalCoordIndexer) * function.metpy.units
+            function = (
+                function.interpolate_na(dim=self.VerticalCoordIndexer)
+                * function.metpy.units
+            )
             if np.isnan(function).any():
                 function = function.dropna(dim=self.VerticalCoordIndexer)
         return function
-    
+
     def _convert_units(self, function, variable_name):
         """
         Converts the units of a given function to 'J/m^2'.
@@ -253,17 +278,17 @@ class ConversionTerms:
             None
         """
         try:
-            function = function.metpy.convert_units('W/m^2')
+            function = function.metpy.convert_units("W/m^2")
         except ValueError as e:
-            raise ValueError(f'Unit error in {variable_name}') from e
+            raise ValueError(f"Unit error in {variable_name}") from e
         return function
-    
+
     def _save_vertical_levels(self, function, variable_name):
         """Save computed energy data to a CSV file."""
         df = function.to_dataframe(name=variable_name)
         df.reset_index(inplace=True)
 
-        if self.method == 'fixed':
+        if self.method == "fixed":
             if self.TimeName not in function.dims:
                 df = df.T
             else:
@@ -271,8 +296,12 @@ class ConversionTerms:
 
         else:
             df.set_index(self.TimeName, inplace=True)
-            df.index = df.index.strftime('%Y-%m-%d %H:%M:%S')
+            df.index = df.index.strftime("%Y-%m-%d %H:%M:%S")
             df = df.pivot(columns=self.VerticalCoordIndexer, values=variable_name)
             df.columns.name = None
 
-        df.to_csv(f"{self.output_dir}/{variable_name}_{self.VerticalCoordIndexer}.csv", mode="a", header=None)
+        df.to_csv(
+            f"{self.output_dir}/{variable_name}_{self.VerticalCoordIndexer}.csv",
+            mode="a",
+            header=None,
+        )
