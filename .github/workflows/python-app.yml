@@ -43,4 +43,4 @@ jobs:
       env:
         PYTHONPATH: ${{ github.workspace }}
       run: |
-        pytest
+        python -m pytest
