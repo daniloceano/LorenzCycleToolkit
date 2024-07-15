@@ -24,7 +24,7 @@ jobs:
         pip install autopep8 isort autoflake
 
     - name: Set up PYTHONPATH
-      run: echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
+      run: echo "PYTHONPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
 
     - name: Format code with autopep8
       run: |
