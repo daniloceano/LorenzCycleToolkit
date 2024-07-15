@@ -26,13 +26,14 @@ Contact:
 """
 
 import logging
-import pandas as pd
+
 import numpy as np
+from metpy.constants import Cp_d, g
 from metpy.units import units
-from metpy.constants import Cp_d
-from metpy.constants import g
-from ..utils.calc_averages import CalcAreaAverage
+
 from ..utils.box_data import BoxData
+from ..utils.calc_averages import CalcAreaAverage
+
 
 class GenerationDissipationTerms:
     """
@@ -55,7 +56,7 @@ class GenerationDissipationTerms:
         Monthly Weather Review, 108(7), 954-965. Retrieved Jan 25, 2022, from:
         https://journals.ametsoc.org/view/journals/mwre/108/7/1520-0493_1980_108_0954_zaecot_2_0_co_2.xml
     """
-    
+
     def __init__(self, box_obj: BoxData, method: str, app_logger: logging.Logger):
         """Initialize the EnergyContents object with a BoxData object and a method."""
         self._initialize_attributes(box_obj, method, app_logger)
@@ -68,13 +69,13 @@ class GenerationDissipationTerms:
         self.box_obj = box_obj
         self.output_dir = box_obj.output_dir
         self.app_logger = app_logger
-        
+
         # Initialize spatial and temporal attributes
         self.LonIndexer = box_obj.LonIndexer
         self.LatIndexer = box_obj.LatIndexer
         self.VerticalCoordIndexer = box_obj.VerticalCoordIndexer
         self.TimeName = box_obj.TimeName
-        
+
         # Initialize lengths for averaging
         self.xlength = box_obj.xlength
         self.ylength = box_obj.ylength
@@ -107,7 +108,7 @@ class GenerationDissipationTerms:
         self.omega = box_obj.omega
 
         # Initialize attributes related to static stability
-        self.sigma_AA = box_obj.sigma_AA        
+        self.sigma_AA = box_obj.sigma_AA
         self.sigma_AA = box_obj.sigma_AA
 
         # Initialize attributes related to the adiabatic heating term
@@ -116,28 +117,36 @@ class GenerationDissipationTerms:
         self.Q_AA = box_obj.Q_AA
         self.Q_ZE = box_obj.Q_ZE
         self.Q_AE = box_obj.Q_AE
-    
+
     def calc_gz(self):
         """Computes Generation of Zonal Available Potential Energy (Gz)."""
         self.app_logger.debug("Computing Gz...")
         term = self.Q_AE * self.tair_AE
         function = CalcAreaAverage(term, self.ylength) / (Cp_d * self.sigma_AA)
         function = self._handle_nans(function)
-        self._save_vertical_levels(function, 'Gz')
-        Gz = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
-        self._convert_units(Gz, 'Gz')
+        self._save_vertical_levels(function, "Gz")
+        Gz = (
+            function.integrate(self.VerticalCoordIndexer)
+            * self.PressureData.metpy.units
+        )
+        self._convert_units(Gz, "Gz")
         self.app_logger.debug("Ok.")
         return Gz
-    
+
     def calc_ge(self):
         """Computes Generation of Eddy Available Potential Energy (Ge)."""
         self.app_logger.debug("Computing Ge...")
         term = self.Q_ZE * self.tair_ZE
-        function = CalcAreaAverage(term, self.ylength, xlength=self.xlength) / (Cp_d * self.sigma_AA)
+        function = CalcAreaAverage(term, self.ylength, xlength=self.xlength) / (
+            Cp_d * self.sigma_AA
+        )
         function = self._handle_nans(function)
-        self._save_vertical_levels(function, 'Ge')
-        Ge = function.integrate(self.VerticalCoordIndexer) * self.PressureData.metpy.units
-        self._convert_units(Ge, 'Ge')
+        self._save_vertical_levels(function, "Ge")
+        Ge = (
+            function.integrate(self.VerticalCoordIndexer)
+            * self.PressureData.metpy.units
+        )
+        self._convert_units(Ge, "Ge")
         self.app_logger.debug("Ok.")
         return Ge
 
@@ -150,31 +159,33 @@ class GenerationDissipationTerms:
         self.app_logger.debug("Computing Dz...")
         # Here we will use only the lowest vertical level
         term = (self.u_ZA.isel({self.VerticalCoordIndexer: 0}) * self.ust_ZA) + (
-            self.v_ZA.isel({self.VerticalCoordIndexer: 0}) * self.vst_ZA)
+            self.v_ZA.isel({self.VerticalCoordIndexer: 0}) * self.vst_ZA
+        )
         function = CalcAreaAverage(term, self.ylength) / g
-        self._save_vertical_levels(function, 'Dz')
+        self._save_vertical_levels(function, "Dz")
         Dz = units.Pa * function
-        self._convert_units(Dz, 'Dz')
+        self._convert_units(Dz, "Dz")
         self.app_logger.debug("Ok.")
         return Dz
 
     def calc_de(self):
         """
         Computes Dissipation of Eddy Kinetic Energy (De).
-        
+
         Note: Still needs to be fully implemented and tested
         """
         self.app_logger.debug("Computing De...")
         # Here we will use only the lowest vertical level
         term = (self.u_ZE.isel({self.VerticalCoordIndexer: 0}) * self.ust_ZE) + (
-            self.v_ZE.isel({self.VerticalCoordIndexer: 0}) * self.vst_ZE)
+            self.v_ZE.isel({self.VerticalCoordIndexer: 0}) * self.vst_ZE
+        )
         function = CalcAreaAverage(term, self.ylength) / g
-        self._save_vertical_levels(function, 'De')
+        self._save_vertical_levels(function, "De")
         De = units.Pa * function
-        self._convert_units(De, 'De')
+        self._convert_units(De, "De")
         self.app_logger.debug("Ok.")
         return De
-    
+
     def _handle_nans(self, function):
         """
         If there are any, interpolate them and drop any remaining NaN values.
@@ -187,11 +198,14 @@ class GenerationDissipationTerms:
             None
         """
         if np.isnan(function).any():
-            function = function.interpolate_na(dim=self.VerticalCoordIndexer) * function.metpy.units
+            function = (
+                function.interpolate_na(dim=self.VerticalCoordIndexer)
+                * function.metpy.units
+            )
             if np.isnan(function).any():
                 function = function.dropna(dim=self.VerticalCoordIndexer)
         return function
-    
+
     def _convert_units(self, function, variable_name):
         """
         Converts the units of a given function to 'J/m^2'.
@@ -207,21 +221,25 @@ class GenerationDissipationTerms:
             None
         """
         try:
-            function = function.metpy.convert_units('W/m^2')
+            function = function.metpy.convert_units("W/m^2")
         except ValueError as e:
-            raise ValueError(f'Unit error in {variable_name}') from e
+            raise ValueError(f"Unit error in {variable_name}") from e
         return function
-    
+
     def _save_vertical_levels(self, function, variable_name):
         """Save computed energy data to a CSV file."""
         df = function.to_dataframe(name=variable_name)
         df.reset_index(inplace=True)
-        if self.method == 'fixed':
+        if self.method == "fixed":
             df = df.pivot(index=self.TimeName, columns=self.VerticalCoordIndexer)
         else:
             df.set_index(self.TimeName, inplace=True)
-            df.index = df.index.strftime('%Y-%m-%d %H:%M:%S')
+            df.index = df.index.strftime("%Y-%m-%d %H:%M:%S")
             df = df.pivot(columns=self.VerticalCoordIndexer, values=variable_name)
             df.columns.name = None
 
-        df.to_csv(f"{self.output_dir}/{variable_name}_{self.VerticalCoordIndexer}.csv", mode="a", header=None)
+        df.to_csv(
+            f"{self.output_dir}/{variable_name}_{self.VerticalCoordIndexer}.csv",
+            mode="a",
+            header=None,
+        )

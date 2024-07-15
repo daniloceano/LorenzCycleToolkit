@@ -24,8 +24,10 @@ Contact:
 """
 
 import logging
+
 import numpy as np
 import pandas as pd
+
 
 def calc_budget_diff(df: pd.DataFrame, dates: np.ndarray, app_logger: logging.Logger):
     """
@@ -37,15 +39,15 @@ def calc_budget_diff(df: pd.DataFrame, dates: np.ndarray, app_logger: logging.Lo
 
     Returns:
         DataFrame: Updated DataFrame with budget values.
-    """    
+    """
     app_logger.debug("Estimating budget values using finite differences...")
 
-    dt = float((dates[1] - dates[0]) / np.timedelta64(1, 's'))
-    energy_terms = ['Az', 'Ae', 'Kz', 'Ke']
+    dt = float((dates[1] - dates[0]) / np.timedelta64(1, "s"))
+    energy_terms = ["Az", "Ae", "Kz", "Ke"]
 
     try:
         for term in energy_terms:
-            df[f'∂{term}/∂t (finite diff.)'] = np.gradient(df[term], dt) 
+            df[f"∂{term}/∂t (finite diff.)"] = np.gradient(df[term], dt)
     except Exception as e:
         app_logger.error(f"Error in calc_budget_diff: {e}")
         raise
@@ -53,7 +55,10 @@ def calc_budget_diff(df: pd.DataFrame, dates: np.ndarray, app_logger: logging.Lo
     app_logger.debug("Done.")
     return df
 
-def calc_budget_diff_4th(df: pd.DataFrame, time: np.ndarray, app_logger: logging.Logger):
+
+def calc_budget_diff_4th(
+    df: pd.DataFrame, time: np.ndarray, app_logger: logging.Logger
+):
     """
     Estimate budget values for energy terms using 4th order finite differences.
 
@@ -63,10 +68,10 @@ def calc_budget_diff_4th(df: pd.DataFrame, time: np.ndarray, app_logger: logging
 
     Returns:
         DataFrame: Updated DataFrame with budget values.
-    """    
+    """
     app_logger.debug("Estimating budget values using 4th order finite differences...")
-    dt = float((time[1] - time[0]) / np.timedelta64(1, 's'))
-    energy_terms = ['Az', 'Ae', 'Kz', 'Ke']
+    dt = float((time[1] - time[0]) / np.timedelta64(1, "s"))
+    energy_terms = ["Az", "Ae", "Kz", "Ke"]
 
     try:
         for term in energy_terms:
@@ -77,6 +82,7 @@ def calc_budget_diff_4th(df: pd.DataFrame, time: np.ndarray, app_logger: logging
 
     app_logger.debug("Done.")
     return df
+
 
 def _apply_4th_order_diff(df, term, dt):
     """
@@ -96,8 +102,11 @@ def _apply_4th_order_diff(df, term, dt):
     fourth_order = _compute_4th_order_terms(df[term], dt)
     backward = (df[term].iloc[-1] - df[term].iloc[-2]) / dt
 
-    df[f'∂{term}/∂t (finite diff.)'] = [forward, central_second] + fourth_order + [central_penultimate, backward]
+    df[f"∂{term}/∂t (finite diff.)"] = (
+        [forward, central_second] + fourth_order + [central_penultimate, backward]
+    )
     return df
+
 
 def _compute_4th_order_terms(series, dt):
     """
@@ -110,9 +119,14 @@ def _compute_4th_order_terms(series, dt):
     Returns:
         list: List of calculated 4th order terms.
     """
-    fourth_order1 = (4/3) * (series.iloc[3:-1].values - series.iloc[1:-3].values) / (2 * dt)
-    fourth_order2 = (1/3) * (series.iloc[4:].values - series.iloc[:-4].values) / (4 * dt)
+    fourth_order1 = (
+        (4 / 3) * (series.iloc[3:-1].values - series.iloc[1:-3].values) / (2 * dt)
+    )
+    fourth_order2 = (
+        (1 / 3) * (series.iloc[4:].values - series.iloc[:-4].values) / (4 * dt)
+    )
     return list(fourth_order1 - fourth_order2)
+
 
 def calc_residuals(df: pd.DataFrame, app_logger: logging.Logger):
     """
@@ -127,11 +141,11 @@ def calc_residuals(df: pd.DataFrame, app_logger: logging.Logger):
     app_logger.debug("Estimating residuals...")
 
     try:
-        df['RGz'] = df['∂Az/∂t (finite diff.)'] + df['Cz'] + df['Ca'] - df['BAz']
-        df['RKz'] = df['∂Kz/∂t (finite diff.)'] - df['Cz'] - df['Ck'] - df['BKz']
-        df['RGe'] = df['∂Ae/∂t (finite diff.)'] - df['Ca'] + df['Ce'] - df['BAe']
-        df['RKe'] = df['∂Ke/∂t (finite diff.)'] - df['Ce'] + df['Ck'] - df['BKe']
-        
+        df["RGz"] = df["∂Az/∂t (finite diff.)"] + df["Cz"] + df["Ca"] - df["BAz"]
+        df["RKz"] = df["∂Kz/∂t (finite diff.)"] - df["Cz"] - df["Ck"] - df["BKz"]
+        df["RGe"] = df["∂Ae/∂t (finite diff.)"] - df["Ca"] + df["Ce"] - df["BAe"]
+        df["RKe"] = df["∂Ke/∂t (finite diff.)"] - df["Ce"] + df["Ck"] - df["BKe"]
+
     except Exception as e:
         app_logger.error(f"Error in calc_residuals: {e}")
         raise

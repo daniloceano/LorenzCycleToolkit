@@ -1,24 +1,27 @@
 import shutil
-from lorenz_cycle import create_arg_parser, initialize_logging, prepare_data, setup_results_directory, run_lec_analysis
 
+from lorenzcycletoolkit import (create_arg_parser, initialize_logging,
+                                prepare_data, run_lec_analysis,
+                                setup_results_directory)
 
-## TO DO: slice nc file for smaller time steps and improve testing
+# TO DO: slice nc file for smaller time steps and improve testing
+
 
 def test_different_args(monkeypatch):
     # Prepare input data
     shutil.copy('inputs/track_testdata_ERA5', 'inputs/track')
     shutil.copy('inputs/namelist_ERA5', 'inputs/namelist')
 
-    test_args = ['lorenz_cycle.py', 'samples/testdata_ERA5.nc', '-r', '-t', '-p', '-v']
+    test_args = ['lorenzcycletoolkit.py', 'samples/testdata_ERA5.nc', '-r', '-t', '-p', '-v']
     monkeypatch.setattr('sys.argv', test_args)
-    
+
     parser = create_arg_parser()
     args = parser.parse_args()
-    
-    assert args.residuals == True
-    assert args.track == True
-    assert args.plots == True
-    assert args.verbosity == True
+
+    assert args.residuals
+    assert args.track
+    assert args.plots
+    assert args.verbosity
     assert args.infile == 'samples/testdata_ERA5.nc'
 
     method = 'track'
@@ -33,6 +36,6 @@ def test_different_args(monkeypatch):
 
     # Prepare data
     data = prepare_data(args, 'inputs/namelist', app_logger)
-    
+
     # Run LEC analysis
     run_lec_analysis(data, args, results_subdirectory, figures_directory, app_logger)

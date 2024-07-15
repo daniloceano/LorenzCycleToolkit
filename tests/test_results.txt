@@ -50,7 +50,7 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x178197880>
 
     def test_example_args(monkeypatch):
         # Example usage for debugging
-        test_args = ['lorenz_cycle.py', 'samples/Reg1-Representative_NCEP-R2.nc', '-r', '-f', '-p', '-v']
+        test_args = ['lorenzcycletoolkit.py', 'samples/Reg1-Representative_NCEP-R2.nc', '-r', '-f', '-p', '-v']
         monkeypatch.setattr('sys.argv', test_args)
     
         parser = create_arg_parser()
