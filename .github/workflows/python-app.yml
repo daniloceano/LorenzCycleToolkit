@@ -4,7 +4,6 @@ on: [push, pull_request]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -22,7 +21,7 @@ jobs:
         pip install autopep8 isort autoflake
 
     - name: Set up PYTHONPATH
-      run: echo "PYTHONPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+      run: echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
 
     - name: Format code with autopep8
       run: |
@@ -39,4 +38,5 @@ jobs:
 
     - name: Test with pytest
       run: |
+        ls -R
         pytest
