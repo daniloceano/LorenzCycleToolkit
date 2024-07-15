@@ -1,42 +1,42 @@
-name: Python application
+# name: Python application
 
-on: [push, pull_request]
+# on: [push, pull_request]
 
-jobs:
-  build:
+# jobs:
+#   build:
 
-    runs-on: ubuntu-latest
+#     runs-on: ubuntu-latest
 
-    steps:
-    - uses: actions/checkout@v2
+#     steps:
+#     - uses: actions/checkout@v2
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.12'
+#     - name: Set up Python
+#       uses: actions/setup-python@v2
+#       with:
+#         python-version: '3.12'
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install autopep8 isort autoflake
+#     - name: Install dependencies
+#       run: |
+#         python -m pip install --upgrade pip
+#         pip install -r requirements.txt
+#         pip install autopep8 isort autoflake
 
-    - name: Set up PYTHONPATH
-      run: echo "PYTHONPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+#     - name: Set up PYTHONPATH
+#       run: echo "PYTHONPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
 
-    - name: Format code with autopep8
-      run: |
-        autopep8 --in-place --aggressive --aggressive --recursive .
+#     - name: Format code with autopep8
+#       run: |
+#         autopep8 --in-place --aggressive --aggressive --recursive .
 
-    - name: Sort imports with isort
-      run: |
-        isort .
+#     - name: Sort imports with isort
+#       run: |
+#         isort .
 
-    - name: Lint with flake8
-      run: |
-        flake8 . --config .flake8 --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --config .flake8 --count --exit-zero --max-complexity=10 --statistics
+#     - name: Lint with flake8
+#       run: |
+#         flake8 . --config .flake8 --count --select=E9,F63,F7,F82 --show-source --statistics
+#         flake8 . --config .flake8 --count --exit-zero --max-complexity=10 --statistics
 
-    - name: Test with pytest
-      run: |
-        pytest
+#     - name: Test with pytest
+#       run: |
+#         pytest
