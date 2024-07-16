@@ -65,3 +65,7 @@ You can view the CI/CD configuration in the following files:
 
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Journal of Open Source Software (JOSS) Submission
+
+This software is submitted to the Journal of Open Source Software (JOSS). The submission can be found [here](https://joss.theoj.org/).
