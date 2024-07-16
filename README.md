@@ -32,5 +32,23 @@ Comprehensive documentation is available in the `docs/` directory, covering:
 ## Contributing
 Contributions are welcome! Please see the [contributing guide](CONTRIBUTING.md) for more details.
 
+### Continuous Integration and Deployment
+
+This project uses GitHub Actions for Continuous Integration (CI) and Continuous Deployment (CD). 
+
+- **CI Pipeline**: The CI pipeline is triggered on each push and pull request to the repository. It runs the following steps:
+  - Sets up the Python environment.
+  - Installs dependencies.
+  - Formats code using autopep8.
+  - Sorts imports using isort.
+  - Lints code using flake8.
+  - Runs tests using pytest.
+
+- **CD Pipeline**: The CD pipeline deploys the documentation to GitHub Pages whenever changes are pushed to the `main` branch.
+
+You can view the CI/CD configuration in the following files:
+- [python-app.yml](.github/workflows/python-app.yml)
+- [deploy-docs.yml](.github/workflows/deploy-docs.yml)
+
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
