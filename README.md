@@ -24,10 +24,8 @@ python lorenzcycletoolkit.py samples/testdata_ERA5.nc -r -f
 For more detailed usage instructions, including configuration options and examples, please refer to the documentation.
 
 ## Documentation
-Comprehensive documentation is available in the `docs/` directory, covering:
-- Installation and setup
-- Configuration files
-- Detailed examples and tutorials
+
+For detailed documentation and usage instructions, visit the [LorenzCycleToolkit Documentation](https://daniloceano.github.io/LorenzCycleToolkit/).
 
 ## Contributing
 Contributions are welcome! Please see the [contributing guide](CONTRIBUTING.md) for more details.
