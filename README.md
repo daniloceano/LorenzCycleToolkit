@@ -1,13 +1,32 @@
 # LorenzCycleToolkit
 
 ## Overview
-The LorenzCycleToolkit is a tool for calculating the Lorenz Energy Cycle (LEC) in specific atmospheric regions. The LEC, introduced by Edward Lorenz in 1965, is an analytical framework used to estimate atmospheric energy, including zonal and eddy components of Kinetic and Available Potential Energy, and conversions between these forms.
 
-## Features
-- Fixed (Eulerian) Framework
-- Moving (Semi-Lagrangian) Framework
-- Interactive Domain Selection
-- Comprehensive energy calculations and visualizations
+The LorenzCycleToolkit is a tool for calculating the Lorenz Energy Cycle (LEC) in specific atmospheric regions. Introduced by Edward Lorenz in 1965, the LEC estimates atmospheric energy, including zonal and eddy components of Kinetic and Available Potential Energy, and the conversions between these forms.
+
+### Importance
+
+- **Climate Studies:** Improves understanding of energy exchanges, aiding climate predictions.
+- **Weather Prediction:** Comparison tool for weather models and forecasts.
+- **Research and Education:** Provides a structured approach for analyzing atmospheric energy flows.
+- **Environmental Diagnostics:** Serves as a diagnostic tool for atmospheric dynamics.
+
+### Applications
+
+- **Synoptic-Scale Phenomena:** Study extratropical cyclones and convergence zones.
+- **Mesoscale Phenomena:** Analyze energy transformations in tropical cyclones.
+- **Model Comparison:** Compare model dynamics with reanalysis data.
+
+### Features
+
+- **Flexible Frameworks:** Analyze fixed regions using Eulerian or Semi-Lagrangian frameworks.
+- **User-Friendly:** Simple command-line interface without needing to program scripts.
+- **Customizable Inputs:** Define custom domains and variable configurations.
+- **Visualization Options:** Generate detailed plots to visualize the energy cycle components.
+
+## Documentation
+
+For detailed documentation and usage instructions, visit the [LorenzCycleToolkit Documentation](https://daniloceano.github.io/LorenzCycleToolkit/).
 
 ## Installation
 To install the required dependencies, use the provided `requirements.txt` file:
@@ -22,10 +41,6 @@ python lorenzcycletoolkit.py samples/testdata_ERA5.nc -r -f
 ```
 
 For more detailed usage instructions, including configuration options and examples, please refer to the documentation.
-
-## Documentation
-
-For detailed documentation and usage instructions, visit the [LorenzCycleToolkit Documentation](https://daniloceano.github.io/LorenzCycleToolkit/).
 
 ## Contributing
 Contributions are welcome! Please see the [contributing guide](CONTRIBUTING.md) for more details.
