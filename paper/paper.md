@@ -52,6 +52,10 @@ The program can handle any reanalysis or model data provided in isobaric levels.
 
 The program outputs the results for each term in comma-separated values (CSV) files, generating one CSV file for each term. For energy, conversion, and generation terms, it also provides results for each vertical level, enabling two-dimensional analysis. Additionally, the program can be configured by the user to automatically generate plots. These plots include spatial representations of the computational domain defined for the analysis, time series of the system's central minimum pressure and relative vorticity at 850 hPa, time series of each LEC term, Hovmöller diagrams, and complete energy flux boxes for the LEC.
 
+# Acknowledgements
+
+This study was partly financed by the Coordenação de Aperfeiçoamento de Pessoal de Nível Superior – Brasil (CAPES) under Finance Code 001. The authors would like to acknowledge the Laboratory of Applied Meteorology for Regional Meteorological Systems (MASTER) for the data processing infrastructure and special thanks are extended to Jean Peres and Djalma Vieira for their invaluable technical assistance and support in the laboratory.
+
 
 # External Libraries Used
 
