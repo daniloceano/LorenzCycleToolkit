@@ -56,14 +56,16 @@ For handling meteorological constants and variable units, the program uses the M
 
 The energy budget equations are as follows:
 
-$$
+<div align="left">
+
+\[
 \begin{aligned}
 \frac{\partial A_Z}{\partial t} &= C_K - C_A + BA_Z + \Delta G_Z \\
 \frac{\partial A_E}{\partial t} &= C_A - C_E + BA_E + \Delta G_E \\
 \frac{\partial K_Z}{\partial t} &= C_K - C_Z + BK_Z - \Delta R_Z \\
 \frac{\partial K_E}{\partial t} &= C_E - C_K + BK_E - \Delta R_E 
 \end{aligned}
-$$
+\]
 
 
 In these equations, APE is divided into zonal ($A_Z$) and eddy ($A_E$) components, as is K ($K_Z$ and $K_E$, respectively). The transformations between these forms of energy are denoted by $C$, with subscripts $Z$ and $E$ for conversions between zonal and eddy forms, and $A$ and $K$ indicating conversions between APE and kinetic energy, respectively. Thus, $C_A$ represents the conversion between $A_Z$ and $A_E$, $C_E$ denotes the conversion from $A_E$ to $K_E$, $C_K$ signifies the transformation from $K_E$ to $K_Z$, and $C_Z$ describes the conversion from $A_Z$ to $K_Z$. The residual terms are defined as:
