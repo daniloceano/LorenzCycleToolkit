@@ -8,15 +8,17 @@ Fixed (Eulerian) Framework Example
 
    .. code-block:: text
 
-       min_lat, max_lat, min_lon, max_lon
-       -30, 30, -60, 60
+       min_lon;-60
+       max_lon;-30
+       min_lat;-42.5
+       max_lat;-17.5
 
 2. Prepare the `inputs/namelist` file.
    The `namelist` file specifies the variable names and units used in the input NetCDF file. Here is an example for the National Center for Environmental Protection Reanalysis 2 (NCEP-R2) dataset:
 
    .. code-block:: text
 
-       Name;standard_name;Variable;Units
+       ;standard_name;Variable;Units
        Air Temperature;air_temperature;TMP_2_ISBL;K
        Geopotential Height;geopotential_height;HGT_2_ISBL;m
        Omega Velocity;omega;V_VEL_2_ISBL;Pa/s
@@ -29,7 +31,7 @@ Fixed (Eulerian) Framework Example
 
 3. Run the following command::
 
-       python lorenzcycletoolkit.py samples/testdata_NCEP-R2.nc -r -e
+       python lorenzcycletoolkit.py samples/testdata_NCEP-R2.nc -r -f
 
    This will execute the LorenzCycleToolkit using the fixed (Eulerian) framework.
 
