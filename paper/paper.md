@@ -25,7 +25,7 @@ affiliations:
     index: 1
   - name: OceanPact, Rua da Glória, 122, Rio de Janeiro, 20241-180, Rio de Janeiro, Brazil
     index: 2
-date: 2024-07-16
+date: "2024-07-16"
 bibliography: paper.bib
 ---
 
