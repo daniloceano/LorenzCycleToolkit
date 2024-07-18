@@ -1,5 +1,5 @@
 ---
-title: 'LorenzCycleToolkit: A Tool for Calculating the Lorenz Energy Cycle'
+title: 'LorenzCycleToolkit: A Comprehensive Python Tool for Analyzing Atmospheric Energy Cycles'
 tags:
   - Python
   - meteorology
@@ -31,7 +31,9 @@ bibliography: paper.bib
 
 # Summary
 
-The LorenzCycleToolkit is a Python package for calculating the Lorenz Energy Cycle (LEC) in limited atmospheric regions. Introduced by Edward Lorenz in 1965, the LEC estimates atmospheric energy, including zonal and eddy components of Kinetic and Available Potential Energy, and conversions between these forms. This toolkit allows researchers to analyze energy transformations in various atmospheric phenomena, enhancing our understanding of atmospheric dynamics and aiding in weather and climate prediction.
+The LorenzCycleToolkit is a Python package designed for the calculation and analysis of the Lorenz Energy Cycle (LEC) in specified atmospheric regions. Originally proposed by Edward Lorenz in 1965, the LEC provides a comprehensive framework for understanding the transformation and distribution of energy within the atmosphere, particularly focusing on the zonal and eddy components of Kinetic and Available Potential Energy. This toolkit enables researchers to study these energy transformations in various atmospheric phenomena, thereby enhancing our understanding of atmospheric dynamics and improving weather and climate prediction models.
+
+The LorenzCycleToolkit supports both Eulerian and Semi-Lagrangian frameworks, allowing for flexibility in the analysis of atmospheric data. It can handle reanalysis or model data provided in isobaric levels, and outputs results in CSV format for easy analysis. Additionally, the toolkit offers options for automatic plot generation, including spatial representations of the computational domain, time series, Hovmöller diagrams, and complete energy flux boxes for the LEC. This package is a valuable tool for meteorologists and climate scientists aiming to diagnose and improve the performance of numerical weather prediction models and to study the impacts of climate change on atmospheric energy processes.
 
 # Background
 
