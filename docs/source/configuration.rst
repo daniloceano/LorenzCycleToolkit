@@ -28,8 +28,10 @@ The `box_limits` file defines the spatial domain for the fixed framework. It is 
 
 .. code-block:: text
 
-    min_lat, max_lat, min_lon, max_lon
-    -30, 30, -60, 60
+    min_lon;-60
+    max_lon;-30
+    min_lat;-42.5
+    max_lat;-17.5
 
 Track File (Optional)
 ---------------------

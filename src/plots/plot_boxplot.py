@@ -136,7 +136,7 @@ def boxplot_vertical(dict_vertical, figures_subdirectory, app_logger):
                 bplot = ax.boxplot(
                     dict_vertical[term][lev].values,
                     positions=[j / 3],
-                    labels=[lev],
+                    tick_labels=[lev],
                     patch_artist=True,
                 )
                 bplot["boxes"][-1].set_facecolor(linecolors[i % len(linecolors)])
@@ -194,7 +194,7 @@ def plot_boxplot_terms(df, figures_subdirectory, app_logger):
                 vert=True,
                 patch_artist=True,
                 notch=True,
-                labels=[term],
+                tick_labels=[term],
             )
             box_color = utils.COLORS[i % len(utils.COLORS)]
             for box in bplot["boxes"]:
@@ -235,7 +235,7 @@ def plot_boxplot_terms(df, figures_subdirectory, app_logger):
         plt.close("all")
 
 
-def boxplot_terms(results_file, results_directory, figures_directory, app_logger=False):
+def boxplot_terms(results_file, results_subdirectory, figures_directory, app_logger=False):
     (
         app_logger.info("Plotting boxplots...")
         if app_logger
@@ -244,7 +244,7 @@ def boxplot_terms(results_file, results_directory, figures_directory, app_logger
 
     df = read_results(results_file, app_logger)
 
-    dict_vertical = get_data_vertical_levels(results_directory)
+    dict_vertical = get_data_vertical_levels(results_subdirectory)
 
     figures_subdirectory = os.path.join(figures_directory, "boxplots")
     os.makedirs(figures_subdirectory, exist_ok=True)

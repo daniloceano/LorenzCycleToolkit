@@ -13,10 +13,17 @@ Steps
    git clone https://github.com/daniloceano/lorenz-cycle.git
    cd lorenz-cycle
 
-2. Create a virtual environment and activate it::
+2. Create and activate a virtual environment:
 
-   python -m venv venv
-   source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+   - Using `venv`::
+
+      python -m venv venv
+      source venv/bin/activate
+
+   - Or using `conda`::
+
+      conda create --name lorenz-cycle python=3.12
+      conda activate lorenz-cycle
 
 3. Install the dependencies::
 

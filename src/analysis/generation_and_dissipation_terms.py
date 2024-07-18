@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2020/11/26 18:27:40 by daniloceano       #+#    #+#              #
-#    Updated: 2024/07/13 11:55:33 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/18 00:33:23 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -67,7 +67,8 @@ class GenerationDissipationTerms:
         # Operational attributes
         self.method = method
         self.box_obj = box_obj
-        self.output_dir = box_obj.output_dir
+        self.results_subdirectory = box_obj.results_subdirectory
+        self.results_subdirectory_vertical_levels = box_obj.results_subdirectory_vertical_levels
         self.app_logger = app_logger
 
         # Initialize spatial and temporal attributes
@@ -239,7 +240,7 @@ class GenerationDissipationTerms:
             df.columns.name = None
 
         df.to_csv(
-            f"{self.output_dir}/{variable_name}_{self.VerticalCoordIndexer}.csv",
+            f"{self.results_subdirectory_vertical_levels}/{variable_name}_{self.VerticalCoordIndexer}.csv",
             mode="a",
             header=None,
         )

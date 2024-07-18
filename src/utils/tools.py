@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/07/14 19:38:41 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/18 09:38:56 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -105,6 +105,8 @@ def find_extremum_coordinates(
     lat_values = lat.values
     lon_values = lon.values
     min_lat = lat_values.min()
+
+    data = np.array(data)  # Ensure data is a numpy array
 
     if variable == "min_max_zeta":
         index = np.unravel_index(

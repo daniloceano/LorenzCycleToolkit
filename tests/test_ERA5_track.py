@@ -27,7 +27,7 @@ def test_different_args(monkeypatch):
     method = 'track'
 
     # Setup results directory
-    results_subdirectory, figures_directory = setup_results_directory(args, method)
+    results_subdirectory, figures_directory, results_subdirectory_vertical_levels = setup_results_directory(args, method)
 
     # Initialize logging
     app_logger = initialize_logging(results_subdirectory, args)
@@ -38,4 +38,4 @@ def test_different_args(monkeypatch):
     data = prepare_data(args, 'inputs/namelist', app_logger)
 
     # Run LEC analysis
-    run_lec_analysis(data, args, results_subdirectory, figures_directory, app_logger)
+    run_lec_analysis(data, args, results_subdirectory, figures_directory, results_subdirectory_vertical_levels, app_logger)
