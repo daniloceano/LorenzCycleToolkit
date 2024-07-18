@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2024/07/14 19:37:45 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/18 00:19:08 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -68,7 +68,7 @@ class BoxData:
         southern_limit (float): Southern boundary of the bounding box.
         northern_limit (float): Northern boundary of the bounding box.
         args (argparse.Namespace): Arguments for additional processing controls.
-        output_dir (str): Directory path for output data.
+        results_subdirectory (str): Directory path for output data.
         dTdt (xr.DataArray, optional): Dataset containing temperature gradient data.
 
     Methods:
@@ -84,13 +84,15 @@ class BoxData:
         southern_limit: float,
         northern_limit: float,
         args: argparse.Namespace,
-        output_dir: str,
+        results_subdirectory: str,
+        results_subdirectory_vertical_levels: str,
         dTdt: xr.DataArray = None,
     ):
         """Initialize the BoxData object with meteorological data and computation parameters."""
         self._initialize_indices(variable_list_df, data)
         self.args = args
-        self.output_dir = output_dir
+        self.results_subdirectory = results_subdirectory
+        self.results_subdirectory_vertical_levels = results_subdirectory_vertical_levels
 
         self.dx = float(data[self.LatIndexer][1] - data[self.LatIndexer][0])
 

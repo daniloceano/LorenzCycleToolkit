@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/29 10:02:20 by daniloceano       #+#    #+#              #
-#    Updated: 2024/07/14 19:37:22 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/18 09:24:41 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -158,7 +158,7 @@ def read_box_limits(box_limits_file, app_logger=None):
         return None
 
 
-def get_data_vertical_levels(results_directory):
+def get_data_vertical_levels(results_subdirectory):
     """
     Retrieves data from CSV files in a given directory and organizes it based on the term found in each file.
 
@@ -169,17 +169,16 @@ def get_data_vertical_levels(results_directory):
         data (dict): A dictionary where the keys are terms found in the CSV file names and the values are pandas DataFrames
         containing the data from the corresponding files.
     """
-    [term for details in TERM_DETAILS.values() for term in details["terms"]]
+    # Set results subdirectory
+    results_subdirectory_vertical_levels = os.path.join(
+        results_subdirectory, "results_vertical_levels"
+    )
+
+    # Get list of CSV files but remove files for split terms
     files = [
         file
-        for file in glob(os.path.join(results_directory, "*.csv"))
-        if "results" not in file
-    ]
-    # Remove files for split terms
-    files = [
-        file
-        for file in files
-        if not re.search(r"_[0-9]", os.path.basename(file)) and "results" not in file
+        for file in glob(os.path.join(results_subdirectory_vertical_levels, "*.csv"))
+        if not re.search(r"_[0-9]", os.path.basename(file))
     ]
 
     data = {}
@@ -187,6 +186,7 @@ def get_data_vertical_levels(results_directory):
         term = os.path.splitext(os.path.basename(file))[0].split("_")[0]
         try:
             data[term] = pd.read_csv(file, header=0, index_col=0, parse_dates=True)
+            data[term].columns = [float(x) for x in data[term].columns]
         except pd.errors.ParserError as e:
             print(f"Error reading {file}: {e}")
 

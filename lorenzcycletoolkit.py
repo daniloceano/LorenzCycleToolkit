@@ -133,20 +133,22 @@ def setup_results_directory(args, method):
     Returns:
         tuple: A tuple containing the path to the results directory and the path to the figures directory.
     """
-    resuts_directory = "../LEC_Results/"
+    resuts_directory = "./LEC_Results/"
     results_subdirectory = os.path.join(
         resuts_directory,
         "".join(args.infile.split("/")[-1].split(".nc")) + "_" + method,
     )
+    results_subdirectory_vertical_levels = os.path.join(
+        results_subdirectory, "results_vertical_levels")
     figures_directory = os.path.join(results_subdirectory, "Figures")
     os.makedirs(figures_directory, exist_ok=True)
     os.makedirs(results_subdirectory, exist_ok=True)
-    os.makedirs(results_subdirectory, exist_ok=True)
+    os.makedirs(results_subdirectory_vertical_levels, exist_ok=True)
 
-    return results_subdirectory, figures_directory
+    return results_subdirectory, figures_directory, results_subdirectory_vertical_levels
 
 
-def run_lec_analysis(data, args, results_subdirectory, figures_directory, app_logger):
+def run_lec_analysis(data, args, results_subdirectory, figures_directory, results_subdirectory_vertical_levels, app_logger):
     """
     Runs the LEc analysis on the given data using the specified method and arguments.
 
@@ -166,7 +168,7 @@ def run_lec_analysis(data, args, results_subdirectory, figures_directory, app_lo
     variable_list_df = pd.read_csv("inputs/namelist", sep=";", index_col=0, header=0)
 
     if args.fixed:
-        lec_fixed(data, variable_list_df, results_subdirectory, app_logger, args)
+        lec_fixed(data, variable_list_df, results_subdirectory, results_subdirectory_vertical_levels, app_logger, args)
         app_logger.info(
             "--- %s seconds running fixed framework ---" % (time.time() - start_time)
         )
@@ -182,6 +184,7 @@ def run_lec_analysis(data, args, results_subdirectory, figures_directory, app_lo
             dTdt,
             results_subdirectory,
             figures_directory,
+            results_subdirectory_vertical_levels,
             app_logger,
             args,
         )
@@ -238,7 +241,7 @@ def main():
         method = "choose"
 
     # Setup results directory
-    results_subdirectory, figures_directory = setup_results_directory(args, method)
+    results_subdirectory, figures_directory, results_subdirectory_vertical_levels = setup_results_directory(args, method)
 
     # Initialize logging
     app_logger = initialize_logging(results_subdirectory, args)
@@ -249,7 +252,7 @@ def main():
     data = prepare_data(args, "inputs/namelist", app_logger)
 
     # Run LEC analysis
-    run_lec_analysis(data, args, results_subdirectory, figures_directory, app_logger)
+    run_lec_analysis(data, args, results_subdirectory, figures_directory, results_subdirectory_vertical_levels, app_logger)
 
 
 if __name__ == "__main__":
