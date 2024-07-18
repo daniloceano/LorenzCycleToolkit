@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/07/14 19:31:18 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/18 00:36:10 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -541,6 +541,7 @@ def lec_moving(
     dTdt: xr.Dataset,
     results_subdirectory: str,
     figures_directory: str,
+    results_subdirectory_vertical_levels: str,
     app_logger: logging.Logger,
     args: argparse.Namespace,
 ):
@@ -597,7 +598,7 @@ def lec_moving(
         columns = [TimeName] + [float(i) for i in PressureData.values]
         df = pd.DataFrame(columns=columns)
         file_name = term + "_" + VerticalCoordIndexer + ".csv"
-        file_path = os.path.join(results_subdirectory, file_name)
+        file_path = os.path.join(results_subdirectory_vertical_levels, file_name)
         df.to_csv(file_path, index=None)
         app_logger.info(f"{file_path} created (but still empty)")
 
@@ -625,11 +626,6 @@ def lec_moving(
 
     # Dictionary for storing results
     terms_dict = create_terms_dict(args)
-
-    # # For debugging
-    # track = track[:5]
-    # times = times[:5]
-    # data = data.isel({TimeName:slice(0,5)})
 
     # Iterating over times
     for t in times:
@@ -729,7 +725,8 @@ def lec_moving(
                 eastern_limit=limits["max_lon"],
                 southern_limit=limits["min_lat"],
                 northern_limit=limits["max_lat"],
-                output_dir=results_subdirectory,
+                results_subdirectory=results_subdirectory,
+                results_subdirectory_vertical_levels=results_subdirectory_vertical_levels,
                 dTdt=idTdt,
             )
         except Exception as e:

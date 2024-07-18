@@ -24,14 +24,14 @@ import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
-
+import pandas as pd
 import src.plots.utils as utils
 from src.plots.utils import get_data_vertical_levels, read_results
 
 
 def _plotter(dict_vertical, figures_subdirectory, app_logger=False):
 
-    times = dict_vertical["Az"].index
+    times = pd.to_datetime(dict_vertical["Az"].index)
     levs = dict_vertical["Az"].columns
 
     term_details = utils.TERM_DETAILS

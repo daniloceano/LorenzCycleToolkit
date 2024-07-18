@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/01/31 20:15:59 by daniloceano       #+#    #+#              #
-#    Updated: 2023/12/27 20:20:59 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/18 00:21:16 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -72,7 +72,7 @@ class BoundaryTerms:
         # Operational attributes
         self.method = method
         self.box_obj = box_obj
-        self.output_dir = box_obj.output_dir
+        self.results_subdirectory = box_obj.results_subdirectory
         self.app_logger = app_logger
 
         # Initialize spatial and temporal attributes

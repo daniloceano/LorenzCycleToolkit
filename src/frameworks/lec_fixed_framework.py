@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:59 by daniloceano       #+#    #+#              #
-#    Updated: 2024/07/14 19:27:16 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/07/18 00:20:44 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -31,6 +31,7 @@ def lec_fixed(
     data: xr.Dataset,
     variable_list_df: pd.DataFrame,
     results_subdirectory: str,
+    results_subdirectory_vertical_levels: str,
     app_logger: logging.Logger,
     args: argparse.Namespace,
 ):
@@ -41,6 +42,7 @@ def lec_fixed(
         data (xr.Dataset): Dataset containing the atmospheric data for LEC computation.
         variable_list_df (pd.DataFrame): DataFrame with variable mappings used in the LEC analysis.
         results_subdirectory (str): Directory path to save the results.
+        results_subdirectory_vertical_levels (str): Directory path to save the vertical level results.
         args (argparse.Namespace): Arguments provided to the script, including configurations
                                    for the LEC computation.
 
@@ -109,7 +111,7 @@ def lec_fixed(
         "Ck_5",
     ]:
         columns = [TimeName] + [float(i) / 100 for i in pres.values]
-        output_path = Path(results_subdirectory, f"{term}_{VerticalCoordIndexer}.csv")
+        output_path = Path(results_subdirectory_vertical_levels, f"{term}_{VerticalCoordIndexer}.csv")
         pd.DataFrame(columns=columns).to_csv(output_path, index=None)
 
     try:
@@ -122,6 +124,7 @@ def lec_fixed(
             max_lat,
             args,
             results_subdirectory,
+            results_subdirectory_vertical_levels,
         )
     except Exception:
         app_logger.exception("An exception occurred while creating BoxData object")
