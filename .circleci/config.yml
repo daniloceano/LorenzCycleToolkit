@@ -16,6 +16,12 @@ jobs:
           command: ls -l dist/
 
       - run:
+          name: Set wheel filename (build_test)
+          command: |
+            export WHL_FILENAME=$(ls dist/*.whl)
+            echo "WHEEL FILE: $WHL_FILENAME"
+
+      - run:
           name: Install dependencies (build_test)
           command: |
             python -m venv venv
@@ -26,7 +32,8 @@ jobs:
           name: Install package (build_test)
           command: |
             . venv/bin/activate
-            pip install dist/lorenzcycletoolkit-1.0.0-py3-none-any.whl
+            export WHL_FILENAME=$(ls dist/*.whl)
+            pip install $WHL_FILENAME
 
       - run:
           name: Install pytest (build_test)
