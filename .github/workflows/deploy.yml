@@ -29,6 +29,15 @@ jobs:
         cd docs
         make html
 
+    - name: Fetch remote gh-pages branch
+      run: git fetch origin gh-pages
+
+    - name: Checkout gh-pages branch
+      run: git checkout gh-pages
+
+    - name: Merge changes from main branch
+      run: git merge origin/main
+
     - name: Deploy to GitHub Pages
       run: |
         ghp-import -n -p -f docs/build/html

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.2] - 2024-07-27
+### Added
+- Improved CI/CD pipeline by ensuring up-to-date gh-pages branch before deployment.
+- Updated installation instructions to include pip installation from PyPI.
+
 ## [1.0.1] - 2024-07-27
 ### Added
 - Added `CHANGELOG.md` file to document changes.
