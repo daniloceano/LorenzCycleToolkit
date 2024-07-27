@@ -16,7 +16,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: '3.12'
+        python-version: '3.12.4'
 
     - name: Install dependencies
       run: |
@@ -28,15 +28,6 @@ jobs:
       run: |
         cd docs
         make html
-
-    - name: Fetch remote gh-pages branch
-      run: git fetch origin gh-pages
-
-    - name: Checkout gh-pages branch
-      run: git checkout gh-pages
-
-    - name: Merge changes from main branch
-      run: git merge origin/main
 
     - name: Deploy to GitHub Pages
       run: |

@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.3] - 2024-07-27
+### Bug Fixes
+- Deploying documentation
+
 ## [1.0.2] - 2024-07-27
 ### Added
 - Improved CI/CD pipeline by ensuring up-to-date gh-pages branch before deployment.
