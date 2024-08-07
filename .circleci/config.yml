@@ -1,0 +1,136 @@
+version: 2.1
+
+jobs:
+  build_test:
+    docker:
+      - image: cimg/python:3.12
+    steps:
+      - checkout
+
+      - run:
+          name: Build (build_test)
+          command: python3 setup.py sdist bdist_wheel
+
+      - run:
+          name: Check if wheel file exists (build_test)
+          command: ls -l dist/
+
+      - run:
+          name: Set wheel filename (build_test)
+          command: |
+            export WHL_FILENAME=$(ls dist/*.whl)
+            echo "WHEEL FILE: $WHL_FILENAME"
+
+      - run:
+          name: Install dependencies (build_test)
+          command: |
+            python -m venv venv
+            . venv/bin/activate
+            pip install -r requirements.txt
+
+      - run:
+          name: Install package (build_test)
+          command: |
+            . venv/bin/activate
+            export WHL_FILENAME=$(ls dist/*.whl)
+            pip install $WHL_FILENAME
+
+      - run:
+          name: Install pytest (build_test)
+          command: |
+            . venv/bin/activate
+            pip install pytest
+
+      - run:
+          name: Run Tests (build_test)
+          command: |
+            . venv/bin/activate
+            pytest
+
+      - store_test_results:
+          path: test-reports
+
+  test_pypi_publish:
+    docker:
+      - image: cimg/python:3.12
+    steps:
+      - checkout
+
+      - run:
+          name: Create whl (test_pypi_publish)
+          command: python3 setup.py sdist bdist_wheel
+
+      - run:
+          name: Check if wheel file exists (test_pypi_publish)
+          command: ls -l dist/
+
+      - run:
+          name: Install dependencies (test_pypi_publish)
+          command: |
+            python -m venv venv
+            . venv/bin/activate
+            pip install -r requirements.txt
+
+      - run:
+          name: Install twine (test_pypi_publish)
+          command: |
+            . venv/bin/activate
+            pip install twine
+
+      - run:
+          name: Publish on TestPyPI
+          command: |
+            . venv/bin/activate
+            twine upload -u ${TESTPYPI_USERNAME} -p ${TESTPYPI_PASSWORD} --repository testpypi dist/* --verbose
+
+  pypi_publish:
+    docker:
+      - image: cimg/python:3.12
+    steps:
+      - checkout
+
+      - run:
+          name: Create whl (pypi_publish)
+          command: python3 setup.py sdist bdist_wheel
+
+      - run:
+          name: Check if wheel file exists (pypi_publish)
+          command: ls -l dist/
+
+      - run:
+          name: Install dependencies (pypi_publish)
+          command: |
+            python -m venv venv
+            . venv/bin/activate
+            pip install -r requirements.txt
+
+      - run:
+          name: Install twine (pypi_publish)
+          command: |
+            . venv/bin/activate
+            pip install twine
+
+      - run:
+          name: Publish on PyPI
+          command: |
+            . venv/bin/activate
+            twine upload -u ${PYPI_USERNAME} -p ${PYPI_PASSWORD} dist/* --verbose
+
+workflows:
+  build_test_publish:
+    jobs:
+      - build_test
+      - test_pypi_publish:
+          requires:
+            - build_test
+          filters:
+            branches:
+              only:
+                - develop
+      - pypi_publish:
+          requires:
+            - build_test
+          filters:
+            branches:
+              only:
+                - main
