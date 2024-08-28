@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.4] - 2024-08-28
+
+### Added
+- Added a `support` section in the documentation to provide guidelines for users seeking help or reporting issues. Users are encouraged to use the GitHub repository for reporting, with the option to contact via email if needed.
+
+### Updated
+- Updated the "Moving (Semi-Lagrangian) Framework Example" section in the documentation to include information about using the default track file for testing and the requirement to overwrite the `inputs/track` file with custom track data.
+- Clarified that the preferred method for running the LorenzCycleToolkit is through command line arguments executed from the top-level directory of the project.
+
+### Fixed
+- Improved clarity in the documentation by specifying the appropriate directories and command usage for various examples and tutorials.
+
 ## [1.0.3] - 2024-07-27
 ### Bug Fixes
 - Deploying documentation
