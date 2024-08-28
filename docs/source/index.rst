@@ -22,5 +22,6 @@ Welcome to the LorenzCycleToolkit documentation! This toolkit is designed to cal
    results
    math
    contributing
+   support
    license
    references

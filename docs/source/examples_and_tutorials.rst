@@ -1,9 +1,11 @@
 Examples and Tutorials
 ======================
 
+The preferred method for using the LorenzCycleToolkit is through command line arguments executed from the top-level directory of the project. Below are examples demonstrating how to configure and run the toolkit using different frameworks.
+
 Fixed (Eulerian) Framework Example
 ----------------------------------
-1. Prepare the `inputs/box_limits` file.
+1. Prepare the `inputs/box_limits` file.  
    The `box_limits` file should define the spatial domain as a CSV file with the following format:
 
    .. code-block:: text
@@ -13,7 +15,7 @@ Fixed (Eulerian) Framework Example
        min_lat;-42.5
        max_lat;-17.5
 
-2. Prepare the `inputs/namelist` file.
+2. Prepare the `inputs/namelist` file.  
    The `namelist` file specifies the variable names and units used in the input NetCDF file. Here is an example for the National Center for Environmental Protection Reanalysis 2 (NCEP-R2) dataset:
 
    .. code-block:: text
@@ -29,15 +31,16 @@ Fixed (Eulerian) Framework Example
        Time;;initial_time0_hours
        Vertical Level;;lv_ISBL3
 
-3. Run the following command::
+3. From the top-level directory of the project, run the following command::
 
        python lorenzcycletoolkit.py samples/testdata_NCEP-R2.nc -r -f
 
    This will execute the LorenzCycleToolkit using the fixed (Eulerian) framework.
 
-Moving (Semi-Lagrangian) Framework Example
+Moving (Semi-Lagrangian) Framework Example  
 ------------------------------------------
-1. Prepare the `inputs/track_file`.
+
+1. Prepare the `inputs/track_file`.  
    The `track_file` should define the system's center over time. Optionally, add length and width columns to adjust the domain size. Example:
 
    .. code-block:: text
@@ -49,7 +52,15 @@ Moving (Semi-Lagrangian) Framework Example
        2005-08-08-1800;-22.8;-44.7
        2005-08-09-0000;-22.9;-44.6
 
-2. Run the following command::
+   A default track file for testing purposes is also provided and can be used by running the following command:
+
+   .. code-block:: shell
+
+       cp inputs/track_testdata_NCEP-R2 inputs/track
+
+   The program will always use the `inputs/track` file for processing. Therefore, if you have a custom track file, you need to overwrite the `inputs/track` file with the desired track data before running the program.
+
+2. From the top-level directory of the project, run the following command::
 
        python lorenzcycletoolkit.py samples/testdata__NCEP-R2.nc -r -t
 
@@ -57,7 +68,7 @@ Moving (Semi-Lagrangian) Framework Example
 
 Interactive Domain Selection Example
 ------------------------------------
-1. Run the following command::
+1. From the top-level directory of the project, run the following command::
 
        python lorenzcycletoolkit.py samples/testdata__NCEP-R2.nc -r -c
 
