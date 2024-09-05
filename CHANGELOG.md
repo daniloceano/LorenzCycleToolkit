@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.7] - 2024-09-05
+
+### Fixed
+- Fixed the broken link to the **Contributing** section in the `README.md` file.
+
 ## [1.0.6] - 2024-09-05
 
 ### Added

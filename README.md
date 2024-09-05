@@ -33,7 +33,7 @@ For detailed installation instructions, please refer to the [Installation Guide]
 For detailed documentation and usage instructions, visit the [LorenzCycleToolkit Documentation](https://daniloceano.github.io/LorenzCycleToolkit/).
 
 ## Contributing
-Contributions are welcome! Please see the [contributing guide](CONTRIBUTING.md) for more details.
+Contributions are welcome! Please see the [contributing guide](https://daniloceano.github.io/LorenzCycleToolkit/contributing) for more details.
 
 ### Continuous Integration and Deployment
 
