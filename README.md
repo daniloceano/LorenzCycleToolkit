@@ -24,6 +24,10 @@ The LorenzCycleToolkit is a tool for calculating the Lorenz Energy Cycle (LEC) i
 - **Customizable Inputs:** Define custom domains and variable configurations.
 - **Visualization Options:** Generate detailed plots to visualize the energy cycle components.
 
+## Installation
+
+For detailed installation instructions, please refer to the [Installation Guide](https://daniloceano.github.io/LorenzCycleToolkit/installation) in the official documentation.
+
 ## Documentation
 
 For detailed documentation and usage instructions, visit the [LorenzCycleToolkit Documentation](https://daniloceano.github.io/LorenzCycleToolkit/).
@@ -59,5 +63,5 @@ You can view the CI/CD configuration in the following files:
 - [deploy-docs.yml](.github/workflows/deploy-docs.yml)
 - [config.yml](.circleci/config.yml)
 
-## License
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+This project is licensed under the GNU License Version 3. See the [LICENSE](LICENSE) file for details.
