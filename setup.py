@@ -13,7 +13,7 @@ def read_requirements():
 
 setup(
     name='LorenzCycleToolkit',
-    version='1.0.4',
+    version='1.0.5',
     packages=find_packages(),
     include_package_data=True,
     install_requires=read_requirements(),
