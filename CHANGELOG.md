@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.6] - 2024-09-05
+
+### Added
+- Expanded the **Contributing** section to include detailed guidelines on branch naming conventions, code style (autopep8, isort, flake8), testing, and PR submission.
+- Added a suggestion for running tests (`pytest`) and code formatting/linting commands (`autopep8`, `isort`, `flake8`) before submitting pull requests.
+
+### Changed
+- Improved the **Contributing** section in the documentation to provide better clarity on contribution processes and coding standards.
+- Updated the **Contributing** section to include information about the Continuous Integration (CI) pipeline and the required coding practices.
+- Removed "flags" from `index.rst` as the content was moved to the **Usage** section in version 1.0.5 but not reflected in the index.
+
+### Fixed
+- Resolved a merge conflict in the `README.md` file caused during cherry-picking of changes from the `joss-submission` branch to the `main` branch.
+
+
 ## [1.0.5] - 2024-09-04
 
 ### Added

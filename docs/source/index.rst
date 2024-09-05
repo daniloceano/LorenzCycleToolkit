@@ -17,7 +17,6 @@ Welcome to the LorenzCycleToolkit documentation! This toolkit is designed to cal
    usage
    configuration
    file_naming_convention
-   flags
    examples_and_tutorials
    results
    math
