@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.8] - 2024-09-05
+
+### Added
+- Added badges for JOSS, Zenodo, documentation status, and license (GPL v3) to the README.
+
 ## [1.0.7] - 2024-09-05
 
 ### Fixed

@@ -1,5 +1,11 @@
 # LorenzCycleToolkit
 
+[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.13765959.svg)](https://doi.org/10.5281/zenodo.13765959)
+[![DOI](https://joss.theoj.org/papers/10.21105/joss.07139/status.svg)](https://doi.org/10.21105/joss.07139)
+![Documentation Status](https://img.shields.io/badge/docs-passing-brightgreen.svg)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+
 ## Overview
 
 The LorenzCycleToolkit is a tool for calculating the Lorenz Energy Cycle (LEC) in specific atmospheric regions. Introduced by Edward Lorenz in 1965, the LEC estimates atmospheric energy, including zonal and eddy components of Kinetic and Available Potential Energy, and the conversions between these forms.
