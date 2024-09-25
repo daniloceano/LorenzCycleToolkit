@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Examples and Tutorials &#8212; LorenzCycleToolKit 1.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
+    <script src="_static/documentation_options.js?v=8d563738"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Results" href="results.html" />
+    <link rel="prev" title="File Naming Convention" href="file_naming_convention.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="examples-and-tutorials">
+<h1>Examples and Tutorials<a class="headerlink" href="#examples-and-tutorials" title="Link to this heading">¶</a></h1>
+<p>The preferred method for using the LorenzCycleToolkit is through command line arguments executed from the top-level directory of the project. Below are examples demonstrating how to configure and run the toolkit using different frameworks.</p>
+<section id="fixed-eulerian-framework-example">
+<h2>Fixed (Eulerian) Framework Example<a class="headerlink" href="#fixed-eulerian-framework-example" title="Link to this heading">¶</a></h2>
+<ol class="arabic">
+<li><p>Prepare the <cite>inputs/box_limits</cite> file.
+The <cite>box_limits</cite> file should define the spatial domain as a CSV file with the following format:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>min_lon;-60
+max_lon;-30
+min_lat;-42.5
+max_lat;-17.5
+</pre></div>
+</div>
+</li>
+<li><p>Prepare the <cite>inputs/namelist</cite> file.
+The <cite>namelist</cite> file specifies the variable names and units used in the input NetCDF file. Here is an example for the National Center for Environmental Protection Reanalysis 2 (NCEP-R2) dataset:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>;standard_name;Variable;Units
+Air Temperature;air_temperature;TMP_2_ISBL;K
+Geopotential Height;geopotential_height;HGT_2_ISBL;m
+Omega Velocity;omega;V_VEL_2_ISBL;Pa/s
+Eastward Wind Component;eastward_wind;U_GRD_2_ISBL;m/s
+Northward Wind Component;northward_wind;V_GRD_2_ISBL;m/s
+Longitude;;lon_2
+Latitude;;lat_2
+Time;;initial_time0_hours
+Vertical Level;;lv_ISBL3
+</pre></div>
+</div>
+</li>
+<li><p>From the top-level directory of the project, run the following command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">lorenzcycletoolkit</span><span class="o">.</span><span class="n">py</span> <span class="n">samples</span><span class="o">/</span><span class="n">testdata_NCEP</span><span class="o">-</span><span class="n">R2</span><span class="o">.</span><span class="n">nc</span> <span class="o">-</span><span class="n">r</span> <span class="o">-</span><span class="n">f</span>
+</pre></div>
+</div>
+<p>This will execute the LorenzCycleToolkit using the fixed (Eulerian) framework.</p>
+</li>
+</ol>
+</section>
+<section id="moving-semi-lagrangian-framework-example">
+<h2>Moving (Semi-Lagrangian) Framework Example<a class="headerlink" href="#moving-semi-lagrangian-framework-example" title="Link to this heading">¶</a></h2>
+<ol class="arabic">
+<li><p>Prepare the <cite>inputs/track_file</cite>.
+The <cite>track_file</cite> should define the system’s center over time. Optionally, add length and width columns to adjust the domain size. Example:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>time;Lat;Lon
+2005-08-08-0000;-22.5;-45.0
+2005-08-08-0600;-22.6;-44.9
+2005-08-08-1200;-22.7;-44.8
+2005-08-08-1800;-22.8;-44.7
+2005-08-09-0000;-22.9;-44.6
+</pre></div>
+</div>
+<p>A default track file for testing purposes is also provided and can be used by running the following command:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cp<span class="w"> </span>inputs/track_testdata_NCEP-R2<span class="w"> </span>inputs/track
+</pre></div>
+</div>
+<p>The program will always use the <cite>inputs/track</cite> file for processing. Therefore, if you have a custom track file, you need to overwrite the <cite>inputs/track</cite> file with the desired track data before running the program.</p>
+</li>
+<li><p>From the top-level directory of the project, run the following command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">lorenzcycletoolkit</span><span class="o">.</span><span class="n">py</span> <span class="n">samples</span><span class="o">/</span><span class="n">testdata__NCEP</span><span class="o">-</span><span class="n">R2</span><span class="o">.</span><span class="n">nc</span> <span class="o">-</span><span class="n">r</span> <span class="o">-</span><span class="n">t</span>
+</pre></div>
+</div>
+<p>This will execute the LorenzCycleToolkit using the moving (Semi-Lagrangian) framework.</p>
+</li>
+</ol>
+</section>
+<section id="interactive-domain-selection-example">
+<h2>Interactive Domain Selection Example<a class="headerlink" href="#interactive-domain-selection-example" title="Link to this heading">¶</a></h2>
+<ol class="arabic">
+<li><p>From the top-level directory of the project, run the following command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">lorenzcycletoolkit</span><span class="o">.</span><span class="n">py</span> <span class="n">samples</span><span class="o">/</span><span class="n">testdata__NCEP</span><span class="o">-</span><span class="n">R2</span><span class="o">.</span><span class="n">nc</span> <span class="o">-</span><span class="n">r</span> <span class="o">-</span><span class="n">c</span>
+</pre></div>
+</div>
+<p>This command enables interactive map-based domain selection. First, define a slice of global data to enhance visualization and processing speed. Then, select the computational area for each timestep interactively.</p>
+<p>Each timestep prompts the user to select a computational area:</p>
+<a class="reference internal image-reference" href="https://user-images.githubusercontent.com/56005607/214922008-5b7c094f-c160-4415-a528-07cc58730827.png"><img alt="https://user-images.githubusercontent.com/56005607/214922008-5b7c094f-c160-4415-a528-07cc58730827.png" src="https://user-images.githubusercontent.com/56005607/214922008-5b7c094f-c160-4415-a528-07cc58730827.png" style="width: 350px;" /></a>
+</li>
+</ol>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">LorenzCycleToolKit</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#flags">Flags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_naming_convention.html">File Naming Convention</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Examples and Tutorials</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#fixed-eulerian-framework-example">Fixed (Eulerian) Framework Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#moving-semi-lagrangian-framework-example">Moving (Semi-Lagrangian) Framework Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#interactive-domain-selection-example">Interactive Domain Selection Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="results.html">Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="math.html">Mathematics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="support.html">Support and Issue Reporting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="file_naming_convention.html" title="previous chapter">File Naming Convention</a></li>
+      <li>Next: <a href="results.html" title="next chapter">Results</a></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Danilo Couto de Souza.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.4</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="_sources/examples_and_tutorials.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

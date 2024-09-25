@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Usage &#8212; LorenzCycleToolKit 1.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
+    <script src="_static/documentation_options.js?v=8d563738"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Configuration" href="configuration.html" />
+    <link rel="prev" title="Installation" href="installation.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Link to this heading">¶</a></h1>
+<section id="fixed-framework">
+<h2>Fixed Framework<a class="headerlink" href="#fixed-framework" title="Link to this heading">¶</a></h2>
+<p><strong>Prerequisites</strong>
+- NetCDF file with necessary variables (u, v, omega, air temperature, geopotential or geopotential height).
+- <cite>inputs/box_limits</cite> file defining the domain.
+- <cite>inputs/namelist</cite> file specifying variable names and units.</p>
+<p><strong>Command</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">lorenzcycletoolkit</span><span class="o">.</span><span class="n">py</span> <span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">infile</span><span class="o">.</span><span class="n">nc</span> <span class="o">-</span><span class="n">r</span> <span class="o">-</span><span class="n">f</span>
+</pre></div>
+</div>
+</section>
+<section id="moving-framework">
+<h2>Moving Framework<a class="headerlink" href="#moving-framework" title="Link to this heading">¶</a></h2>
+<p><strong>Pre-defined Domain</strong>
+- Follow initial steps for the Fixed Framework.
+- Use a <cite>inputs/track_file</cite> to define the system’s center over time.</p>
+<p><strong>Command</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">lorenzcycletoolkit</span><span class="o">.</span><span class="n">py</span> <span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">infile</span><span class="o">.</span><span class="n">nc</span> <span class="o">-</span><span class="n">r</span> <span class="o">-</span><span class="n">t</span>
+</pre></div>
+</div>
+</section>
+<section id="interactive-domain-selection">
+<h2>Interactive Domain Selection<a class="headerlink" href="#interactive-domain-selection" title="Link to this heading">¶</a></h2>
+<ul>
+<li><p>For interactive domain selection, run:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">lorenzcycletoolkit</span><span class="o">.</span><span class="n">py</span> <span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">infile</span><span class="o">.</span><span class="n">nc</span> <span class="o">-</span><span class="n">r</span> <span class="o">-</span><span class="n">c</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</section>
+</section>
+<section id="flags">
+<h1>Flags<a class="headerlink" href="#flags" title="Link to this heading">¶</a></h1>
+<ul class="simple">
+<li><p><cite>-r</cite>, <cite>–residuals</cite>: Compute the Dissipation and Generation terms as residuals.</p></li>
+<li><p><cite>-f</cite>, <cite>–fixed</cite>: Compute the energetics for a fixed domain specified by the ‘box_limits’ file.</p></li>
+<li><p><cite>-t</cite>, <cite>–track</cite>: Define the domain using a track file.</p></li>
+<li><p><cite>-c</cite>, <cite>–choose</cite>: Interactively select the domain for each time step.</p></li>
+<li><p><cite>-o</cite>, <cite>–outname</cite>: Specify an output name for the results.</p></li>
+<li><p><cite>-z</cite>, <cite>–zeta</cite>: Use the vorticity from the track file instead of computing it at 850 hPa.</p></li>
+<li><p><cite>-m</cite>, <cite>–mpas</cite>: Specify this flag if working with MPAS-A data processed with MPAS-BR routines.</p></li>
+<li><p><cite>-p</cite>, <cite>–plots</cite>: Generate plots.</p></li>
+</ul>
+<p>Ensure that the provided NetCDF file and the <cite>namelist</cite> configuration align with the selected flags.</p>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">LorenzCycleToolKit</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#fixed-framework">Fixed Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#moving-framework">Moving Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#interactive-domain-selection">Interactive Domain Selection</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#flags">Flags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_naming_convention.html">File Naming Convention</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples_and_tutorials.html">Examples and Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="results.html">Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="math.html">Mathematics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="support.html">Support and Issue Reporting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="installation.html" title="previous chapter">Installation</a></li>
+      <li>Next: <a href="configuration.html" title="next chapter">Configuration</a></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Danilo Couto de Souza.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.4</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="_sources/usage.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

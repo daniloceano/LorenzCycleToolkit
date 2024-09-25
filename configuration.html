@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Configuration &#8212; LorenzCycleToolKit 1.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
+    <script src="_static/documentation_options.js?v=8d563738"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="File Naming Convention" href="file_naming_convention.html" />
+    <link rel="prev" title="Usage" href="usage.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="configuration">
+<h1>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">¶</a></h1>
+<p>The LorenzCycleToolkit requires specific configuration files for both fixed and moving frameworks. Below are examples and descriptions of the required configuration files.</p>
+<section id="namelist-file">
+<h2>Namelist File<a class="headerlink" href="#namelist-file" title="Link to this heading">¶</a></h2>
+<p>The <cite>namelist</cite> file specifies the variable names and units used in the input NetCDF file. Here is an example <cite>namelist</cite> file for the NCEP-R2 dataset:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>;standard_name;Variable;Units
+Air Temperature;air_temperature;TMP_2_ISBL;K
+Geopotential Height;geopotential_height;HGT_2_ISBL;m
+Omega Velocity;omega;V_VEL_2_ISBL;Pa/s
+Eastward Wind Component;eastward_wind;U_GRD_2_ISBL;m/s
+Northward Wind Component;northward_wind;V_GRD_2_ISBL;m/s
+Longitude;;lon_2
+Latitude;;lat_2
+Time;;initial_time0_hours
+Vertical Level;;lv_ISBL3
+</pre></div>
+</div>
+</section>
+<section id="box-limits-file-optional">
+<h2>Box Limits File (Optional)<a class="headerlink" href="#box-limits-file-optional" title="Link to this heading">¶</a></h2>
+<p>The <cite>box_limits</cite> file defines the spatial domain for the fixed framework. It is a CSV file with the following format:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>min_lon;-60
+max_lon;-30
+min_lat;-42.5
+max_lat;-17.5
+</pre></div>
+</div>
+</section>
+<section id="track-file-optional">
+<h2>Track File (Optional)<a class="headerlink" href="#track-file-optional" title="Link to this heading">¶</a></h2>
+<p>For the moving framework, a <cite>track_file</cite> can be used to define the system’s center over time. Optionally, length and width columns can be added to adjust the domain size. Here is an example <cite>track_file</cite>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>time, lon, lat, length, width
+2021-01-01 00:00:00, -50, 0, 10, 10
+2021-01-01 06:00:00, -49, 1, 10, 10
+2021-01-01 12:00:00, -48, 2, 10, 10
+</pre></div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">LorenzCycleToolKit</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#flags">Flags</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#namelist-file">Namelist File</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#box-limits-file-optional">Box Limits File (Optional)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#track-file-optional">Track File (Optional)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="file_naming_convention.html">File Naming Convention</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples_and_tutorials.html">Examples and Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="results.html">Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="math.html">Mathematics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="support.html">Support and Issue Reporting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="usage.html" title="previous chapter">Usage</a></li>
+      <li>Next: <a href="file_naming_convention.html" title="next chapter">File Naming Convention</a></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Danilo Couto de Souza.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.4</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="_sources/configuration.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
