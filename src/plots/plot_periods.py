@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/01/02 23:38:49 by daniloceano       #+#    #+#              #
-#    Updated: 2024/07/14 10:10:32 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/10/21 13:41:38 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -46,6 +46,9 @@ def plot_periods(
     periods_figure_directory = os.path.join(figures_directory, "Periods")
     os.makedirs(periods_figure_directory, exist_ok=True)
     vorticity_data = out_track["min_max_zeta_850"].to_list()
+
+    if out_track['central_lat'].mean() > 0:
+        vorticity_data = [x * -1 for x in vorticity_data]
 
     options_high_res = {
         "use_filter": "auto",

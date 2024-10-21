@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.9] - 2024-10-21
+
+### Fixed
+
+- **LEC Fixed Framework**: Fixed a bug where the vertical levels output file was not saving the correct pressure levels as columns. Now, the output correctly reflects the pressure levels.
+  
+- **LEC Moving Framework**: Resolved a bug that prevented the framework from correctly handling maximum vorticity for the Northern Hemisphere track files. The framework now properly processes maximum vorticity values for the Northern Hemisphere.
+
+- **Plot Periods**: Enhanced the functionality to check if the track is for the Northern Hemisphere. If so, the vorticity values are multiplied by `-1` to ensure correct behavior in the CycloPhaser program.
+
+### Added
+
+- **Tools.py**: Added a preprocessing stage to remove the new dimensions (`expver` and `number`) introduced in recent ERA5 datasets, ensuring compatibility with previous workflows.
+
 ## [1.0.8] - 2024-09-05
 
 ### Added

@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/07/18 09:38:56 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/10/21 13:15:43 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -356,6 +356,12 @@ def process_data(
     data = data.assign_coords({"coslats": np.cos(np.deg2rad(data[LatIndexer]))})
     data = data.assign_coords({"rlons": np.deg2rad(data[LonIndexer])})
     app_logger.debug("Ok.")
+
+    # Drop unnecessary dimensions
+    if 'expver' in data.coords:
+        data = data.drop('expver')
+    if 'number' in data.coords:
+        data = data.drop('number')
 
     levels_Pa = (
         data[LevelIndexer] * units(str(data[LevelIndexer].units))

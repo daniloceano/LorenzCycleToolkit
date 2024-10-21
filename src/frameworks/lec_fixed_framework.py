@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:59 by daniloceano       #+#    #+#              #
-#    Updated: 2024/07/18 00:20:44 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/10/21 12:22:32 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -82,7 +82,7 @@ def lec_fixed(
         variable_list_df.loc["Vertical Level"]["Variable"],
     )
 
-    pres = data[VerticalCoordIndexer] * data[VerticalCoordIndexer].metpy.units
+    PressureData = data[VerticalCoordIndexer] * data[VerticalCoordIndexer].metpy.units
     app_logger.info(
         f"Bounding box: min_lon={min_lon}, max_lon={max_lon}, min_lat={min_lat}, max_lat={max_lat}"
     )
@@ -110,7 +110,7 @@ def lec_fixed(
         "Ck_4",
         "Ck_5",
     ]:
-        columns = [TimeName] + [float(i) / 100 for i in pres.values]
+        columns = [TimeName] + [float(i) for i in PressureData.values]
         output_path = Path(results_subdirectory_vertical_levels, f"{term}_{VerticalCoordIndexer}.csv")
         pd.DataFrame(columns=columns).to_csv(output_path, index=None)
 
@@ -229,8 +229,38 @@ def lec_fixed(
 
         app_logger.info("Generating plots..")
         figures_directory = os.path.join(results_subdirectory, "Figures")
-        plot_timeseries(results_file, figures_directory, app_logger)
-        plot_box_limits(box_limits_file, figures_directory, app_logger)
-        boxplot_terms(results_file, results_subdirectory, figures_directory, app_logger)
-        plot_hovmoller(results_file, figures_directory, app_logger)
-        plot_lorenzcycletoolkit(results_file, figures_directory, app_logger=app_logger)
+
+        # Plot time series
+        try:
+            plot_timeseries(results_file, figures_directory, app_logger)
+            app_logger.info("Successfully generated time series plot.")
+        except Exception as e:
+            app_logger.error(f"Error occurred while generating time series plot: {e}")
+
+        # Plot box limits
+        try:
+            plot_box_limits(box_limits_file, figures_directory, app_logger)
+            app_logger.info("Successfully generated box limits plot.")
+        except Exception as e:
+            app_logger.error(f"Error occurred while generating box limits plot: {e}")
+
+        # Plot boxplot terms
+        try:
+            boxplot_terms(results_file, results_subdirectory, figures_directory, app_logger)
+            app_logger.info("Successfully generated boxplot terms.")
+        except Exception as e:
+            app_logger.error(f"Error occurred while generating boxplot terms: {e}")
+
+        # Plot Hovmöller diagram
+        try:
+            plot_hovmoller(results_file, figures_directory, app_logger)
+            app_logger.info("Successfully generated Hovmöller plot.")
+        except Exception as e:
+            app_logger.error(f"Error occurred while generating Hovmöller plot: {e}")
+
+        # Plot Lorenz cycle toolkit
+        try:
+            plot_lorenzcycletoolkit(results_file, figures_directory, app_logger=app_logger)
+            app_logger.info("Successfully generated Lorenz cycle plot.")
+        except Exception as e:
+            app_logger.error(f"Error occurred while generating Lorenz cycle plot: {e}")

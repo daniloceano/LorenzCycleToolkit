@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/07/18 00:36:10 by daniloceano      ###   ########.fr        #
+#    Updated: 2024/10/21 13:56:21 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -335,10 +335,18 @@ def get_position(
                     LonIndexer: slice(limits["min_lon"], limits["max_lon"]),
                 }
             )
-            min_max_zeta_unformatted = izeta_850_slice.min()
 
+            # Get mininum vorticity if in the southern hemisphere
+            if limits["min_lat"] < 0:
+                min_max_zeta_unformatted = izeta_850_slice.min()
+            # Get maximum vorticity if in the northern hemisphere
+            else:
+                min_max_zeta_unformatted = izeta_850_slice.max()
+
+        # Get minimum vorticity if in the southern hemisphere
         if limits["min_lat"] < 0:
             min_max_zeta = float(np.nanmin(min_max_zeta_unformatted))
+        # Get maximum vorticity if in the northern hemisphere
         else:
             min_max_zeta = float(np.nanmax(min_max_zeta_unformatted))
 
