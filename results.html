@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Results &#8212; LorenzCycleToolKit 1.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
+    <script src="_static/documentation_options.js?v=8d563738"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Mathematics" href="math.html" />
+    <link rel="prev" title="Examples and Tutorials" href="examples_and_tutorials.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="results">
+<h1>Results<a class="headerlink" href="#results" title="Link to this heading">¶</a></h1>
+<p>The <cite>LorenzCycleToolkit</cite> generates a directory structure to store the results of the Lorenz Energy Cycle (LEC) calculations. This structure includes CSV files containing the calculated terms, a log file, and optional figures if the plotting flag is enabled. Here’s an example of the results directory structure:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>LEC_Results/
+├──<span class="w"> </span>testdata_ERA5_fixed
+│<span class="w">   </span>├──<span class="w"> </span>Figures
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>LEC
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>boxplots
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>hovmollers
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>timeseries
+│<span class="w">   </span>├──<span class="w"> </span>log.testdata_ERA5
+│<span class="w">   </span>├──<span class="w"> </span>results_vertical_levels
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Ae_level.csv
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Az_level.csv
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Ca_1_level.csv
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Ck_1_level.csv
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Cz_1_level.csv
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Ge_level.csv
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Gz_level.csv
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Ke_level.csv
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Kz_level.csv
+│<span class="w">   </span>├──<span class="w"> </span>testdata_ERA5_fixed_results.csv
+</pre></div>
+</div>
+<p>Each subdirectory within the <cite>LEC_Results</cite> directory corresponds to a different dataset or analysis run. The structure of each subdirectory includes:</p>
+<ul class="simple">
+<li><p><strong>Figures/</strong>: Contains figures generated when the <cite>-p</cite> flag is used.
+- <strong>LEC/</strong>: Contains LEC diagrams for each time step.
+- <strong>boxplots/</strong>: Contains boxplots of the LEC terms for each time step.
+- <strong>hovmollers/</strong>: Contains Hovmöller diagrams of the LEC terms.
+- <strong>timeseries/</strong>: Contains time series plots of the LEC terms.</p></li>
+<li><p><a href="#id1"><span class="problematic" id="id2">**</span></a>log.*: This log file contains detailed information about the processing and calculations performed during the analysis.</p></li>
+<li><p><strong>results_vertical_levels/</strong>: Contains CSV files for each LEC term at various vertical levels. Each conversion term is split into multiple sub-terms. For example:
+- <cite>Ae_level.csv</cite>: Contains the values of the eddy component of Available Potential Energy (Ae) at different levels.
+- <cite>Az_level.csv</cite>: Contains the values of the zonal component of Available Potential Energy (Az) at different levels.
+- <cite>Ca_1_level.csv</cite>, <cite>Ca_2_level.csv</cite>: Contains the values of the conversion term Ca at different levels, split into multiple sub-terms.
+- <cite>Ck_1_level.csv</cite>, <cite>Ck_2_level.csv</cite>, <cite>Ck_3_level.csv</cite>, <cite>Ck_4_level.csv</cite>, <cite>Ck_5_level.csv</cite>: Contains the values of the conversion term Ck at different levels, split into multiple sub-terms.
+- <cite>Cz_1_level.csv</cite>, <cite>Cz_2_level.csv</cite>: Contains the values of the conversion term Cz at different levels, split into multiple sub-terms.
+- <cite>Ge_level.csv</cite>: Contains the values of the generation term Ge at different levels.
+- <cite>Gz_level.csv</cite>: Contains the values of the generation term Gz at different levels.
+- <cite>Ke_level.csv</cite>: Contains the values of the eddy component of Kinetic Energy (Ke) at different levels.
+- <cite>Kz_level.csv</cite>: Contains the values of the zonal component of Kinetic Energy (Kz) at different levels.</p></li>
+<li><p><strong>testdata_*_fixed_results.csv</strong>: This CSV file contains the overall results of the LEC calculations for the given dataset.</p></li>
+</ul>
+<p>### Log File</p>
+<p>The log file provides detailed information about the processing and calculations performed during the analysis. It includes information about the input data, the configuration used for the analysis, and any errors or warnings encountered during the process.</p>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">LorenzCycleToolKit</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#flags">Flags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_naming_convention.html">File Naming Convention</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples_and_tutorials.html">Examples and Tutorials</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="math.html">Mathematics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="support.html">Support and Issue Reporting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="examples_and_tutorials.html" title="previous chapter">Examples and Tutorials</a></li>
+      <li>Next: <a href="math.html" title="next chapter">Mathematics</a></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Danilo Couto de Souza.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.4</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="_sources/results.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

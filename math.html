@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Mathematics &#8212; LorenzCycleToolKit 1.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
+    <script src="_static/documentation_options.js?v=8d563738"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Contributing" href="contributing.html" />
+    <link rel="prev" title="Results" href="results.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="mathematics">
+<h1>Mathematics<a class="headerlink" href="#mathematics" title="Link to this heading">¶</a></h1>
+<p>The energy budget equations are as follows:</p>
+<div class="math notranslate nohighlight">
+\begin{align*}
+\frac{\partial A_Z}{\partial t} &amp;= C_K - C_A + BA_Z + \Delta G_Z \\
+\frac{\partial A_E}{\partial t} &amp;= C_A - C_E + BA_E + \Delta G_E \\
+\frac{\partial K_Z}{\partial t} &amp;= C_K - C_Z + BK_Z - \Delta R_Z \\
+\frac{\partial K_E}{\partial t} &amp;= C_E - C_K + BK_E - \Delta R_E
+\end{align*}</div><p>In these equations, available potential energy (APE) is divided into
+zonal (<span class="math notranslate nohighlight">\(A_Z\)</span>) and eddy (<span class="math notranslate nohighlight">\(A_E\)</span>) components, as is kinetic
+energy (<span class="math notranslate nohighlight">\(K_Z\)</span> and <span class="math notranslate nohighlight">\(K_E\)</span>, respectively). The transformations
+between these forms of energy are denoted by <span class="math notranslate nohighlight">\(C\)</span>, with subscripts
+<span class="math notranslate nohighlight">\(Z\)</span> and <span class="math notranslate nohighlight">\(E\)</span> for conversions between zonal and eddy forms,
+and <span class="math notranslate nohighlight">\(A\)</span> and <span class="math notranslate nohighlight">\(K\)</span> indicating conversions between APE and
+kinetic energy, respectively. Thus, <span class="math notranslate nohighlight">\(C_A\)</span> represents the
+conversion between <span class="math notranslate nohighlight">\(A_Z\)</span> and <span class="math notranslate nohighlight">\(A_E\)</span>, <span class="math notranslate nohighlight">\(C_E\)</span> denotes the
+conversion from <span class="math notranslate nohighlight">\(A_E\)</span> to <span class="math notranslate nohighlight">\(K_E\)</span>, <span class="math notranslate nohighlight">\(C_K\)</span> signifies the
+transformation from <span class="math notranslate nohighlight">\(K_E\)</span> to <span class="math notranslate nohighlight">\(K_Z\)</span>, and <span class="math notranslate nohighlight">\(C_Z\)</span>
+describes the conversion from <span class="math notranslate nohighlight">\(A_Z\)</span> to <span class="math notranslate nohighlight">\(K_Z\)</span>. The residual
+terms are defined as:</p>
+<div class="math notranslate nohighlight">
+\begin{align*}
+\Delta R_Z &amp;= B \Phi_Z - D_Z + \epsilon_{KZ} \\
+\Delta R_E &amp;= B \Phi_E - D_E + \epsilon_{KE} \\
+\Delta G_Z &amp;= G_Z + \epsilon_{GZ} \\
+\Delta G_E &amp;= G_E + \epsilon_{GE}
+\end{align*}</div><p>Where APE generation and dissipation of kinetic energy are indicated by
+<span class="math notranslate nohighlight">\(G\)</span> and <span class="math notranslate nohighlight">\(D\)</span>, with <span class="math notranslate nohighlight">\(G_Z\)</span> and <span class="math notranslate nohighlight">\(G_E\)</span> marking the
+generation of <span class="math notranslate nohighlight">\(A_Z\)</span> and <span class="math notranslate nohighlight">\(A_E\)</span>, and <span class="math notranslate nohighlight">\(D_Z\)</span> and
+<span class="math notranslate nohighlight">\(D_E\)</span> representing the dissipation of <span class="math notranslate nohighlight">\(K_Z\)</span> and <span class="math notranslate nohighlight">\(K_E\)</span>,
+respectively.</p>
+<p>Firstly, we define the zonal mean of a variable <span class="math notranslate nohighlight">\(X\)</span>, between
+longitudes <span class="math notranslate nohighlight">\(\lambda_{1}\)</span> and <span class="math notranslate nohighlight">\(\lambda_{2}\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[\begin{align*}
+[X]_\lambda &amp;= \frac{1}{\lambda_2 - \lambda_1} \int_{\lambda_2}^{\lambda_1} X d\lambda
+\end{align*}\]</div>
+<p>The eddy component of this variable is its deviation from the zonal mean:</p>
+<div class="math notranslate nohighlight">
+\[\begin{align*}
+(X)_\lambda &amp;=  X - [X]_\lambda
+\end{align*}\]</div>
+<p>The domain mean of the variable <span class="math notranslate nohighlight">\(X\)</span>, defined over the computational domain bounded by longitudes <span class="math notranslate nohighlight">\(\lambda_1\)</span> and <span class="math notranslate nohighlight">\(\lambda_2\)</span>, and latitudes <span class="math notranslate nohighlight">\(\varphi_1\)</span> and <span class="math notranslate nohighlight">\(\varphi_2\)</span>, is given by:</p>
+<div class="math notranslate nohighlight">
+\[\begin{align*}
+[X]_{\lambda\phi} &amp;= \left(\frac{1}{\lambda_2 - \lambda_1}\right)  \left(\frac{1}{\sin\phi_2 - \sin\phi_1}\right) \int_{\lambda_2}^{\lambda_1} X \cos\phi d\lambda d\phi
+\end{align*}\]</div>
+<p>Similarly, we define the deviation of the zonal mean from the domain mean:</p>
+<div class="math notranslate nohighlight">
+\[\begin{align*}
+([X]_\lambda)_\phi &amp;= [X]_\lambda - [X]_{\lambda\phi}
+\end{align*}\]</div>
+<p>From the definitions above, the four energy components used in the LEC computation are defined as follows:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{align*}
+A_Z &amp;= \int_{p_t}^{p_b} \frac{([(T)_\lambda ])_\phi^{2}]_{\lambda \phi}}  {2[\sigma]_{\lambda \phi}} dp \\
+A_E &amp;= \int_{p_t}^{p_b} \frac{[(T)_\lambda^{2}]_{\lambda \phi}]}  {2[\sigma]_{\lambda \phi}} dp \\
+K_Z &amp;=  \int_{p_t}^{p_b} \frac{[[u]_\lambda^2 + [v]_\lambda^2]_{\lambda \phi}}{2g} dp \\
+K_E &amp;=  \int_{p_t}^{p_b} \frac{[(u)_\lambda^2 + (v)_\lambda^2]_{\lambda \phi}}{2g} dp
+\end{align*}\end{split}\]</div>
+<p>where <span class="math notranslate nohighlight">\(p\)</span> is the atmospheric pressure, with subscripts <span class="math notranslate nohighlight">\(b\)</span> and <span class="math notranslate nohighlight">\(t\)</span> denoting the lower (base) and upper (top) pressure boundaries of the atmosphere, respectively. <span class="math notranslate nohighlight">\(T\)</span> represents temperature, <span class="math notranslate nohighlight">\(g\)</span> is the acceleration due to gravity, and <span class="math notranslate nohighlight">\(u\)</span> and <span class="math notranslate nohighlight">\(v\)</span> are the zonal and meridional wind components, respectively. The static stability parameter <span class="math notranslate nohighlight">\(\sigma\)</span> is defined as:</p>
+<div class="math notranslate nohighlight">
+\[\begin{align*}
+\sigma &amp;= \left[\frac{gT}{c_p}-\frac{pg}{R}\frac{\partial T}{\partial p}\right]_{\lambda \phi}
+\end{align*}\]</div>
+<p>where <span class="math notranslate nohighlight">\(c_p\)</span> is the specific heat at constant pressure, and <span class="math notranslate nohighlight">\(R\)</span> is the ideal gas constant for dry air.</p>
+<p>The four conversion terms are defined as follows, integrating over the atmospheric column from the base (<span class="math notranslate nohighlight">\(p_b\)</span>) to the top (<span class="math notranslate nohighlight">\(p_t\)</span>) pressures:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+    &amp;C_Z = \int_{p_t}^{p_b} - [\left([T]_\lambda)_\phi ([\omega]_\lambda\right)_\phi]_{\lambda\phi} \ \frac{R}{gp} \ dp \label{eq:CZ} \\
+    &amp;C_E = \int_{p_t}^{p_b} - [(T)_\lambda (\omega)_\lambda]_{\lambda\phi} \ \frac{R}{gp} \ dp \label{eq:CE} \\
+    &amp;C_A = \int_{p_t}^{p_b} - \left( \frac{1}{2a\sigma}  \left[ (v)_\lambda (T)_\lambda  \frac{\partial  ([T]_\lambda)_\phi}{\partial \phi} \right]_{\lambda\phi} + \frac{1}{\sigma}  \left[ (\omega)_\lambda (T)_\lambda \frac{\partial  ([T]_\lambda)_\phi}{\partial p} \right]_{\lambda\phi} \right) dp \label{eq:CA} \\
+    &amp;C_K = \int_{p_t}^{p_b} \frac{1}{g} \left(\left[ \frac{\cos\phi}{a} (u)_\lambda (v)_\lambda \frac{\partial}{\partial\phi} \left(\frac{[u]_\lambda}{\cos\phi}\right)\right]_{\lambda\phi} + \left[ \frac{(v)_\lambda^2}{a} \frac{\partial [v]_\lambda}{\partial\phi}  \right]_{\lambda\phi}  \right.
+    \left. + \left[ \frac{\tan\phi}{a} (u)_\lambda^2 [v]_\lambda  \right]_{\lambda\phi} + \left[ (\omega)_\lambda  (u)_\lambda \frac{\partial [u]_\lambda}{\partial p} \right]_{\lambda\phi} + \left[ (\omega)_\lambda  (v)_\lambda \frac{\partial [v]_\lambda}{\partial p} \right]_{\lambda\phi}  \right) dp \label{eq:CK}
+\end{aligned}\end{split}\]</div>
+<p>where <span class="math notranslate nohighlight">\(a\)</span> is the Earth’s radius and <span class="math notranslate nohighlight">\(\omega\)</span> is the vertical velocity in isobaric coordinates.</p>
+<p>The APE generation and K dissipation terms are defined as:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{align*}
+G_Z &amp;=  \int_{p_t}^{p_b} \frac{[([q]_\lambda)_\phi ([T]_\lambda)_\phi]_{\lambda \phi}}{c_p[\sigma]_{\lambda \phi}} dp \\
+G_E &amp;=  \int_{p_t}^{p_b} \frac{[(q)_\lambda (T)_\lambda]_{\lambda \phi}}{c_p[\sigma]_{\lambda \phi}} dp \\
+D_Z &amp;= -  \int_{p_t}^{p_b} \frac{1}{g} [[u]_\lambda [F_\lambda]_\lambda + [v]_\lambda [F_\phi]_\lambda]_{\lambda \phi} dp \\
+D_E &amp;= -  \int_{p_t}^{p_b} \frac{1}{g} [(u)_\lambda (F_\lambda)_\lambda + (v)_\lambda (F_\phi)_\lambda]_{\lambda \phi} dp
+\end{align*}\end{split}\]</div>
+<p>Here, <span class="math notranslate nohighlight">\(F_{\lambda}\)</span> and <span class="math notranslate nohighlight">\(F_{\varphi}\)</span> represent the zonal and meridional frictional components, respectively, and <span class="math notranslate nohighlight">\(q\)</span> is the diabatic heating term, computed as a residual from the thermodynamic equation:</p>
+<div class="math notranslate nohighlight">
+\[\begin{align*}
+\frac{q}{c_p} &amp;= \frac{\partial T}{\partial t} + \vec{V}_H \cdot \vec{\nabla}_p T - S_p\omega
+\end{align*}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\vec{V}_H \cdot \vec{\nabla}_p T\)</span> represents the horizontal advection of temperature and <span class="math notranslate nohighlight">\(S_p\)</span> approximates the static stability, given by:</p>
+<div class="math notranslate nohighlight">
+\[\begin{align*}
+S_p &amp;\equiv -\frac{T}{\theta}\frac{\partial \theta}{\partial p}
+\end{align*}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\theta\)</span> is the potential temperature.</p>
+<p>The boundary terms are given by:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+&amp; \mathrm{BAZ}=c_1 \int_{p_1}^{p_2} \int_{\varphi_1}^{\varphi_2} \frac{1}{2[\sigma]_{\lambda_{\varphi}}}\left(2\left([T]_\lambda\right)_{\varphi}(T)_\lambda u+\left([T]_{\lambda_{\varphi}}\right)_{\varphi}^2 u\right)_{\lambda_1}^{\lambda_2} \nonumber \\
+&amp; \times d \varphi d p+c_2 \int_{p_1}^{p_2} \frac{1}{2[\sigma]_{\lambda \varphi}}\left(2\left[(v)_\lambda(T)_\lambda\right]_\lambda\left([T]_\lambda\right)_{\varphi} \cos \varphi \right. \left.+\left([T]_\lambda\right)_{\varphi}^2[v]_\lambda \cos \varphi\right)_{\varphi_1}^{\varphi_2} d p \nonumber \\
+&amp; -\frac{1}{2[\sigma]_{\lambda \varphi}}\left(\left[2(\omega)_\lambda(T)_\lambda\right]_\lambda\left([T]_\lambda\right)_{\varphi}+\left[[\omega]_\lambda\left([T]_\lambda\right)_{\varphi}^2\right]_{\lambda_{\varphi}}\right)_{p_1}^{p_2} \\
+&amp; \mathrm{BAE}=c_1 \int_{p_1}^{p_2} \int_{\varphi_1}^{\varphi_2} \frac{1}{2[\sigma]_{\lambda \varphi}}\left[u(T)_\lambda^2\right]_{\lambda_1}^{\lambda_2} d \varphi d p \nonumber \\
+&amp; +c_2 \int_{p_1}^{p_2} \frac{1}{2[\sigma]_{\lambda \varphi}}\left(\left[(T)_\lambda^2 v\right]_\lambda \cos \varphi\right)_{\varphi_1}^{^{\varphi_2}} d p \\
+&amp; -\left(\frac{\left[\omega(T)_\lambda^2\right]_{\lambda \varphi}}{2[\sigma]_{\lambda \varphi}}\right)_{p_1}^{p_2} \nonumber \\
+&amp; \mathrm{BKZ}=c_1 \int_{p_1}^{p_2} \int_{\varphi_1}^{\varphi_2} \frac{1}{2 g}\left(u\left[u^2+v^2-(u)_\lambda^2-(v)_\lambda^2\right]\right)_{\lambda_1}^{\lambda_2} \nonumber \\
+&amp; \times d \varphi d p+c_2 \int_{p_1}^{p_2} \frac{1}{2 g}\left(\left[v \cos \varphi \left[u^2+v^2\right.\right.\right. \left.\left.-(u)_\lambda^2-(v)_\lambda^2\right]\right]_{\varphi_1}^{\varphi_2} d p  \\
+&amp; -\left(\frac{1}{2 g}\left[\omega\left[u^2+v^2-(u)_\lambda^2-(v)_\lambda^2\right]\right]_{\lambda \varphi}\right)_{p_1}^{p_2} \nonumber \\
+&amp; \mathrm{BKE}=c_1 \int_{p_1}^{p_2} \int_{\varphi_1}^{\varphi_2} \frac{1}{2 g}\left(u\left[(u)_\lambda^2+(v)_\lambda^2\right]\right)_{\lambda_1}^{\lambda_2} d \varphi d p \nonumber \\
+&amp; +c_2 \int_{p_1}^{p_2} \frac{1}{2 g}\left(\left[v \cos \varphi\left[(u)_\lambda^2+(v)_\lambda^2\right]\right]_\lambda\right)_{\varphi_1}^{\varphi_2} d p \\
+&amp; -\left(\frac{1}{2 g}\left[\omega\left[(u)_\lambda^2+(v)_\lambda^2\right]\right]_{\lambda \varphi}\right)_{p_1}^{p_2} \nonumber
+\end{aligned}\end{split}\]</div>
+<p>where <span class="math notranslate nohighlight">\(c_1=-\left[a\left(\lambda_2-\lambda_1\right)\left(\sin \varphi_2-\sin \varphi_1\right)\right]^{-1}, c_2=-\left[a\left(\sin \varphi_2-\sin \varphi_1\right)\right]^{-1}\)</span>.</p>
+<p>Lastly, the terms <span class="math notranslate nohighlight">\(B\Phi_Z\)</span> and <span class="math notranslate nohighlight">\(B\Phi_E\)</span> are given by:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+\mathrm{B} \Phi \mathrm{Z}= &amp; c_1 \int_{p_1}^{p_2} \int_{\varphi_1}^{\varphi_2} \frac{1}{g}\left([v]_\lambda\left([\Phi]_\lambda\right)_{\varphi}\right)_{\lambda_1}^{\lambda_2} d \varphi d p \nonumber \\
+&amp; +c_2 \int_{p_1}^{p_2} \frac{1}{g}\left(\cos \varphi[v]_\lambda\left([\Phi]_\lambda\right)_{\varphi}\right)_{\varphi_1}^{\varphi_2} d p  \\
+&amp; -\frac{1} {g}\left(\left[\left([\omega]_\lambda\right)_{\varphi}\left([\Phi]_\lambda\right)_{\varphi}\right]_{\lambda_{\varphi}}\right)_{p_1}^{p_2} \nonumber \\
+\mathrm{~B} \Phi \mathrm{E}= &amp; c_1 \int_{p_1}^{p_2} \int_{\varphi_1}^{\varphi_2} \frac{1}{g}\left((u)_\lambda(\Phi)_{\lambda_\lambda}\right)_{\lambda_1}^{\lambda_2} d \varphi d p \nonumber \\
+&amp; +c_2 \int_{p_1}^{p_2} \frac{1}{g}\left(\left[(v)_\lambda(\Phi)_{\lambda_\lambda}\right]_\lambda \cos \varphi\right)_{\varphi_1}^{\varphi_2} d p \\
+&amp; -\frac{1}{g}\left(\left[(\omega)_\lambda(\Phi)_\lambda\right]_{\lambda_{\varphi}}\right)_{p_1}^{p_2} \nonumber
+\end{aligned}\end{split}\]</div>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">LorenzCycleToolKit</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#flags">Flags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_naming_convention.html">File Naming Convention</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples_and_tutorials.html">Examples and Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="results.html">Results</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Mathematics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="support.html">Support and Issue Reporting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="results.html" title="previous chapter">Results</a></li>
+      <li>Next: <a href="contributing.html" title="next chapter">Contributing</a></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Danilo Couto de Souza.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.4</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="_sources/math.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
