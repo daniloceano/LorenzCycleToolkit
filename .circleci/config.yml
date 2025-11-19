@@ -7,7 +7,7 @@ jobs:
     steps:
       - add_ssh_keys:
           fingerprints:
-            - "SHA256:aGL+bUhBKoZZJG0gu0EHwgWf0GC09iug8beV1nW4XmU"
+            - "SHA256:LKYr9SOoyo5huvufhx5YYARg5H/lQzttURK06cmeJ78"
       - checkout
 
       - run:
@@ -59,7 +59,7 @@ jobs:
     steps:
       - add_ssh_keys:
           fingerprints:
-            - "SHA256:aGL+bUhBKoZZJG0gu0EHwgWf0GC09iug8beV1nW4XmU"
+            - "SHA256:LKYr9SOoyo5huvufhx5YYARg5H/lQzttURK06cmeJ78"
       - checkout
 
       - run:
@@ -95,7 +95,7 @@ jobs:
     steps:
       - add_ssh_keys:
           fingerprints:
-            - "SHA256:aGL+bUhBKoZZJG0gu0EHwgWf0GC09iug8beV1nW4XmU"
+            - "SHA256:LKYr9SOoyo5huvufhx5YYARg5H/lQzttURK06cmeJ78"
       - checkout
 
       - run:
