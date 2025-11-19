@@ -6,5 +6,5 @@ Eastward Wind Component;eastward_wind;u;m/s
 Northward Wind Component;northward_wind;v;m/s
 Longitude;;longitude
 Latitude;;latitude
-Time;;time
-Vertical Level;;level
+Time;;valid_time
+Vertical Level;;pressure_level
