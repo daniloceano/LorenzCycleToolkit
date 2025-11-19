@@ -220,3 +220,5 @@ src/error_log.txt
 src/plots/.vscode/settings.json
 *.nc
 
+# Namelist files
+inputs/namelist

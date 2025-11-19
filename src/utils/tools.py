@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2024/10/21 13:15:43 by daniloceano      ###   ########.fr        #
+#    Updated: 2025/11/18 22:04:52 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -125,14 +125,32 @@ def find_extremum_coordinates(
 
 def get_cdsapi_data(
     args: argparse.Namespace, track: pd.DataFrame, app_logger: logging.Logger
-) -> xr.Dataset:
+) -> str:
+    """
+    Retrieve ERA5 pressure level data from the CDS API based on track information.
+
+    This function uses the latest cdsapi syntax to download ERA5 reanalysis data
+    for a specified geographical area and time period derived from a track DataFrame.
+
+    Args:
+        args (argparse.Namespace): Command-line arguments containing the output file path.
+        track (pd.DataFrame): DataFrame with 'Lat', 'Lon' columns and datetime index.
+        app_logger (logging.Logger): Logger for the application.
+
+    Returns:
+        str: Path to the downloaded NetCDF file.
+
+    Raises:
+        FileNotFoundError: If the CDS API file is not created.
+        Exception: For other errors during data retrieval.
+    """
     import math
 
     import cdsapi
 
     # Extract bounding box (lat/lon limits) from track
-    min_lat, max_lat = track["Lat"].min(), track["Lat"].max()
-    min_lon, max_lon = track["Lon"].min(), track["Lon"].max()
+    min_lat, max_lat = float(track["Lat"].min()), float(track["Lat"].max())
+    min_lon, max_lon = float(track["Lon"].min()), float(track["Lon"].max())
 
     # Apply a 15-degree buffer and round to nearest integer
     buffered_max_lat = math.ceil(max_lat + 15)
@@ -140,52 +158,19 @@ def get_cdsapi_data(
     buffered_min_lat = math.floor(min_lat - 15)
     buffered_max_lon = math.ceil(max_lon + 15)
 
-    # Define the area for the request
-    # North, West, South, East. Nort/West/Sout/East
-    area = (
-        f"{buffered_max_lat}/{buffered_min_lon}/{buffered_min_lat}/{buffered_max_lon}"
-    )
+    # Define the area for the request [North, West, South, East]
+    area = [buffered_max_lat, buffered_min_lon, buffered_min_lat, buffered_max_lon]
 
+    # Pressure levels in hPa
     pressure_levels = [
-        "1",
-        "2",
-        "3",
-        "5",
-        "7",
-        "10",
-        "20",
-        "30",
-        "50",
-        "70",
-        "100",
-        "125",
-        "150",
-        "175",
-        "200",
-        "225",
-        "250",
-        "300",
-        "350",
-        "400",
-        "450",
-        "500",
-        "550",
-        "600",
-        "650",
-        "700",
-        "750",
-        "775",
-        "800",
-        "825",
-        "850",
-        "875",
-        "900",
-        "925",
-        "950",
-        "975",
-        "1000",
+        "1", "2", "3", "5", "7", "10", "20", "30", "50", "70",
+        "100", "125", "150", "175", "200", "225", "250", "300",
+        "350", "400", "450", "500", "550", "600", "650", "700",
+        "750", "775", "800", "825", "850", "875", "900", "925",
+        "950", "975", "1000",
     ]
 
+    # Variables to retrieve
     variables = [
         "u_component_of_wind",
         "v_component_of_wind",
@@ -194,66 +179,90 @@ def get_cdsapi_data(
         "geopotential",
     ]
 
-    # Assuming your data resolution is 3 hours and your service updates at 00,
-    # 03, 06, ..., 21 hours
-
-    # Convert track index to DatetimeIndex and find the last date & time
+    # Convert track index to DatetimeIndex and find the date range
     track_datetime_index = pd.DatetimeIndex(track.index)
+    first_date = track_datetime_index.min()
     last_track_timestamp = track_datetime_index.max()
 
-    # Calculate if the additional day is needed by comparing last track
-    # timestamp with the last possible data timestamp for that day
+    # Calculate if an additional day is needed
     last_possible_data_timestamp_for_day = pd.Timestamp(
         f"{last_track_timestamp.strftime('%Y-%m-%d')} 21:00:00"
     )
     need_additional_day = last_track_timestamp > last_possible_data_timestamp_for_day
 
-    # Include additional day in dates if needed
-    dates = track_datetime_index.strftime("%Y%m%d").unique()
-    if need_additional_day:
-        additional_day = (last_track_timestamp + timedelta(days=1)).strftime("%Y%m%d")
-        dates = np.append(dates, additional_day)
+    # Get all unique dates
+    dates = pd.date_range(
+        start=first_date.date(),
+        end=(last_track_timestamp + timedelta(days=1)).date() if need_additional_day 
+        else last_track_timestamp.date(),
+        freq='D'
+    )
 
-    # Convert unique dates to string format for the request
-    # dates = track.index.strftime('%Y%m%d').unique().tolist()
-    time_range = f"{dates[0]}/{dates[-1]}"
-    time_step = str(int((track.index[1] - track.index[0]).total_seconds() / 3600))
-    time_step = "3" if time_step < "3" else time_step
+    # Extract years, months, and days for the request
+    years = sorted(set(dates.strftime('%Y')))
+    months = sorted(set(dates.strftime('%m')))
+    days = sorted(set(dates.strftime('%d')))
+
+    # Calculate time step in hours
+    if len(track.index) > 1:
+        time_step = int((track.index[1] - track.index[0]).total_seconds() / 3600)
+        time_step = max(time_step, 1)  # Ensure at least 1 hour
+    else:
+        time_step = 3  # Default to 3 hours
+
+    # Generate time list based on time_step
+    times = [f"{hour:02d}:00" for hour in range(0, 24, time_step)]
 
     # Log track file bounds and requested data bounds
     app_logger.debug(
-        f"Track File Limits: max_lon (east): min_lon (west): {min_lon}, "
-        f"max_lon (west): {max_lon}, min_lat (south): {min_lat}, "
-        f"max_lat (north): {max_lat}"
+        f"Track File Limits: lon range: [{min_lon:.2f}, {max_lon:.2f}], "
+        f"lat range: [{min_lat:.2f}, {max_lat:.2f}]"
     )
     app_logger.debug(
-        f"Buffered Data Bounds: min_lon (west): {buffered_min_lon}, "
-        f"max_lon (east): {buffered_max_lon}, min_lat (south): {buffered_min_lat}, "
-        f"max_lat (north): {buffered_max_lat}"
+        f"Buffered Data Bounds: lon range: [{buffered_min_lon}, {buffered_max_lon}], "
+        f"lat range: [{buffered_min_lat}, {buffered_max_lat}]"
     )
     app_logger.debug(
-        f"Requesting data for time range: {time_range}, and time step: {time_step}..."
+        f"Requesting data for years: {years}, months: {months}, days: {days}"
     )
+    app_logger.debug(f"Time step: {time_step} hour(s), times: {times}")
 
-    # Load ERA5 data
+    # Prepare the request dictionary
+    request = {
+        "product_type": "reanalysis",
+        "format": "netcdf",
+        "variable": variables,
+        "pressure_level": pressure_levels,
+        "year": years,
+        "month": months,
+        "day": days,
+        "time": times,
+        "area": area,
+    }
+
+    # Load ERA5 data using the latest cdsapi syntax
     app_logger.info("Retrieving data from CDS API...")
-    c = cdsapi.Client(timeout=600)
-    c.retrieve(
-        "reanalysis-era5-pressure-levels",
-        {
-            "product_type": "reanalysis",
-            "format": "netcdf",
-            "pressure_level": pressure_levels,
-            "date": time_range,
-            "area": area,
-            "time": f"00/to/23/by/{time_step}",
-            "variable": variables,
-        },
-        args.infile,  # save file as passed in arguments
-    )
+    try:
+        client = cdsapi.Client(timeout=600, retry_max=500)
+        client.retrieve(
+            "reanalysis-era5-pressure-levels",
+            request,
+            args.infile,
+        )
+        app_logger.info("Data retrieval completed successfully.")
+    except Exception as e:
+        app_logger.error(f"Error retrieving data from CDS API: {e}")
+        raise
 
+    # Verify the file was created
     if not os.path.exists(args.infile):
-        raise FileNotFoundError("CDS API file not created.")
+        raise FileNotFoundError(
+            f"CDS API file not created at expected path: {args.infile}"
+        )
+    
+    file_size = os.path.getsize(args.infile)
+    app_logger.info(f"Downloaded file size: {file_size / (1024**2):.2f} MB")
+    
     return args.infile
 
 
