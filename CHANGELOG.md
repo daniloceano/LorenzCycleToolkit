@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+
+
+## [1.1.0] - 2025-11-18
+
+### Updated
+
+- **get_cdsapi_data Function**: Modernized the `get_cdsapi_data` function to align with the latest CDS API syntax (v0.7.x). This includes improved error handling, logging, and support for new request parameters such as `retry_max`.
+
+### Added
+
+- **Test Suite for get_cdsapi_data**: Created a comprehensive test suite (`tests/test_cdsapi.py`) to validate the `get_cdsapi_data` function. The suite includes 13 test cases covering parameter validation, error handling, and edge cases.
+
+
+
 ## [1.0.9] - 2024-10-21
 
 ### Fixed
