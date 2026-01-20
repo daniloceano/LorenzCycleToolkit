@@ -39,7 +39,7 @@ def sample_track():
 def sample_args():
     """Create sample arguments for testing."""
     with tempfile.NamedTemporaryFile(suffix=".nc", delete=False) as tmp:
-        args = argparse.Namespace(infile=tmp.name)
+        args = argparse.Namespace(infile=tmp.name, time_resolution=3)
     return args
 
 
@@ -157,7 +157,7 @@ class TestGetCDSAPIData:
 
     @patch('cdsapi.Client')
     def test_time_step_calculation(self, mock_client_class, sample_track, sample_args, app_logger):
-        """Test time step calculation based on track temporal resolution."""
+        """Test time step uses the value from args.time_resolution."""
         from src.utils.tools import get_cdsapi_data
 
         mock_client = MagicMock()
@@ -171,8 +171,8 @@ class TestGetCDSAPIData:
         request = mock_client.retrieve.call_args[0][1]
         times = request["time"]
 
-        # Track has 6-hour resolution, so times should be every 6 hours
-        expected_times = ["00:00", "06:00", "12:00", "18:00"]
+        # args.time_resolution is 3 hours (default), so times should be every 3 hours
+        expected_times = ["00:00", "03:00", "06:00", "09:00", "12:00", "15:00", "18:00", "21:00"]
         assert times == expected_times
 
     @patch('cdsapi.Client')

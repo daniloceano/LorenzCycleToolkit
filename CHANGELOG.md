@@ -13,16 +13,22 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - **CDS API Cost Limits**: Fixed issue where automatic 1-hour temporal resolution detection often exceeded CDS API cost limits. Now defaults to 3-hour resolution with user-configurable options (3, 6, 12, or 24 hours).
+- **Test Suite**: Updated `test_cdsapi.py` to include `time_resolution` parameter in test fixtures and adjusted time step calculation test expectations.
 
 ### Changed
 
 - **CDS API Temporal Resolution**: Changed from automatically detecting temporal resolution from track file to using a configurable `--time-resolution` parameter with a safe default of 3 hours.
+- **Documentation Theme**: Updated documentation theme from Alabaster to ReadTheDocs (`sphinx_rtd_theme`) for better readability and navigation.
+- **Repository URL**: Updated installation documentation to reflect new repository URL: `https://github.com/daniloceano/LorenzCycleToolkit`.
+- **Documentation Version**: Updated documentation version to 1.1.1 in `conf.py`.
 
 ### Documentation
 
-- Updated `usage.rst` with information about the new `--time-resolution` flag.
+- Updated `usage.rst` with information about the new `--time-resolution` flag and cost limit guidelines.
 - Updated `cdsapi_example.rst` with detailed examples and guidelines for choosing appropriate temporal resolutions.
-- Updated `CDSAPI_USAGE.md` with troubleshooting tips for cost limit errors.
+- Updated `CDSAPI_USAGE.md` with troubleshooting tips for cost limit errors and temporal resolution examples.
+- Updated `installation.rst` with corrected repository URLs.
+- Added `sphinx_rtd_theme` to `requirements.txt`.
 
 ## [1.1.0] - 2025-11-18
 

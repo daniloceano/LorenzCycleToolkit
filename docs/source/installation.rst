@@ -14,8 +14,8 @@ Steps
 
 2. Alternatively, clone the repository::
 
-   git clone https://github.com/daniloceano/lorenz-cycle.git
-   cd lorenz-cycle
+   git clone https://github.com/daniloceano/LorenzCycleToolkit.git
+   cd LorenzCycleToolkit
 
 3. Create a virtual environment and activate it::
 
@@ -30,8 +30,8 @@ For Conda users:
 
 1. Clone the repository::
 
-   git clone https://github.com/daniloceano/lorenz-cycle.git
-   cd lorenz-cycle
+   git clone https://github.com/daniloceano/LorenzCycleToolkit.git
+   cd LorenzCycleToolkit
 
 2. Create a Conda environment and activate it::
 
