@@ -105,6 +105,12 @@ def create_arg_parser():
         help="Use CDS API for downloading data (experimental).",
     )
     parser.add_argument(
+        "--time-resolution",
+        type=int,
+        default=3,
+        help="Temporal resolution in hours for CDS API data download (default: 3). Use 3, 6, or 12 to avoid cost limits.",
+    )
+    parser.add_argument(
         "--trackfile",
         type=str,
         default="inputs/track",

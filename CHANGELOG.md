@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 
 
+## [1.1.1] - 2026-01-20
+
+### Added
+
+- **--time-resolution Flag**: Added `--time-resolution` command-line flag to control the temporal resolution of ERA5 data downloads via CDS API. Default is 3 hours to avoid exceeding API cost limits.
+
+### Fixed
+
+- **CDS API Cost Limits**: Fixed issue where automatic 1-hour temporal resolution detection often exceeded CDS API cost limits. Now defaults to 3-hour resolution with user-configurable options (3, 6, 12, or 24 hours).
+
+### Changed
+
+- **CDS API Temporal Resolution**: Changed from automatically detecting temporal resolution from track file to using a configurable `--time-resolution` parameter with a safe default of 3 hours.
+
+### Documentation
+
+- Updated `usage.rst` with information about the new `--time-resolution` flag.
+- Updated `cdsapi_example.rst` with detailed examples and guidelines for choosing appropriate temporal resolutions.
+- Updated `CDSAPI_USAGE.md` with troubleshooting tips for cost limit errors.
+
 ## [1.1.0] - 2025-11-18
 
 ### Updated

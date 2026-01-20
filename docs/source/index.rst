@@ -16,6 +16,7 @@ Welcome to the LorenzCycleToolkit documentation! This toolkit is designed to cal
    installation
    usage
    configuration
+   cdsapi_example
    file_naming_convention
    examples_and_tutorials
    results

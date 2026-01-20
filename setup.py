@@ -22,7 +22,7 @@ def read_long_description():
 
 setup(
     name='LorenzCycleToolkit',
-    version='1.1.0',
+    version='1.1.1',
     packages=find_packages(),
     include_package_data=True,
     install_requires=read_requirements(),

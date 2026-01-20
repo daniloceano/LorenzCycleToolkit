@@ -40,8 +40,34 @@ For the moving framework, a `track_file` can be used to define the system's cent
 
 .. code-block:: text
 
-    time, lon, lat, length, width
-    2021-01-01 00:00:00, -50, 0, 10, 10
-    2021-01-01 06:00:00, -49, 1, 10, 10
-    2021-01-01 12:00:00, -48, 2, 10, 10
+    time;lon;lat;length;width
+    2021-01-01 00:00:00;-50;0;10;10
+    2021-01-01 06:00:00;-49;1;10;10
+    2021-01-01 12:00:00;-48;2;10;10
+
+**Note**: The track file uses semicolon (``;``) as the delimiter and must include a ``time`` column that can be parsed as datetime.
+
+Namelist for ERA5 Data (CDS API)
+---------------------------------
+
+When using the ``--cdsapi`` flag to automatically download ERA5 data, you must use a specific namelist that matches ERA5 variable naming conventions. The toolkit provides ``inputs/namelist_ERA5-cdsapi`` for this purpose:
+
+.. code-block:: text
+
+    ;standard_name;Variable;Units
+    Air Temperature;air_temperature;t;K
+    Geopotential;geopotential;z;m**2/s**2
+    Omega Velocity;omega;w;Pa/s
+    Eastward Wind Component;eastward_wind;u;m/s
+    Northward Wind Component;northward_wind;v;m/s
+    Longitude;;longitude
+    Latitude;;latitude
+    Time;;valid_time
+    Vertical Level;;pressure_level
+
+To use ERA5 data downloaded via CDS API:
+
+.. code-block:: bash
+
+   cp inputs/namelist_ERA5-cdsapi inputs/namelist
 

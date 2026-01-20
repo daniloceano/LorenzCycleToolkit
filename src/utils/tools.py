@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2025/11/18 22:04:52 by daniloceano      ###   ########.fr        #
+#    Updated: 2026/01/20 17:54:13 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -203,12 +203,9 @@ def get_cdsapi_data(
     months = sorted(set(dates.strftime('%m')))
     days = sorted(set(dates.strftime('%d')))
 
-    # Calculate time step in hours
-    if len(track.index) > 1:
-        time_step = int((track.index[1] - track.index[0]).total_seconds() / 3600)
-        time_step = max(time_step, 1)  # Ensure at least 1 hour
-    else:
-        time_step = 3  # Default to 3 hours
+    # Use time_resolution from args (default is 3 hours)
+    time_step = args.time_resolution
+    app_logger.debug(f"Using time resolution from args: {time_step} hour(s)")
 
     # Generate time list based on time_step
     times = [f"{hour:02d}:00" for hour in range(0, 24, time_step)]
