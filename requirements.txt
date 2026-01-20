@@ -19,7 +19,7 @@ contourpy==1.2.1
 cycler==0.12.1
 cyclophaser==1.7.3
 dask==2024.7.0
-docutils==0.21.2
+docutils==0.20.1
 eccodes==1.7.1
 findlibs==0.0.5
 flake8==7.1.0

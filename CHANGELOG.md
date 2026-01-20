@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 
 - **CDS API Cost Limits**: Fixed issue where automatic 1-hour temporal resolution detection often exceeded CDS API cost limits. Now defaults to 3-hour resolution with user-configurable options (3, 6, 12, or 24 hours).
 - **Test Suite**: Updated `test_cdsapi.py` to include `time_resolution` parameter in test fixtures and adjusted time step calculation test expectations.
+- **Dependencies**: Fixed `docutils` version conflict between `sphinx` and `sphinx_rtd_theme` by downgrading to `docutils==0.20.1`.
 
 ### Changed
 

@@ -225,3 +225,4 @@ inputs/namelist
 inputs/box_limits
 inputs/fvars
 inputs/track
+.vscode/
