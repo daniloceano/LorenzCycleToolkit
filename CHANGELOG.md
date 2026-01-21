@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.4] - 2026-01-21
+
+### Changed
+
+- **Dependencies Update**: Updated CDS API and multiurl dependencies to use flexible version constraints:
+  - `cdsapi`: Changed from `==0.7.0` to `>=0.7.0` (now compatible with version 0.7.7)
+  - `multiurl`: Changed from `==0.3.1` to `>=0.3.1` (now compatible with version 0.3.7)
+  - This resolves dependency conflicts when users upgrade cdsapi to the latest version
+  - The package now automatically adapts to newer versions of these dependencies
+
+### Notes
+
+- Users can now safely upgrade cdsapi without encountering dependency conflicts
+- The deprecated CDS API endpoint warning will persist until Copernicus fully migrates to the new API
+
 ## [1.1.3] - 2026-01-21
 
 ### Fixed
