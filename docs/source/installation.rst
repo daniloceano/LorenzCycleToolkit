@@ -4,40 +4,79 @@ Installation
 Prerequisites
 -------------
 - Python 3.12 or later
+- Conda (recommended) or pip
 
-Steps
------
+Installation Methods
+--------------------
 
-1. Install via pip::
+Method 1: Install from Source with Conda (Recommended)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-   pip install LorenzCycleToolkit
-
-2. Alternatively, clone the repository::
-
-   git clone https://github.com/daniloceano/LorenzCycleToolkit.git
-   cd LorenzCycleToolkit
-
-3. Create a virtual environment and activate it::
-
-   python -m venv venv
-   source venv/bin/activate
-
-4. Install the dependencies::
-
-   pip install -r requirements.txt
-
-For Conda users:
+If you want to contribute to the project or modify the code, follow these steps:
 
 1. Clone the repository::
 
-   git clone https://github.com/daniloceano/LorenzCycleToolkit.git
-   cd LorenzCycleToolkit
+      git clone https://github.com/daniloceano/LorenzCycleToolkit.git
+      cd LorenzCycleToolkit
 
-2. Create a Conda environment and activate it::
+2. Create a Conda environment with Python 3.12::
 
-   conda create --name lorenzcycletoolkit python=3.12
-   conda activate lorenzcycletoolkit
+      conda create --name lorenz python=3.12 -y
+      conda activate lorenz
 
-3. Install the dependencies::
+3. Install dependencies::
 
-   pip install -r requirements.txt
+      pip install -r requirements.txt
+
+4. Install the package in editable mode::
+
+      pip install -e .
+
+5. Verify the installation::
+
+      lorenzcycletoolkit --help
+
+Method 2: Install from Source with venv
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you prefer using Python's built-in virtual environment:
+
+1. Clone the repository::
+
+      git clone https://github.com/daniloceano/LorenzCycleToolkit.git
+      cd LorenzCycleToolkit
+
+2. Create a virtual environment and activate it::
+
+      python -m venv venv
+      source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+3. Install dependencies::
+
+      pip install -r requirements.txt
+
+4. Install the package in editable mode::
+
+      pip install -e .
+
+5. Verify the installation::
+
+      lorenzcycletoolkit --help
+
+Troubleshooting
+---------------
+
+**Issue**: Command ``lorenzcycletoolkit`` not found after installation.
+
+**Solution**: Make sure you've activated the correct environment:
+
+- For Conda: ``conda activate lorenz``
+- For venv: ``source venv/bin/activate``
+
+**Issue**: ``ModuleNotFoundError: No module named 'lorenzcycletoolkit'``
+
+**Solution**: Install the package using ``pip install -e .`` (for development) or ``pip install LorenzCycleToolkit`` (for regular use).
+
+**Issue**: Tests failing with import errors.
+
+**Solution**: Ensure all dependencies are installed by running ``pip install -r requirements.txt`` in your activated environment

@@ -2,19 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.2] - 2026-01-21
 
+### Fixed / Improved
 
+- **Environment & Installation**: Added `environment.yml` and clarified recommended Conda-based installation method for developers. Ensured `pip install -e .` is documented and included in developer install steps.
+- **Package installation**: Confirmed `setup.py` includes the root module (`py_modules=['lorenzcycletoolkit']`) and bumped package version to `1.1.2` to reflect this release.
+- **Documentation**: Rewrote `installation.rst` and updated `README.md` to keep the README concise while directing full install and usage instructions to the documentation. Fixed RST formatting issues and rebuilt docs to resolve related warnings.
+- **Docs version**: Updated Sphinx `release` to `1.1.2` in `docs/source/conf.py`.
+- 
 ## [1.1.1] - 2026-01-20
 
 ### Added
 
 - **--time-resolution Flag**: Added `--time-resolution` command-line flag to control the temporal resolution of ERA5 data downloads via CDS API. Default is 3 hours to avoid exceeding API cost limits.
+- **environment.yml**: Added `environment.yml` file to simplify conda environment creation for users.
 
 ### Fixed
 
 - **CDS API Cost Limits**: Fixed issue where automatic 1-hour temporal resolution detection often exceeded CDS API cost limits. Now defaults to 3-hour resolution with user-configurable options (3, 6, 12, or 24 hours).
 - **Test Suite**: Updated `test_cdsapi.py` to include `time_resolution` parameter in test fixtures and adjusted time step calculation test expectations.
 - **Dependencies**: Fixed `docutils` version conflict between `sphinx` and `sphinx_rtd_theme` by downgrading to `docutils==0.20.1`.
+- **Package Installation**: Fixed `setup.py` to properly include `lorenzcycletoolkit.py` module by adding `py_modules=['lorenzcycletoolkit']` parameter. This resolves the `ModuleNotFoundError` when installing the package.
 
 ### Changed
 
@@ -25,11 +34,18 @@ All notable changes to this project will be documented in this file.
 
 ### Documentation
 
+- Completely rewrote `installation.rst` with clearer instructions for:
+  - Installing from PyPI for regular users
+  - Installing from source with Conda (recommended for developers)
+  - Installing from source with venv
+  - Added troubleshooting section for common installation issues
 - Updated `usage.rst` with information about the new `--time-resolution` flag and cost limit guidelines.
 - Updated `cdsapi_example.rst` with detailed examples and guidelines for choosing appropriate temporal resolutions.
 - Updated `CDSAPI_USAGE.md` with troubleshooting tips for cost limit errors and temporal resolution examples.
+- Updated `README.md` with comprehensive installation instructions and examples for both users and developers.
 - Updated `installation.rst` with corrected repository URLs.
 - Added `sphinx_rtd_theme` to `requirements.txt`.
+
 
 ## [1.1.0] - 2025-11-18
 

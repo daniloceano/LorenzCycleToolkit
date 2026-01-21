@@ -32,7 +32,7 @@ The LorenzCycleToolkit is a tool for calculating the Lorenz Energy Cycle (LEC) i
 
 ## Installation
 
-For detailed installation instructions, please refer to the [Installation Guide](https://daniloceano.github.io/LorenzCycleToolkit/installation) in the official documentation.
+For detailed installation instructions and troubleshooting, please refer to the [Installation Guide](https://daniloceano.github.io/LorenzCycleToolkit/installation).
 
 ## Documentation
 
