@@ -2,15 +2,6 @@ import os
 
 from setuptools import find_packages, setup
 
-# Utility function to read the requirements.txt file
-
-
-def read_requirements():
-    requirements_path = os.path.join(os.path.dirname(__file__), 'requirements.txt')
-    with open(requirements_path, 'r') as f:
-        return f.read().splitlines()
-
-
 # Read the long description from README
 def read_long_description():
     readme_path = os.path.join(os.path.dirname(__file__), 'README.md')
@@ -26,14 +17,12 @@ setup(
     packages=find_packages(),
     py_modules=['lorenzcycletoolkit'],
     include_package_data=True,
-    install_requires=read_requirements(),
     long_description=read_long_description(),
     long_description_content_type='text/markdown',
     author='Danilo Couto de Souza',
     author_email='danilo.oceano@gmail.com',
     description='A toolkit for calculating the Lorenz Energy Cycle in atmospheric systems',
     url='https://github.com/daniloceano/LorenzCycleToolkit',
-    license='GPL-3.0',
     project_urls={
         'Documentation': 'https://lorenzcycletoolkit.readthedocs.io/',
         'Source': 'https://github.com/daniloceano/LorenzCycleToolkit',
