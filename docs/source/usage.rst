@@ -61,15 +61,20 @@ The LorenzCycleToolkit supports automatic downloading of ERA5 reanalysis data fr
 When using the ``--cdsapi`` flag:
 
 1. The program reads your track file to determine:
-   - Temporal range (start and end dates)
+   - Temporal range (exact start and end times, not just dates)
    - Spatial domain (automatically adds a 15° buffer around track boundaries)
 
-2. Downloads ERA5 pressure level data with:
+2. Downloads ERA5 pressure level data with smart time detection:
+   - **First day**: Downloads only from track start time onwards
+   - **Last day**: Downloads only until track end time
+   - **Middle days**: Downloads complete days (all hours)
    - **Temporal resolution**: Configurable via ``--time-resolution`` flag (default: 3 hours)
    - **Variables**: U and V wind components, temperature, vertical velocity (omega), geopotential
    - **Pressure levels**: All standard pressure levels (1000 hPa to 1 hPa)
 
 3. Saves the data to the filename specified as the first argument
+
+This smart time detection minimizes unnecessary downloads and reduces API costs.
 
 **Usage Example**
 

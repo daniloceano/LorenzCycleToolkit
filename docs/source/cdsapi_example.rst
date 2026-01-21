@@ -34,6 +34,12 @@ Create a track file with your system's trajectory. The file must use semicolons 
 
 Save this file (e.g., as ``inputs/track_19790205.csv``).
 
+**Important**: Your track can start and end at any hour of the day. The toolkit will automatically download only the necessary hours:
+
+- Track from 18:00 on day 1 → Downloads start at 18:00 (not 00:00)
+- Track ending at 15:00 on last day → Downloads stop at 15:00 (not 23:00)
+- Middle days are always downloaded completely (00:00 to 23:00)
+
 **3. Configure Namelist for ERA5**
 
 Copy the ERA5-specific namelist:
@@ -74,40 +80,89 @@ When you run the command with ``--cdsapi``:
 
 1. **Track Analysis**: The program reads your track file to determine:
    
-   - Start date: earliest timestamp in track
-   - End date: latest timestamp in track (plus one day if needed)
+   - Start date and time: earliest timestamp in track
+   - End date and time: latest timestamp in track
    - Spatial bounds: min/max latitude and longitude
 
-2. **Automatic Buffering**: A 15° buffer is added to all spatial boundaries to ensure adequate coverage around your system
+2. **Smart Time Range Detection**: The program intelligently determines which hours to download:
+   
+   - **First day**: Downloads only from the track's start time onwards (not from 00Z)
+   - **Last day**: Downloads only until the track's end time (not until 23Z)
+   - **Middle days**: Downloads complete days (00Z to 23Z)
+   - All times are rounded to match your ``--time-resolution`` setting
+   
+   Example: If your track runs from June 6 18:00 to June 8 15:00 with 3-hour resolution:
+   
+   - June 6: Downloads 18:00, 21:00 only
+   - June 7: Downloads 00:00, 03:00, 06:00, ..., 21:00 (full day)
+   - June 8: Downloads 00:00, 03:00, 06:00, 09:00, 12:00, 15:00 only
 
-3. **Data Request**: The program requests from CDS:
+3. **Automatic Buffering**: A 15° buffer is added to all spatial boundaries to ensure adequate coverage around your system
+
+4. **Day-by-Day Download**: Data is downloaded separately for each day, showing progress for each file
+
+5. **Data Request**: The program requests from CDS:
    
    - **Variables**: u, v, t (temperature), w (omega), z (geopotential)
    - **Pressure levels**: All 37 standard levels (1000 to 1 hPa)
    - **Temporal resolution**: Configurable via ``--time-resolution`` flag (default: 3 hours)
    - **Spatial coverage**: Buffered domain around your track
 
-4. **Download**: Data is downloaded and saved to your specified output file
+6. **Concatenation**: All daily files are merged into a single NetCDF file
 
-5. **Processing**: The toolkit continues with LEC calculations using the downloaded data
+7. **Processing**: The toolkit continues with LEC calculations using the downloaded data
 
 Expected Output
 ---------------
 
-During execution, you'll see:
+During execution, you'll see detailed progress information:
 
 .. code-block:: text
 
    INFO - Starting LEC analysis
-   INFO - Retrieving data from CDS API...
-   INFO - Data retrieval completed successfully.
-   INFO - Downloaded file size: 245.67 MB
-   INFO - Opening input data...
+   INFO - Will download 3 day(s) of data: 1992-06-06 to 1992-06-08
+   INFO - Starting data download from CDS API...
+   INFO - Expected files to download: 3
+   INFO -   - Day 1: 1992-06-06
+   INFO -   - Day 2: 1992-06-07
+   INFO -   - Day 3: 1992-06-08
+   INFO - Downloading day 1/3: 1992-06-06
+   DEBUG -   Times: 18:00 to 21:00 (2 timesteps)
+   INFO -   ✓ Downloaded successfully: 45.23 MB
+   INFO - Downloading day 2/3: 1992-06-07
+   DEBUG -   Times: 00:00 to 21:00 (8 timesteps)
+   INFO -   ✓ Downloaded successfully: 178.45 MB
+   INFO - Downloading day 3/3: 1992-06-08
+   DEBUG -   Times: 00:00 to 18:00 (7 timesteps)
+   INFO -   ✓ Downloaded successfully: 156.78 MB
+   INFO - ============================================================
+   INFO - All daily files downloaded successfully!
+   INFO - Total files: 3
+   INFO - ============================================================
+   INFO - Concatenating daily files into single dataset...
+   INFO - Merging datasets along time dimension...
+   INFO - Saving final dataset to: output.nc
+   INFO - ============================================================
+   INFO - ✓ DATA DOWNLOAD COMPLETED SUCCESSFULLY!
+   INFO - Final file: output.nc
+   INFO - File size: 380.46 MB
+   INFO - Time coverage: 1992-06-06 18:00:00 to 1992-06-08 18:00:00
+   INFO - ============================================================
+
+Key features of the new logging:
+
+- **Progress tracking**: See which day is currently being downloaded
+- **Time range info**: Know exactly which hours are being requested
+- **Success indicators**: Checkmarks (✓) show successful downloads
+- **File sizes**: Monitor download sizes for each day
+- **Clear summaries**: Final summary shows total coverage and file size
 
 The download typically takes 5-15 minutes depending on:
 - Data volume (duration and spatial extent)
 - CDS server load
 - Your internet connection speed
+
+**Note**: Use the ``-v`` (verbose) flag to see detailed timing information for each day.
 
 Common Use Cases
 ----------------

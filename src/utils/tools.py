@@ -183,29 +183,19 @@ def get_cdsapi_data(
 
     # Convert track index to DatetimeIndex and find the date range
     track_datetime_index = pd.DatetimeIndex(track.index)
-    first_date = track_datetime_index.min()
-    last_track_timestamp = track_datetime_index.max()
+    first_timestamp = track_datetime_index.min()
+    last_timestamp = track_datetime_index.max()
 
-    # Calculate if an additional day is needed
-    last_possible_data_timestamp_for_day = pd.Timestamp(
-        f"{last_track_timestamp.strftime('%Y-%m-%d')} 21:00:00"
-    )
-    need_additional_day = last_track_timestamp > last_possible_data_timestamp_for_day
-
-    # Get all unique dates
+    # Get all unique dates needed for download
     dates = pd.date_range(
-        start=first_date.date(),
-        end=(last_track_timestamp + timedelta(days=1)).date() if need_additional_day 
-        else last_track_timestamp.date(),
+        start=first_timestamp.date(),
+        end=last_timestamp.date(),
         freq='D'
     )
 
     # Use time_resolution from args (default is 3 hours)
     time_step = args.time_resolution
     app_logger.debug(f"Using time resolution from args: {time_step} hour(s)")
-
-    # Generate time list based on time_step
-    times = [f"{hour:02d}:00" for hour in range(0, 24, time_step)]
 
     # Log track file bounds and requested data bounds
     app_logger.debug(
@@ -217,16 +207,22 @@ def get_cdsapi_data(
         f"lat range: [{buffered_min_lat}, {buffered_max_lat}]"
     )
     app_logger.debug(
-        f"Requesting data for {len(dates)} days: {dates[0].date()} to {dates[-1].date()}"
+        f"Track period: {first_timestamp} to {last_timestamp}"
     )
-    app_logger.debug(f"Time step: {time_step} hour(s), times: {times}")
+    app_logger.info(
+        f"Will download {len(dates)} day(s) of data: {dates[0].date()} to {dates[-1].date()}"
+    )
 
     # Create temporary directory for daily files
     temp_dir = tempfile.mkdtemp(prefix="cdsapi_daily_")
     app_logger.debug(f"Created temporary directory: {temp_dir}")
     
     # Download data day by day
-    app_logger.info(f"Retrieving data from CDS API ({len(dates)} days)...")
+    app_logger.info(f"Starting data download from CDS API...")
+    app_logger.info(f"Expected files to download: {len(dates)}")
+    for i, date in enumerate(dates, 1):
+        app_logger.info(f"  - Day {i}: {date.date()}")
+    
     daily_files = []
     client = cdsapi.Client(timeout=600, retry_max=500)
     
@@ -236,11 +232,47 @@ def get_cdsapi_data(
             month = date.strftime('%m')
             day = date.strftime('%d')
             
+            # Determine which hours to download for this day
+            # For the first day, start from the first timestamp hour
+            # For the last day, end at the last timestamp hour
+            # For middle days, download all hours
+            if date.date() == first_timestamp.date():
+                # First day: start from first timestamp hour
+                start_hour = first_timestamp.hour
+                # Round down to nearest time_step
+                start_hour = (start_hour // time_step) * time_step
+                if date.date() == last_timestamp.date():
+                    # Same day: both start and end on same day
+                    end_hour = last_timestamp.hour
+                    # Round up to nearest time_step
+                    end_hour = ((end_hour + time_step - 1) // time_step) * time_step
+                else:
+                    # First day but not last: download until end of day
+                    end_hour = 24
+            elif date.date() == last_timestamp.date():
+                # Last day (not first): start from beginning of day
+                start_hour = 0
+                end_hour = last_timestamp.hour
+                # Round up to nearest time_step
+                end_hour = ((end_hour + time_step - 1) // time_step) * time_step
+            else:
+                # Middle day: download all hours
+                start_hour = 0
+                end_hour = 24
+            
+            # Generate times list for this specific day
+            times = [f"{hour:02d}:00" for hour in range(start_hour, end_hour, time_step)]
+            
+            if not times:
+                app_logger.warning(f"No times to download for {year}-{month}-{day}, skipping...")
+                continue
+            
             # Create temporary file for this day
             temp_file = os.path.join(temp_dir, f"era5_{year}{month}{day}.nc")
             daily_files.append(temp_file)
             
             app_logger.info(f"Downloading day {i}/{len(dates)}: {year}-{month}-{day}")
+            app_logger.debug(f"  Times: {times[0]} to {times[-1]} ({len(times)} timesteps)")
             
             # Prepare request for single day
             request = {
@@ -270,26 +302,31 @@ def get_cdsapi_data(
                     )
                 
                 file_size = os.path.getsize(temp_file)
-                app_logger.debug(f"Downloaded file size: {file_size / (1024**2):.2f} MB")
+                app_logger.info(f"  ✓ Downloaded successfully: {file_size / (1024**2):.2f} MB")
                 
             except Exception as e:
-                app_logger.error(f"Error downloading data for {year}-{month}-{day}: {e}")
+                app_logger.error(f"✗ Error downloading data for {year}-{month}-{day}: {e}")
                 raise
         
-        app_logger.info("All daily files downloaded successfully.")
+        app_logger.info("=" * 60)
+        app_logger.info("All daily files downloaded successfully!")
+        app_logger.info(f"Total files: {len(daily_files)}")
+        app_logger.info("=" * 60)
         
         # Concatenate daily files
-        app_logger.info("Concatenating daily files...")
+        app_logger.info("Concatenating daily files into single dataset...")
         datasets = []
-        for daily_file in daily_files:
+        for idx, daily_file in enumerate(daily_files, 1):
+            app_logger.debug(f"  Loading file {idx}/{len(daily_files)}: {os.path.basename(daily_file)}")
             ds = xr.open_dataset(daily_file)
             datasets.append(ds)
         
         # Concatenate along time dimension
+        app_logger.info("Merging datasets along time dimension...")
         combined_ds = xr.concat(datasets, dim='valid_time')
         
         # Save concatenated dataset
-        app_logger.info(f"Saving concatenated data to {args.infile}...")
+        app_logger.info(f"Saving final dataset to: {args.infile}")
         combined_ds.to_netcdf(args.infile)
         combined_ds.close()
         
@@ -304,8 +341,12 @@ def get_cdsapi_data(
             )
         
         final_file_size = os.path.getsize(args.infile)
-        app_logger.info(f"Final concatenated file size: {final_file_size / (1024**2):.2f} MB")
-        app_logger.info("Data retrieval and concatenation completed successfully.")
+        app_logger.info("=" * 60)
+        app_logger.info("✓ DATA DOWNLOAD COMPLETED SUCCESSFULLY!")
+        app_logger.info(f"Final file: {args.infile}")
+        app_logger.info(f"File size: {final_file_size / (1024**2):.2f} MB")
+        app_logger.info(f"Time coverage: {first_timestamp} to {last_timestamp}")
+        app_logger.info("=" * 60)
         
     finally:
         # Clean up temporary files and directory

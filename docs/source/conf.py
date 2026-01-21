@@ -9,7 +9,7 @@
 project = 'LorenzCycleToolKit'
 copyright = '2024, Danilo Couto de Souza'
 author = 'Danilo Couto de Souza'
-release = '1.1.3'
+release = '1.1.5'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.5] - 2026-01-21
+
+### Improved
+
+- **CDS API Download Logging**: Significantly enhanced logging for ERA5 data downloads:
+  - Shows list of expected files before download starts
+  - Displays progress with checkmarks (✓) for successful downloads
+  - Shows time ranges being downloaded for each day (start time to end time)
+  - Provides clear success summary with file size and time coverage
+  - More informative error messages if downloads fail
+
+- **Smart Time Range Detection**: Fixed issue where downloads always requested full days (00Z-23Z):
+  - Now detects actual start and end times from track file
+  - For first day: downloads only from track start time onwards
+  - For last day: downloads only until track end time
+  - For middle days: downloads complete day as before
+  - Respects the `--time-resolution` parameter for all calculations
+  - Example: Track from 18Z to 23Z on same day will only download those hours
+
+### Technical Details
+
+- Track files can now start at any hour (e.g., 18Z) and end at any hour (e.g., 15Z)
+- Time ranges are automatically rounded to the nearest `time_resolution` interval
+- Reduces unnecessary data downloads and API costs
+- Better handles single-day tracks with partial day coverage
+
 ## [1.1.4] - 2026-01-21
 
 ### Changed
