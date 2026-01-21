@@ -15,7 +15,7 @@ jobs:
           command: |
             python -m venv venv
             . venv/bin/activate
-            pip install --upgrade pip setuptools wheel build
+            pip install --upgrade pip 'setuptools>=65.0.0' wheel build
 
       - run:
           name: Build (build_test)
@@ -75,7 +75,7 @@ jobs:
           command: |
             python -m venv venv
             . venv/bin/activate
-            pip install --upgrade pip setuptools wheel build
+            pip install --upgrade pip 'setuptools>=65.0.0' wheel build
 
       - run:
           name: Create whl (test_pypi_publish)
@@ -119,7 +119,7 @@ jobs:
           command: |
             python -m venv venv
             . venv/bin/activate
-            pip install --upgrade pip setuptools wheel build
+            pip install --upgrade pip 'setuptools>=65.0.0' wheel build
 
       - run:
           name: Create whl (pypi_publish)
