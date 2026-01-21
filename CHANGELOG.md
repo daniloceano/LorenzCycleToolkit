@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.3] - 2026-01-21
+
+### Fixed
+
+- **CDS API Download Issues**: Modified `get_cdsapi_data` function to download ERA5 data day-by-day instead of all at once. This resolves issues with large file downloads that were causing failures. The function now:
+  - Downloads data separately for each day
+  - Stores temporary daily files in a system temporary directory
+  - Concatenates all daily files into the final output file
+  - Automatically cleans up temporary files after concatenation
+  - Provides better progress logging for multi-day downloads
+- **Test Suite Warnings**: Fixed FutureWarnings in test suite by updating pandas `freq` parameter from `'H'` to `'h'`. Added `pytest.ini` to filter deprecation warnings from external libraries (cdsapi, pkg_resources, metpy).
+
+### Changed
+
+- **CDS API Workflow**: The CDS API download process is now more robust and reliable for large datasets spanning multiple days. Users will see progress updates for each day being downloaded.
+
 ## [1.1.2] - 2026-01-21
 
 ### Fixed / Improved

@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2026/01/20 17:54:13 by daniloceano      ###   ########.fr        #
+#    Updated: 2026/01/21 10:19:30 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -129,8 +129,9 @@ def get_cdsapi_data(
     """
     Retrieve ERA5 pressure level data from the CDS API based on track information.
 
-    This function uses the latest cdsapi syntax to download ERA5 reanalysis data
-    for a specified geographical area and time period derived from a track DataFrame.
+    This function downloads ERA5 reanalysis data day-by-day to avoid issues with
+    large file downloads, then concatenates the daily files into a single output file.
+    Temporary daily files are automatically deleted after concatenation.
 
     Args:
         args (argparse.Namespace): Command-line arguments containing the output file path.
@@ -141,10 +142,11 @@ def get_cdsapi_data(
         str: Path to the downloaded NetCDF file.
 
     Raises:
-        FileNotFoundError: If the CDS API file is not created.
-        Exception: For other errors during data retrieval.
+        FileNotFoundError: If temporary files are not created during download.
+        Exception: For other errors during data retrieval or concatenation.
     """
     import math
+    import tempfile
 
     import cdsapi
 
@@ -198,11 +200,6 @@ def get_cdsapi_data(
         freq='D'
     )
 
-    # Extract years, months, and days for the request
-    years = sorted(set(dates.strftime('%Y')))
-    months = sorted(set(dates.strftime('%m')))
-    days = sorted(set(dates.strftime('%d')))
-
     # Use time_resolution from args (default is 3 hours)
     time_step = args.time_resolution
     app_logger.debug(f"Using time resolution from args: {time_step} hour(s)")
@@ -220,45 +217,112 @@ def get_cdsapi_data(
         f"lat range: [{buffered_min_lat}, {buffered_max_lat}]"
     )
     app_logger.debug(
-        f"Requesting data for years: {years}, months: {months}, days: {days}"
+        f"Requesting data for {len(dates)} days: {dates[0].date()} to {dates[-1].date()}"
     )
     app_logger.debug(f"Time step: {time_step} hour(s), times: {times}")
 
-    # Prepare the request dictionary
-    request = {
-        "product_type": "reanalysis",
-        "format": "netcdf",
-        "variable": variables,
-        "pressure_level": pressure_levels,
-        "year": years,
-        "month": months,
-        "day": days,
-        "time": times,
-        "area": area,
-    }
-
-    # Load ERA5 data using the latest cdsapi syntax
-    app_logger.info("Retrieving data from CDS API...")
-    try:
-        client = cdsapi.Client(timeout=600, retry_max=500)
-        client.retrieve(
-            "reanalysis-era5-pressure-levels",
-            request,
-            args.infile,
-        )
-        app_logger.info("Data retrieval completed successfully.")
-    except Exception as e:
-        app_logger.error(f"Error retrieving data from CDS API: {e}")
-        raise
-
-    # Verify the file was created
-    if not os.path.exists(args.infile):
-        raise FileNotFoundError(
-            f"CDS API file not created at expected path: {args.infile}"
-        )
+    # Create temporary directory for daily files
+    temp_dir = tempfile.mkdtemp(prefix="cdsapi_daily_")
+    app_logger.debug(f"Created temporary directory: {temp_dir}")
     
-    file_size = os.path.getsize(args.infile)
-    app_logger.info(f"Downloaded file size: {file_size / (1024**2):.2f} MB")
+    # Download data day by day
+    app_logger.info(f"Retrieving data from CDS API ({len(dates)} days)...")
+    daily_files = []
+    client = cdsapi.Client(timeout=600, retry_max=500)
+    
+    try:
+        for i, date in enumerate(dates, 1):
+            year = date.strftime('%Y')
+            month = date.strftime('%m')
+            day = date.strftime('%d')
+            
+            # Create temporary file for this day
+            temp_file = os.path.join(temp_dir, f"era5_{year}{month}{day}.nc")
+            daily_files.append(temp_file)
+            
+            app_logger.info(f"Downloading day {i}/{len(dates)}: {year}-{month}-{day}")
+            
+            # Prepare request for single day
+            request = {
+                "product_type": "reanalysis",
+                "format": "netcdf",
+                "variable": variables,
+                "pressure_level": pressure_levels,
+                "year": year,
+                "month": month,
+                "day": day,
+                "time": times,
+                "area": area,
+            }
+            
+            # Download data for this day
+            try:
+                client.retrieve(
+                    "reanalysis-era5-pressure-levels",
+                    request,
+                    temp_file,
+                )
+                
+                # Verify file was created
+                if not os.path.exists(temp_file):
+                    raise FileNotFoundError(
+                        f"Daily file not created at expected path: {temp_file}"
+                    )
+                
+                file_size = os.path.getsize(temp_file)
+                app_logger.debug(f"Downloaded file size: {file_size / (1024**2):.2f} MB")
+                
+            except Exception as e:
+                app_logger.error(f"Error downloading data for {year}-{month}-{day}: {e}")
+                raise
+        
+        app_logger.info("All daily files downloaded successfully.")
+        
+        # Concatenate daily files
+        app_logger.info("Concatenating daily files...")
+        datasets = []
+        for daily_file in daily_files:
+            ds = xr.open_dataset(daily_file)
+            datasets.append(ds)
+        
+        # Concatenate along time dimension
+        combined_ds = xr.concat(datasets, dim='valid_time')
+        
+        # Save concatenated dataset
+        app_logger.info(f"Saving concatenated data to {args.infile}...")
+        combined_ds.to_netcdf(args.infile)
+        combined_ds.close()
+        
+        # Close all datasets
+        for ds in datasets:
+            ds.close()
+        
+        # Verify the final file was created
+        if not os.path.exists(args.infile):
+            raise FileNotFoundError(
+                f"CDS API file not created at expected path: {args.infile}"
+            )
+        
+        final_file_size = os.path.getsize(args.infile)
+        app_logger.info(f"Final concatenated file size: {final_file_size / (1024**2):.2f} MB")
+        app_logger.info("Data retrieval and concatenation completed successfully.")
+        
+    finally:
+        # Clean up temporary files and directory
+        app_logger.debug("Cleaning up temporary files...")
+        for temp_file in daily_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+                    app_logger.debug(f"Deleted temporary file: {temp_file}")
+            except Exception as e:
+                app_logger.warning(f"Could not delete temporary file {temp_file}: {e}")
+        
+        try:
+            os.rmdir(temp_dir)
+            app_logger.debug(f"Deleted temporary directory: {temp_dir}")
+        except Exception as e:
+            app_logger.warning(f"Could not delete temporary directory {temp_dir}: {e}")
     
     return args.infile
 
