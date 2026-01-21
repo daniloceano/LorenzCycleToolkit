@@ -373,9 +373,9 @@ class TestGetCDSAPIData:
         request = mock_client.retrieve.call_args[0][1]
         times = request["time"]
 
-        # Should default to 3-hour time step
-        expected_times = ["00:00", "03:00", "06:00", "09:00", "12:00", 
-                         "15:00", "18:00", "21:00"]
+        # With smart time detection, single timestep at 00:00 should download only that hour
+        # (rounded to time_step which is 3, so it downloads 00:00 only)
+        expected_times = ["00:00"]
         assert times == expected_times
 
     @patch('xarray.concat')
@@ -439,9 +439,11 @@ class TestGetCDSAPIData:
             get_cdsapi_data(sample_args, sample_track, logger)
 
         # Check that key log messages were generated
-        assert any("Retrieving data from CDS API" in record.message 
+        assert any("Starting data download from CDS API" in record.message 
+                  or "Retrieving data from CDS API" in record.message
                   for record in caplog.records)
-        assert any("completed successfully" in record.message 
+        assert any("COMPLETED SUCCESSFULLY" in record.message 
+                  or "completed successfully" in record.message
                   for record in caplog.records)
 
     @patch('xarray.concat')

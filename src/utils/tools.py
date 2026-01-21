@@ -244,8 +244,10 @@ def get_cdsapi_data(
                 if date.date() == last_timestamp.date():
                     # Same day: both start and end on same day
                     end_hour = last_timestamp.hour
-                    # Round up to nearest time_step
+                    # Round up to nearest time_step, ensuring at least one timestep
                     end_hour = ((end_hour + time_step - 1) // time_step) * time_step
+                    if end_hour <= start_hour:
+                        end_hour = start_hour + time_step
                 else:
                     # First day but not last: download until end of day
                     end_hour = 24
@@ -255,6 +257,9 @@ def get_cdsapi_data(
                 end_hour = last_timestamp.hour
                 # Round up to nearest time_step
                 end_hour = ((end_hour + time_step - 1) // time_step) * time_step
+                # If last timestamp is at midnight (hour 0), download that hour
+                if end_hour == 0:
+                    end_hour = time_step
             else:
                 # Middle day: download all hours
                 start_hour = 0
