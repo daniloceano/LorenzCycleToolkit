@@ -34,7 +34,6 @@ setup(
     description='A toolkit for calculating the Lorenz Energy Cycle in atmospheric systems',
     url='https://github.com/daniloceano/LorenzCycleToolkit',
     license='GPL-3.0',
-    license_files=['LICENSE'],
     project_urls={
         'Documentation': 'https://lorenzcycletoolkit.readthedocs.io/',
         'Source': 'https://github.com/daniloceano/LorenzCycleToolkit',
