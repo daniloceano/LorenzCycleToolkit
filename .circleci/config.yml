@@ -97,7 +97,7 @@ jobs:
           name: Install twine (test_pypi_publish)
           command: |
             . venv/bin/activate
-            pip install --upgrade twine
+            pip install 'twine>=5.0.0'
 
       - run:
           name: Publish on TestPyPI
@@ -141,7 +141,7 @@ jobs:
           name: Install twine (pypi_publish)
           command: |
             . venv/bin/activate
-            pip install --upgrade twine
+            pip install 'twine>=5.0.0'
 
       - run:
           name: Publish on PyPI
