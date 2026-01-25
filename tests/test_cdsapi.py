@@ -439,7 +439,7 @@ class TestGetCDSAPIData:
             get_cdsapi_data(sample_args, sample_track, logger)
 
         # Check that key log messages were generated
-        assert any("Starting data download from CDS API" in record.message 
+        assert any("Starting ERA5 data download from CDS API" in record.message 
                   or "Retrieving data from CDS API" in record.message
                   for record in caplog.records)
         assert any("COMPLETED SUCCESSFULLY" in record.message 
