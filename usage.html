@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Usage &mdash; LorenzCycleToolKit 1.1.7 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=370aedac"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Configuration" href="configuration.html" />
+    <link rel="prev" title="Installation" href="installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            LorenzCycleToolKit
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#fixed-framework">Fixed Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#moving-framework">Moving Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#interactive-domain-selection">Interactive Domain Selection</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#automatic-era5-data-download">Automatic ERA5 Data Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#flags">Flags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cdsapi_example.html">CDS API - Complete Example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_naming_convention.html">File Naming Convention</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples_and_tutorials.html">Examples and Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="results.html">Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="math.html">Mathematics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="support.html">Support and Issue Reporting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">LorenzCycleToolKit</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Usage</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/usage.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h1>
+<section id="fixed-framework">
+<h2>Fixed Framework<a class="headerlink" href="#fixed-framework" title="Link to this heading"></a></h2>
+<p><strong>Prerequisites</strong>
+- NetCDF file with necessary variables (u, v, omega, air temperature, geopotential or geopotential height).
+- <cite>inputs/box_limits</cite> file defining the domain.
+- <cite>inputs/namelist</cite> file specifying variable names and units.</p>
+<p><strong>Command</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">lorenzcycletoolkit</span><span class="o">.</span><span class="n">py</span> <span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">infile</span><span class="o">.</span><span class="n">nc</span> <span class="o">-</span><span class="n">r</span> <span class="o">-</span><span class="n">f</span>
+</pre></div>
+</div>
+</section>
+<section id="moving-framework">
+<h2>Moving Framework<a class="headerlink" href="#moving-framework" title="Link to this heading"></a></h2>
+<p><strong>Pre-defined Domain</strong>
+- Follow initial steps for the Fixed Framework.
+- Use a <cite>inputs/track_file</cite> to define the system’s center over time.</p>
+<p><strong>Command</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">lorenzcycletoolkit</span><span class="o">.</span><span class="n">py</span> <span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">infile</span><span class="o">.</span><span class="n">nc</span> <span class="o">-</span><span class="n">r</span> <span class="o">-</span><span class="n">t</span>
+</pre></div>
+</div>
+</section>
+<section id="interactive-domain-selection">
+<h2>Interactive Domain Selection<a class="headerlink" href="#interactive-domain-selection" title="Link to this heading"></a></h2>
+<ul>
+<li><p>For interactive domain selection, run:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">lorenzcycletoolkit</span><span class="o">.</span><span class="n">py</span> <span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">infile</span><span class="o">.</span><span class="n">nc</span> <span class="o">-</span><span class="n">r</span> <span class="o">-</span><span class="n">c</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</section>
+</section>
+<section id="automatic-era5-data-download">
+<h1>Automatic ERA5 Data Download<a class="headerlink" href="#automatic-era5-data-download" title="Link to this heading"></a></h1>
+<p>The LorenzCycleToolkit supports automatic downloading of ERA5 reanalysis data from the Copernicus Climate Data Store (CDS) using the <code class="docutils literal notranslate"><span class="pre">--cdsapi</span></code> flag. This feature is particularly useful when you have a track file but haven’t yet downloaded the corresponding atmospheric data.</p>
+<p><strong>Prerequisites</strong></p>
+<ol class="arabic">
+<li><p><strong>CDS API Account</strong>: Create a free account at the <a class="reference external" href="https://cds.climate.copernicus.eu/user/register">CDS registration page</a>.</p></li>
+<li><p><strong>API Key Configuration</strong>: After registration, obtain your API key from your <a class="reference external" href="https://cds.climate.copernicus.eu/user">user profile</a> and create a <code class="docutils literal notranslate"><span class="pre">.cdsapirc</span></code> file in your home directory:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>url: https://cds.climate.copernicus.eu/api
+key: YOUR-UID:YOUR-API-KEY
+</pre></div>
+</div>
+<p>Replace <code class="docutils literal notranslate"><span class="pre">YOUR-UID</span></code> and <code class="docutils literal notranslate"><span class="pre">YOUR-API-KEY</span></code> with your actual credentials.</p>
+</li>
+<li><p><strong>Namelist Configuration</strong>: The <code class="docutils literal notranslate"><span class="pre">--cdsapi</span></code> flag now <strong>automatically</strong> uses the ERA5-compatible namelist (<code class="docutils literal notranslate"><span class="pre">inputs/namelist_ERA5-cdsapi</span></code>). You no longer need to manually copy or configure the namelist file.</p></li>
+</ol>
+<p><strong>How It Works</strong></p>
+<p>When using the <code class="docutils literal notranslate"><span class="pre">--cdsapi</span></code> flag:</p>
+<ol class="arabic simple">
+<li><p>The program reads your track file to determine:
+- Temporal range (exact start and end times, not just dates)
+- Spatial domain (automatically adds a 15° buffer around track boundaries)</p></li>
+<li><p>Downloads ERA5 pressure level data with smart time detection:
+- <strong>First day</strong>: Downloads only from track start time onwards
+- <strong>Last day</strong>: Downloads only until track end time
+- <strong>Middle days</strong>: Downloads complete days (all hours)
+- <strong>Temporal resolution</strong>: Configurable via <code class="docutils literal notranslate"><span class="pre">--time-resolution</span></code> flag (default: 3 hours)
+- <strong>Variables</strong>: U and V wind components, temperature, vertical velocity (omega), geopotential
+- <strong>Pressure levels</strong>: All standard pressure levels (1000 hPa to 1 hPa)</p></li>
+<li><p>Saves the data to the filename specified as the first argument</p></li>
+</ol>
+<p>This smart time detection minimizes unnecessary downloads and reduces API costs.</p>
+<p><strong>Usage Example</strong></p>
+<p>For a track file covering January 1-3, 2020:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>my_output_file.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>-p<span class="w"> </span>--cdsapi<span class="w"> </span>--trackfile<span class="w"> </span>inputs/track_20200101.csv
+</pre></div>
+</div>
+<p><strong>Important Notes</strong></p>
+<ul class="simple">
+<li><p>The filename provided (<code class="docutils literal notranslate"><span class="pre">my_output_file.nc</span></code>) doesn’t need to exist beforehand—it will be created by the download process</p></li>
+<li><p><strong>Temporal resolution</strong>: Default is 3 hours. Using 1-hour intervals may exceed CDS API cost limits for large domains/long periods</p></li>
+<li><p>Recommended time resolutions: 3, 6, or 12 hours</p></li>
+<li><p>Download times depend on data volume and CDS server load (typically several minutes)</p></li>
+<li><p>A 15° buffer is automatically applied to ensure adequate spatial coverage</p></li>
+<li><p>If the file already exists, the download is skipped and the existing file is used</p></li>
+</ul>
+<p><strong>Troubleshooting</strong></p>
+<ul class="simple">
+<li><p><strong>Authentication errors</strong>: Verify your <code class="docutils literal notranslate"><span class="pre">.cdsapirc</span></code> file is correctly formatted and contains valid credentials</p></li>
+<li><p><strong>Slow downloads</strong>: CDS API can be slow during peak hours; use the <code class="docutils literal notranslate"><span class="pre">-v</span></code> flag for detailed progress logging</p></li>
+<li><p><strong>File size</strong>: ERA5 files can be large (&gt;1 GB); ensure adequate disk space</p></li>
+</ul>
+</section>
+<section id="flags">
+<h1>Flags<a class="headerlink" href="#flags" title="Link to this heading"></a></h1>
+<ul class="simple">
+<li><p><cite>-r</cite>, <cite>–residuals</cite>: Compute the Dissipation and Generation terms as residuals.</p></li>
+<li><p><cite>-f</cite>, <cite>–fixed</cite>: Compute the energetics for a fixed domain specified by the ‘box_limits’ file.</p></li>
+<li><p><cite>-t</cite>, <cite>–track</cite>: Define the domain using a track file.</p></li>
+<li><p><cite>-c</cite>, <cite>–choose</cite>: Interactively select the domain for each time step.</p></li>
+<li><p><cite>-o</cite>, <cite>–outname</cite>: Specify an output name for the results.</p></li>
+<li><p><cite>-z</cite>, <cite>–zeta</cite>: Use the vorticity from the track file instead of computing it at 850 hPa.</p></li>
+<li><p><cite>-m</cite>, <cite>–mpas</cite>: Specify this flag if working with MPAS-A data processed with MPAS-BR routines.</p></li>
+<li><p><cite>-p</cite>, <cite>–plots</cite>: Generate plots.</p></li>
+<li><p><cite>-v</cite>, <cite>–verbosity</cite>: Enable debug logging for detailed output.</p></li>
+<li><p><cite>–cdsapi</cite>: Automatically download ERA5 data from CDS API based on track file (experimental).</p></li>
+<li><p><cite>–time-resolution</cite>: Temporal resolution in hours for CDS API downloads (default: 3). Recommended values: 3, 6, or 12 hours to avoid exceeding API cost limits.</p></li>
+<li><p><cite>–trackfile</cite>: Specify a custom track file path (default: <code class="docutils literal notranslate"><span class="pre">inputs/track</span></code>).</p></li>
+<li><p><cite>–box_limits</cite>: Specify a custom box limits file path (default: <code class="docutils literal notranslate"><span class="pre">inputs/box_limits</span></code>).</p></li>
+</ul>
+<p>Ensure that the provided NetCDF file and the <cite>namelist</cite> configuration align with the selected flags.</p>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="configuration.html" class="btn btn-neutral float-right" title="Configuration" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Danilo Couto de Souza.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
