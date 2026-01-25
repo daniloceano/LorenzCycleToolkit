@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.6] - 2026-01-25
+
+### Changed
+
+ - **`src/utils/tools.py` improvements**: Improved helper logging and error messages in the tools module.
+
 ## [1.1.5] - 2026-01-21
 
 ### Improved

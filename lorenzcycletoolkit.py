@@ -232,8 +232,7 @@ def main():
         args = parser.parse_args(
             ["samples/testdata_NCEP-R2.nc", "-t", "-r", "-p", "-v"]
         )
-        # args = parser.parse_args(['20070536_ERA5_sliced.nc', '-t', '-r', '-p', '-v', '-g', '--cdsapi', '--trackfile',
-        # 'inputs/track_20070536.csv'])
+        # args = parser.parse_args(['19790205_ERA5.nc', '-t', '-r', '-p', '-v'])
         print(
             "----------------------------------------------------------------------------"
         )

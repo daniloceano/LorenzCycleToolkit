@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2026/01/21 10:19:30 by daniloceano      ###   ########.fr        #
+#    Updated: 2026/01/25 15:41:38 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -447,6 +447,36 @@ def process_data(
             track_file, parse_dates=[0], delimiter=";", index_col="time"
         )
         TimeIndexer = variable_list_df.loc["Time"]["Variable"]
+        # Check input data and track time steps
+        data_time_delta = int(
+            (data[TimeIndexer][1] - data[TimeIndexer][0]) / np.timedelta64(1, "h")
+        )
+        track_time_delta = int(
+            (track.index[1] - track.index[0]) / np.timedelta64(1, "h")
+        )
+        # If track dt is higher than data dt, raise error
+        if track_time_delta > data_time_delta:
+            app_logger.error(
+                "Track time step is higher than data time step. Please resample the track to match the data time step."
+            )
+            raise ValueError(
+                "Track time step is higher than data time step. Please resample the track to match the data time step."
+            )
+        # Check data and track initial and final timestamps
+        if track.index[0] < data[TimeIndexer][0].values:
+            app_logger.error(
+                "Track initial timestamp is earlier than data initial timestamp. Please adjust the track file."
+            )
+            raise ValueError(
+                "Track initial timestamp is earlier than data initial timestamp. Please adjust the track file."
+            ) 
+        if track.index[-1] > data[TimeIndexer][-1].values:
+            app_logger.error(
+                "Track final timestamp is later than data final timestamp. Please adjust the track file."
+            )
+            raise ValueError(
+                "Track final timestamp is later than data final timestamp. Please adjust the track file."
+            )
         # If using CDS API, resample track to data time step
         if args.cdsapi:
             time_delta = int(
@@ -454,7 +484,7 @@ def process_data(
             )
             track = track[track.index.hour % time_delta == 0]
         data = data.sel({TimeIndexer: track.index.values})
-
+        app_logger.debug("Ok.")
     if (
         data[variable_list_df.loc["Longitude"]["Variable"]].min() < -180
         or data[variable_list_df.loc["Longitude"]["Variable"]].max() > 180
