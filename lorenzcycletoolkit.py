@@ -176,7 +176,7 @@ def run_lec_analysis(data, args, results_subdirectory, figures_directory, result
     if args.fixed:
         lec_fixed(data, variable_list_df, results_subdirectory, results_subdirectory_vertical_levels, app_logger, args)
         app_logger.info(
-            "--- %s seconds running fixed framework ---" % (time.time() - start_time)
+            "🎉 Analysis complete! Fixed framework ran in %.2f seconds" % (time.time() - start_time)
         )
 
     if args.track or args.choose:
@@ -195,7 +195,7 @@ def run_lec_analysis(data, args, results_subdirectory, figures_directory, result
             args,
         )
         app_logger.info(
-            "--- %s seconds running moving framework ---" % (time.time() - start_time)
+            "🎉 Analysis complete! Moving framework ran in %.2f seconds" % (time.time() - start_time)
         )
 
 
@@ -227,12 +227,12 @@ def main():
         print("WARNING: USING EXAMPLE ARGUMENTS")
         import shutil
 
-        shutil.copy("inputs/namelist_NCEP-R2", "inputs/namelist")
-        shutil.copy("inputs/track_testdata_NCEP-R2", "inputs/track")
-        args = parser.parse_args(
-            ["samples/testdata_NCEP-R2.nc", "-t", "-r", "-p", "-v"]
-        )
-        # args = parser.parse_args(['19790205_ERA5.nc', '-t', '-r', '-p', '-v'])
+        # shutil.copy("inputs/namelist_NCEP-R2", "inputs/namelist")
+        # shutil.copy("inputs/track_testdata_NCEP-R2", "inputs/track")
+        # args = parser.parse_args(
+        #     ["samples/testdata_NCEP-R2.nc", "-t", "-r", "-p", "-v"]
+        # )
+        args = parser.parse_args(['test.nc', '-t', '-r', '-p', '-v', '--cdsapi'])
         print(
             "----------------------------------------------------------------------------"
         )
@@ -250,8 +250,8 @@ def main():
 
     # Initialize logging
     app_logger = initialize_logging(results_subdirectory, args)
-    app_logger.info("Starting LEC analysis")
-    app_logger.info(f"Command line arguments: {args}")
+    app_logger.info("🚀 Starting LEC analysis")
+    app_logger.info(f"⚙️ Command line arguments: {args}")
 
     # Prepare data
     data = prepare_data(args, "inputs/namelist", app_logger)

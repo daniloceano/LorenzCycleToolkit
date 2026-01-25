@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.7] - 2026-01-25
+
+### Fixed
+
+- **CDS API Last Timestep Issue**: Fixed a bug where the final timestamp from the track file was excluded when downloading ERA5 data via CDS API. The download logic now correctly includes the last hour of the track period.
+
+### Added
+
+- **Automatic Namelist Selection**: When using the `--cdsapi` flag, the program now automatically uses the ERA5-compatible namelist (`inputs/namelist_ERA5-cdsapi`). Users no longer need to manually copy or configure the namelist file for CDS API downloads.
+
+### Improved
+
+- **Enhanced Logging with Emojis**: Completely revamped logging throughout the application for better user experience:
+  - 🚀 Clear startup messages
+  - 📥 Download progress indicators
+  - ✅ Success confirmations
+  - ❌ Error messages with clear explanations
+  - 🎨 Plot generation status
+  - ⚡ Energy calculation progress
+  - 🔄 Conversion term computation
+  - 🏁 Boundary term computation
+  - 🔥 Generation/dissipation term computation
+  - 📈 Budget estimation progress
+  - 💾 File save confirmations
+  - 🗑️ Cleanup operations
+  - 🎉 Completion messages
+
+- **More Informative Error Messages**: Error messages now include specific timestamps and values to help users diagnose issues (e.g., track vs data timestamp mismatches).
+
+### Documentation
+
+- Updated `usage.rst` to reflect automatic namelist selection when using `--cdsapi` flag.
+
 ## [1.1.6] - 2026-01-25
 
 ### Changed
