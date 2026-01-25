@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:55 by daniloceano       #+#    #+#              #
-#    Updated: 2024/10/21 13:56:21 by daniloceano      ###   ########.fr        #
+#    Updated: 2026/01/25 17:40:51 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -110,13 +110,13 @@ def handle_track_file(
         )
 
         if track.index[0] < times.min() or track.index[-1] > times.max():
-            app_logger.error("Track time limits do not match with data time limits.")
+            app_logger.error("❌ Track time limits do not match with data time limits.")
             raise ValueError("Track time limits do not match with data time limits.")
 
         # Check longitude limits
         if track["Lon"].max() > data_lon_max:
             app_logger.error(
-                f"Track file longitude max limit ({track['Lon'].max():.2f}) exceeds data max "
+                f"❌ Track file longitude max limit ({track['Lon'].max():.2f}) exceeds data max "
                 f"longitude limit ({data_lon_max:.2f})."
             )
             raise ValueError(
@@ -125,7 +125,7 @@ def handle_track_file(
             )
         if track["Lon"].min() < data_lon_min:
             app_logger.error(
-                f"Track file longitude min limit ({track['Lon'].min():.2f}) is below data min "
+                f"❌ Track file longitude min limit ({track['Lon'].min():.2f}) is below data min "
                 f"longitude limit ({data_lon_min:.2f})."
             )
             raise ValueError(
@@ -136,7 +136,7 @@ def handle_track_file(
         # Check latitude limits
         if track["Lat"].max() > data_lat_max:
             app_logger.error(
-                f"Track file latitude max limit ({track['Lat'].max():.2f}) exceeds data max "
+                f"❌ Track file latitude max limit ({track['Lat'].max():.2f}) exceeds data max "
                 f"latitude limit ({data_lat_max:.2f})."
             )
             raise ValueError(
@@ -145,7 +145,7 @@ def handle_track_file(
             )
         if track["Lat"].min() < data_lat_min:
             app_logger.error(
-                f"Track file latitude min limit ({track['Lat'].min():.2f}) is below data min "
+                f"❌ Track file latitude min limit ({track['Lat'].min():.2f}) is below data min "
                 f"latitude limit ({data_lat_min:.2f})."
             )
             raise ValueError(
@@ -156,7 +156,7 @@ def handle_track_file(
         return track
 
     except FileNotFoundError:
-        app_logger.error(f"Track file {trackfile} not found.")
+        app_logger.error(f"❌ Track file {trackfile} not found.")
         raise
 
 
@@ -440,7 +440,7 @@ def compute_and_store_terms(box_obj, terms_dict, app_logger):
         dict: Updated dictionary with the computed terms.
     """
     # Energy Contents
-    app_logger.info("Computing Energy Contents...")
+    app_logger.info("⚡ Computing Energy Contents...")
     try:
         ec_obj = EnergyContents(box_obj, method="moving", app_logger=app_logger)
         terms_dict["Az"].append(ec_obj.calc_az())
@@ -448,11 +448,11 @@ def compute_and_store_terms(box_obj, terms_dict, app_logger):
         terms_dict["Kz"].append(ec_obj.calc_kz())
         terms_dict["Ke"].append(ec_obj.calc_ke())
     except Exception as e:
-        app_logger.exception(f"Error in computing Energy Contents: {e}")
+        app_logger.exception(f"❌ Error in computing Energy Contents: {e}")
         raise
 
     # Conversion Terms
-    app_logger.info("Computing Conversion Terms...")
+    app_logger.info("🔄 Computing Conversion Terms...")
     try:
         ct_obj = ConversionTerms(box_obj, method="moving", app_logger=app_logger)
         terms_dict["Cz"].append(ct_obj.calc_cz())
@@ -460,11 +460,11 @@ def compute_and_store_terms(box_obj, terms_dict, app_logger):
         terms_dict["Ck"].append(ct_obj.calc_ck())
         terms_dict["Ce"].append(ct_obj.calc_ce())
     except Exception as e:
-        app_logger.exception(f"Error in computing Conversion Terms: {e}")
+        app_logger.exception(f"❌ Error in computing Conversion Terms: {e}")
         raise
 
     # Boundary Terms
-    app_logger.info("Computing Boundary Terms...")
+    app_logger.info("🏁 Computing Boundary Terms...")
     try:
         bt_obj = BoundaryTerms(box_obj, method="moving", app_logger=app_logger)
         terms_dict["BAz"].append(bt_obj.calc_baz())
@@ -474,11 +474,11 @@ def compute_and_store_terms(box_obj, terms_dict, app_logger):
         terms_dict["BΦZ"].append(bt_obj.calc_boz())
         terms_dict["BΦE"].append(bt_obj.calc_boe())
     except Exception as e:
-        app_logger.exception(f"Error in computing Boundary Terms: {e}")
+        app_logger.exception(f"❌ Error in computing Boundary Terms: {e}")
         raise
 
     # Generation/Dissipation Terms
-    app_logger.info("Computing Generation/Dissipation Terms...")
+    app_logger.info("🔥 Computing Generation/Dissipation Terms...")
     try:
         gdt_obj = GenerationDissipationTerms(
             box_obj, method="moving", app_logger=app_logger
@@ -489,7 +489,7 @@ def compute_and_store_terms(box_obj, terms_dict, app_logger):
             terms_dict["Dz"].append(gdt_obj.calc_dz())
             terms_dict["De"].append(gdt_obj.calc_de())
     except Exception as e:
-        app_logger.exception(f"Error in computing Generation/Dissipation Terms: {e}")
+        app_logger.exception(f"❌ Error in computing Generation/Dissipation Terms: {e}")
         raise
 
     return terms_dict
@@ -513,12 +513,12 @@ def finalize_results(
     df = pd.DataFrame(terms_dict, index=pd.to_datetime(times), dtype=float)
 
     # Estimating budget terms (∂X/∂t) using finite differences
-    app_logger.info("Estimating budget terms...")
+    app_logger.info("📈 Estimating budget terms...")
     df = calc_budget_diff(df, times, app_logger)
 
     # Computing residuals, if required
     if args.residuals:
-        app_logger.info("Computing residuals...")
+        app_logger.info("🧮 Computing residuals...")
         df = calc_residuals(df, app_logger)
 
     # Constructing output filename
@@ -529,7 +529,7 @@ def finalize_results(
 
     # Saving the DataFrame to a CSV file
     df.to_csv(results_file)
-    app_logger.info(f"Results saved to {results_file}")
+    app_logger.info(f"💾 Results saved to {results_file}")
 
     # Save system position as a csv file for replicability
     out_track = out_track.rename(
@@ -538,7 +538,7 @@ def finalize_results(
     out_trackfile_name = "".join(f"{infile_name}_{method}_trackfile")
     output_trackfile = os.path.join(results_subdirectory, out_trackfile_name)
     out_track.to_csv(output_trackfile, index=False, sep=";")
-    app_logger.info(f"System track saved to {output_trackfile}")
+    app_logger.info(f"📍 System track saved to {output_trackfile}")
 
     return results_file, df
 
@@ -567,7 +567,7 @@ def lec_moving(
     Returns:
         None
     """
-    app_logger.info("Computing energetics using moving framework")
+    app_logger.info("🌀 Computing energetics using moving framework...")
 
     # Indexers
     LonIndexer, LatIndexer, TimeName, VerticalCoordIndexer = (
@@ -637,13 +637,13 @@ def lec_moving(
 
     # Iterating over times
     for t in times:
-        app_logger.info(f"Processing data at time: {t}...")
+        app_logger.info(f"⏰ Processing data at time: {t}...")
         try:
             idata, idTdt = data.sel({TimeName: t}), dTdt.sel({TimeName: t})
             if idata[TimeName].shape != ():
                 idata, idTdt = data.isel({TimeName: 1}), dTdt.isel({TimeName: 1})
         except KeyError as e:
-            app_logger.error(f"Time indexing error: {e}")
+            app_logger.error(f"❌ Time indexing error: {e}")
             continue
 
         # Wind components and geopotential height
@@ -676,10 +676,8 @@ def lec_moving(
         # Get box attributes for current time
         limits = get_limits(args, t, data850, track if args.track else None)
         app_logger.info(
-            f"central lat: {limits['central_lat']}, central lon: {limits['central_lon']}, "
-            f"size: {limits['length']} x {limits['width']}, "
-            f"lon range: {limits['min_lon']} to {limits['max_lon']}, "
-            f"lat range: {limits['min_lat']} to {limits['max_lat']}"
+            f"🗺️ Box: center=({limits['central_lat']:.2f}, {limits['central_lon']:.2f}), "
+            f"size={limits['length']}°x{limits['width']}°"
         )
 
         # Get position of  850 hPaextreme values for current time
@@ -694,16 +692,9 @@ def lec_moving(
             args,
         )
         app_logger.info(
-            f"850 hPa diagnostics --> "
-            f"min/max ζ: {position['min_max_zeta_850']['value']:.2e}, "
-            f"min geopotential height: {position['min_hgt_850']['value']:.0f}, "
-            f"max wind speed: {position['max_wind_850']['value']:.2f}"
-        )
-        app_logger.info(
-            f"850 hPa positions (lat/lon) --> "
-            f"min/max ζ: {position['min_max_zeta_850']['latitude']:.2f}, {position['min_max_zeta_850']['longitude']:.2f}, "
-            f"min geopotential height: {position['min_hgt_850']['latitude']:.2f}, {position['min_hgt_850']['longitude']:.2f}, "
-            f"max wind speed: {position['max_wind_850']['latitude']:.2f}, {position['max_wind_850']['longitude']:.2f}"
+            f"🌡️ 850 hPa: ζ={position['min_max_zeta_850']['value']:.2e}, "
+            f"hgt={position['min_hgt_850']['value']:.0f}m, "
+            f"wspd={position['max_wind_850']['value']:.1f}m/s"
         )
 
         # Store results
@@ -723,7 +714,7 @@ def lec_moving(
             plot_domain_attributes(data850, limits, position, figures_directory)
 
         # Create box object
-        app_logger.info("Creating box object...")
+        app_logger.info("📦 Creating box object...")
         try:
             box_obj = BoxData(
                 data=idata.compute(),
@@ -738,15 +729,15 @@ def lec_moving(
                 dTdt=idTdt,
             )
         except Exception as e:
-            app_logger.exception(f"Error creating BoxData object: {e}")
+            app_logger.exception(f"❌ Error creating BoxData object: {e}")
             raise
-        app_logger.info("Ok.")
+        app_logger.info("✅ Box object created.")
 
         # Compute and store various meteorological terms
         terms_dict = compute_and_store_terms(box_obj, terms_dict, app_logger)
 
         # Log that the processing for this time is done
-        app_logger.info("Done.\n")
+        app_logger.info("✅ Timestep complete.\n")
 
     # Finalize and process results
     results_file, df = finalize_results(
@@ -754,9 +745,9 @@ def lec_moving(
     )
 
     if args.cdsapi:
-        app_logger.info("Deleting files from CDS...")
+        app_logger.info("🗑️ Cleaning up CDS API temporary files...")
         os.remove(args.infile)
-        app_logger.info("Done.")
+        app_logger.info("✅ Cleanup complete.")
 
     if args.plots:
         from glob import glob
@@ -770,7 +761,7 @@ def lec_moving(
         from ..plots.timeseries_terms import plot_timeseries
         from ..plots.timeseries_zeta_and_Z import plot_min_zeta_hgt
 
-        app_logger.info("Generating plots..")
+        app_logger.info("🎨 Generating plots...")
         figures_directory = os.path.join(results_subdirectory, "Figures")
         track_file = glob(os.path.join(results_subdirectory, "*trackfile"))[0]
 
@@ -805,7 +796,7 @@ def lec_moving(
         )
         plot_LPS(df, args.infile, results_subdirectory, figures_directory, app_logger)
 
-        app_logger.info("Done.")
+        app_logger.info("🎉 All plots generated successfully!")
 
 
 if __name__ == "__main__":

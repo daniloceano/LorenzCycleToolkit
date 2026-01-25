@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2026/01/21 10:19:30 by daniloceano      ###   ########.fr        #
+#    Updated: 2026/01/25 17:33:29 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -195,33 +195,33 @@ def get_cdsapi_data(
 
     # Use time_resolution from args (default is 3 hours)
     time_step = args.time_resolution
-    app_logger.debug(f"Using time resolution from args: {time_step} hour(s)")
+    app_logger.debug(f"⏱️ Using time resolution from args: {time_step} hour(s)")
 
     # Log track file bounds and requested data bounds
     app_logger.debug(
-        f"Track File Limits: lon range: [{min_lon:.2f}, {max_lon:.2f}], "
+        f"📍 Track File Limits: lon range: [{min_lon:.2f}, {max_lon:.2f}], "
         f"lat range: [{min_lat:.2f}, {max_lat:.2f}]"
     )
     app_logger.debug(
-        f"Buffered Data Bounds: lon range: [{buffered_min_lon}, {buffered_max_lon}], "
+        f"🗺️ Buffered Data Bounds: lon range: [{buffered_min_lon}, {buffered_max_lon}], "
         f"lat range: [{buffered_min_lat}, {buffered_max_lat}]"
     )
     app_logger.debug(
-        f"Track period: {first_timestamp} to {last_timestamp}"
+        f"📅 Track period: {first_timestamp} to {last_timestamp}"
     )
     app_logger.info(
-        f"Will download {len(dates)} day(s) of data: {dates[0].date()} to {dates[-1].date()}"
+        f"📥 Will download {len(dates)} day(s) of data: {dates[0].date()} to {dates[-1].date()}"
     )
 
     # Create temporary directory for daily files
     temp_dir = tempfile.mkdtemp(prefix="cdsapi_daily_")
-    app_logger.debug(f"Created temporary directory: {temp_dir}")
+    app_logger.debug(f"📁 Created temporary directory: {temp_dir}")
     
     # Download data day by day
-    app_logger.info(f"Starting data download from CDS API...")
-    app_logger.info(f"Expected files to download: {len(dates)}")
+    app_logger.info(f"🌐 Starting ERA5 data download from CDS API...")
+    app_logger.info(f"📦 Expected files to download: {len(dates)}")
     for i, date in enumerate(dates, 1):
-        app_logger.info(f"  - Day {i}: {date.date()}")
+        app_logger.info(f"  📅 Day {i}: {date.date()}")
     
     daily_files = []
     client = cdsapi.Client(timeout=600, retry_max=500)
@@ -244,10 +244,13 @@ def get_cdsapi_data(
                 if date.date() == last_timestamp.date():
                     # Same day: both start and end on same day
                     end_hour = last_timestamp.hour
-                    # Round up to nearest time_step, ensuring at least one timestep
-                    end_hour = ((end_hour + time_step - 1) // time_step) * time_step
+                    # Round up to include the last timestamp - go one step beyond
+                    end_hour = ((end_hour // time_step) + 1) * time_step
                     if end_hour <= start_hour:
                         end_hour = start_hour + time_step
+                    # Cap at 24 hours (end of day)
+                    if end_hour > 24:
+                        end_hour = 24
                 else:
                     # First day but not last: download until end of day
                     end_hour = 24
@@ -255,29 +258,33 @@ def get_cdsapi_data(
                 # Last day (not first): start from beginning of day
                 start_hour = 0
                 end_hour = last_timestamp.hour
-                # Round up to nearest time_step
-                end_hour = ((end_hour + time_step - 1) // time_step) * time_step
+                # Round up to nearest time_step to INCLUDE the last timestamp
+                # We need to go one step further to include the last hour in the range
+                end_hour = ((end_hour // time_step) + 1) * time_step
                 # If last timestamp is at midnight (hour 0), download that hour
                 if end_hour == 0:
                     end_hour = time_step
+                # Cap at 24 hours (end of day)
+                if end_hour > 24:
+                    end_hour = 24
             else:
                 # Middle day: download all hours
                 start_hour = 0
-                end_hour = 24
+                end_hour = 24 
             
             # Generate times list for this specific day
             times = [f"{hour:02d}:00" for hour in range(start_hour, end_hour, time_step)]
             
             if not times:
-                app_logger.warning(f"No times to download for {year}-{month}-{day}, skipping...")
+                app_logger.warning(f"⚠️ No times to download for {year}-{month}-{day}, skipping...")
                 continue
             
             # Create temporary file for this day
             temp_file = os.path.join(temp_dir, f"era5_{year}{month}{day}.nc")
             daily_files.append(temp_file)
             
-            app_logger.info(f"Downloading day {i}/{len(dates)}: {year}-{month}-{day}")
-            app_logger.debug(f"  Times: {times[0]} to {times[-1]} ({len(times)} timesteps)")
+            app_logger.info(f"⬇️ Downloading day {i}/{len(dates)}: {year}-{month}-{day}")
+            app_logger.debug(f"  ⏰ Times: {times[0]} to {times[-1]} ({len(times)} timesteps)")
             
             # Prepare request for single day
             request = {
@@ -314,24 +321,24 @@ def get_cdsapi_data(
                 raise
         
         app_logger.info("=" * 60)
-        app_logger.info("All daily files downloaded successfully!")
-        app_logger.info(f"Total files: {len(daily_files)}")
+        app_logger.info("✅ All daily files downloaded successfully!")
+        app_logger.info(f"📦 Total files: {len(daily_files)}")
         app_logger.info("=" * 60)
         
         # Concatenate daily files
-        app_logger.info("Concatenating daily files into single dataset...")
+        app_logger.info("🔗 Concatenating daily files into single dataset...")
         datasets = []
         for idx, daily_file in enumerate(daily_files, 1):
-            app_logger.debug(f"  Loading file {idx}/{len(daily_files)}: {os.path.basename(daily_file)}")
+            app_logger.debug(f"  📂 Loading file {idx}/{len(daily_files)}: {os.path.basename(daily_file)}")
             ds = xr.open_dataset(daily_file)
             datasets.append(ds)
         
         # Concatenate along time dimension
-        app_logger.info("Merging datasets along time dimension...")
+        app_logger.info("🔀 Merging datasets along time dimension...")
         combined_ds = xr.concat(datasets, dim='valid_time')
         
         # Save concatenated dataset
-        app_logger.info(f"Saving final dataset to: {args.infile}")
+        app_logger.info(f"💾 Saving final dataset to: {args.infile}")
         combined_ds.to_netcdf(args.infile)
         combined_ds.close()
         
@@ -342,33 +349,33 @@ def get_cdsapi_data(
         # Verify the final file was created
         if not os.path.exists(args.infile):
             raise FileNotFoundError(
-                f"CDS API file not created at expected path: {args.infile}"
+                f"❌ CDS API file not created at expected path: {args.infile}"
             )
         
         final_file_size = os.path.getsize(args.infile)
         app_logger.info("=" * 60)
-        app_logger.info("✓ DATA DOWNLOAD COMPLETED SUCCESSFULLY!")
-        app_logger.info(f"Final file: {args.infile}")
-        app_logger.info(f"File size: {final_file_size / (1024**2):.2f} MB")
-        app_logger.info(f"Time coverage: {first_timestamp} to {last_timestamp}")
+        app_logger.info("🎉 DATA DOWNLOAD COMPLETED SUCCESSFULLY!")
+        app_logger.info(f"📄 Final file: {args.infile}")
+        app_logger.info(f"📊 File size: {final_file_size / (1024**2):.2f} MB")
+        app_logger.info(f"📅 Time coverage: {first_timestamp} to {last_timestamp}")
         app_logger.info("=" * 60)
         
     finally:
         # Clean up temporary files and directory
-        app_logger.debug("Cleaning up temporary files...")
+        app_logger.debug("🧹 Cleaning up temporary files...")
         for temp_file in daily_files:
             try:
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
-                    app_logger.debug(f"Deleted temporary file: {temp_file}")
+                    app_logger.debug(f"🗑️ Deleted temporary file: {temp_file}")
             except Exception as e:
-                app_logger.warning(f"Could not delete temporary file {temp_file}: {e}")
+                app_logger.warning(f"⚠️ Could not delete temporary file {temp_file}: {e}")
         
         try:
             os.rmdir(temp_dir)
-            app_logger.debug(f"Deleted temporary directory: {temp_dir}")
+            app_logger.debug(f"🗑️ Deleted temporary directory: {temp_dir}")
         except Exception as e:
-            app_logger.warning(f"Could not delete temporary directory {temp_dir}: {e}")
+            app_logger.warning(f"⚠️ Could not delete temporary directory {temp_dir}: {e}")
     
     return args.infile
 
@@ -394,29 +401,29 @@ def get_data(args: argparse.Namespace, app_logger: logging.Logger) -> xr.Dataset
     if args.cdsapi:
         if not os.path.exists(infile):
             app_logger.debug(
-                "CDS API data not found. Attempting to retrieve data from CDS API..."
+                "🌐 CDS API data not found. Attempting to retrieve data from CDS API..."
             )
             track = pd.read_csv(
                 args.trackfile, parse_dates=[0], delimiter=";", index_col="time"
             )
             infile = get_cdsapi_data(args, track, app_logger)
-            app_logger.debug(f"CDS API data: {infile}")
+            app_logger.debug(f"✅ CDS API data ready: {infile}")
         else:
-            app_logger.info("CDS API data found.")
+            app_logger.info("✅ CDS API data already exists, skipping download.")
 
-    app_logger.debug("Opening input data... ")
+    app_logger.debug("📂 Opening input data... ")
     try:
         with dask.config.set(array={"slicing": {"split_large_chunks": True}}):
             data = xr.open_dataset(infile)
     except FileNotFoundError:
         app_logger.error(
-            "Could not open file. Check if path, namelist file, and file format (.nc) are correct."
+            "❌ Could not open file. Check if path, namelist file, and file format (.nc) are correct."
         )
         raise
     except Exception as e:
-        app_logger.exception("An exception occurred: {}".format(e))
+        app_logger.exception("❌ An exception occurred: {}".format(e))
         raise
-    app_logger.debug("Ok.")
+    app_logger.debug("✅ Data opened successfully.")
 
     return data
 
@@ -441,12 +448,44 @@ def process_data(
     """
     # Select only data matching the track dates
     if args.track:
-        app_logger.debug("Selecting only data matching the track dates... ")
+        app_logger.debug("📅 Selecting only data matching the track dates... ")
         track_file = args.trackfile
         track = pd.read_csv(
             track_file, parse_dates=[0], delimiter=";", index_col="time"
         )
         TimeIndexer = variable_list_df.loc["Time"]["Variable"]
+        # Check input data and track time steps
+        data_time_delta = int(
+            (data[TimeIndexer][1] - data[TimeIndexer][0]) / np.timedelta64(1, "h")
+        )
+        track_time_delta = int(
+            (track.index[1] - track.index[0]) / np.timedelta64(1, "h")
+        )
+        # If track dt is higher than data dt, raise error
+        if track_time_delta > data_time_delta:
+            app_logger.error(
+                "❌ Track time step is higher than data time step. Please resample the track to match the data time step."
+            )
+            raise ValueError(
+                "Track time step is higher than data time step. Please resample the track to match the data time step."
+            )
+        # Check data and track initial and final timestamps
+        if track.index[0] < data[TimeIndexer][0].values:
+            app_logger.error(
+                "❌ Track initial timestamp is earlier than data initial timestamp. Please adjust the track file."
+            )
+            raise ValueError(
+                "Track initial timestamp is earlier than data initial timestamp. Please adjust the track file."
+            ) 
+        if track.index[-1] > data[TimeIndexer][-1].values:
+            app_logger.error(
+                f"❌ Track final timestamp ({track.index[-1]}) is later than data final timestamp ({data[TimeIndexer][-1].values}). "
+                f"Please adjust the track file or re-download the data."
+            )
+            raise ValueError(
+                f"Track final timestamp ({track.index[-1]}) is later than data final timestamp ({data[TimeIndexer][-1].values}). "
+                f"Please adjust the track file or re-download the data."
+            )
         # If using CDS API, resample track to data time step
         if args.cdsapi:
             time_delta = int(
@@ -454,7 +493,7 @@ def process_data(
             )
             track = track[track.index.hour % time_delta == 0]
         data = data.sel({TimeIndexer: track.index.values})
-
+        app_logger.debug("✅ Track dates selection complete.")
     if (
         data[variable_list_df.loc["Longitude"]["Variable"]].min() < -180
         or data[variable_list_df.loc["Longitude"]["Variable"]].max() > 180
@@ -467,11 +506,11 @@ def process_data(
     LatIndexer = variable_list_df.loc["Latitude"]["Variable"]
     LevelIndexer = variable_list_df.loc["Vertical Level"]["Variable"]
 
-    app_logger.debug("Assigning geospatial coordinates in radians... ")
+    app_logger.debug("🌐 Assigning geospatial coordinates in radians... ")
     data = data.assign_coords({"rlats": np.deg2rad(data[LatIndexer])})
     data = data.assign_coords({"coslats": np.cos(np.deg2rad(data[LatIndexer]))})
     data = data.assign_coords({"rlons": np.deg2rad(data[LonIndexer])})
-    app_logger.debug("Ok.")
+    app_logger.debug("✅ Geospatial coordinates assigned.")
 
     # Drop unnecessary dimensions
     if 'expver' in data.coords:
@@ -496,7 +535,7 @@ def process_data(
     if args.mpas:
         data = data.drop_dims("standard_height")
 
-    app_logger.debug("Data opened successfully.")
+    app_logger.debug("✅ Data processing complete.")
     return data
 
 
@@ -515,25 +554,30 @@ def prepare_data(
         method (str): The method used for the analysis: fixed, track or choose.
         xr.Dataset: The prepared dataset for analysis.
     """
+    # Automatically use ERA5-cdsapi namelist when --cdsapi flag is set
+    if args.cdsapi:
+        varlist = "inputs/namelist_ERA5-cdsapi"
+        app_logger.info("🌐 CDS API mode detected: automatically using ERA5-compatible namelist")
+        app_logger.debug(f"📋 Using namelist: {varlist}")
 
-    app_logger.debug(f"Variables specified by the user in: {varlist}")
-    app_logger.debug(f"Attempting to read {varlist} file...")
+    app_logger.debug(f"📝 Variables specified by the user in: {varlist}")
+    app_logger.debug(f"📂 Attempting to read {varlist} file...")
     try:
         variable_list_df = pd.read_csv(varlist, sep=";", index_col=0, header=0)
     except FileNotFoundError:
-        app_logger.error("The 'namelist' text file could not be found.")
+        app_logger.error("❌ The 'namelist' text file could not be found.")
         raise
     except pd.errors.EmptyDataError:
-        app_logger.error("The 'namelist' text file is empty.")
+        app_logger.error("❌ The 'namelist' text file is empty.")
         raise
-    app_logger.debug("List of variables found:\n" + str(variable_list_df))
+    app_logger.debug("✅ Variable list loaded:\n" + str(variable_list_df))
 
     data = get_data(args, app_logger)
 
     # Check if variable_list_df matches the data
     if not set(variable_list_df["Variable"]).issubset(set(data.variables)):
         app_logger.error(
-            "The variable list does not match the data. Check if the 'namelist' text file is correct."
+            "❌ The variable list does not match the data. Check if the 'namelist' text file is correct."
         )
         raise ValueError("'namelist' text file does not match the data.")
 

@@ -50,11 +50,7 @@ The LorenzCycleToolkit supports automatic downloading of ERA5 reanalysis data fr
 
    Replace ``YOUR-UID`` and ``YOUR-API-KEY`` with your actual credentials.
 
-3. **Namelist Configuration**: Copy the ERA5-specific namelist to use ERA5 variable names:
-
-   .. code-block:: bash
-
-      cp inputs/namelist_ERA5-cdsapi inputs/namelist
+3. **Namelist Configuration**: The ``--cdsapi`` flag now **automatically** uses the ERA5-compatible namelist (``inputs/namelist_ERA5-cdsapi``). You no longer need to manually copy or configure the namelist file.
 
 **How It Works**
 
