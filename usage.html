@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Usage &mdash; LorenzCycleToolKit 1.1.7 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=370aedac"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Examples and Tutorials" href="examples_and_tutorials.html" />
+    <link rel="prev" title="Configuration" href="configuration.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            LorenzCycleToolKit
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#before-you-start">Before You Start</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#input-data-requirements">Input Data Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#system-requirements-and-performance">System Requirements and Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#fixed-framework">Fixed Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#moving-framework">Moving Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#interactive-domain-selection">Interactive Domain Selection</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#advanced-options">Advanced Options</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#custom-output-names">Custom Output Names</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-pre-computed-vorticity">Using Pre-computed Vorticity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#working-with-mpas-a-data">Working with MPAS-A Data</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#automatic-era5-data-download">Automatic ERA5 Data Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#flags">Flags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#common-issues-and-questions">Common Issues and Questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples_and_tutorials.html">Examples and Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cdsapi_example.html">CDS API - Complete Example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="results.html">Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_naming_convention.html">File Naming Convention</a></li>
+<li class="toctree-l1"><a class="reference internal" href="math.html">Mathematics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="support.html">Support and Issue Reporting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">LorenzCycleToolKit</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Usage</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/usage.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h1>
+<section id="before-you-start">
+<h2>Before You Start<a class="headerlink" href="#before-you-start" title="Link to this heading"></a></h2>
+<p>Before using the LorenzCycleToolkit, you need to configure the required input files. The specific files depend on which framework you choose:</p>
+<p><strong>Required for all frameworks:</strong></p>
+<ul class="simple">
+<li><p><strong>Namelist file</strong> (<code class="docutils literal notranslate"><span class="pre">inputs/namelist</span></code>): Specifies the variable names and units in your NetCDF file. See the <a class="reference internal" href="configuration.html"><span class="doc">Configuration</span></a> page for details on creating this file from the provided presets.</p></li>
+</ul>
+<p><strong>Required for specific frameworks:</strong></p>
+<ul class="simple">
+<li><p><strong>Fixed framework</strong> (<code class="docutils literal notranslate"><span class="pre">-f</span></code> flag): Requires <code class="docutils literal notranslate"><span class="pre">inputs/box_limits</span></code> file defining the spatial domain</p></li>
+<li><p><strong>Moving framework</strong> (<code class="docutils literal notranslate"><span class="pre">-t</span></code> flag): Requires <code class="docutils literal notranslate"><span class="pre">inputs/track</span></code> file (or custom path via <code class="docutils literal notranslate"><span class="pre">--trackfile</span></code>) defining the system’s center over time</p></li>
+<li><p><strong>Interactive framework</strong> (<code class="docutils literal notranslate"><span class="pre">-c</span></code> flag): No additional file required; domain is selected interactively</p></li>
+</ul>
+<p>For detailed information on creating these configuration files, see the <a class="reference internal" href="configuration.html"><span class="doc">Configuration</span></a> page.</p>
+</section>
+<section id="input-data-requirements">
+<h2>Input Data Requirements<a class="headerlink" href="#input-data-requirements" title="Link to this heading"></a></h2>
+<p>The LorenzCycleToolkit requires NetCDF files with specific characteristics:</p>
+<p><strong>Required Format:</strong></p>
+<ul class="simple">
+<li><p><strong>Grid type</strong>: Regular latitude-longitude grid (not supported: irregular grids, rotated poles)</p></li>
+<li><p><strong>Vertical levels</strong>: Isobaric (pressure) levels in Pa or hPa</p></li>
+<li><p><strong>Required variables</strong>:</p>
+<ul>
+<li><p>Air temperature</p></li>
+<li><p>Geopotential or geopotential height</p></li>
+<li><p>Omega (vertical velocity)</p></li>
+<li><p>Eastward wind component (u)</p></li>
+<li><p>Northward wind component (v)</p></li>
+</ul>
+</li>
+</ul>
+<p><strong>Data Preparation Best Practices:</strong></p>
+<p>To avoid memory issues and improve processing speed, it is <strong>strongly recommended</strong> to pre-process your data:</p>
+<ol class="arabic simple">
+<li><p><strong>Temporal subsetting</strong>: Extract only the time period needed for your analysis</p></li>
+<li><p><strong>Spatial subsetting</strong>: Crop to a domain slightly larger than your analysis region</p></li>
+<li><p><strong>Variable selection</strong>: Keep only the required variables listed above</p></li>
+<li><p><strong>Vertical subsetting</strong>: Include only the pressure levels needed (typically 1000-100 hPa for tropospheric studies)</p></li>
+</ol>
+<p><strong>Example: Preparing data with Python (xarray)</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+
+<span class="c1"># Open original dataset</span>
+<span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="s1">&#39;original_data.nc&#39;</span><span class="p">)</span>
+
+<span class="c1"># Subset in time (example: January 2020)</span>
+<span class="n">ds_subset</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="s1">&#39;2020-01-01&#39;</span><span class="p">,</span> <span class="s1">&#39;2020-01-31&#39;</span><span class="p">))</span>
+
+<span class="c1"># Subset in space (example: South Atlantic region)</span>
+<span class="n">ds_subset</span> <span class="o">=</span> <span class="n">ds_subset</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span>
+    <span class="n">latitude</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="o">-</span><span class="mi">60</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+    <span class="n">longitude</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="o">-</span><span class="mi">80</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="c1"># Select only required variables</span>
+<span class="n">required_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="s1">&#39;z&#39;</span><span class="p">,</span> <span class="s1">&#39;u&#39;</span><span class="p">,</span> <span class="s1">&#39;v&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">]</span>  <span class="c1"># Adjust names to your dataset</span>
+<span class="n">ds_subset</span> <span class="o">=</span> <span class="n">ds_subset</span><span class="p">[</span><span class="n">required_vars</span><span class="p">]</span>
+
+<span class="c1"># Select pressure levels (example: 1000 to 100 hPa)</span>
+<span class="n">ds_subset</span> <span class="o">=</span> <span class="n">ds_subset</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
+
+<span class="c1"># Save processed dataset</span>
+<span class="n">ds_subset</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="s1">&#39;processed_data.nc&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Example: Preparing data with CDO (Climate Data Operators)</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Select time period, spatial domain, and variables</span>
+cdo<span class="w"> </span>-select,name<span class="o">=</span>t,z,u,v,w<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-sellonlatbox,-80,20,-60,0<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-seldate,2020-01-01,2020-01-31<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-sellevel,1000,925,850,700,500,300,250,200,150,100<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>original_data.nc<span class="w"> </span>processed_data.nc
+</pre></div>
+</div>
+<p><strong>Note</strong>: Adjust variable names, coordinates, and domains according to your specific dataset.</p>
+</section>
+<section id="system-requirements-and-performance">
+<h2>System Requirements and Performance<a class="headerlink" href="#system-requirements-and-performance" title="Link to this heading"></a></h2>
+<p><strong>Memory Requirements</strong></p>
+<p>The toolkit loads entire NetCDF files into memory using xarray with dask. Typical requirements:</p>
+<ul class="simple">
+<li><p><strong>Small domain</strong> (10° × 10°, 7 days, 3-hour resolution): ~500 MB RAM</p></li>
+<li><p><strong>Medium domain</strong> (30° × 30°, 30 days, 6-hour resolution): ~2-4 GB RAM</p></li>
+<li><p><strong>Large domain</strong> (60° × 60°, 60 days, 3-hour resolution): ~8-16 GB RAM</p></li>
+</ul>
+<p><strong>Performance Tips</strong></p>
+<ol class="arabic simple">
+<li><p><strong>Pre-process your data</strong> to include only the necessary components:</p>
+<ul class="simple">
+<li><p>Time period of interest</p></li>
+<li><p>Spatial domain (with small buffer around analysis region)</p></li>
+<li><p>Pressure levels relevant to your study (e.g., 1000-100 hPa for tropospheric analyses)</p></li>
+<li><p>Required variables only (u, v, ω, T, geopotential)</p></li>
+</ul>
+</li>
+<li><p><strong>Choose appropriate temporal resolution</strong>:</p>
+<ul class="simple">
+<li><p>Synoptic-scale analysis: 6-hour intervals</p></li>
+<li><p>Mesoscale systems: 3-hour intervals</p></li>
+<li><p>High-resolution studies: 1-hour intervals (requires significantly more memory)</p></li>
+</ul>
+</li>
+<li><p><strong>For very large datasets</strong>, consider:</p>
+<ul class="simple">
+<li><p>Splitting the analysis into smaller time periods</p></li>
+<li><p>Using ERA5 on a coarser grid (0.5° instead of 0.25°)</p></li>
+<li><p>Processing days or weeks individually</p></li>
+</ul>
+</li>
+</ol>
+<p><strong>Computational Time</strong></p>
+<p>Typical processing times (on a modern desktop with 16 GB RAM):</p>
+<ul class="simple">
+<li><p>Small domain, 7 days: ~2-5 minutes</p></li>
+<li><p>Medium domain, 30 days: ~10-20 minutes</p></li>
+<li><p>Large domain, 60 days: ~30-60 minutes</p></li>
+</ul>
+<p>Time increases with:</p>
+<ul class="simple">
+<li><p>Domain size</p></li>
+<li><p>Number of timesteps</p></li>
+<li><p>Number of vertical levels</p></li>
+<li><p>Plot generation (<code class="docutils literal notranslate"><span class="pre">-p</span></code> flag)</p></li>
+<li><p>Interactive framework (<code class="docutils literal notranslate"><span class="pre">-c</span></code> flag, requires user input at each timestep)</p></li>
+</ul>
+</section>
+<section id="fixed-framework">
+<h2>Fixed Framework<a class="headerlink" href="#fixed-framework" title="Link to this heading"></a></h2>
+<p>The fixed framework analyzes a stationary spatial domain over time.</p>
+<p><strong>Prerequisites</strong></p>
+<ul class="simple">
+<li><p>Prepared NetCDF file (see “Input Data Requirements” above)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">inputs/namelist</span></code> file (see <a class="reference internal" href="configuration.html"><span class="doc">Configuration</span></a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">inputs/box_limits</span></code> file defining the domain (see <a class="reference internal" href="configuration.html"><span class="doc">Configuration</span></a>)</p></li>
+</ul>
+<p><strong>Command</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">lorenzcycletoolkit</span><span class="o">.</span><span class="n">py</span> <span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">infile</span><span class="o">.</span><span class="n">nc</span> <span class="o">-</span><span class="n">r</span> <span class="o">-</span><span class="n">f</span>
+</pre></div>
+</div>
+</section>
+<section id="moving-framework">
+<h2>Moving Framework<a class="headerlink" href="#moving-framework" title="Link to this heading"></a></h2>
+<p>The moving framework follows a moving system (e.g., a cyclone) over time.</p>
+<p><strong>Prerequisites</strong></p>
+<ul class="simple">
+<li><p>Prepared NetCDF file (see “Input Data Requirements” above)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">inputs/namelist</span></code> file (see <a class="reference internal" href="configuration.html"><span class="doc">Configuration</span></a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">inputs/track</span></code> file defining the system’s center over time (see <a class="reference internal" href="configuration.html"><span class="doc">Configuration</span></a>)</p></li>
+</ul>
+<p><strong>Command</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">lorenzcycletoolkit</span><span class="o">.</span><span class="n">py</span> <span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">infile</span><span class="o">.</span><span class="n">nc</span> <span class="o">-</span><span class="n">r</span> <span class="o">-</span><span class="n">t</span>
+</pre></div>
+</div>
+</section>
+<section id="interactive-domain-selection">
+<h2>Interactive Domain Selection<a class="headerlink" href="#interactive-domain-selection" title="Link to this heading"></a></h2>
+<p>The interactive (choose) framework allows you to manually select the analysis domain at each timestep.</p>
+<p><strong>Prerequisites</strong></p>
+<ul class="simple">
+<li><p>Prepared NetCDF file (see “Input Data Requirements” above)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">inputs/namelist</span></code> file (see <a class="reference internal" href="configuration.html"><span class="doc">Configuration</span></a>)</p></li>
+</ul>
+<p><strong>Command</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">lorenzcycletoolkit</span><span class="o">.</span><span class="n">py</span> <span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">infile</span><span class="o">.</span><span class="n">nc</span> <span class="o">-</span><span class="n">r</span> <span class="o">-</span><span class="n">c</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="advanced-options">
+<h1>Advanced Options<a class="headerlink" href="#advanced-options" title="Link to this heading"></a></h1>
+<section id="custom-output-names">
+<h2>Custom Output Names<a class="headerlink" href="#custom-output-names" title="Link to this heading"></a></h2>
+<p>By default, results are saved in <code class="docutils literal notranslate"><span class="pre">LEC_Results/&lt;inputfile&gt;_&lt;framework&gt;/</span></code>. You can customize the output directory name using the <code class="docutils literal notranslate"><span class="pre">-o/--outname</span></code> flag:</p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>data.nc<span class="w"> </span>-r<span class="w"> </span>-f<span class="w"> </span>-o<span class="w"> </span>my_cyclone_analysis
+</pre></div>
+</div>
+<p>This creates the directory: <code class="docutils literal notranslate"><span class="pre">LEC_Results/my_cyclone_analysis_fixed/</span></code></p>
+<p><strong>Use cases</strong>:</p>
+<ul class="simple">
+<li><p>Organizing multiple analyses of the same dataset with different configurations</p></li>
+<li><p>Creating descriptive names for specific case studies</p></li>
+<li><p>Avoiding overwriting previous results</p></li>
+</ul>
+</section>
+<section id="using-pre-computed-vorticity">
+<h2>Using Pre-computed Vorticity<a class="headerlink" href="#using-pre-computed-vorticity" title="Link to this heading"></a></h2>
+<p><strong>Flag</strong>: <code class="docutils literal notranslate"><span class="pre">-z</span></code> or <code class="docutils literal notranslate"><span class="pre">--zeta</span></code></p>
+<p>By default, the toolkit computes relative vorticity at 850 hPa for system tracking and visualization. If your track file already contains accurate vorticity values, use the <code class="docutils literal notranslate"><span class="pre">-z</span></code> flag to use those values instead of computing them:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>data.nc<span class="w"> </span>-r<span class="w"> </span>-t<span class="w"> </span>-z
+</pre></div>
+</div>
+<p><strong>When to use this flag</strong>:</p>
+<ul class="simple">
+<li><p>Your track file includes a vorticity column with pre-computed values</p></li>
+<li><p>Working with high-resolution data where pre-computed vorticity is more accurate</p></li>
+<li><p>Analyzing systems where a different level or method for vorticity computation is preferred</p></li>
+<li><p>Computational efficiency (skips vorticity calculation)</p></li>
+</ul>
+<p><strong>Track file format with vorticity</strong>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>time;Lat;Lon;vorticity
+2020-01-01 00:00:00;-25.0;-45.0;2.5e-5
+2020-01-01 06:00:00;-25.5;-44.5;3.2e-5
+2020-01-01 12:00:00;-26.0;-44.0;4.1e-5
+</pre></div>
+</div>
+</section>
+<section id="working-with-mpas-a-data">
+<h2>Working with MPAS-A Data<a class="headerlink" href="#working-with-mpas-a-data" title="Link to this heading"></a></h2>
+<p><strong>Flag</strong>: <code class="docutils literal notranslate"><span class="pre">-m</span></code> or <code class="docutils literal notranslate"><span class="pre">--mpas</span></code></p>
+<p>The Model for Prediction Across Scales - Atmosphere (MPAS-A) uses an unstructured mesh. When using MPAS-A data that has been processed with MPAS-BR routines (converted to pressure levels on a regular grid), use the <code class="docutils literal notranslate"><span class="pre">-m</span></code> flag:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>mpas_data.nc<span class="w"> </span>-r<span class="w"> </span>-f<span class="w"> </span>-m
+</pre></div>
+</div>
+<p><strong>MPAS-A Specific Requirements</strong>:</p>
+<ol class="arabic">
+<li><p><strong>Data preprocessing</strong>: MPAS-A data must be processed with MPAS-BR routines to:</p>
+<ul class="simple">
+<li><p>Convert from native unstructured mesh to regular lat-lon grid</p></li>
+<li><p>Interpolate from model levels to isobaric (pressure) levels</p></li>
+<li><p>Extract required variables</p></li>
+</ul>
+</li>
+<li><p><strong>Namelist configuration</strong>: Use the MPAS-A specific namelist:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cp<span class="w"> </span>inputs/namelist_MPAS-A<span class="w"> </span>inputs/namelist
+</pre></div>
+</div>
+</li>
+<li><p><strong>Dimension handling</strong>: The <code class="docutils literal notranslate"><span class="pre">-m</span></code> flag automatically handles the <code class="docutils literal notranslate"><span class="pre">standard_height</span></code> dimension present in MPAS-BR processed data</p></li>
+</ol>
+<p><strong>Example workflow</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Step 1: Prepare namelist</span>
+cp<span class="w"> </span>inputs/namelist_MPAS-A<span class="w"> </span>inputs/namelist
+
+<span class="c1"># Step 2: Prepare box_limits</span>
+cat<span class="w"> </span>&gt;<span class="w"> </span>inputs/box_limits<span class="w"> </span><span class="s">&lt;&lt; EOF</span>
+<span class="s">min_lon;-55</span>
+<span class="s">max_lon;-35</span>
+<span class="s">min_lat;-35</span>
+<span class="s">max_lat;-20</span>
+<span class="s">EOF</span>
+
+<span class="c1"># Step 3: Run analysis</span>
+python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>mpas_processed_data.nc<span class="w"> </span>-r<span class="w"> </span>-f<span class="w"> </span>-m<span class="w"> </span>-p
+</pre></div>
+</div>
+<p><strong>Note</strong>: The MPAS-A flag is only needed for data processed with MPAS-BR routines. Regular MPAS output requires additional preprocessing steps not covered by the toolkit.</p>
+</section>
+</section>
+<section id="automatic-era5-data-download">
+<h1>Automatic ERA5 Data Download<a class="headerlink" href="#automatic-era5-data-download" title="Link to this heading"></a></h1>
+<p>The LorenzCycleToolkit supports automatic downloading of ERA5 reanalysis data from the Copernicus Climate Data Store (CDS) using the <code class="docutils literal notranslate"><span class="pre">--cdsapi</span></code> flag. This feature is particularly useful when you have a track file but haven’t yet downloaded the corresponding atmospheric data.</p>
+<p><strong>Prerequisites</strong></p>
+<ol class="arabic">
+<li><p><strong>CDS API Account</strong>: Create a free account at the <a class="reference external" href="https://cds.climate.copernicus.eu/user/register">CDS registration page</a>.</p></li>
+<li><p><strong>API Key Configuration</strong>: After registration, obtain your API key from your <a class="reference external" href="https://cds.climate.copernicus.eu/user">user profile</a> and create a <code class="docutils literal notranslate"><span class="pre">.cdsapirc</span></code> file in your home directory:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>url: https://cds.climate.copernicus.eu/api
+key: YOUR-UID:YOUR-API-KEY
+</pre></div>
+</div>
+<p>Replace <code class="docutils literal notranslate"><span class="pre">YOUR-UID</span></code> and <code class="docutils literal notranslate"><span class="pre">YOUR-API-KEY</span></code> with your actual credentials.</p>
+</li>
+<li><p><strong>Namelist Configuration</strong>: The <code class="docutils literal notranslate"><span class="pre">--cdsapi</span></code> flag now <strong>automatically</strong> uses the ERA5-compatible namelist (<code class="docutils literal notranslate"><span class="pre">inputs/namelist_ERA5-cdsapi</span></code>). You no longer need to manually copy or configure the namelist file.</p></li>
+</ol>
+<p><strong>How It Works</strong></p>
+<p>When using the <code class="docutils literal notranslate"><span class="pre">--cdsapi</span></code> flag:</p>
+<ol class="arabic simple">
+<li><p>The program reads your track file to determine:
+- Temporal range (exact start and end times, not just dates)
+- Spatial domain (automatically adds a 15° buffer around track boundaries)</p></li>
+<li><p>Downloads ERA5 pressure level data with smart time detection:
+- <strong>First day</strong>: Downloads only from track start time onwards
+- <strong>Last day</strong>: Downloads only until track end time
+- <strong>Middle days</strong>: Downloads complete days (all hours)
+- <strong>Temporal resolution</strong>: Configurable via <code class="docutils literal notranslate"><span class="pre">--time-resolution</span></code> flag (default: 3 hours)
+- <strong>Variables</strong>: U and V wind components, temperature, vertical velocity (omega), geopotential
+- <strong>Pressure levels</strong>: All standard pressure levels (1000 hPa to 1 hPa)</p></li>
+<li><p>Saves the data to the filename specified as the first argument</p></li>
+</ol>
+<p>This smart time detection minimizes unnecessary downloads and reduces API costs.</p>
+<p><strong>Usage Example</strong></p>
+<p>For a track file covering January 1-3, 2020:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>my_output_file.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>-p<span class="w"> </span>--cdsapi<span class="w"> </span>--trackfile<span class="w"> </span>inputs/track_20200101.csv
+</pre></div>
+</div>
+<p><strong>Important Notes</strong></p>
+<ul class="simple">
+<li><p>The filename provided (<code class="docutils literal notranslate"><span class="pre">my_output_file.nc</span></code>) doesn’t need to exist beforehand—it will be created by the download process</p></li>
+<li><p><strong>Temporal resolution</strong>: Default is 3 hours. Using 1-hour intervals may exceed CDS API cost limits for large domains/long periods</p></li>
+<li><p>Recommended time resolutions: 3, 6, or 12 hours</p></li>
+<li><p>Download times depend on data volume and CDS server load (typically several minutes)</p></li>
+<li><p>A 15° buffer is automatically applied to ensure adequate spatial coverage</p></li>
+<li><p>If the file already exists, the download is skipped and the existing file is used</p></li>
+</ul>
+<p><strong>Troubleshooting</strong></p>
+<ul class="simple">
+<li><p><strong>Authentication errors</strong>: Verify your <code class="docutils literal notranslate"><span class="pre">.cdsapirc</span></code> file is correctly formatted and contains valid credentials</p></li>
+<li><p><strong>Slow downloads</strong>: CDS API can be slow during peak hours; use the <code class="docutils literal notranslate"><span class="pre">-v</span></code> flag for detailed progress logging</p></li>
+<li><p><strong>File size</strong>: ERA5 files can be large (&gt;1 GB); ensure adequate disk space</p></li>
+</ul>
+</section>
+<section id="flags">
+<h1>Flags<a class="headerlink" href="#flags" title="Link to this heading"></a></h1>
+<ul class="simple">
+<li><p><cite>-r</cite>, <cite>–residuals</cite>: Compute the Dissipation and Generation terms as residuals.</p></li>
+<li><p><cite>-f</cite>, <cite>–fixed</cite>: Compute the energetics for a fixed domain specified by the ‘box_limits’ file.</p></li>
+<li><p><cite>-t</cite>, <cite>–track</cite>: Define the domain using a track file.</p></li>
+<li><p><cite>-c</cite>, <cite>–choose</cite>: Interactively select the domain for each time step.</p></li>
+<li><p><cite>-o</cite>, <cite>–outname</cite>: Specify an output name for the results.</p></li>
+<li><p><cite>-z</cite>, <cite>–zeta</cite>: Use the vorticity from the track file instead of computing it at 850 hPa.</p></li>
+<li><p><cite>-m</cite>, <cite>–mpas</cite>: Specify this flag if working with MPAS-A data processed with MPAS-BR routines.</p></li>
+<li><p><cite>-p</cite>, <cite>–plots</cite>: Generate plots.</p></li>
+<li><p><cite>-v</cite>, <cite>–verbosity</cite>: Enable debug logging for detailed output.</p></li>
+<li><p><cite>–cdsapi</cite>: Automatically download ERA5 data from CDS API based on track file (experimental).</p></li>
+<li><p><cite>–time-resolution</cite>: Temporal resolution in hours for CDS API downloads (default: 3). Recommended values: 3, 6, or 12 hours to avoid exceeding API cost limits.</p></li>
+<li><p><cite>–trackfile</cite>: Specify a custom track file path (default: <code class="docutils literal notranslate"><span class="pre">inputs/track</span></code>).</p></li>
+<li><p><cite>–box_limits</cite>: Specify a custom box limits file path (default: <code class="docutils literal notranslate"><span class="pre">inputs/box_limits</span></code>).</p></li>
+</ul>
+<p>Ensure that the provided NetCDF file and the <cite>namelist</cite> configuration align with the selected flags.</p>
+</section>
+<section id="common-issues-and-questions">
+<h1>Common Issues and Questions<a class="headerlink" href="#common-issues-and-questions" title="Link to this heading"></a></h1>
+<p>If you encounter problems:</p>
+<ul class="simple">
+<li><p><strong>Track file timesteps don’t match data</strong>: See <a class="reference internal" href="troubleshooting.html"><span class="doc">Troubleshooting and FAQ</span></a> section on “Track File Issues”</p></li>
+<li><p><strong>Units and variable specifications</strong>: See <a class="reference internal" href="troubleshooting.html"><span class="doc">Troubleshooting and FAQ</span></a> section on “Units and Variable Specifications”</p></li>
+<li><p><strong>Memory or performance issues</strong>: See <a class="reference internal" href="troubleshooting.html"><span class="doc">Troubleshooting and FAQ</span></a> section on “Memory and Performance Issues”</p></li>
+<li><p><strong>Configuration errors</strong>: See <a class="reference internal" href="troubleshooting.html"><span class="doc">Troubleshooting and FAQ</span></a> section on “Configuration Issues”</p></li>
+<li><p><strong>CDS API problems</strong>: See <a class="reference internal" href="troubleshooting.html"><span class="doc">Troubleshooting and FAQ</span></a> section on “CDS API Issues”</p></li>
+</ul>
+<p>For a comprehensive list of common issues and solutions, visit the <a class="reference internal" href="troubleshooting.html"><span class="doc">Troubleshooting and FAQ</span></a> page.</p>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="configuration.html" class="btn btn-neutral float-left" title="Configuration" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="examples_and_tutorials.html" class="btn btn-neutral float-right" title="Examples and Tutorials" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Danilo Couto de Souza.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

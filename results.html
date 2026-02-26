@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Results &mdash; LorenzCycleToolKit 1.1.7 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=370aedac"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Troubleshooting and FAQ" href="troubleshooting.html" />
+    <link rel="prev" title="CDS API - Complete Example" href="cdsapi_example.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            LorenzCycleToolKit
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#advanced-options">Advanced Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#automatic-era5-data-download">Automatic ERA5 Data Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#flags">Flags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#common-issues-and-questions">Common Issues and Questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples_and_tutorials.html">Examples and Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cdsapi_example.html">CDS API - Complete Example</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Results</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#main-results-file">Main Results File</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#log-file">Log File</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_naming_convention.html">File Naming Convention</a></li>
+<li class="toctree-l1"><a class="reference internal" href="math.html">Mathematics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="support.html">Support and Issue Reporting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">LorenzCycleToolKit</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Results</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/results.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="results">
+<h1>Results<a class="headerlink" href="#results" title="Link to this heading"></a></h1>
+<p>The <cite>LorenzCycleToolkit</cite> generates a directory structure to store the results of the Lorenz Energy Cycle (LEC) calculations. This structure includes CSV files containing the calculated terms, a log file, and optional figures if the plotting flag is enabled. Here’s an example of the results directory structure:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>LEC_Results/
+├──<span class="w"> </span>testdata_ERA5_fixed
+│<span class="w">   </span>├──<span class="w"> </span>Figures
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>LEC
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>boxplots
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>hovmollers
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>timeseries
+│<span class="w">   </span>├──<span class="w"> </span>log.testdata_ERA5
+│<span class="w">   </span>├──<span class="w"> </span>results_vertical_levels
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Ae_level.csv
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Az_level.csv
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Ca_1_level.csv
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Ck_1_level.csv
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Cz_1_level.csv
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Ge_level.csv
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Gz_level.csv
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Ke_level.csv
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Kz_level.csv
+│<span class="w">   </span>├──<span class="w"> </span>testdata_ERA5_fixed_results.csv
+</pre></div>
+</div>
+<p>Each subdirectory within the <cite>LEC_Results</cite> directory corresponds to a different dataset or analysis run. The structure of each subdirectory includes:</p>
+<ul>
+<li><p><strong>Figures/</strong>: Contains figures generated when the <code class="docutils literal notranslate"><span class="pre">-p</span></code> flag is used.</p>
+<ul class="simple">
+<li><p><strong>LEC/</strong>: Contains LEC diagrams for each time step.</p></li>
+<li><p><strong>boxplots/</strong>: Contains boxplots of the LEC terms for each time step.</p></li>
+<li><p><strong>hovmollers/</strong>: Contains Hovmöller diagrams of the LEC terms.</p></li>
+<li><p><strong>timeseries/</strong>: Contains time series plots of the LEC terms.</p></li>
+</ul>
+</li>
+<li><p><strong>log.*</strong> (log file): Contains detailed information about the processing and calculations performed during the analysis.</p></li>
+<li><p><strong>results_vertical_levels/</strong>: Contains CSV files for each LEC term at various vertical levels. Each conversion term may be split into multiple sub-terms for detailed analysis. For example:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Ae_level.csv</span></code>: Contains the values of the eddy component of Available Potential Energy (Ae) at different levels.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Az_level.csv</span></code>: Contains the values of the zonal component of Available Potential Energy (Az) at different levels.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ca_1_level.csv</span></code>, <code class="docutils literal notranslate"><span class="pre">Ca_2_level.csv</span></code>: Contains the values of the conversion term Ca at different levels, split into multiple sub-terms for detailed horizontal and vertical advection analysis.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ce_level.csv</span></code>: Contains the values of the conversion term Ce at different levels.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ck_1_level.csv</span></code>, <code class="docutils literal notranslate"><span class="pre">Ck_2_level.csv</span></code>, <code class="docutils literal notranslate"><span class="pre">Ck_3_level.csv</span></code>, <code class="docutils literal notranslate"><span class="pre">Ck_4_level.csv</span></code>, <code class="docutils literal notranslate"><span class="pre">Ck_5_level.csv</span></code>: Contains the values of the conversion term Ck at different levels, split into five sub-terms representing different physical processes (horizontal shear, meridional momentum transport, Coriolis effect, vertical shear).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Cz_1_level.csv</span></code>, <code class="docutils literal notranslate"><span class="pre">Cz_2_level.csv</span></code>: Contains the values of the conversion term Cz at different levels, split into horizontal and vertical components.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ge_level.csv</span></code>: Contains the values of the generation term Ge (eddy) at different levels.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Gz_level.csv</span></code>: Contains the values of the generation term Gz (zonal) at different levels.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ke_level.csv</span></code>: Contains the values of the eddy component of Kinetic Energy (Ke) at different levels.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Kz_level.csv</span></code>: Contains the values of the zonal component of Kinetic Energy (Kz) at different levels.</p></li>
+</ul>
+<p><strong>Note</strong>: The split of conversion terms into sub-components allows for detailed analysis of the physical processes contributing to energy transformations at each vertical level.</p>
+</li>
+</ul>
+<section id="main-results-file">
+<h2>Main Results File<a class="headerlink" href="#main-results-file" title="Link to this heading"></a></h2>
+<p>The main CSV file (e.g., <code class="docutils literal notranslate"><span class="pre">testdata_ERA5_fixed_results.csv</span></code>) contains the integrated LEC terms over the entire atmospheric column for each timestep. This file provides a time series of the energy cycle and is the primary output for analysis.</p>
+<p><strong>File Columns</strong>:</p>
+<ul>
+<li><p><strong>Time</strong>: Timestamp of each analysis step</p></li>
+<li><p><strong>Az, Ae, Kz, Ke</strong>: Energy reservoirs (J/m²), integrated over all pressure levels:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Az</span></code>: Zonal Available Potential Energy</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ae</span></code>: Eddy Available Potential Energy</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Kz</span></code>: Zonal Kinetic Energy</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ke</span></code>: Eddy Kinetic Energy</p></li>
+</ul>
+</li>
+<li><p><strong>Ca, Ce, Cz, Ck</strong>: Conversion terms (W/m²), representing energy transformations:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Ca</span></code>: Conversion between Az and Ae</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ce</span></code>: Conversion from Ae to Ke</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Cz</span></code>: Conversion from Az to Kz</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ck</span></code>: Conversion from Ke to Kz</p></li>
+</ul>
+</li>
+<li><p><strong>BAz, BAe, BKz, BKe</strong>: Boundary terms (W/m²), energy transport across domain boundaries (only for regional analyses)</p></li>
+<li><p><strong>Generation and Dissipation terms</strong> (W/m²):</p>
+<p>When using <code class="docutils literal notranslate"><span class="pre">-r/--residuals</span></code> flag:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">RGz,</span> <span class="pre">RGe</span></code>: Residual generation terms (include generation + numerical errors)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">RKz,</span> <span class="pre">RKe</span></code>: Residual dissipation terms (include boundary flux + dissipation + numerical errors)</p></li>
+</ul>
+<p>When <strong>not</strong> using <code class="docutils literal notranslate"><span class="pre">-r</span></code> flag:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Gz,</span> <span class="pre">Ge</span></code>: Generation terms (computed from diabatic heating)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Dz,</span> <span class="pre">De</span></code>: Dissipation terms (computed from friction)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BΦz,</span> <span class="pre">BΦe</span></code>: Geopotential flux terms</p></li>
+</ul>
+</li>
+</ul>
+<p><strong>Usage Example</strong>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="c1"># Load results</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;LEC_Results/testdata_ERA5_fixed/testdata_ERA5_fixed_results.csv&#39;</span><span class="p">,</span>
+                 <span class="n">parse_dates</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Time&#39;</span><span class="p">],</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;Time&#39;</span><span class="p">)</span>
+
+<span class="c1"># Plot energy reservoirs</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">df</span><span class="p">[[</span><span class="s1">&#39;Az&#39;</span><span class="p">,</span> <span class="s1">&#39;Ae&#39;</span><span class="p">,</span> <span class="s1">&#39;Kz&#39;</span><span class="p">,</span> <span class="s1">&#39;Ke&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Energy (J/m²)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Lorenz Energy Cycle - Energy Reservoirs&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="log-file">
+<h2>Log File<a class="headerlink" href="#log-file" title="Link to this heading"></a></h2>
+<p>The log file (<code class="docutils literal notranslate"><span class="pre">log.&lt;filename&gt;</span></code>) provides detailed information about the processing and calculations performed during the analysis. It includes:</p>
+<ul class="simple">
+<li><p>Input data information and validation checks</p></li>
+<li><p>Configuration used for the analysis</p></li>
+<li><p>Processing steps and timing information</p></li>
+<li><p>Any errors or warnings encountered during execution</p></li>
+<li><p>Download progress (when using <code class="docutils literal notranslate"><span class="pre">--cdsapi</span></code>)</p></li>
+</ul>
+<p>Use the <code class="docutils literal notranslate"><span class="pre">-v/--verbosity</span></code> flag for more detailed debug-level logging.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="cdsapi_example.html" class="btn btn-neutral float-left" title="CDS API - Complete Example" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="troubleshooting.html" class="btn btn-neutral float-right" title="Troubleshooting and FAQ" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Danilo Couto de Souza.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

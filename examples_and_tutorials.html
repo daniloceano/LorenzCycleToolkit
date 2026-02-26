@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Examples and Tutorials &mdash; LorenzCycleToolKit 1.1.7 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=370aedac"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="CDS API - Complete Example" href="cdsapi_example.html" />
+    <link rel="prev" title="Usage" href="usage.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            LorenzCycleToolKit
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#advanced-options">Advanced Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#automatic-era5-data-download">Automatic ERA5 Data Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#flags">Flags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#common-issues-and-questions">Common Issues and Questions</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Examples and Tutorials</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#tutorial-1-basic-fixed-framework-analysis">Tutorial 1: Basic Fixed Framework Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tutorial-2-moving-framework-with-track-file">Tutorial 2: Moving Framework with Track File</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tutorial-3-downloading-and-analyzing-era5-data">Tutorial 3: Downloading and Analyzing ERA5 Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tutorial-4-interactive-domain-selection">Tutorial 4: Interactive Domain Selection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#advanced-example-batch-processing-multiple-cases">Advanced Example: Batch Processing Multiple Cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#next-steps">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cdsapi_example.html">CDS API - Complete Example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="results.html">Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_naming_convention.html">File Naming Convention</a></li>
+<li class="toctree-l1"><a class="reference internal" href="math.html">Mathematics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="support.html">Support and Issue Reporting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">LorenzCycleToolKit</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Examples and Tutorials</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/examples_and_tutorials.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="examples-and-tutorials">
+<h1>Examples and Tutorials<a class="headerlink" href="#examples-and-tutorials" title="Link to this heading"></a></h1>
+<p>This page provides step-by-step tutorials progressing from basic to advanced usage. Each tutorial includes objectives, estimated time, and detailed instructions.</p>
+<section id="tutorial-1-basic-fixed-framework-analysis">
+<h2>Tutorial 1: Basic Fixed Framework Analysis<a class="headerlink" href="#tutorial-1-basic-fixed-framework-analysis" title="Link to this heading"></a></h2>
+<p><strong>Objective</strong>: Calculate the Lorenz Energy Cycle for a fixed region using sample data</p>
+<p><strong>Estimated time</strong>: 10 minutes</p>
+<p><strong>Prerequisites</strong>: LorenzCycleToolkit installed and activated</p>
+<p><strong>Step 1: Prepare the namelist file</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">namelist</span></code> file specifies the variable names and units in your NetCDF file. For this example using NCEP-R2 data, copy the appropriate preset:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cp<span class="w"> </span>inputs/namelist_NCEP-R2<span class="w"> </span>inputs/namelist
+</pre></div>
+</div>
+<p>The namelist should look like this:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>;standard_name;Variable;Units
+Air Temperature;air_temperature;TMP_2_ISBL;K
+Geopotential Height;geopotential_height;HGT_2_ISBL;m
+Omega Velocity;omega;V_VEL_2_ISBL;Pa/s
+Eastward Wind Component;eastward_wind;U_GRD_2_ISBL;m/s
+Northward Wind Component;northward_wind;V_GRD_2_ISBL;m/s
+Longitude;;lon_2
+Latitude;;lat_2
+Time;;initial_time0_hours
+Vertical Level;;lv_ISBL3
+</pre></div>
+</div>
+<p><strong>Step 2: Prepare the box_limits file</strong></p>
+<p>Create or edit <code class="docutils literal notranslate"><span class="pre">inputs/box_limits</span></code> to define your spatial domain. For this example, we’ll analyze a region over the South Atlantic:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cat<span class="w"> </span>&gt;<span class="w"> </span>inputs/box_limits<span class="w"> </span><span class="s">&lt;&lt; EOF</span>
+<span class="s">min_lon;-60</span>
+<span class="s">max_lon;-30</span>
+<span class="s">min_lat;-42.5</span>
+<span class="s">max_lat;-17.5</span>
+<span class="s">EOF</span>
+</pre></div>
+</div>
+<p><strong>Step 3: Run the analysis</strong></p>
+<p>Execute the LorenzCycleToolkit with the fixed framework. The <code class="docutils literal notranslate"><span class="pre">-r</span></code> flag computes generation and dissipation as residuals, and <code class="docutils literal notranslate"><span class="pre">-p</span></code> generates plots:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>samples/testdata_NCEP-R2.nc<span class="w"> </span>-r<span class="w"> </span>-f<span class="w"> </span>-p
+</pre></div>
+</div>
+<p><strong>Step 4: Check the results</strong></p>
+<p>Results are saved in <code class="docutils literal notranslate"><span class="pre">LEC_Results/testdata_NCEP-R2_fixed/</span></code>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>LEC_Results/testdata_NCEP-R2_fixed/
+├── testdata_NCEP-R2_fixed_results.csv    # Main time series results
+├── log.testdata_NCEP-R2                   # Processing log
+├── results_vertical_levels/               # Level-by-level results
+│   ├── Az_level.csv
+│   ├── Ae_level.csv
+│   └── ...
+└── Figures/                               # Visualizations
+    ├── LEC/                               # LEC diagrams
+    ├── boxplots/                          # Statistical distributions
+    ├── hovmollers/                        # Vertical-time diagrams
+    └── timeseries/                        # Time series plots
+</pre></div>
+</div>
+<p><strong>Step 5: Analyze the output</strong></p>
+<p>Open the main results file to examine the energy cycle:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="c1"># Load results</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;LEC_Results/testdata_NCEP-R2_fixed/testdata_NCEP-R2_fixed_results.csv&#39;</span><span class="p">,</span>
+                 <span class="n">parse_dates</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Time&#39;</span><span class="p">],</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;Time&#39;</span><span class="p">)</span>
+
+<span class="c1"># Display first few rows</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
+
+<span class="c1"># Quick visualization</span>
+<span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">ax1</span><span class="p">,</span> <span class="n">ax2</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+
+<span class="c1"># Energy reservoirs</span>
+<span class="n">df</span><span class="p">[[</span><span class="s1">&#39;Az&#39;</span><span class="p">,</span> <span class="s1">&#39;Ae&#39;</span><span class="p">,</span> <span class="s1">&#39;Kz&#39;</span><span class="p">,</span> <span class="s1">&#39;Ke&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Energy (J/m²)&#39;</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Energy Reservoirs&#39;</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s1">&#39;best&#39;</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Conversion terms</span>
+<span class="n">df</span><span class="p">[[</span><span class="s1">&#39;Ca&#39;</span><span class="p">,</span> <span class="s1">&#39;Ce&#39;</span><span class="p">,</span> <span class="s1">&#39;Cz&#39;</span><span class="p">,</span> <span class="s1">&#39;Ck&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax2</span><span class="p">)</span>
+<span class="n">ax2</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Conversion (W/m²)&#39;</span><span class="p">)</span>
+<span class="n">ax2</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Conversion Terms&#39;</span><span class="p">)</span>
+<span class="n">ax2</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s1">&#39;best&#39;</span><span class="p">)</span>
+<span class="n">ax2</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><strong>Understanding the results</strong>:</p>
+<ul class="simple">
+<li><p><strong>Positive Az, Ae</strong>: Indicates potential energy stored in temperature gradients</p></li>
+<li><p><strong>Positive Kz, Ke</strong>: Indicates kinetic energy of atmospheric motions</p></li>
+<li><p><strong>Positive Ca</strong>: Energy conversion from zonal to eddy APE (baroclinic instability)</p></li>
+<li><p><strong>Positive Ce</strong>: Energy conversion from eddy APE to eddy KE (cyclone intensification)</p></li>
+<li><p><strong>Positive Ck</strong>: Energy conversion from eddy to zonal KE (barotropic conversion)</p></li>
+<li><p><strong>Positive Cz</strong>: Energy conversion from zonal APE to zonal KE</p></li>
+</ul>
+</section>
+<section id="tutorial-2-moving-framework-with-track-file">
+<h2>Tutorial 2: Moving Framework with Track File<a class="headerlink" href="#tutorial-2-moving-framework-with-track-file" title="Link to this heading"></a></h2>
+<p><strong>Objective</strong>: Analyze a moving atmospheric system (e.g., cyclone) using a track file</p>
+<p><strong>Estimated time</strong>: 15 minutes</p>
+<p><strong>Prerequisites</strong>: Tutorial 1 completed</p>
+<p><strong>Step 1: Prepare the track file</strong></p>
+<p>Create a track file defining your system’s center over time. The file must use semicolons as delimiters:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cat<span class="w"> </span>&gt;<span class="w"> </span>inputs/track<span class="w"> </span><span class="s">&lt;&lt; EOF</span>
+<span class="s">time;Lat;Lon</span>
+<span class="s">2005-08-08 00:00:00;-22.5;-45.0</span>
+<span class="s">2005-08-08 06:00:00;-22.6;-44.9</span>
+<span class="s">2005-08-08 12:00:00;-22.7;-44.8</span>
+<span class="s">2005-08-08 18:00:00;-22.8;-44.7</span>
+<span class="s">2005-08-09 00:00:00;-22.9;-44.6</span>
+<span class="s">EOF</span>
+</pre></div>
+</div>
+<p>For this tutorial, you can use the provided test track:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>samples/testdata_NCEP-R2.nc<span class="w"> </span>-r<span class="w"> </span>-t<span class="w"> </span>-p<span class="w"> </span>--trackfile<span class="w"> </span>inputs/track_testdata_NCEP-R2
+</pre></div>
+</div>
+<p><strong>Step 2: Configure namelist (same as Tutorial 1)</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cp<span class="w"> </span>inputs/namelist_NCEP-R2<span class="w"> </span>inputs/namelist
+</pre></div>
+</div>
+<p><strong>Step 3: Run the analysis</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>samples/testdata_NCEP-R2.nc<span class="w"> </span>-r<span class="w"> </span>-t<span class="w"> </span>-p<span class="w"> </span>--trackfile<span class="w"> </span>inputs/track
+</pre></div>
+</div>
+<p>The moving framework automatically follows the system center, using a domain that moves with the tracked feature.</p>
+<p><strong>Step 4: Examine track-specific output</strong></p>
+<p>The moving framework produces additional visualizations in <code class="docutils literal notranslate"><span class="pre">Figures/</span></code>:</p>
+<ul class="simple">
+<li><p><strong>Track maps</strong>: Show the system trajectory with domain boxes</p></li>
+<li><p><strong>Time-evolving LEC diagrams</strong>: Show how energy cycle changes as system moves</p></li>
+</ul>
+<p><strong>Differences from fixed framework</strong>:</p>
+<ul class="simple">
+<li><p>Domain follows the system (Semi-Lagrangian approach)</p></li>
+<li><p>Better for studying individual cyclones or moving systems</p></li>
+<li><p>Reduces influence of features entering/leaving domain</p></li>
+<li><p>Boundary terms represent actual system interaction with environment</p></li>
+</ul>
+</section>
+<section id="tutorial-3-downloading-and-analyzing-era5-data">
+<h2>Tutorial 3: Downloading and Analyzing ERA5 Data<a class="headerlink" href="#tutorial-3-downloading-and-analyzing-era5-data" title="Link to this heading"></a></h2>
+<p><strong>Objective</strong>: Download ERA5 data using CDS API and perform LEC analysis</p>
+<p><strong>Estimated time</strong>: 30-60 minutes (depending on download speed)</p>
+<p><strong>Prerequisites</strong>: CDS API account and credentials configured</p>
+<p><strong>Step 1: Setup CDS API credentials</strong></p>
+<p>Create or edit <code class="docutils literal notranslate"><span class="pre">~/.cdsapirc</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cat<span class="w"> </span>&gt;<span class="w"> </span>~/.cdsapirc<span class="w"> </span><span class="s">&lt;&lt; EOF</span>
+<span class="s">url: https://cds.climate.copernicus.eu/api</span>
+<span class="s">key: YOUR-UID:YOUR-API-KEY</span>
+<span class="s">EOF</span>
+</pre></div>
+</div>
+<p>Replace <code class="docutils literal notranslate"><span class="pre">YOUR-UID:YOUR-API-KEY</span></code> with your credentials from <a class="reference external" href="https://cds.climate.copernicus.eu/user">https://cds.climate.copernicus.eu/user</a></p>
+<p><strong>Step 2: Prepare track file</strong></p>
+<p>Create a track file for the period you want to analyze:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cat<span class="w"> </span>&gt;<span class="w"> </span>inputs/track_era5_example<span class="w"> </span><span class="s">&lt;&lt; EOF</span>
+<span class="s">time;Lat;Lon</span>
+<span class="s">2020-06-15 00:00:00;-30.0;-50.0</span>
+<span class="s">2020-06-15 06:00:00;-30.5;-49.5</span>
+<span class="s">2020-06-15 12:00:00;-31.0;-49.0</span>
+<span class="s">2020-06-15 18:00:00;-31.5;-48.5</span>
+<span class="s">2020-06-16 00:00:00;-32.0;-48.0</span>
+<span class="s">EOF</span>
+</pre></div>
+</div>
+<p><strong>Step 3: Run with automatic download</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">--cdsapi</span></code> flag triggers automatic ERA5 download. The namelist is configured automatically:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>era5_cyclone_2020.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>-p<span class="w"> </span>--cdsapi<span class="w"> </span>--trackfile<span class="w"> </span>inputs/track_era5_example
+</pre></div>
+</div>
+<p><strong>What happens</strong>:</p>
+<ol class="arabic simple">
+<li><p>Reads track file to determine time range and spatial domain</p></li>
+<li><p>Adds 15° buffer around track boundaries</p></li>
+<li><p>Downloads ERA5 data day-by-day from CDS</p></li>
+<li><p>Saves combined data to <code class="docutils literal notranslate"><span class="pre">era5_cyclone_2020.nc</span></code></p></li>
+<li><p>Performs LEC analysis automatically</p></li>
+</ol>
+<p><strong>Step 4: Re-run without re-downloading</strong></p>
+<p>If the NetCDF file already exists, the toolkit skips the download:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># This will use existing era5_cyclone_2020.nc</span>
+python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>era5_cyclone_2020.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>-p<span class="w"> </span>--cdsapi<span class="w"> </span>--trackfile<span class="w"> </span>inputs/track_era5_example
+</pre></div>
+</div>
+<p><strong>Controlling temporal resolution</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Download with 6-hour resolution (faster, less data)</span>
+python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>era5_6h.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>-p<span class="w"> </span>--cdsapi<span class="w"> </span>--time-resolution<span class="w"> </span><span class="m">6</span><span class="w"> </span>--trackfile<span class="w"> </span>inputs/track_era5_example
+</pre></div>
+</div>
+<p><strong>For more details</strong>, see <a class="reference internal" href="cdsapi_example.html"><span class="doc">CDS API - Complete Example</span></a>.</p>
+</section>
+<section id="tutorial-4-interactive-domain-selection">
+<h2>Tutorial 4: Interactive Domain Selection<a class="headerlink" href="#tutorial-4-interactive-domain-selection" title="Link to this heading"></a></h2>
+<p><strong>Objective</strong>: Manually select analysis domain at each timestep</p>
+<p><strong>Estimated time</strong>: Variable (depends on number of timesteps)</p>
+<p><strong>When to use</strong>: When you want to manually adjust the domain based on visual inspection of meteorological fields at each time</p>
+<p><strong>Step 1: Prepare namelist</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cp<span class="w"> </span>inputs/namelist_NCEP-R2<span class="w"> </span>inputs/namelist
+</pre></div>
+</div>
+<p><strong>Step 2: Run with interactive mode</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>samples/testdata_NCEP-R2.nc<span class="w"> </span>-r<span class="w"> </span>-c
+</pre></div>
+</div>
+<p><strong>Step 3: Select domain interactively</strong></p>
+<p>For each timestep, a map appears showing meteorological fields. Click on the map to define:</p>
+<ol class="arabic simple">
+<li><p>First click: Northwestern corner</p></li>
+<li><p>Second click: Southeastern corner</p></li>
+</ol>
+<a class="reference internal image-reference" href="https://user-images.githubusercontent.com/56005607/214922008-5b7c094f-c160-4415-a528-07cc58730827.png"><img alt="https://user-images.githubusercontent.com/56005607/214922008-5b7c094f-c160-4415-a528-07cc58730827.png" src="https://user-images.githubusercontent.com/56005607/214922008-5b7c094f-c160-4415-a528-07cc58730827.png" style="width: 350px;" /></a>
+<p>The toolkit then computes LEC for that domain and proceeds to the next timestep.</p>
+<p><strong>Use cases</strong>:</p>
+<ul class="simple">
+<li><p>Analyzing systems with irregular shapes</p></li>
+<li><p>Studies requiring domain adjustment based on synoptic patterns</p></li>
+<li><p>Exploratory analysis to understand system evolution</p></li>
+</ul>
+</section>
+<section id="advanced-example-batch-processing-multiple-cases">
+<h2>Advanced Example: Batch Processing Multiple Cases<a class="headerlink" href="#advanced-example-batch-processing-multiple-cases" title="Link to this heading"></a></h2>
+<p><strong>Objective</strong>: Process multiple cyclone cases efficiently</p>
+<p><strong>Estimated time</strong>: Variable</p>
+<p><strong>Scenario</strong>: You have multiple cyclone track files and want to process them all</p>
+<p><strong>Step 1: Organize your data</strong></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>inputs/
+├── tracks/
+│   ├── cyclone_20200115.csv
+│   ├── cyclone_20200223.csv
+│   └── cyclone_20200315.csv
+└── data/
+    ├── cyclone_20200115_ERA5.nc
+    ├── cyclone_20200223_ERA5.nc
+    └── cyclone_20200315_ERA5.nc
+</pre></div>
+</div>
+<p><strong>Step 2: Create a batch processing script</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/bin/bash</span>
+<span class="c1"># batch_process.sh</span>
+
+<span class="c1"># Prepare namelist</span>
+cp<span class="w"> </span>inputs/namelist_ERA5-cdsapi<span class="w"> </span>inputs/namelist
+
+<span class="c1"># Process each case</span>
+<span class="k">for</span><span class="w"> </span><span class="k">case</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>cyclone_20200115<span class="w"> </span>cyclone_20200223<span class="w"> </span>cyclone_20200315<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Processing </span><span class="nv">$case</span><span class="s2">...&quot;</span>
+<span class="w">    </span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>inputs/data/<span class="si">${</span><span class="nv">case</span><span class="si">}</span>_ERA5.nc<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>-t<span class="w"> </span>-r<span class="w"> </span>-p<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>--trackfile<span class="w"> </span>inputs/tracks/<span class="si">${</span><span class="nv">case</span><span class="si">}</span>.csv<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>-o<span class="w"> </span><span class="si">${</span><span class="nv">case</span><span class="si">}</span>_analysis
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Completed </span><span class="nv">$case</span><span class="s2">&quot;</span>
+<span class="k">done</span>
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;All cases processed!&quot;</span>
+</pre></div>
+</div>
+<p><strong>Step 3: Run the batch script</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>chmod<span class="w"> </span>+x<span class="w"> </span>batch_process.sh
+./batch_process.sh
+</pre></div>
+</div>
+<p><strong>Step 4: Compare results</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="n">cases</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;cyclone_20200115&#39;</span><span class="p">,</span> <span class="s1">&#39;cyclone_20200223&#39;</span><span class="p">,</span> <span class="s1">&#39;cyclone_20200315&#39;</span><span class="p">]</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">sharex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">case</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cases</span><span class="p">):</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;LEC_Results/</span><span class="si">{</span><span class="n">case</span><span class="si">}</span><span class="s1">_analysis_track/</span><span class="si">{</span><span class="n">case</span><span class="si">}</span><span class="s1">_analysis_track_results.csv&#39;</span><span class="p">,</span>
+                     <span class="n">parse_dates</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Time&#39;</span><span class="p">],</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;Time&#39;</span><span class="p">)</span>
+
+    <span class="n">axes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Ke&#39;</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Ke&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Ae&#39;</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Ae&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Energy (J/m²)&#39;</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">case</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+    <span class="n">axes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s1">&#39;comparison_all_cases.png&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="next-steps">
+<h2>Next Steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
+<p>After completing these tutorials:</p>
+<ul class="simple">
+<li><p>Explore the <a class="reference internal" href="results.html"><span class="doc">Results</span></a> section to understand all output files in detail</p></li>
+<li><p>Review <a class="reference internal" href="math.html"><span class="doc">Mathematics</span></a> for detailed mathematical formulations of each term</p></li>
+<li><p>Check <a class="reference internal" href="contributing.html"><span class="doc">Contributing</span></a> if you want to contribute to the project</p></li>
+<li><p>Visit <a class="reference internal" href="support.html"><span class="doc">Support and Issue Reporting</span></a> for help with specific issues</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="usage.html" class="btn btn-neutral float-left" title="Usage" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="cdsapi_example.html" class="btn btn-neutral float-right" title="CDS API - Complete Example" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Danilo Couto de Souza.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

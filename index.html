@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LorenzCycleToolkit &mdash; LorenzCycleToolKit 1.1.7 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=370aedac"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Overview" href="overview.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            LorenzCycleToolKit
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#advanced-options">Advanced Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#automatic-era5-data-download">Automatic ERA5 Data Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#flags">Flags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#common-issues-and-questions">Common Issues and Questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples_and_tutorials.html">Examples and Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cdsapi_example.html">CDS API - Complete Example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="results.html">Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_naming_convention.html">File Naming Convention</a></li>
+<li class="toctree-l1"><a class="reference internal" href="math.html">Mathematics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="support.html">Support and Issue Reporting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">LorenzCycleToolKit</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">LorenzCycleToolkit</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="lorenzcycletoolkit">
+<h1>LorenzCycleToolkit<a class="headerlink" href="#lorenzcycletoolkit" title="Link to this heading"></a></h1>
+<p>Welcome to the LorenzCycleToolkit documentation! This toolkit is designed to calculate the Lorenz Energy Cycle (LEC) for specific atmospheric regions.</p>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#what-is-the-lorenz-energy-cycle">What is the Lorenz Energy Cycle?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#mathematical-framework">Mathematical Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#getting-started">Getting Started</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#installation-methods">Installation Methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#next-steps">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#namelist-file">Namelist File</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#box-limits-file-optional">Box Limits File (Optional)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#track-file-optional">Track File (Optional)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#namelist-for-era5-data-cds-api">Namelist for ERA5 Data (CDS API)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#next-steps">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#before-you-start">Before You Start</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#input-data-requirements">Input Data Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#system-requirements-and-performance">System Requirements and Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#fixed-framework">Fixed Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#moving-framework">Moving Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#interactive-domain-selection">Interactive Domain Selection</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#advanced-options">Advanced Options</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#custom-output-names">Custom Output Names</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#using-pre-computed-vorticity">Using Pre-computed Vorticity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#working-with-mpas-a-data">Working with MPAS-A Data</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#automatic-era5-data-download">Automatic ERA5 Data Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#flags">Flags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#common-issues-and-questions">Common Issues and Questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples_and_tutorials.html">Examples and Tutorials</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples_and_tutorials.html#tutorial-1-basic-fixed-framework-analysis">Tutorial 1: Basic Fixed Framework Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples_and_tutorials.html#tutorial-2-moving-framework-with-track-file">Tutorial 2: Moving Framework with Track File</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples_and_tutorials.html#tutorial-3-downloading-and-analyzing-era5-data">Tutorial 3: Downloading and Analyzing ERA5 Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples_and_tutorials.html#tutorial-4-interactive-domain-selection">Tutorial 4: Interactive Domain Selection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples_and_tutorials.html#advanced-example-batch-processing-multiple-cases">Advanced Example: Batch Processing Multiple Cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples_and_tutorials.html#next-steps">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cdsapi_example.html">CDS API - Complete Example</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="cdsapi_example.html#step-by-step-example">Step-by-Step Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cdsapi_example.html#what-happens-behind-the-scenes">What Happens Behind the Scenes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cdsapi_example.html#expected-output">Expected Output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cdsapi_example.html#common-use-cases">Common Use Cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cdsapi_example.html#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cdsapi_example.html#advanced-custom-temporal-resolution">Advanced: Custom Temporal Resolution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cdsapi_example.html#notes-and-limitations">Notes and Limitations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="results.html">Results</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="results.html#main-results-file">Main Results File</a></li>
+<li class="toctree-l2"><a class="reference internal" href="results.html#log-file">Log File</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting and FAQ</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#track-file-issues">Track File Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#units-and-variable-specifications">Units and Variable Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#data-format-and-loading-issues">Data Format and Loading Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#memory-and-performance-issues">Memory and Performance Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#configuration-issues">Configuration Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#cds-api-issues">CDS API Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#still-having-issues">Still Having Issues?</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="file_naming_convention.html">File Naming Convention</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="file_naming_convention.html#input-files">Input Files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="file_naming_convention.html#track-files">Track Files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="file_naming_convention.html#box-limits-files">Box Limits Files</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="math.html">Mathematics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="support.html">Support and Issue Reporting</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="support.html#getting-support">Getting Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="support.html#reporting-issues">Reporting Issues</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="references.html#citing-lorenzcycletoolkit">Citing LorenzCycleToolkit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="references.html#foundational-literature">Foundational Literature</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="overview.html" class="btn btn-neutral float-right" title="Overview" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Danilo Couto de Souza.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

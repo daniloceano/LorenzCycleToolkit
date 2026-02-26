@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CDS API - Complete Example &mdash; LorenzCycleToolKit 1.1.7 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=370aedac"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Results" href="results.html" />
+    <link rel="prev" title="Examples and Tutorials" href="examples_and_tutorials.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            LorenzCycleToolKit
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#advanced-options">Advanced Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#automatic-era5-data-download">Automatic ERA5 Data Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#flags">Flags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#common-issues-and-questions">Common Issues and Questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples_and_tutorials.html">Examples and Tutorials</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">CDS API - Complete Example</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#step-by-step-example">Step-by-Step Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#what-happens-behind-the-scenes">What Happens Behind the Scenes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#expected-output">Expected Output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#common-use-cases">Common Use Cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#advanced-custom-temporal-resolution">Advanced: Custom Temporal Resolution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#notes-and-limitations">Notes and Limitations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="results.html">Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_naming_convention.html">File Naming Convention</a></li>
+<li class="toctree-l1"><a class="reference internal" href="math.html">Mathematics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="support.html">Support and Issue Reporting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">LorenzCycleToolKit</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">CDS API - Complete Example</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/cdsapi_example.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="cds-api-complete-example">
+<h1>CDS API - Complete Example<a class="headerlink" href="#cds-api-complete-example" title="Link to this heading"></a></h1>
+<p>This guide provides a complete walkthrough for using the CDS API feature to automatically download ERA5 data.</p>
+<section id="step-by-step-example">
+<h2>Step-by-Step Example<a class="headerlink" href="#step-by-step-example" title="Link to this heading"></a></h2>
+<p><strong>1. Setup CDS API Credentials</strong></p>
+<p>First, register at the <a class="reference external" href="https://cds.climate.copernicus.eu/user/register">Copernicus Climate Data Store</a> and configure your API key.</p>
+<p>Create or edit <code class="docutils literal notranslate"><span class="pre">~/.cdsapirc</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cat<span class="w"> </span>&gt;<span class="w"> </span>~/.cdsapirc<span class="w"> </span><span class="s">&lt;&lt; EOF</span>
+<span class="s">url: https://cds.climate.copernicus.eu/api</span>
+<span class="s">key: YOUR-UID:YOUR-API-KEY</span>
+<span class="s">EOF</span>
+</pre></div>
+</div>
+<p>Replace <code class="docutils literal notranslate"><span class="pre">YOUR-UID:YOUR-API-KEY</span></code> with your actual credentials from your CDS profile.</p>
+<p><strong>2. Prepare Your Track File</strong></p>
+<p>Create a track file with your system’s trajectory. The file must use semicolons as delimiters and include at least <code class="docutils literal notranslate"><span class="pre">time</span></code>, <code class="docutils literal notranslate"><span class="pre">Lat</span></code>, and <code class="docutils literal notranslate"><span class="pre">Lon</span></code> columns:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>time;Lat;Lon
+1979-02-05 00:00:00;-35.5;-45.2
+1979-02-05 06:00:00;-36.0;-44.8
+1979-02-05 12:00:00;-36.5;-44.3
+</pre></div>
+</div>
+<p>Save this file (e.g., as <code class="docutils literal notranslate"><span class="pre">inputs/track_19790205.csv</span></code>).</p>
+<p><strong>Important</strong>: Your track can start and end at any hour of the day. The toolkit will automatically download only the necessary hours:</p>
+<ul class="simple">
+<li><p>Track from 18:00 on day 1 → Downloads start at 18:00 (not 00:00)</p></li>
+<li><p>Track ending at 15:00 on last day → Downloads stop at 15:00 (not 23:00)</p></li>
+<li><p>Middle days are always downloaded completely (00:00 to 23:00)</p></li>
+</ul>
+<p><strong>3. Namelist Configuration (Automatic)</strong></p>
+<p>When using the <code class="docutils literal notranslate"><span class="pre">--cdsapi</span></code> flag, the toolkit <strong>automatically</strong> uses the ERA5-compatible namelist (<code class="docutils literal notranslate"><span class="pre">inputs/namelist_ERA5-cdsapi</span></code>). You do not need to manually create or copy the namelist file.</p>
+<p>If you’re using ERA5 data from other sources (not via <code class="docutils literal notranslate"><span class="pre">--cdsapi</span></code>), you need to manually configure the namelist:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cp<span class="w"> </span>inputs/namelist_ERA5-cdsapi<span class="w"> </span>inputs/namelist
+</pre></div>
+</div>
+<p><strong>4. Run the Toolkit with CDS API</strong></p>
+<p>Use the following command structure:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>OUTPUT_FILENAME.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>-p<span class="w"> </span>--cdsapi<span class="w"> </span>--trackfile<span class="w"> </span>PATH/TO/TRACKFILE.csv
+</pre></div>
+</div>
+<p>Optionally, specify the temporal resolution (default is 3 hours):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>OUTPUT_FILENAME.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>-p<span class="w"> </span>--cdsapi<span class="w"> </span>--time-resolution<span class="w"> </span><span class="m">6</span><span class="w"> </span>--trackfile<span class="w"> </span>PATH/TO/TRACKFILE.csv
+</pre></div>
+</div>
+<p><strong>Complete Example</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>19790205_ERA5.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>-p<span class="w"> </span>--cdsapi<span class="w"> </span>--trackfile<span class="w"> </span>inputs/track_19790205.csv
+</pre></div>
+</div>
+<p><strong>Important</strong>:
+- The first argument (<code class="docutils literal notranslate"><span class="pre">19790205_ERA5.nc</span></code>) is the output filename where ERA5 data will be saved
+- This file doesn’t need to exist beforehand—it will be created by the download process
+- If it already exists, the download is skipped</p>
+</section>
+<section id="what-happens-behind-the-scenes">
+<h2>What Happens Behind the Scenes<a class="headerlink" href="#what-happens-behind-the-scenes" title="Link to this heading"></a></h2>
+<p>When you run the command with <code class="docutils literal notranslate"><span class="pre">--cdsapi</span></code>:</p>
+<ol class="arabic">
+<li><p><strong>Track Analysis</strong>: The program reads your track file to determine:</p>
+<ul class="simple">
+<li><p>Start date and time: earliest timestamp in track</p></li>
+<li><p>End date and time: latest timestamp in track</p></li>
+<li><p>Spatial bounds: min/max latitude and longitude</p></li>
+</ul>
+</li>
+<li><p><strong>Smart Time Range Detection</strong>: The program intelligently determines which hours to download:</p>
+<ul class="simple">
+<li><p><strong>First day</strong>: Downloads only from the track’s start time onwards (not from 00Z)</p></li>
+<li><p><strong>Last day</strong>: Downloads only until the track’s end time (not until 23Z)</p></li>
+<li><p><strong>Middle days</strong>: Downloads complete days (00Z to 23Z)</p></li>
+<li><p>All times are rounded to match your <code class="docutils literal notranslate"><span class="pre">--time-resolution</span></code> setting</p></li>
+</ul>
+<p>Example: If your track runs from June 6 18:00 to June 8 15:00 with 3-hour resolution:</p>
+<ul class="simple">
+<li><p>June 6: Downloads 18:00, 21:00 only</p></li>
+<li><p>June 7: Downloads 00:00, 03:00, 06:00, …, 21:00 (full day)</p></li>
+<li><p>June 8: Downloads 00:00, 03:00, 06:00, 09:00, 12:00, 15:00 only</p></li>
+</ul>
+</li>
+<li><p><strong>Automatic Buffering</strong>: A 15° buffer is added to all spatial boundaries to ensure adequate coverage around your system</p></li>
+<li><p><strong>Day-by-Day Download</strong>: Data is downloaded separately for each day, showing progress for each file</p></li>
+<li><p><strong>Data Request</strong>: The program requests from CDS:</p>
+<ul class="simple">
+<li><p><strong>Variables</strong>: u, v, t (temperature), w (omega), z (geopotential)</p></li>
+<li><p><strong>Pressure levels</strong>: All 37 standard levels (1000 to 1 hPa)</p></li>
+<li><p><strong>Temporal resolution</strong>: Configurable via <code class="docutils literal notranslate"><span class="pre">--time-resolution</span></code> flag (default: 3 hours)</p></li>
+<li><p><strong>Spatial coverage</strong>: Buffered domain around your track</p></li>
+</ul>
+</li>
+<li><p><strong>Concatenation</strong>: All daily files are merged into a single NetCDF file</p></li>
+<li><p><strong>Processing</strong>: The toolkit continues with LEC calculations using the downloaded data</p></li>
+</ol>
+</section>
+<section id="expected-output">
+<h2>Expected Output<a class="headerlink" href="#expected-output" title="Link to this heading"></a></h2>
+<p>During execution, you’ll see detailed progress information:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>INFO - Starting LEC analysis
+INFO - Will download 3 day(s) of data: 1992-06-06 to 1992-06-08
+INFO - Starting data download from CDS API...
+INFO - Expected files to download: 3
+INFO -   - Day 1: 1992-06-06
+INFO -   - Day 2: 1992-06-07
+INFO -   - Day 3: 1992-06-08
+INFO - Downloading day 1/3: 1992-06-06
+DEBUG -   Times: 18:00 to 21:00 (2 timesteps)
+INFO -   ✓ Downloaded successfully: 45.23 MB
+INFO - Downloading day 2/3: 1992-06-07
+DEBUG -   Times: 00:00 to 21:00 (8 timesteps)
+INFO -   ✓ Downloaded successfully: 178.45 MB
+INFO - Downloading day 3/3: 1992-06-08
+DEBUG -   Times: 00:00 to 18:00 (7 timesteps)
+INFO -   ✓ Downloaded successfully: 156.78 MB
+INFO - ============================================================
+INFO - All daily files downloaded successfully!
+INFO - Total files: 3
+INFO - ============================================================
+INFO - Concatenating daily files into single dataset...
+INFO - Merging datasets along time dimension...
+INFO - Saving final dataset to: output.nc
+INFO - ============================================================
+INFO - ✓ DATA DOWNLOAD COMPLETED SUCCESSFULLY!
+INFO - Final file: output.nc
+INFO - File size: 380.46 MB
+INFO - Time coverage: 1992-06-06 18:00:00 to 1992-06-08 18:00:00
+INFO - ============================================================
+</pre></div>
+</div>
+<p>Key features of the new logging:</p>
+<ul class="simple">
+<li><p><strong>Progress tracking</strong>: See which day is currently being downloaded</p></li>
+<li><p><strong>Time range info</strong>: Know exactly which hours are being requested</p></li>
+<li><p><strong>Success indicators</strong>: Checkmarks (✓) show successful downloads</p></li>
+<li><p><strong>File sizes</strong>: Monitor download sizes for each day</p></li>
+<li><p><strong>Clear summaries</strong>: Final summary shows total coverage and file size</p></li>
+</ul>
+<p>The download typically takes 5-15 minutes depending on:
+- Data volume (duration and spatial extent)
+- CDS server load
+- Your internet connection speed</p>
+<p><strong>Note</strong>: Use the <code class="docutils literal notranslate"><span class="pre">-v</span></code> (verbose) flag to see detailed timing information for each day.</p>
+</section>
+<section id="common-use-cases">
+<h2>Common Use Cases<a class="headerlink" href="#common-use-cases" title="Link to this heading"></a></h2>
+<p><strong>Case 1: Single Cyclone Analysis</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>cyclone_catarina_2004.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>-p<span class="w"> </span>--cdsapi<span class="w"> </span>--trackfile<span class="w"> </span>tracks/catarina_track.csv
+</pre></div>
+</div>
+<p><strong>Case 2: Multiple Time Periods</strong></p>
+<p>For analyzing the same region at different times, download once and reuse:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># First run - downloads data</span>
+python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>region_jan2020.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>-p<span class="w"> </span>--cdsapi<span class="w"> </span>--trackfile<span class="w"> </span>tracks/jan2020.csv
+
+<span class="c1"># Subsequent runs - reuses existing file (no download)</span>
+python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>region_jan2020.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>-p<span class="w"> </span>--trackfile<span class="w"> </span>tracks/jan2020.csv
+</pre></div>
+</div>
+<p><strong>Case 3: Different Analysis Parameters</strong></p>
+<p>Once data is downloaded, experiment with different flags without re-downloading:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># With plots and residuals</span>
+python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>mydata.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>-p<span class="w"> </span>--trackfile<span class="w"> </span>tracks/mytrack.csv
+
+<span class="c1"># Without residuals</span>
+python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>mydata.nc<span class="w"> </span>-t<span class="w"> </span>-p<span class="w"> </span>--trackfile<span class="w"> </span>tracks/mytrack.csv
+</pre></div>
+</div>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<p><strong>Problem</strong>: <code class="docutils literal notranslate"><span class="pre">Authentication</span> <span class="pre">failed</span></code></p>
+<p><strong>Solution</strong>: Check your <code class="docutils literal notranslate"><span class="pre">.cdsapirc</span></code> file:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cat<span class="w"> </span>~/.cdsapirc
+</pre></div>
+</div>
+<p>Ensure it contains valid credentials and the URL is correct.</p>
+<p><strong>Problem</strong>: <code class="docutils literal notranslate"><span class="pre">Request</span> <span class="pre">too</span> <span class="pre">large</span></code> or <code class="docutils literal notranslate"><span class="pre">cost</span> <span class="pre">limits</span> <span class="pre">exceeded</span></code></p>
+<p><strong>Solution</strong>:
+- Use a larger time resolution: <code class="docutils literal notranslate"><span class="pre">--time-resolution</span> <span class="pre">6</span></code> or <code class="docutils literal notranslate"><span class="pre">--time-resolution</span> <span class="pre">12</span></code>
+- Reduce the spatial extent of your track
+- Use shorter time periods
+- Check track file doesn’t span too many days</p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># If 3-hour resolution fails, try 6 hours</span>
+python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>output.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>--cdsapi<span class="w"> </span>--time-resolution<span class="w"> </span><span class="m">6</span><span class="w"> </span>--trackfile<span class="w"> </span>track.csv
+</pre></div>
+</div>
+<p><strong>Problem</strong>: Download hangs or is very slow</p>
+<p><strong>Solution</strong>:
+- Use <code class="docutils literal notranslate"><span class="pre">-v</span></code> flag for verbose logging to monitor progress
+- Check CDS service status at <a class="reference external" href="https://cds.climate.copernicus.eu">https://cds.climate.copernicus.eu</a>
+- Try during off-peak hours (CDS is busiest during European business hours)</p>
+<p><strong>Problem</strong>: <code class="docutils literal notranslate"><span class="pre">FileNotFoundError</span></code> for track file</p>
+<p><strong>Solution</strong>: Use absolute paths:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>output.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>--cdsapi<span class="w"> </span>--trackfile<span class="w"> </span>/full/path/to/track.csv
+</pre></div>
+</div>
+</section>
+<section id="advanced-custom-temporal-resolution">
+<h2>Advanced: Custom Temporal Resolution<a class="headerlink" href="#advanced-custom-temporal-resolution" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">--time-resolution</span></code> flag allows you to control the temporal resolution of downloaded ERA5 data. This is crucial for managing API cost limits.</p>
+<p><strong>Available Resolutions</strong>:</p>
+<ul class="simple">
+<li><p><strong>1 hour</strong>: Highest resolution, but likely to exceed cost limits for large domains or long periods</p></li>
+<li><p><strong>3 hours</strong> (default): Good balance between resolution and data volume</p></li>
+<li><p><strong>6 hours</strong>: Recommended for large domains or long time periods</p></li>
+<li><p><strong>12 hours</strong>: Suitable for extended analyses or very large domains</p></li>
+<li><p><strong>24 hours</strong>: Daily data</p></li>
+</ul>
+<p><strong>Examples</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 3-hour resolution (default)</span>
+python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>output.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>--cdsapi<span class="w"> </span>--trackfile<span class="w"> </span>track.csv
+
+<span class="c1"># 6-hour resolution</span>
+python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>output.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>--cdsapi<span class="w"> </span>--time-resolution<span class="w"> </span><span class="m">6</span><span class="w"> </span>--trackfile<span class="w"> </span>track.csv
+
+<span class="c1"># 12-hour resolution for large domain</span>
+python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>output.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>--cdsapi<span class="w"> </span>--time-resolution<span class="w"> </span><span class="m">12</span><span class="w"> </span>--trackfile<span class="w"> </span>track.csv
+</pre></div>
+</div>
+<p><strong>Cost Limit Guidelines</strong>:</p>
+<ul class="simple">
+<li><p>Small domain (&lt; 20° x 20°), short period (&lt; 7 days): 3-hour resolution usually works</p></li>
+<li><p>Medium domain (20-40°), medium period (7-14 days): use 6-hour resolution</p></li>
+<li><p>Large domain (&gt; 40°), long period (&gt; 14 days): use 12-hour resolution</p></li>
+</ul>
+<p><strong>Note</strong>: After downloading with a specific resolution, the toolkit will interpolate your track data to match the downloaded time steps during processing.</p>
+</section>
+<section id="notes-and-limitations">
+<h2>Notes and Limitations<a class="headerlink" href="#notes-and-limitations" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Data source</strong>: Only ERA5 reanalysis is supported via CDS API</p></li>
+<li><p><strong>Spatial resolution</strong>: ERA5 native resolution (0.25° × 0.25°)</p></li>
+<li><p><strong>Pressure levels</strong>: All 37 standard levels are downloaded (cannot be customized)</p></li>
+<li><p><strong>Variables</strong>: Fixed set required for LEC calculations (u, v, t, omega, geopotential)</p></li>
+<li><p><strong>File format</strong>: NetCDF output only</p></li>
+<li><p><strong>Authentication</strong>: Requires valid CDS account and API key</p></li>
+<li><p><strong>Rate limits</strong>: Subject to CDS API rate limiting during high-demand periods</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="examples_and_tutorials.html" class="btn btn-neutral float-left" title="Examples and Tutorials" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="results.html" class="btn btn-neutral float-right" title="Results" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Danilo Couto de Souza.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

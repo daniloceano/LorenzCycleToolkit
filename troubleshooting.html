@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Troubleshooting and FAQ &mdash; LorenzCycleToolKit 1.1.7 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=370aedac"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="File Naming Convention" href="file_naming_convention.html" />
+    <link rel="prev" title="Results" href="results.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            LorenzCycleToolKit
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#advanced-options">Advanced Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#automatic-era5-data-download">Automatic ERA5 Data Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#flags">Flags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#common-issues-and-questions">Common Issues and Questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples_and_tutorials.html">Examples and Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cdsapi_example.html">CDS API - Complete Example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="results.html">Results</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Troubleshooting and FAQ</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#track-file-issues">Track File Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#track-file-has-more-timesteps-than-input-data">Track file has more timesteps than input data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#track-file-has-fewer-timesteps-than-input-data">Track file has fewer timesteps than input data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#track-file-has-timesteps-not-present-in-data">Track file has timesteps not present in data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#track-temporal-resolution-differs-from-data">Track temporal resolution differs from data</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#units-and-variable-specifications">Units and Variable Specifications</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#do-variables-need-to-match-units-specified-in-namelist">Do variables need to match units specified in namelist?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pressure-levels-must-be-in-pa-or-hpa">Pressure levels must be in Pa or hPa?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#why-does-my-analysis-fail-with-units-error">Why does my analysis fail with “units” error?</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#data-format-and-loading-issues">Data Format and Loading Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#could-not-open-file-error">“Could not open file” error</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#namelist-does-not-match-the-data-error">“Namelist does not match the data” error</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#memory-and-performance-issues">Memory and Performance Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#memoryerror-or-system-becomes-unresponsive">“MemoryError” or system becomes unresponsive</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#analysis-takes-too-long">Analysis takes too long</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration-issues">Configuration Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#no-such-file-or-directory-inputs-namelist">“No such file or directory: ‘inputs/namelist’”</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#no-such-file-or-directory-inputs-box-limits-fixed-framework">“No such file or directory: ‘inputs/box_limits’” (fixed framework)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#no-such-file-or-directory-inputs-track-moving-framework">“No such file or directory: ‘inputs/track’” (moving framework)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#cds-api-issues">CDS API Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cds-api-authentication-fails">CDS API authentication fails</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cds-api-download-is-very-slow">CDS API download is very slow</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#still-having-issues">Still Having Issues?</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="file_naming_convention.html">File Naming Convention</a></li>
+<li class="toctree-l1"><a class="reference internal" href="math.html">Mathematics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="support.html">Support and Issue Reporting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">LorenzCycleToolKit</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Troubleshooting and FAQ</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/troubleshooting.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="troubleshooting-and-faq">
+<h1>Troubleshooting and FAQ<a class="headerlink" href="#troubleshooting-and-faq" title="Link to this heading"></a></h1>
+<p>This page addresses common issues and frequently asked questions when using the LorenzCycleToolkit.</p>
+<section id="track-file-issues">
+<h2>Track File Issues<a class="headerlink" href="#track-file-issues" title="Link to this heading"></a></h2>
+<section id="track-file-has-more-timesteps-than-input-data">
+<h3>Track file has more timesteps than input data<a class="headerlink" href="#track-file-has-more-timesteps-than-input-data" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Your track file extends beyond the temporal coverage of your NetCDF data file.</p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Track file: 2020-01-01 00:00 to 2020-01-10 23:00
+Input data:  2020-01-01 00:00 to 2020-01-08 18:00
+</pre></div>
+</div>
+<p><strong>Error message</strong>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>❌ Track final timestamp (2020-01-10 23:00:00) is later than data final timestamp
+(2020-01-08 18:00:00). Please adjust the track file or re-download the data.
+</pre></div>
+</div>
+<p><strong>Solutions</strong>:</p>
+<ol class="arabic">
+<li><p><strong>Trim your track file</strong> to match the data coverage:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="c1"># Load track file</span>
+<span class="n">track</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;inputs/track&#39;</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;;&#39;</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">],</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;time&#39;</span><span class="p">)</span>
+
+<span class="c1"># Trim to match data period</span>
+<span class="n">track_trimmed</span> <span class="o">=</span> <span class="n">track</span><span class="p">[</span><span class="s1">&#39;2020-01-01&#39;</span><span class="p">:</span><span class="s1">&#39;2020-01-08 18:00&#39;</span><span class="p">]</span>
+
+<span class="c1"># Save trimmed track</span>
+<span class="n">track_trimmed</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">&#39;inputs/track_trimmed&#39;</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;;&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Download additional data</strong> to cover the full track period (if using CDS API):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>extended_data.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>--cdsapi<span class="w"> </span>--trackfile<span class="w"> </span>inputs/track
+</pre></div>
+</div>
+</li>
+<li><p><strong>Use a pre-downloaded file</strong> that covers the full period</p></li>
+</ol>
+</section>
+<section id="track-file-has-fewer-timesteps-than-input-data">
+<h3>Track file has fewer timesteps than input data<a class="headerlink" href="#track-file-has-fewer-timesteps-than-input-data" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Your track file covers a shorter period than your input data.</p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Track file: 2020-01-03 00:00 to 2020-01-05 18:00
+Input data:  2020-01-01 00:00 to 2020-01-10 23:00
+</pre></div>
+</div>
+<p><strong>Behavior</strong>: This is <strong>perfectly fine</strong>! The toolkit will automatically use only the timesteps from the input data that match the track file period.</p>
+<p><strong>What happens</strong>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># The toolkit automatically does this:</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">track</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Your analysis will run from 2020-01-03 00:00 to 2020-01-05 18:00, using only the relevant portion of the input data.</p>
+<p><strong>Use case</strong>: This is useful when you have a large dataset but only want to analyze a specific event or time period.</p>
+</section>
+<section id="track-file-has-timesteps-not-present-in-data">
+<h3>Track file has timesteps not present in data<a class="headerlink" href="#track-file-has-timesteps-not-present-in-data" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Some track timesteps don’t match any data timesteps (e.g., track has 1-hour intervals but data has 3-hour intervals).</p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Track timesteps: 00:00, 01:00, 02:00, 03:00, 04:00, ...
+Data timesteps:  00:00, 03:00, 06:00, 09:00, ...
+</pre></div>
+</div>
+<p><strong>Error message</strong>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>KeyError: &#39;Some timesteps from track not found in data&#39;
+</pre></div>
+</div>
+<p><strong>Solutions</strong>:</p>
+<ol class="arabic">
+<li><p><strong>Resample your track file</strong> to match data temporal resolution:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="c1"># Load track</span>
+<span class="n">track</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;inputs/track&#39;</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;;&#39;</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">],</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;time&#39;</span><span class="p">)</span>
+
+<span class="c1"># Resample to 3-hour intervals (matching data)</span>
+<span class="n">track_resampled</span> <span class="o">=</span> <span class="n">track</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="s1">&#39;3H&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>  <span class="c1"># or .interpolate() for interpolation</span>
+
+<span class="c1"># Remove any NaN rows</span>
+<span class="n">track_resampled</span> <span class="o">=</span> <span class="n">track_resampled</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+
+<span class="c1"># Save resampled track</span>
+<span class="n">track_resampled</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">&#39;inputs/track_resampled&#39;</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;;&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>If using CDS API</strong>, the toolkit automatically handles this by resampling the track:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># The toolkit will resample your track to match --time-resolution</span>
+python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>data.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>--cdsapi<span class="w"> </span>--time-resolution<span class="w"> </span><span class="m">3</span><span class="w"> </span>--trackfile<span class="w"> </span>inputs/track
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+<section id="track-temporal-resolution-differs-from-data">
+<h3>Track temporal resolution differs from data<a class="headerlink" href="#track-temporal-resolution-differs-from-data" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Track has higher temporal resolution than the data (e.g., 1-hour track vs 6-hour data).</p>
+<p><strong>Behavior</strong>: The toolkit checks this and raises an error if track resolution is higher than data resolution.</p>
+<p><strong>Error message</strong>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>❌ Track time step is higher than data time step. Please resample the track
+to match the data time step.
+</pre></div>
+</div>
+<p><strong>Why this matters</strong>: You cannot analyze a system every hour if your atmospheric data is only available every 6 hours.</p>
+<p><strong>Solution</strong>: Resample your track file to match or exceed the data temporal resolution:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="n">track</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;inputs/track&#39;</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;;&#39;</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">],</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;time&#39;</span><span class="p">)</span>
+
+<span class="c1"># If data is 6-hourly, resample track to 6-hourly</span>
+<span class="n">track_6h</span> <span class="o">=</span> <span class="n">track</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="s1">&#39;6H&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>  <span class="c1"># Takes the first value in each 6h window</span>
+<span class="c1"># OR use interpolation if you want intermediate positions</span>
+<span class="n">track_6h</span> <span class="o">=</span> <span class="n">track</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="s1">&#39;6H&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">interpolate</span><span class="p">()</span>
+
+<span class="n">track_6h</span> <span class="o">=</span> <span class="n">track_6h</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+<span class="n">track_6h</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">&#39;inputs/track_6h&#39;</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;;&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="units-and-variable-specifications">
+<h2>Units and Variable Specifications<a class="headerlink" href="#units-and-variable-specifications" title="Link to this heading"></a></h2>
+<section id="do-variables-need-to-match-units-specified-in-namelist">
+<h3>Do variables need to match units specified in namelist?<a class="headerlink" href="#do-variables-need-to-match-units-specified-in-namelist" title="Link to this heading"></a></h3>
+<p><strong>Short answer</strong>: No, but the namelist must specify the <strong>actual units in your file</strong>.</p>
+<p><strong>How it works</strong>:</p>
+<ol class="arabic simple">
+<li><p>The namelist tells the toolkit what units are <strong>currently</strong> in your NetCDF file</p></li>
+<li><p>The toolkit reads the data with those units</p></li>
+<li><p>The toolkit <strong>automatically converts</strong> everything to SI units internally using MetPy</p></li>
+</ol>
+<p><strong>Example</strong>:</p>
+<p>If your ERA5 file has temperature in Kelvin:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>;standard_name;Variable;Units
+Air Temperature;air_temperature;t;K
+</pre></div>
+</div>
+<p>The toolkit will:</p>
+<ul class="simple">
+<li><p>Read temperature as Kelvin</p></li>
+<li><p>Keep it in Kelvin for calculations (Kelvin is already SI)</p></li>
+</ul>
+<p>If your file had temperature in Celsius (unusual):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>;standard_name;Variable;Units
+Air Temperature;air_temperature;t;degC
+</pre></div>
+</div>
+<p>The toolkit would:</p>
+<ul class="simple">
+<li><p>Read temperature as Celsius</p></li>
+<li><p>Convert to Kelvin internally</p></li>
+<li><p>Perform all calculations in SI units</p></li>
+</ul>
+<p><strong>Important</strong>: The “Units” column in the namelist should match what’s <strong>actually in your file</strong>, not what you want. The toolkit handles conversions automatically.</p>
+</section>
+<section id="pressure-levels-must-be-in-pa-or-hpa">
+<h3>Pressure levels must be in Pa or hPa?<a class="headerlink" href="#pressure-levels-must-be-in-pa-or-hpa" title="Link to this heading"></a></h3>
+<p><strong>Answer</strong>: Either is fine! The toolkit automatically converts to Pascals (Pa) internally.</p>
+<p><strong>Example from the code</strong>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># The toolkit does this automatically:</span>
+<span class="n">levels_Pa</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">LevelIndexer</span><span class="p">]</span> <span class="o">*</span> <span class="n">units</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">LevelIndexer</span><span class="p">]</span><span class="o">.</span><span class="n">units</span><span class="p">)))</span><span class="o">.</span><span class="n">metpy</span><span class="o">.</span><span class="n">convert_units</span><span class="p">(</span><span class="s2">&quot;Pa&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Your file can have:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">pressure_level</span></code> in hPa: [1000, 925, 850, 700, 500, …]</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pressure_level</span></code> in Pa: [100000, 92500, 85000, 70000, 50000, …]</p></li>
+</ul>
+<p>Both will work correctly. Just make sure the units attribute in your NetCDF file is set correctly.</p>
+</section>
+<section id="why-does-my-analysis-fail-with-units-error">
+<h3>Why does my analysis fail with “units” error?<a class="headerlink" href="#why-does-my-analysis-fail-with-units-error" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Error mentioning units or unit conversion.</p>
+<p><strong>Common causes</strong>:</p>
+<ol class="arabic">
+<li><p><strong>Missing units attribute in NetCDF file</strong>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+
+<span class="c1"># Check if variables have units</span>
+<span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="s1">&#39;your_file.nc&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ds</span><span class="p">[</span><span class="s1">&#39;t&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">)</span>  <span class="c1"># Should show &#39;units&#39;: &#39;K&#39;</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ds</span><span class="p">[</span><span class="s1">&#39;pressure_level&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">)</span>  <span class="c1"># Should show &#39;units&#39;: &#39;hPa&#39; or &#39;Pa&#39;</span>
+</pre></div>
+</div>
+<p><strong>Solution</strong>: Add units to your NetCDF file:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ds</span><span class="p">[</span><span class="s1">&#39;t&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;units&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;K&#39;</span>
+<span class="n">ds</span><span class="p">[</span><span class="s1">&#39;pressure_level&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;units&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;hPa&#39;</span>
+<span class="n">ds</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="s1">&#39;your_file_fixed.nc&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Non-standard unit names</strong>: Use standard CF conventions:</p>
+<ul class="simple">
+<li><p>Temperature: <code class="docutils literal notranslate"><span class="pre">K</span></code> or <code class="docutils literal notranslate"><span class="pre">degC</span></code> (not <code class="docutils literal notranslate"><span class="pre">Kelvin</span></code> or <code class="docutils literal notranslate"><span class="pre">celsius</span></code>)</p></li>
+<li><p>Pressure: <code class="docutils literal notranslate"><span class="pre">Pa</span></code> or <code class="docutils literal notranslate"><span class="pre">hPa</span></code> (not <code class="docutils literal notranslate"><span class="pre">mb</span></code> or <code class="docutils literal notranslate"><span class="pre">millibars</span></code>)</p></li>
+<li><p>Winds: <code class="docutils literal notranslate"><span class="pre">m/s</span></code> or <code class="docutils literal notranslate"><span class="pre">m</span> <span class="pre">s-1</span></code> (not <code class="docutils literal notranslate"><span class="pre">m/sec</span></code>)</p></li>
+</ul>
+</li>
+<li><p><strong>Geopotential vs Geopotential Height</strong>:</p>
+<ul class="simple">
+<li><p>Geopotential: units should be <code class="docutils literal notranslate"><span class="pre">m**2</span> <span class="pre">s**-2</span></code> or <code class="docutils literal notranslate"><span class="pre">m2</span> <span class="pre">s-2</span></code></p></li>
+<li><p>Geopotential Height: units should be <code class="docutils literal notranslate"><span class="pre">m</span></code></p></li>
+</ul>
+<p>The toolkit handles both, but you must specify correctly in your namelist.</p>
+</li>
+</ol>
+</section>
+</section>
+<section id="data-format-and-loading-issues">
+<h2>Data Format and Loading Issues<a class="headerlink" href="#data-format-and-loading-issues" title="Link to this heading"></a></h2>
+<section id="could-not-open-file-error">
+<h3>“Could not open file” error<a class="headerlink" href="#could-not-open-file-error" title="Link to this heading"></a></h3>
+<p><strong>Error message</strong>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>❌ Could not open file. Check if path, namelist file, and file format (.nc) are correct.
+</pre></div>
+</div>
+<p><strong>Checklist</strong>:</p>
+<ol class="arabic">
+<li><p><strong>File path is correct</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ls<span class="w"> </span>-lh<span class="w"> </span>path/to/your/file.nc<span class="w">  </span><span class="c1"># Verify file exists</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>File is valid NetCDF</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ncdump<span class="w"> </span>-h<span class="w"> </span>your_file.nc<span class="w">  </span><span class="c1"># Should show header without errors</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>File is not corrupted</strong>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="s1">&#39;your_file.nc&#39;</span><span class="p">)</span>  <span class="c1"># Should open without errors</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>You have read permissions</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>chmod<span class="w"> </span><span class="m">644</span><span class="w"> </span>your_file.nc<span class="w">  </span><span class="c1"># Add read permissions if needed</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+<section id="namelist-does-not-match-the-data-error">
+<h3>“Namelist does not match the data” error<a class="headerlink" href="#namelist-does-not-match-the-data-error" title="Link to this heading"></a></h3>
+<p><strong>Error message</strong>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>❌ The variable list does not match the data. Check if the &#39;namelist&#39; text file is correct.
+</pre></div>
+</div>
+<p>Followed by a detailed list of available coordinates and variables in your dataset.</p>
+<p><strong>Solution process</strong>:</p>
+<ol class="arabic">
+<li><p><strong>Check the error output</strong> - it shows all coordinates and variables in your file:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>📊 DATASET INFORMATION
+======================================================================
+
+🗺️  Available Coordinates:
+   • latitude (degrees_north) - latitude
+   • longitude (degrees_east) - longitude
+   • level (hPa) - pressure_level
+   • time - valid_time
+
+📋 Available Variables:
+   • t (K) - Temperature [air_temperature]
+   • u (m/s) - U component of wind [eastward_wind]
+   • v (m/s) - V component of wind [northward_wind]
+   • w (Pa/s) - Vertical velocity [lagrangian_tendency_of_air_pressure]
+   • z (m**2/s**2) - Geopotential [geopotential]
+</pre></div>
+</div>
+</li>
+<li><p><strong>Update your namelist</strong> to use the actual variable names:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>;standard_name;Variable;Units
+Air Temperature;air_temperature;t;K
+Geopotential;geopotential;z;m**2/s**2
+Omega Velocity;omega;w;Pa/s
+Eastward Wind Component;eastward_wind;u;m/s
+Northward Wind Component;northward_wind;v;m/s
+Longitude;;longitude
+Latitude;;latitude
+Time;;time
+Vertical Level;;level
+</pre></div>
+</div>
+</li>
+<li><p><strong>Use a preset if available</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># For ERA5 data</span>
+cp<span class="w"> </span>inputs/namelist_ERA5-cdsapi<span class="w"> </span>inputs/namelist
+
+<span class="c1"># For NCEP-R2 data</span>
+cp<span class="w"> </span>inputs/namelist_NCEP-R2<span class="w"> </span>inputs/namelist
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+</section>
+<section id="memory-and-performance-issues">
+<h2>Memory and Performance Issues<a class="headerlink" href="#memory-and-performance-issues" title="Link to this heading"></a></h2>
+<section id="memoryerror-or-system-becomes-unresponsive">
+<h3>“MemoryError” or system becomes unresponsive<a class="headerlink" href="#memoryerror-or-system-becomes-unresponsive" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Your dataset is too large for available RAM.</p>
+<p><strong>Immediate solutions</strong>:</p>
+<ol class="arabic">
+<li><p><strong>Reduce spatial domain</strong>: Pre-process your data to a smaller region:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+
+<span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="s1">&#39;large_file.nc&#39;</span><span class="p">)</span>
+
+<span class="c1"># Subset to smaller region</span>
+<span class="n">ds_subset</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span>
+    <span class="n">latitude</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="o">-</span><span class="mi">50</span><span class="p">,</span> <span class="o">-</span><span class="mi">10</span><span class="p">),</span>
+    <span class="n">longitude</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="o">-</span><span class="mi">70</span><span class="p">,</span> <span class="o">-</span><span class="mi">30</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">ds_subset</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="s1">&#39;smaller_file.nc&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Reduce temporal coverage</strong>: Analyze shorter periods:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ds_subset</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="s1">&#39;2020-01-01&#39;</span><span class="p">,</span> <span class="s1">&#39;2020-01-07&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Reduce vertical levels</strong>: Keep only tropospheric levels:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ds_subset</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>  <span class="c1"># 1000 to 100 hPa</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Increase temporal resolution</strong>: Use 6-hour instead of 3-hour data:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ds_subset</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">hour</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">18</span><span class="p">]))</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Remove unnecessary variables</strong>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Keep only required variables</span>
+<span class="n">required_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="s1">&#39;u&#39;</span><span class="p">,</span> <span class="s1">&#39;v&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="s1">&#39;z&#39;</span><span class="p">,</span> <span class="s1">&#39;latitude&#39;</span><span class="p">,</span> <span class="s1">&#39;longitude&#39;</span><span class="p">,</span> <span class="s1">&#39;level&#39;</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">]</span>
+<span class="n">ds_subset</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="n">required_vars</span><span class="p">]</span>
+</pre></div>
+</div>
+</li>
+</ol>
+<p><strong>See also</strong>: <a class="reference internal" href="usage.html"><span class="doc">Usage</span></a> section on “System Requirements and Performance”</p>
+</section>
+<section id="analysis-takes-too-long">
+<h3>Analysis takes too long<a class="headerlink" href="#analysis-takes-too-long" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Processing is slower than expected.</p>
+<p><strong>Optimization tips</strong>:</p>
+<ol class="arabic simple">
+<li><p><strong>Use appropriate temporal resolution</strong>: 6-hour data processes faster than 1-hour</p></li>
+<li><p><strong>Reduce domain size</strong>: Analyze only the region of interest</p></li>
+<li><p><strong>Disable plots for initial runs</strong>: Remove <code class="docutils literal notranslate"><span class="pre">-p</span></code> flag during testing</p></li>
+<li><p><strong>Use fixed framework instead of interactive</strong>: <code class="docutils literal notranslate"><span class="pre">-f</span></code> is much faster than <code class="docutils literal notranslate"><span class="pre">-c</span></code></p></li>
+<li><p><strong>Check your data preprocessing</strong>: Pre-subset data before running the toolkit</p></li>
+</ol>
+</section>
+</section>
+<section id="configuration-issues">
+<h2>Configuration Issues<a class="headerlink" href="#configuration-issues" title="Link to this heading"></a></h2>
+<section id="no-such-file-or-directory-inputs-namelist">
+<h3>“No such file or directory: ‘inputs/namelist’”<a class="headerlink" href="#no-such-file-or-directory-inputs-namelist" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: You didn’t create the namelist file.</p>
+<p><strong>Solution</strong>: Copy one of the presets:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># For ERA5 data</span>
+cp<span class="w"> </span>inputs/namelist_ERA5-cdsapi<span class="w"> </span>inputs/namelist
+
+<span class="c1"># For NCEP Reanalysis 2</span>
+cp<span class="w"> </span>inputs/namelist_NCEP-R2<span class="w"> </span>inputs/namelist
+
+<span class="c1"># For NCEP Reanalysis 1</span>
+cp<span class="w"> </span>inputs/namelist_NCEP-R1<span class="w"> </span>inputs/namelist
+</pre></div>
+</div>
+<p><strong>See also</strong>: <a class="reference internal" href="configuration.html"><span class="doc">Configuration</span></a> for detailed instructions.</p>
+</section>
+<section id="no-such-file-or-directory-inputs-box-limits-fixed-framework">
+<h3>“No such file or directory: ‘inputs/box_limits’” (fixed framework)<a class="headerlink" href="#no-such-file-or-directory-inputs-box-limits-fixed-framework" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Using <code class="docutils literal notranslate"><span class="pre">-f</span></code> flag but haven’t created box_limits file.</p>
+<p><strong>Solution</strong>: Create the file with your domain bounds:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cat<span class="w"> </span>&gt;<span class="w"> </span>inputs/box_limits<span class="w"> </span><span class="s">&lt;&lt; EOF</span>
+<span class="s">min_lon;-60</span>
+<span class="s">max_lon;-30</span>
+<span class="s">min_lat;-45</span>
+<span class="s">max_lat;-20</span>
+<span class="s">EOF</span>
+</pre></div>
+</div>
+</section>
+<section id="no-such-file-or-directory-inputs-track-moving-framework">
+<h3>“No such file or directory: ‘inputs/track’” (moving framework)<a class="headerlink" href="#no-such-file-or-directory-inputs-track-moving-framework" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Using <code class="docutils literal notranslate"><span class="pre">-t</span></code> flag but haven’t specified a track file.</p>
+<p><strong>Solution</strong>: Either:</p>
+<ol class="arabic">
+<li><p><strong>Create a track file</strong> at <code class="docutils literal notranslate"><span class="pre">inputs/track</span></code></p></li>
+<li><p><strong>Use the –trackfile flag</strong> to specify a different path:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>data.nc<span class="w"> </span>-r<span class="w"> </span>-t<span class="w"> </span>--trackfile<span class="w"> </span>path/to/your/track.csv
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+</section>
+<section id="cds-api-issues">
+<h2>CDS API Issues<a class="headerlink" href="#cds-api-issues" title="Link to this heading"></a></h2>
+<section id="cds-api-authentication-fails">
+<h3>CDS API authentication fails<a class="headerlink" href="#cds-api-authentication-fails" title="Link to this heading"></a></h3>
+<p><strong>Error</strong>: Connection or authentication errors when using <code class="docutils literal notranslate"><span class="pre">--cdsapi</span></code>.</p>
+<p><strong>Solution checklist</strong>:</p>
+<ol class="arabic">
+<li><p><strong>Check credentials file exists</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cat<span class="w"> </span>~/.cdsapirc
+</pre></div>
+</div>
+</li>
+<li><p><strong>Verify format</strong>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>url: https://cds.climate.copernicus.eu/api
+key: YOUR-UID:YOUR-API-KEY
+</pre></div>
+</div>
+</li>
+<li><p><strong>Verify credentials are correct</strong>: Log in to <a class="reference external" href="https://cds.climate.copernicus.eu/user">https://cds.climate.copernicus.eu/user</a> and check your UID and API key</p></li>
+<li><p><strong>Check permissions</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>chmod<span class="w"> </span><span class="m">600</span><span class="w"> </span>~/.cdsapirc
+</pre></div>
+</div>
+</li>
+<li><p><strong>Accept Terms and Conditions</strong>: You must accept the Copernicus terms at <a class="reference external" href="https://cds.climate.copernicus.eu/">https://cds.climate.copernicus.eu/</a> before API access works</p></li>
+</ol>
+</section>
+<section id="cds-api-download-is-very-slow">
+<h3>CDS API download is very slow<a class="headerlink" href="#cds-api-download-is-very-slow" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Downloads take hours or timeout.</p>
+<p><strong>Causes and solutions</strong>:</p>
+<ol class="arabic">
+<li><p><strong>CDS servers are busy</strong>: Try during off-peak hours (evenings/weekends in Europe)</p></li>
+<li><p><strong>Domain is too large</strong>: Reduce spatial coverage or temporal resolution</p></li>
+<li><p><strong>Requesting too many levels</strong>: Consider requesting only tropospheric levels</p></li>
+<li><p><strong>Use coarser temporal resolution</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Use 6-hour instead of 3-hour</span>
+python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>file.nc<span class="w"> </span>-t<span class="w"> </span>-r<span class="w"> </span>--cdsapi<span class="w"> </span>--time-resolution<span class="w"> </span><span class="m">6</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+</section>
+<section id="still-having-issues">
+<h2>Still Having Issues?<a class="headerlink" href="#still-having-issues" title="Link to this heading"></a></h2>
+<p>If your problem isn’t covered here:</p>
+<ol class="arabic">
+<li><p><strong>Enable verbose logging</strong> to see detailed information:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>lorenzcycletoolkit.py<span class="w"> </span>your_file.nc<span class="w"> </span>-r<span class="w"> </span>-f<span class="w"> </span>-v
+</pre></div>
+</div>
+</li>
+<li><p><strong>Check the log file</strong> in <code class="docutils literal notranslate"><span class="pre">LEC_Results/*/log.*</span></code> for detailed error messages</p></li>
+<li><p><strong>Review the documentation</strong>:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="configuration.html"><span class="doc">Configuration</span></a> - Setup requirements</p></li>
+<li><p><a class="reference internal" href="usage.html"><span class="doc">Usage</span></a> - Command-line options and data requirements</p></li>
+<li><p><a class="reference internal" href="examples_and_tutorials.html"><span class="doc">Examples and Tutorials</span></a> - Step-by-step examples</p></li>
+</ul>
+</li>
+<li><p><strong>Seek support</strong>:</p>
+<ul class="simple">
+<li><p>GitHub Issues: <a class="reference external" href="https://github.com/daniloceano/LorenzCycleToolkit/issues">https://github.com/daniloceano/LorenzCycleToolkit/issues</a></p></li>
+<li><p>Email: <a class="reference external" href="mailto:danilo&#46;oceano&#37;&#52;&#48;gmail&#46;com">danilo<span>&#46;</span>oceano<span>&#64;</span>gmail<span>&#46;</span>com</a></p></li>
+</ul>
+</li>
+</ol>
+<p>When reporting issues, please include:</p>
+<ul class="simple">
+<li><p>Full error message and traceback</p></li>
+<li><p>Your command line</p></li>
+<li><p>Relevant parts of the log file</p></li>
+<li><p>Description of your input data (source, resolution, coverage)</p></li>
+<li><p>LorenzCycleToolkit version: check with <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">describe</span> <span class="pre">--tags</span></code></p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="results.html" class="btn btn-neutral float-left" title="Results" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="file_naming_convention.html" class="btn btn-neutral float-right" title="File Naming Convention" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Danilo Couto de Souza.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
