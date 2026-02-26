@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2026/02/26 09:29:00 by daniloceano      ###   ########.fr        #
+#    Updated: 2026/02/26 10:28:28 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -448,15 +448,67 @@ def get_cdsapi_data(
                 
                 # Verify file was created
                 if not os.path.exists(temp_file):
+                    app_logger.error("❌ CDS API file creation failed!")
+                    app_logger.error("\n" + "="*70)
+                    app_logger.error("☁️  CDS API DOWNLOAD ERROR")
+                    app_logger.error("="*70)
+                    app_logger.error(f"Expected file: {temp_file}")
+                    app_logger.error(f"Date: {year}-{month}-{day}")
+                    app_logger.error("\n💡 Possible causes:")
+                    app_logger.error("   1. CDS API request succeeded but file wasn't written")
+                    app_logger.error("   2. Disk space full")
+                    app_logger.error("   3. Permission issues in temp directory")
+                    app_logger.error("\n🔧 Developer Info:")
+                    app_logger.error(f"   Request: {request}")
+                    app_logger.error(f"   Temp dir: {temp_dir}")
+                    app_logger.error("="*70 + "\n")
                     raise FileNotFoundError(
-                        f"Daily file not created at expected path: {temp_file}"
+                        f"CDS API file not created at expected path: {temp_file}"
                     )
                 
                 file_size = os.path.getsize(temp_file)
                 app_logger.info(f"  ✓ Downloaded successfully: {file_size / (1024**2):.2f} MB")
                 
+            except FileNotFoundError:
+                raise  # Re-raise the FileNotFoundError we just created
+            except KeyError as e:
+                app_logger.error(f"❌ CDS API authentication or configuration error!")
+                app_logger.error("\n" + "="*70)
+                app_logger.error("🔑 CDS API AUTHENTICATION ERROR")
+                app_logger.error("="*70)
+                app_logger.error(f"Date: {year}-{month}-{day}")
+                app_logger.error(f"Error: {e}")
+                app_logger.error("\n💡 User Solutions:")
+                app_logger.error("   1. Check if ~/.cdsapirc file exists and is configured:")
+                app_logger.error("      url: https://cds.climate.copernicus.eu/api/v2")
+                app_logger.error("      key: YOUR_UID:YOUR_API_KEY")
+                app_logger.error("   2. Register at: https://cds.climate.copernicus.eu/")
+                app_logger.error("   3. Get your API key from your profile page")
+                app_logger.error("\n🔧 Developer Info:")
+                app_logger.error(f"   Exception: {type(e).__name__}: {str(e)}")
+                app_logger.error("="*70 + "\n")
+                raise
             except Exception as e:
-                app_logger.error(f"✗ Error downloading data for {year}-{month}-{day}: {e}")
+                app_logger.error(f"❌ Error downloading CDS API data for {year}-{month}-{day}!")
+                app_logger.error("\n" + "="*70)
+                app_logger.error("☁️  CDS API REQUEST ERROR")
+                app_logger.error("="*70)
+                app_logger.error(f"Date: {year}-{month}-{day}")
+                app_logger.error(f"Error type: {type(e).__name__}")
+                app_logger.error(f"Error message: {str(e)}")
+                app_logger.error("\n💡 Common causes:")
+                app_logger.error("   1. Network connectivity issues")
+                app_logger.error("   2. CDS API service is down or overloaded")
+                app_logger.error("   3. Invalid request parameters")
+                app_logger.error("   4. API quota exceeded")
+                app_logger.error("   5. Timeout (large requests)")
+                app_logger.error("\n🔍 Check CDS API status:")
+                app_logger.error("   https://cds.climate.copernicus.eu/live/queue")
+                app_logger.error("\n🔧 Developer Info:")
+                app_logger.error(f"   Request parameters: {request}")
+                app_logger.error(f"   Exception: {type(e).__name__}")
+                app_logger.error(f"   Message: {str(e)}")
+                app_logger.error("="*70 + "\n")
                 raise
         
         app_logger.info("=" * 60)
@@ -487,8 +539,24 @@ def get_cdsapi_data(
         
         # Verify the final file was created
         if not os.path.exists(args.infile):
+            app_logger.error("❌ Final CDS API file was not created!")
+            app_logger.error("\n" + "="*70)
+            app_logger.error("📦 FILE CONCATENATION ERROR")
+            app_logger.error("="*70)
+            app_logger.error(f"Expected file: {args.infile}")
+            app_logger.error(f"Daily files downloaded: {len(daily_files)}")
+            app_logger.error("\n💡 Possible causes:")
+            app_logger.error("   1. Error during dataset concatenation")
+            app_logger.error("   2. Disk space full")
+            app_logger.error("   3. Permission issues")
+            app_logger.error("\n🔧 Developer Info:")
+            app_logger.error(f"   Target file: {args.infile}")
+            app_logger.error(f"   Daily files: {len(daily_files)}")
+            app_logger.error(f"   Temp directory: {temp_dir}")
+            app_logger.error("="*70 + "\n")
             raise FileNotFoundError(
-                f"❌ CDS API file not created at expected path: {args.infile}"
+                f"CDS API file not created at expected path: {args.infile}. "
+                f"Check disk space and permissions."
             )
         
         final_file_size = os.path.getsize(args.infile)
@@ -561,13 +629,74 @@ def get_data(args: argparse.Namespace, app_logger: logging.Logger) -> xr.Dataset
         with dask.config.set(array={"slicing": {"split_large_chunks": True}}):
             data = xr.open_dataset(infile)
     except FileNotFoundError:
-        app_logger.error(
-            "❌ Could not open file. Check if path, namelist file, and file format (.nc) are correct."
+        app_logger.error("❌ Input file not found!")
+        app_logger.error("\n" + "="*70)
+        app_logger.error("📁 FILE NOT FOUND ERROR")
+        app_logger.error("="*70)
+        app_logger.error(f"Looking for: {os.path.abspath(infile)}")
+        app_logger.error(f"Current directory: {os.getcwd()}")
+        app_logger.error("\n💡 User Solutions:")
+        app_logger.error("   1. Check if the file path is correct")
+        app_logger.error("   2. Use absolute path instead of relative path")
+        app_logger.error("   3. Verify the file exists: ls -lh <path>")
+        app_logger.error("\n🔧 Developer Info:")
+        app_logger.error(f"   infile argument: {infile}")
+        app_logger.error(f"   os.path.exists(infile): {os.path.exists(infile)}")
+        app_logger.error("="*70 + "\n")
+        raise FileNotFoundError(
+            f"Input file not found: {os.path.abspath(infile)}. "
+            f"Check path and file existence."
         )
-        raise
+    except OSError as e:
+        app_logger.error("❌ Error opening file - OS/File system issue!")
+        app_logger.error("\n" + "="*70)
+        app_logger.error("🚫 FILE SYSTEM ERROR")
+        app_logger.error("="*70)
+        app_logger.error(f"File: {os.path.abspath(infile)}")
+        app_logger.error(f"Error: {type(e).__name__}: {e}")
+        app_logger.error("\n💡 User Solutions:")
+        app_logger.error("   1. Check file permissions: ls -l <path>")
+        app_logger.error("   2. Verify the file is not corrupted")
+        app_logger.error("   3. Check if file format is NetCDF (.nc)")
+        app_logger.error("   4. Try: ncdump -h <file> to test file integrity")
+        app_logger.error("\n🔧 Developer Info:")
+        app_logger.error(f"   Exception type: {type(e).__name__}")
+        app_logger.error(f"   Exception message: {str(e)}")
+        app_logger.error(f"   File exists: {os.path.exists(infile)}")
+        if os.path.exists(infile):
+            app_logger.error(f"   File size: {os.path.getsize(infile)} bytes")
+            app_logger.error(f"   Is readable: {os.access(infile, os.R_OK)}")
+        app_logger.error("="*70 + "\n")
+        raise OSError(
+            f"Cannot open file {os.path.abspath(infile)}: {e}. "
+            f"Check file permissions and format."
+        )
     except Exception as e:
-        app_logger.exception("❌ An exception occurred: {}".format(e))
-        raise
+        app_logger.error("❌ Unexpected error opening NetCDF file!")
+        app_logger.error("\n" + "="*70)
+        app_logger.error("⚠️  UNEXPECTED ERROR")
+        app_logger.error("="*70)
+        app_logger.error(f"File: {os.path.abspath(infile)}")
+        app_logger.error(f"Error type: {type(e).__name__}")
+        app_logger.error(f"Error message: {str(e)}")
+        app_logger.error("\n💡 Possible causes:")
+        app_logger.error("   1. File is not a valid NetCDF format")
+        app_logger.error("   2. File is corrupted or incomplete")
+        app_logger.error("   3. Missing required libraries (netCDF4, xarray)")
+        app_logger.error("   4. Memory issues with large files")
+        app_logger.error("\n🔧 Developer Info:")
+        app_logger.error(f"   Exception: {type(e).__name__}")
+        app_logger.error(f"   Message: {str(e)}")
+        if hasattr(e, '__traceback__'):
+            import traceback
+            app_logger.error("   Traceback:")
+            for line in traceback.format_tb(e.__traceback__):
+                app_logger.error(f"     {line.strip()}")
+        app_logger.error("="*70 + "\n")
+        raise Exception(
+            f"Failed to open NetCDF file {os.path.abspath(infile)}: "
+            f"{type(e).__name__}: {e}"
+        )
     app_logger.debug("✅ Data opened successfully.")
 
     return data
@@ -723,10 +852,64 @@ def process_data(
     if 'number' in data.coords:
         data = data.drop('number')
 
-    levels_Pa = (
-        data[LevelIndexer] * units(str(data[LevelIndexer].units))
-    ).metpy.convert_units("Pa")
-    data = data.assign_coords({LevelIndexer: levels_Pa})
+    # Convert pressure levels to Pa
+    app_logger.debug(f"🔄 Converting vertical levels to Pascals...")
+    try:
+        if not hasattr(data[LevelIndexer], 'units'):
+            app_logger.warning(
+                f"⚠️  Vertical level coordinate '{LevelIndexer}' has no units attribute. "
+                f"Assuming hPa (hectopascals)."
+            )
+            # Assume hPa if no units
+            levels_Pa = data[LevelIndexer] * units('hPa')
+            levels_Pa = levels_Pa.metpy.convert_units("Pa")
+        else:
+            levels_Pa = (
+                data[LevelIndexer] * units(str(data[LevelIndexer].units))
+            ).metpy.convert_units("Pa")
+        data = data.assign_coords({LevelIndexer: levels_Pa})
+        app_logger.debug(f"✅ Vertical levels converted to Pa (range: {float(levels_Pa.min()):.0f} - {float(levels_Pa.max()):.0f} Pa)")
+    except ValueError as e:
+        app_logger.error("❌ Error converting vertical level units!")
+        app_logger.error("\n" + "="*70)
+        app_logger.error("🔄 UNIT CONVERSION ERROR")
+        app_logger.error("="*70)
+        app_logger.error(f"Vertical level coordinate: {LevelIndexer}")
+        if hasattr(data[LevelIndexer], 'units'):
+            app_logger.error(f"Current units: {data[LevelIndexer].units}")
+        else:
+            app_logger.error("Current units: NOT SPECIFIED")
+        app_logger.error(f"Target units: Pa (Pascals)")
+        app_logger.error(f"Error: {e}")
+        app_logger.error("\n💡 User Solutions:")
+        app_logger.error("   1. Check if vertical level units in your data are pressure units")
+        app_logger.error("   2. Expected units: Pa, hPa, mb, mbar")
+        app_logger.error("   3. If units are missing, add them to the file:")
+        app_logger.error("      ncatted -a units,<level_var>,o,c,'hPa' input.nc")
+        app_logger.error("\n🔧 Developer Info:")
+        app_logger.error(f"   Level variable: {LevelIndexer}")
+        app_logger.error(f"   Level values: {data[LevelIndexer].values}")
+        app_logger.error(f"   Has units attr: {hasattr(data[LevelIndexer], 'units')}")
+        if hasattr(data[LevelIndexer], 'units'):
+            app_logger.error(f"   Units value: {data[LevelIndexer].units}")
+        app_logger.error(f"   MetPy error: {str(e)}")
+        app_logger.error("="*70 + "\n")
+        raise ValueError(
+            f"Cannot convert vertical level units to Pa. "
+            f"Check if '{LevelIndexer}' has valid pressure units."
+        )
+    except Exception as e:
+        app_logger.error("❌ Unexpected error in unit conversion!")
+        app_logger.error("\n" + "="*70)
+        app_logger.error("⚠️  UNIT CONVERSION FAILURE")
+        app_logger.error("="*70)
+        app_logger.error(f"Error type: {type(e).__name__}")
+        app_logger.error(f"Error message: {e}")
+        app_logger.error("\n🔧 Developer Info:")
+        app_logger.error(f"   Level variable: {LevelIndexer}")
+        app_logger.error(f"   Exception: {type(e).__name__}: {str(e)}")
+        app_logger.error("="*70 + "\n")
+        raise
 
     data = (
         data.sortby(LonIndexer)
@@ -770,10 +953,56 @@ def prepare_data(
     try:
         variable_list_df = pd.read_csv(varlist, sep=";", index_col=0, header=0)
     except FileNotFoundError:
-        app_logger.error("❌ The 'namelist' text file could not be found.")
-        raise
+        app_logger.error("❌ The 'namelist' file could not be found!")
+        app_logger.error("\n" + "="*70)
+        app_logger.error("📄 NAMELIST FILE NOT FOUND")
+        app_logger.error("="*70)
+        app_logger.error(f"Looking for: {os.path.abspath(varlist)}")
+        app_logger.error(f"Current directory: {os.getcwd()}")
+        app_logger.error("\n💡 User Solutions:")
+        app_logger.error("   1. Create a namelist file from one of the presets:")
+        app_logger.error("      cp inputs/namelist_ERA5-cdsapi inputs/namelist")
+        app_logger.error("   2. Available preset namelists:")
+        app_logger.error("      - inputs/namelist_ERA5-cdsapi (for ERA5 data)")
+        app_logger.error("      - inputs/namelist_NCEP-R1 (for NCEP Reanalysis 1)")
+        app_logger.error("      - inputs/namelist_NCEP-R2 (for NCEP Reanalysis 2)")
+        app_logger.error("   3. Customize the namelist to match your dataset")
+        app_logger.error("\n🔗 Documentation:")
+        app_logger.error("   See Configuration guide: docs/source/configuration.rst")
+        app_logger.error("="*70 + "\n")
+        raise FileNotFoundError(
+            f"Namelist file not found: {os.path.abspath(varlist)}. "
+            f"Please create one from the preset namelists in inputs/ directory."
+        )
     except pd.errors.EmptyDataError:
-        app_logger.error("❌ The 'namelist' text file is empty.")
+        app_logger.error("❌ The 'namelist' file is empty!")
+        app_logger.error("\n" + "="*70)
+        app_logger.error("📄 EMPTY NAMELIST FILE")
+        app_logger.error("="*70)
+        app_logger.error(f"File: {os.path.abspath(varlist)}")
+        app_logger.error("\n💡 Solution:")
+        app_logger.error("   The namelist file exists but contains no data.")
+        app_logger.error("   Copy from one of the preset namelists:")
+        app_logger.error("   cp inputs/namelist_ERA5-cdsapi inputs/namelist")
+        app_logger.error("="*70 + "\n")
+        raise pd.errors.EmptyDataError(
+            f"Namelist file is empty: {os.path.abspath(varlist)}"
+        )
+    except Exception as e:
+        app_logger.error(f"❌ Error reading namelist file!")
+        app_logger.error("\n" + "="*70)
+        app_logger.error("📄 NAMELIST PARSING ERROR")
+        app_logger.error("="*70)
+        app_logger.error(f"File: {os.path.abspath(varlist)}")
+        app_logger.error(f"Error: {type(e).__name__}: {e}")
+        app_logger.error("\n💡 Possible causes:")
+        app_logger.error("   1. File format is incorrect (should be CSV with ';' delimiter)")
+        app_logger.error("   2. File encoding issues")
+        app_logger.error("   3. Malformed CSV structure")
+        app_logger.error("\n🔧 Developer Info:")
+        app_logger.error(f"   Exception: {type(e).__name__}")
+        app_logger.error(f"   Message: {str(e)}")
+        app_logger.error("="*70 + "\n")
         raise
     app_logger.debug("✅ Variable list loaded:\n" + str(variable_list_df))
 
@@ -816,6 +1045,50 @@ def prepare_data(
         app_logger.error("="*70 + "\n")
         
         raise ValueError("'namelist' text file does not match the data.")
+
+    # Validate required coordinates exist in data
+    app_logger.debug("🔍 Validating required coordinates...")
+    required_coords = ["Longitude", "Latitude", "Vertical Level", "Time"]
+    missing_coords = []
+    
+    for coord_type in required_coords:
+        coord_name = variable_list_df.loc[coord_type]["Variable"]
+        if coord_name not in data.coords and coord_name not in data.variables:
+            missing_coords.append((coord_type, coord_name))
+    
+    if missing_coords:
+        app_logger.error("❌ Required coordinates are missing in the dataset!")
+        app_logger.error("\n" + "="*70)
+        app_logger.error("🗺️  MISSING COORDINATES")
+        app_logger.error("="*70)
+        app_logger.error("Required coordinates from namelist that are missing:")
+        for coord_type, coord_name in missing_coords:
+            app_logger.error(f"   • {coord_type}: '{coord_name}'")
+        
+        app_logger.error("\nAvailable coordinates in dataset:")
+        for coord in data.coords:
+            app_logger.error(f"   • {coord}")
+        
+        app_logger.error("\n💡 User Solutions:")
+        app_logger.error("   1. Update the namelist to use the correct coordinate names")
+        app_logger.error("   2. Check if your data has these dimensions:")
+        app_logger.error("      • Longitude (e.g., 'lon', 'longitude', 'x')")
+        app_logger.error("      • Latitude (e.g., 'lat', 'latitude', 'y')")
+        app_logger.error("      • Vertical Level (e.g., 'level', 'pressure_level', 'lev')")
+        app_logger.error("      • Time (e.g., 'time', 'valid_time', 't')")
+        
+        app_logger.error("\n🔧 Developer Info:")
+        app_logger.error(f"   Dataset dimensions: {list(data.dims)}")
+        app_logger.error(f"   Dataset coordinates: {list(data.coords)}")
+        app_logger.error(f"   Namelist file: {varlist}")
+        app_logger.error("="*70 + "\n")
+        
+        raise ValueError(
+            f"Missing required coordinates: {[c[0] for c in missing_coords]}. "
+            f"Update namelist to match your dataset coordinate names."
+        )
+    
+    app_logger.debug("✅ All required coordinates validated.")
 
     processed_data = process_data(data, args, variable_list_df, app_logger)
     sliced_data = slice_domain(processed_data, args, variable_list_df)

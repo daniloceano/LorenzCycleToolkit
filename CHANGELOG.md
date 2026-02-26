@@ -2,6 +2,59 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.10] - 2026-02-26
+
+### Improved
+
+- **Comprehensive Error Messages**: All error messages now include:
+  - Clear description of the problem
+  - Specific solutions for users
+  - Developer information (file paths, exception details, context)
+  - Visual formatting with emojis and separators for better readability
+
+- **File Opening Errors**: Enhanced error handling when opening NetCDF files:
+  - FileNotFoundError: Shows absolute path, current directory, existence check
+  - OSError: Displays file permissions, size, readability status
+  - Generic errors: Includes full traceback and diagnostic information
+
+- **Namelist Validation**: Improved namelist file error messages:
+  - FileNotFoundError: Shows available preset namelists and copy commands
+  - EmptyDataError: Explains the issue with clear solution
+  - Parsing errors: Indicates format requirements and encoding issues
+
+- **Coordinate Validation**: Added validation for required coordinates:
+  - Checks for longitude, latitude, vertical level, and time coordinates
+  - Shows which coordinates are missing vs available in dataset
+  - Provides examples of common coordinate names
+  - Lists dataset dimensions and coordinates for debugging
+
+- **Unit Conversion Errors**: Enhanced pressure level unit conversion handling:
+  - Assumes hPa if units attribute is missing (with warning)
+  - Detailed error messages showing current and target units
+  - Suggestions for fixing units with ncatted command
+  - Developer info includes MetPy error details
+
+- **Box Limits Validation** (Fixed Framework):
+  - FileNotFoundError: Shows absolute path and example format
+  - Missing fields: Lists required vs found fields
+  - Invalid ranges: Explains min/max relationship requirements
+  - All errors include file path and clear solutions
+
+- **CDS API Error Handling**: Comprehensive error messages for:
+  - Authentication errors: Links to registration and API key setup
+  - Network errors: Suggests checking CDS API status page
+  - File creation errors: Checks disk space and permissions
+  - Download errors: Shows request parameters and common causes
+
+### Added
+
+- **Developer Information**: All error messages now include technical details:
+  - Exception types and messages
+  - File paths (both relative and absolute)
+  - Variable values at point of failure
+  - Stack traces where relevant
+  - Configuration parameters
+
 ## [1.1.9] - 2026-02-26
 
 ### Added

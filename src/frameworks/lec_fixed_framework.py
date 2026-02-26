@@ -57,19 +57,101 @@ def lec_fixed(
     logging.info("📊 Computing energetics using fixed framework...")
 
     box_limits_file = args.box_limits
-    dfbox = pd.read_csv(box_limits_file, header=None, delimiter=";", index_col=0)
+    
+    # Read and validate box_limits file
+    try:
+        dfbox = pd.read_csv(box_limits_file, header=None, delimiter=";", index_col=0)
+    except FileNotFoundError:
+        app_logger.error("❌ Box limits file not found!")
+        app_logger.error("\n" + "="*70)
+        app_logger.error("📁 BOX LIMITS FILE NOT FOUND")
+        app_logger.error("="*70)
+        app_logger.error(f"Looking for: {os.path.abspath(box_limits_file)}")
+        app_logger.error(f"Current directory: {os.getcwd()}")
+        app_logger.error("\n💡 User Solutions:")
+        app_logger.error("   1. Create a box_limits file with the domain boundaries")
+        app_logger.error("   2. Use the default: inputs/box_limits")
+        app_logger.error("   3. Specify custom file with: --box_limits <path>")
+        app_logger.error("\n📝 Expected format:")
+        app_logger.error("   min_lon;-60")
+        app_logger.error("   max_lon;-30")
+        app_logger.error("   min_lat;-50")
+        app_logger.error("   max_lat;-20")
+        app_logger.error("\n🔧 Developer Info:")
+        app_logger.error(f"   args.box_limits: {box_limits_file}")
+        app_logger.error("="*70 + "\n")
+        raise FileNotFoundError(
+            f"Box limits file not found: {os.path.abspath(box_limits_file)}. "
+            f"Create one or use --box_limits to specify path."
+        )
+    except pd.errors.EmptyDataError:
+        app_logger.error("❌ Box limits file is empty!")
+        app_logger.error(f"File: {os.path.abspath(box_limits_file)}")
+        raise pd.errors.EmptyDataError(f"Box limits file is empty: {box_limits_file}")
+    except Exception as e:
+        app_logger.error(f"❌ Error reading box_limits file!")
+        app_logger.error(f"File: {os.path.abspath(box_limits_file)}")
+        app_logger.error(f"Error: {type(e).__name__}: {e}")
+        app_logger.error("\n💡 Check file format (should be CSV with ';' delimiter)")
+        raise
+    
+    # Validate required fields exist
+    required_fields = ["min_lon", "max_lon", "min_lat", "max_lat"]
+    missing_fields = [field for field in required_fields if field not in dfbox.index]
+    
+    if missing_fields:
+        app_logger.error("❌ Box limits file is missing required fields!")
+        app_logger.error("\n" + "="*70)
+        app_logger.error("📋 MISSING BOX LIMITS FIELDS")
+        app_logger.error("="*70)
+        app_logger.error(f"File: {box_limits_file}")
+        app_logger.error(f"Missing fields: {missing_fields}")
+        app_logger.error(f"Found fields: {list(dfbox.index)}")
+        app_logger.error("\n📝 Required format:")
+        app_logger.error("   min_lon;<value>")
+        app_logger.error("   max_lon;<value>")
+        app_logger.error("   min_lat;<value>")
+        app_logger.error("   max_lat;<value>")
+        app_logger.error("="*70 + "\n")
+        raise ValueError(
+            f"Box limits file missing required fields: {missing_fields}. "
+            f"Found: {list(dfbox.index)}"
+        )
+    
     min_lon, max_lon = dfbox.loc["min_lon"].iloc[0], dfbox.loc["max_lon"].iloc[0]
     min_lat, max_lat = dfbox.loc["min_lat"].iloc[0], dfbox.loc["max_lat"].iloc[0]
 
     if min_lon > max_lon:
-        error_message = f"❌ Error in box_limits: min_lon ({min_lon}) is greater than max_lon ({max_lon})"
-        app_logger.error(error_message)
-        raise ValueError(error_message)
+        app_logger.error("❌ Invalid box limits: min_lon > max_lon!")
+        app_logger.error("\n" + "="*70)
+        app_logger.error("🗺️  INVALID BOX LIMITS - LONGITUDE")
+        app_logger.error("="*70)
+        app_logger.error(f"min_lon: {min_lon}")
+        app_logger.error(f"max_lon: {max_lon}")
+        app_logger.error("\n💡 Solution:")
+        app_logger.error("   Ensure min_lon < max_lon in your box_limits file")
+        app_logger.error(f"   File: {box_limits_file}")
+        app_logger.error("="*70 + "\n")
+        raise ValueError(
+            f"Invalid box_limits: min_lon ({min_lon}) > max_lon ({max_lon}). "
+            f"Check {box_limits_file}"
+        )
 
     if min_lat > max_lat:
-        error_message = f"❌ Error in box_limits: min_lat ({min_lat}) is greater than max_lat ({max_lat})"
-        app_logger.error(error_message)
-        raise ValueError(error_message)
+        app_logger.error("❌ Invalid box limits: min_lat > max_lat!")
+        app_logger.error("\n" + "="*70)
+        app_logger.error("🗺️  INVALID BOX LIMITS - LATITUDE")
+        app_logger.error("="*70)
+        app_logger.error(f"min_lat: {min_lat}")
+        app_logger.error(f"max_lat: {max_lat}")
+        app_logger.error("\n💡 Solution:")
+        app_logger.error("   Ensure min_lat < max_lat in your box_limits file")
+        app_logger.error(f"   File: {box_limits_file}")
+        app_logger.error("="*70 + "\n")
+        raise ValueError(
+            f"Invalid box_limits: min_lat ({min_lat}) > max_lat ({max_lat}). "
+            f"Check {box_limits_file}"
+        )
 
     app_logger.debug("💾 Loading data into memory..")
     data = data.compute()
