@@ -6,7 +6,28 @@ The LorenzCycleToolkit requires specific configuration files for both fixed and 
 Namelist File
 -------------
 
-The `namelist` file specifies the variable names and units used in the input NetCDF file. Here is an example `namelist` file for the NCEP-R2 dataset:
+**Important**: You must create a ``namelist`` file in the ``inputs/`` directory before running the toolkit. This file is not tracked by version control, as it is customized by each user for their specific dataset.
+
+The ``namelist`` file specifies the variable names and units used in the input NetCDF file. The toolkit provides several preset namelist files that you can use as templates:
+
+- ``inputs/namelist_ERA5-cdsapi`` - For ERA5 data from CDS API
+- ``inputs/namelist_NCEP-R1`` - For NCEP Reanalysis 1 data
+- ``inputs/namelist_NCEP-R2`` - For NCEP Reanalysis 2 data
+- ``inputs/namelist_ERA5`` - For ERA5 data (other sources)
+- ``inputs/namelist_MPAS-A`` - For MPAS-A model data
+
+**Creating your namelist file**:
+
+1. Choose the preset that best matches your data source
+2. Copy it to ``inputs/namelist``:
+
+   .. code-block:: bash
+
+      cp inputs/namelist_NCEP-R2 inputs/namelist
+
+3. Edit if needed to match your specific dataset variable names
+
+Here is an example ``namelist`` file for the NCEP-R2 dataset:
 
 .. code-block:: text
 
@@ -50,7 +71,9 @@ For the moving framework, a `track_file` can be used to define the system's cent
 Namelist for ERA5 Data (CDS API)
 ---------------------------------
 
-When using the ``--cdsapi`` flag to automatically download ERA5 data, you must use a specific namelist that matches ERA5 variable naming conventions. The toolkit provides ``inputs/namelist_ERA5-cdsapi`` for this purpose:
+When using the ``--cdsapi`` flag to automatically download ERA5 data, the toolkit **automatically** uses the ERA5-compatible namelist (``inputs/namelist_ERA5-cdsapi``). You do not need to manually create or configure the namelist file when using this feature.
+
+The ``inputs/namelist_ERA5-cdsapi`` preset contains:
 
 .. code-block:: text
 
@@ -65,9 +88,19 @@ When using the ``--cdsapi`` flag to automatically download ERA5 data, you must u
     Time;;valid_time
     Vertical Level;;pressure_level
 
-To use ERA5 data downloaded via CDS API:
+If you have ERA5 data from other sources (not downloaded via ``--cdsapi``), you should manually create your namelist:
 
 .. code-block:: bash
 
    cp inputs/namelist_ERA5-cdsapi inputs/namelist
+
+Next Steps
+----------
+
+With your configuration files ready, you can:
+
+- See :doc:`usage` for command-line options and framework selection
+- Follow :doc:`examples_and_tutorials` for complete workflows with sample data
+- Check :doc:`cdsapi_example` if you need to automatically download ERA5 data
+- Review :doc:`results` to understand the output structure
 

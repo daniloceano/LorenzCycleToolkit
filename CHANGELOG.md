@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.8] - 2026-02-26
+
+### Changed
+
+- **Namelist File Management**: The `inputs/namelist` file is now excluded from version control to prevent conflicts, as it should be customized by each user for their specific dataset.
+
+### Improved
+
+- **Enhanced Error Messages**: When the namelist doesn't match the dataset, the error message now displays:
+  - Available coordinates in the dataset (with units and long names when available)
+  - Available variables in the dataset (with units, long names, and standard names when available)
+  - Helpful suggestions for which preset namelist to use
+  - This makes it much easier for users to configure the correct namelist for their data
+
+### Documentation
+
+- **Configuration Guide**: Clarified that users must create an `inputs/namelist` file from one of the provided presets before running the toolkit
+- **Usage Guide**: Added comprehensive sections on:
+  - Prerequisites for each framework (fixed, moving, interactive)
+  - Input data requirements (regular grid, isobaric levels, required variables)
+  - Data preparation best practices to avoid memory issues
+  - Examples of data preprocessing using both Python (xarray) and CDO
+  - Links to the Configuration page for detailed setup instructions
+
 ## [1.1.7] - 2026-01-25
 
 ### Fixed

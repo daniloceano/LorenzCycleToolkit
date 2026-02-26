@@ -1,7 +1,30 @@
 Overview
 ========
 
-The Lorenz Energy Cycle (LEC), introduced by Edward Lorenz in 1965, is an analytical framework used to estimate atmospheric energy. It categorizes energy into zonal and eddy components of Kinetic Energy (Kz and Ke, respectively) and Available Potential Energy (Az and Ae, respectively). The LEC also quantifies conversions between these forms (Ca, Ce, Cz, and Ck), along with generation and dissipation terms (Gz, Ge, Dz, and De). Originally developed for global energetics, the framework has been adapted for regional studies, incorporating calculations for energy transport across boundaries (BAz, BAe, BKz, BKe).
+What is the Lorenz Energy Cycle?
+---------------------------------
+
+The atmospheric circulation is driven by energy transformations between different forms:
+
+- **Available Potential Energy (APE)**: Energy stored in atmospheric temperature gradients and density differences
+- **Kinetic Energy (KE)**: Energy of atmospheric motion (wind)
+
+Both APE and KE can be further divided into:
+
+- **Zonal components** (Az, Kz): Represent large-scale, east-west averaged circulation patterns
+- **Eddy components** (Ae, Ke): Represent deviations from the zonal mean, such as storms, cyclones, and weather disturbances
+
+The Lorenz Energy Cycle quantifies how energy flows between these four reservoirs, helping us understand:
+
+- How storms and cyclones intensify and decay
+- Energy sources and sinks in weather systems  
+- The role of different processes in atmospheric dynamics
+- Differences between model simulations and observations
+
+Mathematical Framework
+----------------------
+
+The Lorenz Energy Cycle (LEC), introduced by Edward Lorenz in 1955, is an analytical framework used to estimate atmospheric energy. It categorizes energy into zonal and eddy components of Kinetic Energy (Kz and Ke, respectively) and Available Potential Energy (Az and Ae, respectively). The LEC also quantifies conversions between these forms (Ca, Ce, Cz, and Ck), along with generation and dissipation terms (Gz, Ge, Dz, and De). Originally developed for global energetics, the framework has been adapted for regional studies, incorporating calculations for energy transport across boundaries (BAz, BAe, BKz, BKe).
 
 The LEC budget is described by the following equations:
 
@@ -31,3 +54,16 @@ Where ε represents numerical errors. The complete cycle, assuming all terms are
 
 .. image:: https://github.com/daniloceano/lorenz-cycle/assets/56005607/d59eeb31-5cef-46ac-a841-1ba4170fafbd
    :width: 350
+
+Getting Started
+---------------
+
+To begin using the LorenzCycleToolkit:
+
+1. Follow the :doc:`installation` instructions to set up the toolkit
+2. Configure your :doc:`configuration` files (namelist, box_limits, or track files)
+3. See :doc:`usage` for command-line options and running the toolkit
+4. Check :doc:`examples_and_tutorials` for practical step-by-step examples
+5. Review :doc:`results` to understand the output files
+
+For detailed mathematical formulations, see the :doc:`math` section.

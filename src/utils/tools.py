@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2026/01/25 17:33:29 by daniloceano      ###   ########.fr        #
+#    Updated: 2026/02/26 08:16:57 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -579,6 +579,37 @@ def prepare_data(
         app_logger.error(
             "❌ The variable list does not match the data. Check if the 'namelist' text file is correct."
         )
+        
+        # Display dataset information to help user configure the namelist
+        app_logger.error("\n" + "="*70)
+        app_logger.error("📊 DATASET INFORMATION")
+        app_logger.error("="*70)
+        
+        # List coordinates
+        app_logger.error("\n🗺️  Available Coordinates:")
+        for coord_name in data.coords:
+            coord = data.coords[coord_name]
+            units_str = f" ({coord.units})" if hasattr(coord, 'units') else ""
+            long_name = f" - {coord.long_name}" if hasattr(coord, 'long_name') else ""
+            app_logger.error(f"   • {coord_name}{units_str}{long_name}")
+        
+        # List variables
+        app_logger.error("\n📋 Available Variables:")
+        for var_name in data.data_vars:
+            var = data[var_name]
+            units_str = f" ({var.units})" if hasattr(var, 'units') else ""
+            long_name = f" - {var.long_name}" if hasattr(var, 'long_name') else ""
+            standard_name = f" [{var.standard_name}]" if hasattr(var, 'standard_name') else ""
+            app_logger.error(f"   • {var_name}{units_str}{long_name}{standard_name}")
+        
+        app_logger.error("\n" + "="*70)
+        app_logger.error("💡 TIP: Update your namelist file with the correct variable names")
+        app_logger.error("    from the list above, or use one of the preset namelists:")
+        app_logger.error("    - inputs/namelist_ERA5-cdsapi (for ERA5 data)")
+        app_logger.error("    - inputs/namelist_NCEP-R1 (for NCEP Reanalysis 1)")
+        app_logger.error("    - inputs/namelist_NCEP-R2 (for NCEP Reanalysis 2)")
+        app_logger.error("="*70 + "\n")
+        
         raise ValueError("'namelist' text file does not match the data.")
 
     processed_data = process_data(data, args, variable_list_df, app_logger)

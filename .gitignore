@@ -7,10 +7,11 @@ LEC_Results/
 # data wit nc files
 netCDF_data/
 
-# inputs
+# inputs (user-specific configuration files)
 inputs/box_limits*
 inputs/fvars*
 inputs/track*
+inputs/namelist
 
 # automation
 src/automate-SWSA-cyclones_energetic-analysis.sh
