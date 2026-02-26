@@ -2,6 +2,51 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.11] - 2025-02-26
+
+### Changed
+
+- **Code Organization**: Refactored `src/utils/tools.py` (1096 lines) into three focused modules:
+  - `tools.py`: Utility functions (logging, CDS API, coordinate conversions) - 453 lines
+  - `validation.py`: Input validation functions (track files, namelists, coordinates) - 449 lines
+  - `preprocessing.py`: Data preprocessing functions (loading, processing, preparation) - 592 lines
+  
+- **Improved Maintainability**:
+  - Separation of concerns: utilities, validation, and preprocessing logic are now separate
+  - Better testability with focused modules
+  - Clearer import statements showing dependencies
+  - Module-level docstrings explaining each module's purpose
+
+- **Import Updates**:
+  - `lorenzcycletoolkit.py`: Now imports `prepare_data` from `src.utils.preprocessing`
+  - `initialize_logging` remains in `src.utils.tools`
+  - `get_cdsapi_data` remains in `src.utils.tools` (no changes to tests)
+  
+- **Module Structure**:
+  - `tools.py` contains:
+    - `initialize_logging()` - Setup application logging
+    - `convert_longitude_range()` - Coordinate conversion utility
+    - `find_extremum_coordinates()` - Find min/max points
+    - `get_cdsapi_data()` - ERA5 data download from CDS API
+    
+  - `validation.py` contains:
+    - `validate_track_file()` - Track file format validation
+    - `validate_namelist_file()` - Namelist loading and validation
+    - `validate_variable_match()` - Check namelist-dataset variable matching
+    - `validate_required_coordinates()` - Validate presence of required coordinates
+    
+  - `preprocessing.py` contains:
+    - `get_data()` - NetCDF file opening with error handling
+    - `process_data()` - Data preprocessing (timestep validation, coordinate conversion, unit conversion)
+    - `prepare_data()` - Main orchestration function
+
+### Developer Notes
+
+- No breaking changes for end users - all functionality remains the same
+- Test suite remains unchanged (all tests use functions that stayed in `tools.py`)
+- Error messages and logging behavior unchanged
+- This refactoring improves code navigation and makes future maintenance easier
+
 ## [1.1.10] - 2026-02-26
 
 ### Improved
