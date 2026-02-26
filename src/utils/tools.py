@@ -6,13 +6,14 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2026/02/26 08:16:57 by daniloceano      ###   ########.fr        #
+#    Updated: 2026/02/26 09:29:00 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 import argparse
 import logging
 import os
+import re
 from datetime import timedelta
 
 import dask
@@ -121,6 +122,144 @@ def find_extremum_coordinates(
         raise ValueError(f"Invalid variable specified: {variable}")
 
     return lat_values[index[0]], lon_values[index[1]]
+
+
+def validate_track_file(
+    track_file: str, app_logger: logging.Logger
+) -> tuple[str, bool]:
+    """
+    Validate the track file format and detect the delimiter.
+    
+    Expected format:
+    - Delimiter: ';' (semicolon) - standard, or ',' (comma) - alternative
+    - Required columns: 'time', 'Lat', 'Lon'
+    - Date format: YYYY-MM-DD-HHMM (e.g., 2005-08-08-0000)
+    - First line must be header with column names
+    
+    Args:
+        track_file (str): Path to the track file.
+        app_logger (logging.Logger): Logger for the application.
+    
+    Returns:
+        tuple: (delimiter, has_warnings) where delimiter is the detected separator
+               and has_warnings indicates if any format issues were found.
+    
+    Raises:
+        ValueError: If the track file format is invalid or missing required columns.
+    """
+    app_logger.debug(f"🔍 Validating track file format: {track_file}")
+    
+    if not os.path.exists(track_file):
+        app_logger.error(f"❌ Track file not found: {track_file}")
+        raise FileNotFoundError(f"Track file not found: {track_file}")
+    
+    # Read first few lines to detect format
+    with open(track_file, 'r') as f:
+        first_line = f.readline().strip()
+        second_line = f.readline().strip()
+    
+    # Detect delimiter by checking header
+    delimiter = None
+    has_warnings = False
+    
+    if ';' in first_line:
+        delimiter = ';'
+    elif ',' in first_line:
+        delimiter = ','
+        app_logger.warning(
+            "⚠️  Track file uses ',' as delimiter instead of the standard ';'"
+        )
+        app_logger.warning(
+            "    The file will be read correctly, but consider converting to ';' separator."
+        )
+        has_warnings = True
+    else:
+        delimiter = ';'  # Default fallback
+        app_logger.error(
+            f"❌ Could not detect delimiter in track file header: {first_line}"
+        )
+        raise ValueError(
+            f"Invalid track file format. Header should contain ';' or ',' separators.\n"
+            f"Found: {first_line}"
+        )
+    
+    # Parse header to check columns
+    header_columns = [col.strip() for col in first_line.split(delimiter)]
+    
+    app_logger.debug(f"📋 Detected columns: {header_columns}")
+    app_logger.debug(f"🔧 Detected delimiter: '{delimiter}'")
+    
+    # Check required columns
+    required_columns = ['time', 'Lat', 'Lon']
+    missing_columns = [col for col in required_columns if col not in header_columns]
+    
+    if missing_columns:
+        app_logger.error("❌ Track file is missing required columns!")
+        app_logger.error(f"   Required columns: {required_columns}")
+        app_logger.error(f"   Found columns: {header_columns}")
+        app_logger.error(f"   Missing: {missing_columns}")
+        app_logger.error("\n" + "="*70)
+        app_logger.error("📝 EXPECTED TRACK FILE FORMAT:")
+        app_logger.error("="*70)
+        app_logger.error("time;Lat;Lon")
+        app_logger.error("2005-08-08-0000;-22.5;-45")
+        app_logger.error("2005-08-08-0600;-22.5;-45")
+        app_logger.error("2005-08-08-1200;-22.5;-45")
+        app_logger.error("...")
+        app_logger.error("="*70)
+        app_logger.error("Required:")
+        app_logger.error("  • Delimiter: ';' (semicolon)")
+        app_logger.error("  • Columns: time, Lat, Lon (case-sensitive)")
+        app_logger.error("  • Date format: YYYY-MM-DD-HHMM")
+        app_logger.error("  • Optional: additional columns (e.g., SLP_hPa)")
+        app_logger.error("="*70 + "\n")
+        raise ValueError(
+            f"Track file missing required columns: {missing_columns}\n"
+            f"Expected: {required_columns}\n"
+            f"Found: {header_columns}"
+        )
+    
+    # Validate date format in second line
+    if second_line:
+        date_str = second_line.split(delimiter)[0].strip()
+        
+        # Check if date matches expected format YYYY-MM-DD-HHMM
+        date_pattern = r'^\d{4}-\d{2}-\d{2}-\d{4}$'
+        
+        if not re.match(date_pattern, date_str):
+            app_logger.error("❌ Track file has invalid date format!")
+            app_logger.error(f"   Found: '{date_str}'")
+            app_logger.error(f"   Expected format: YYYY-MM-DD-HHMM (e.g., 2005-08-08-0000)")
+            app_logger.error("\n" + "="*70)
+            app_logger.error("📅 DATE FORMAT EXAMPLES:")
+            app_logger.error("="*70)
+            app_logger.error("✓ Correct: 2005-08-08-0000 (year-month-day-hourminute)")
+            app_logger.error("✓ Correct: 2021-06-26-1800")
+            app_logger.error("✗ Wrong: 2005-08-08 00:00 (space and colon)")
+            app_logger.error("✗ Wrong: 2005/08/08-0000 (forward slashes)")
+            app_logger.error("✗ Wrong: 08-08-2005-0000 (day-month-year)")
+            app_logger.error("="*70 + "\n")
+            raise ValueError(
+                f"Invalid date format in track file: '{date_str}'\n"
+                f"Expected: YYYY-MM-DD-HHMM (e.g., 2005-08-08-0000)"
+            )
+        
+        app_logger.debug(f"✓ Date format validated: {date_str}")
+    
+    # Additional validation: try to read the file with detected delimiter
+    try:
+        test_df = pd.read_csv(track_file, delimiter=delimiter, nrows=2)
+        app_logger.debug(f"✓ File successfully parsed with delimiter '{delimiter}'")
+    except Exception as e:
+        app_logger.error(f"❌ Error parsing track file: {e}")
+        raise ValueError(f"Track file could not be parsed: {e}")
+    
+    if has_warnings:
+        app_logger.info("⚠️  Track file format has minor issues but will be processed.")
+    else:
+        app_logger.debug("✅ Track file format validation passed.")
+    
+    return delimiter, has_warnings
 
 
 def get_cdsapi_data(
@@ -403,8 +542,14 @@ def get_data(args: argparse.Namespace, app_logger: logging.Logger) -> xr.Dataset
             app_logger.debug(
                 "🌐 CDS API data not found. Attempting to retrieve data from CDS API..."
             )
+            # Validate track file format and detect delimiter
+            delimiter, _ = validate_track_file(args.trackfile, app_logger)
             track = pd.read_csv(
-                args.trackfile, parse_dates=[0], delimiter=";", index_col="time"
+                args.trackfile, 
+                delimiter=delimiter, 
+                index_col="time",
+                parse_dates=["time"],
+                date_format="%Y-%m-%d-%H%M"
             )
             infile = get_cdsapi_data(args, track, app_logger)
             app_logger.debug(f"✅ CDS API data ready: {infile}")
@@ -450,8 +595,17 @@ def process_data(
     if args.track:
         app_logger.debug("📅 Selecting only data matching the track dates... ")
         track_file = args.trackfile
+        
+        # Validate track file format and detect delimiter
+        delimiter, _ = validate_track_file(track_file, app_logger)
+        
+        # Read track file with custom date parser for YYYY-MM-DD-HHMM format
         track = pd.read_csv(
-            track_file, parse_dates=[0], delimiter=";", index_col="time"
+            track_file, 
+            delimiter=delimiter, 
+            index_col="time",
+            parse_dates=["time"],
+            date_format="%Y-%m-%d-%H%M"
         )
         TimeIndexer = variable_list_df.loc["Time"]["Variable"]
         # Check input data and track time steps
@@ -461,27 +615,78 @@ def process_data(
         track_time_delta = int(
             (track.index[1] - track.index[0]) / np.timedelta64(1, "h")
         )
-        # If track dt is higher than data dt, raise error
-        if track_time_delta > data_time_delta:
-            app_logger.error(
-                "❌ Track time step is higher than data time step. Please resample the track to match the data time step."
-            )
+        
+        # Log timestep information
+        app_logger.debug(f"📊 Data time resolution: {data_time_delta} hour(s)")
+        app_logger.debug(f"📊 Track time resolution: {track_time_delta} hour(s)")
+        app_logger.debug(f"📅 Data time range: {data[TimeIndexer][0].values} to {data[TimeIndexer][-1].values}")
+        app_logger.debug(f"📍 Track time range: {track.index[0]} to {track.index[-1]}")
+        
+        # If data dt is higher than track dt, raise error (can't select timesteps that don't exist in data)
+        if data_time_delta > track_time_delta:
+            app_logger.error("❌ Data time step is higher than track time step!")
+            app_logger.error("\n" + "="*70)
+            app_logger.error("⏱️  TIME RESOLUTION MISMATCH")
+            app_logger.error("="*70)
+            app_logger.error(f"Data time resolution:  {data_time_delta} hour(s)")
+            app_logger.error(f"Track time resolution: {track_time_delta} hour(s)")
+            app_logger.error("")
+            app_logger.error("📅 Data timestamps:")
+            app_logger.error(f"   First: {data[TimeIndexer][0].values}")
+            app_logger.error(f"   Last:  {data[TimeIndexer][-1].values}")
+            app_logger.error("")
+            app_logger.error("📍 Track timestamps:")
+            app_logger.error(f"   First: {track.index[0]}")
+            app_logger.error(f"   Last:  {track.index[-1]}")
+            app_logger.error("")
+            app_logger.error("⚠️  Problem: The track requests timesteps that don't exist in the data.")
+            app_logger.error(f"   Track needs data every {track_time_delta} hour(s), but data only has timesteps every {data_time_delta} hour(s).")
+            app_logger.error("")
+            app_logger.error("💡 Solutions:")
+            app_logger.error(f"   1. Resample the track file to match or exceed the data time step ({data_time_delta}h)")
+            app_logger.error(f"   2. Re-download data with higher temporal resolution (≤{track_time_delta}h)")
+            app_logger.error("="*70 + "\n")
             raise ValueError(
-                "Track time step is higher than data time step. Please resample the track to match the data time step."
+                f"Data time step ({data_time_delta}h) is higher than track time step ({track_time_delta}h). "
+                f"Cannot select track timesteps that don't exist in data. "
+                f"Please resample the track or re-download data with higher temporal resolution."
             )
         # Check data and track initial and final timestamps
         if track.index[0] < data[TimeIndexer][0].values:
-            app_logger.error(
-                "❌ Track initial timestamp is earlier than data initial timestamp. Please adjust the track file."
-            )
+            app_logger.error("❌ Track initial timestamp is earlier than data initial timestamp!")
+            app_logger.error("\n" + "="*70)
+            app_logger.error("📅 TIMESTAMP MISMATCH - Track starts too early")
+            app_logger.error("="*70)
+            app_logger.error("Data timestamps:")
+            app_logger.error(f"   First: {data[TimeIndexer][0].values}")
+            app_logger.error(f"   Last:  {data[TimeIndexer][-1].values}")
+            app_logger.error("")
+            app_logger.error("Track timestamps:")
+            app_logger.error(f"   First: {track.index[0]} ← TOO EARLY!")
+            app_logger.error(f"   Last:  {track.index[-1]}")
+            app_logger.error("")
+            app_logger.error("💡 Solution: Adjust the track file to start at or after the data start time.")
+            app_logger.error("="*70 + "\n")
             raise ValueError(
-                "Track initial timestamp is earlier than data initial timestamp. Please adjust the track file."
+                f"Track initial timestamp ({track.index[0]}) is earlier than data initial timestamp ({data[TimeIndexer][0].values}). "
+                f"Please adjust the track file."
             ) 
         if track.index[-1] > data[TimeIndexer][-1].values:
-            app_logger.error(
-                f"❌ Track final timestamp ({track.index[-1]}) is later than data final timestamp ({data[TimeIndexer][-1].values}). "
-                f"Please adjust the track file or re-download the data."
-            )
+            app_logger.error("❌ Track final timestamp is later than data final timestamp!")
+            app_logger.error("\n" + "="*70)
+            app_logger.error("📅 TIMESTAMP MISMATCH - Track extends beyond data")
+            app_logger.error("="*70)
+            app_logger.error("Data timestamps:")
+            app_logger.error(f"   First: {data[TimeIndexer][0].values}")
+            app_logger.error(f"   Last:  {data[TimeIndexer][-1].values} ← DATA ENDS HERE")
+            app_logger.error("")
+            app_logger.error("Track timestamps:")
+            app_logger.error(f"   First: {track.index[0]}")
+            app_logger.error(f"   Last:  {track.index[-1]} ← TOO LATE!")
+            app_logger.error("")
+            app_logger.error("💡 Solution: Either adjust the track file to end at or before the data end time,")
+            app_logger.error("   or re-download the data to cover the full track period.")
+            app_logger.error("="*70 + "\n")
             raise ValueError(
                 f"Track final timestamp ({track.index[-1]}) is later than data final timestamp ({data[TimeIndexer][-1].values}). "
                 f"Please adjust the track file or re-download the data."

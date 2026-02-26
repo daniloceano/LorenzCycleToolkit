@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.9] - 2026-02-26
+
+### Added
+
+- **Track File Format Validation**: Added comprehensive validation for track file format:
+  - Automatic delimiter detection (`;` or `,`)
+  - Validation of required columns (`time`, `Lat`, `Lon`)
+  - Validation of date format (`YYYY-MM-DD-HHMM`)
+  - Clear error messages showing expected format with examples
+  - Support for both semicolon and comma delimiters
+
+### Fixed
+
+- **Track/Data Timestep Comparison**: Fixed inverted logic in timestep validation:
+  - Now correctly allows track with larger timesteps than data (e.g., 6h track on 1h data)
+  - Properly errors when data has larger timesteps than track (missing timesteps)
+  - Added detailed error messages showing both data and track temporal information
+
+### Improved
+
+- **Enhanced Error Messages for Timestep Issues**: When timestep or timestamp mismatches occur, error messages now display:
+  - Data time resolution (e.g., 1 hour, 6 hours)
+  - Track time resolution
+  - First and last timestamps for both data and track
+  - Clear explanation of the problem
+  - Actionable solutions for resolving the issue
+  - Visual indicators (arrows, emojis) highlighting problematic timestamps
+
 ## [1.1.8] - 2026-02-26
 
 ### Changed
