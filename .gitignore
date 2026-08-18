@@ -226,8 +226,3 @@ src/plots/.vscode/settings.json
 # VSCode settings folder
 .vscode/
 
-# Large generated validation artefacts (regenerate with build_full_validation_report.py)
-validation/full_validation_report.html
-validation/full_validation_report.pdf
-validation/paper_style_validation.html
-validation/paper_style_validation.pdf

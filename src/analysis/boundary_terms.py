@@ -27,15 +27,14 @@ Contact:
 
 import logging
 
-import numpy as np
 from metpy.constants import Re, g
 
 from ..utils.box_data import BoxData
 from ..utils.calc_averages import CalcAreaAverage, CalcZonalAverage
-from ..utils.nan_handling import convert_units, handle_nans
+from ..utils.term_output import TermOutputMixin
 
 
-class BoundaryTerms:
+class BoundaryTerms(TermOutputMixin):
     """
     Class to compute boundary terms of the Lorenz Energy Cycle.
 
@@ -116,8 +115,6 @@ class BoundaryTerms:
         self.sigma_AA = box_obj.sigma_AA
 
         # Initialize attributes related to geopotential
-        self.geopt = box_obj.geopt
-        self.geopt_ZA = box_obj.geopt_ZA
         self.geopt_ZE = box_obj.geopt_ZE
         self.geopt_AE = box_obj.geopt_AE
 
@@ -396,19 +393,6 @@ class BoundaryTerms:
         self.app_logger.debug("Done.")
         return Boz
 
-    def _east_west_pressure_work(self):
-        """Pressure work through the east and west faces (term I of BΦZ)."""
-        face_flux = (self.u_ZA * self.geopt_ZE + self.geopt_AE * self.u_ZE) / g
-        term = face_flux.sel(**{self.LonIndexer: self.eastern_limit}) - face_flux.sel(
-            **{self.LonIndexer: self.western_limit}
-        )
-        term = self._handle_nans(term.integrate("rlats"), "BΦZ_east_west")
-        return (
-            term.integrate(self.VerticalCoordIndexer)
-            * self.PressureData.metpy.units
-            * self.c1
-        )
-
     def calc_boe(self):
         """
         Computes the appearence of Eddy Kinetic Energy associated with work
@@ -473,29 +457,15 @@ class BoundaryTerms:
         self.app_logger.debug("Done.")
         return Boe
 
-    def _handle_nans(self, function, variable_name=""):
-        """Delegate to the shared NaN policy.
-
-        Interior NaNs are interpolated along the vertical coordinate and
-        reported; pressure levels are never dropped here, because the vertical
-        control volume is fixed once for the whole budget in BoxData.
-        """
-        return handle_nans(
-            function,
-            self.VerticalCoordIndexer,
-            variable_name=variable_name,
-            app_logger=getattr(self, "app_logger", None),
+    def _east_west_pressure_work(self):
+        """Pressure work through the east and west faces (term I of BΦZ)."""
+        face_flux = (self.u_ZA * self.geopt_ZE + self.geopt_AE * self.u_ZE) / g
+        term = face_flux.sel(**{self.LonIndexer: self.eastern_limit}) - face_flux.sel(
+            **{self.LonIndexer: self.western_limit}
         )
-
-    def _convert_units(self, function, variable_name):
-        """Delegate to the shared unit conversion.
-
-        pint raises DimensionalityError, which subclasses TypeError, so a
-        ``ValueError`` guard would not catch it.
-        """
-        return convert_units(
-            function,
-            "W/m^2",
-            variable_name,
-            app_logger=getattr(self, "app_logger", None),
+        term = self._handle_nans(term.integrate("rlats"), "BΦZ_east_west")
+        return (
+            term.integrate(self.VerticalCoordIndexer)
+            * self.PressureData.metpy.units
+            * self.c1
         )

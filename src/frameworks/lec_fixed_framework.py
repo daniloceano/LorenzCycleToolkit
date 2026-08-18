@@ -26,6 +26,7 @@ from ..analysis.generation_and_dissipation_terms import \
 from ..analysis.mass_continuity import MassContinuity
 from ..utils.box_data import BoxData
 from ..utils.calc_budget_and_residual import calc_budget_diff, calc_residuals
+from ..utils.input_files import read_box_limits
 from ..utils.longitude import canonicalize_box
 
 
@@ -58,29 +59,19 @@ def lec_fixed(
     """
     logging.info("📊 Computing energetics using fixed framework...")
 
-    box_limits_file = args.box_limits
-    if not os.path.exists(box_limits_file) and os.path.exists(
-        f"{box_limits_file}.default"
-    ):
-        box_limits_file = f"{box_limits_file}.default"
+    box_limits_file, min_lon, max_lon, min_lat, max_lat = read_box_limits(
+        args.box_limits
+    )
     app_logger.info(f"📐 Fixed-domain limits read from: {box_limits_file}")
-    dfbox = pd.read_csv(box_limits_file, header=None, delimiter=";", index_col=0)
-    min_lon, max_lon = float(dfbox.loc["min_lon"].iloc[0]), float(
-        dfbox.loc["max_lon"].iloc[0]
-    )
-    min_lat, max_lat = float(dfbox.loc["min_lat"].iloc[0]), float(
-        dfbox.loc["max_lat"].iloc[0]
-    )
 
     if min_lat > max_lat:
         error_message = f"❌ Error in box_limits: min_lat ({min_lat}) is greater than max_lat ({max_lat})"
         app_logger.error(error_message)
         raise ValueError(error_message)
 
-    # express the requested longitudes in the dataset's own
-    # convention. A wrapped interval raises an explicit, actionable error
-    # rather than being rejected as a malformed input or, worse, silently
-    # producing a partial slice.
+    # Express the requested longitudes in the dataset's own convention. A
+    # wrapped interval raises an explicit, actionable error rather than
+    # silently producing a partial slice.
     LonIndexerForBox = variable_list_df.loc["Longitude"]["Variable"]
     try:
         min_lon, max_lon = canonicalize_box(
@@ -105,7 +96,6 @@ def lec_fixed(
         variable_list_df.loc["Vertical Level"]["Variable"],
     )
 
-    PressureData = data[VerticalCoordIndexer] * data[VerticalCoordIndexer].metpy.units
     app_logger.info(
         f"🗺️ Bounding box: lon=[{min_lon}, {max_lon}], lat=[{min_lat}, {max_lat}]"
     )
@@ -127,10 +117,8 @@ def lec_fixed(
         app_logger.exception("❌ An exception occurred while creating BoxData object")
         raise
 
-    # The per-level CSV headers must list the levels ACTUALLY used, which are
-    # only known after BoxData has fixed the vertical control volume
-    #. Creating them earlier from the full level set silently
-    # misaligned every archived profile whenever a level was excluded.
+    # The per-level CSV headers list the levels actually used, which are only
+    # known after BoxData has fixed the vertical control volume.
     used_levels = [float(i) for i in box_obj.PressureData.metpy.dequantify().values]
     app_logger.info(
         f"🧾 Vertical-level CSVs will carry {len(used_levels)} levels: "
@@ -234,11 +222,9 @@ def lec_fixed(
         df[col] = energy_list[i]
     for i, col in enumerate(["Cz", "Ca", "Ck", "Ce", "C_overturning"]):
         df[col] = conversion_list[i]
-    # all six boundary diagnostics are computed, so all six are
-    # exported. Previously BΦZ and BΦE were computed and then discarded, which
-    # also made the fixed and moving frameworks emit different column sets.
-    # They are exported here now that their formulations have been re-derived
-    # They do NOT enter the residuals.
+    # All six boundary diagnostics are computed and all six are exported, so
+    # the fixed and moving frameworks emit the same column set. BΦZ and BΦE do
+    # NOT enter the residuals.
     for i, col in enumerate(["BAz", "BAe", "BKz", "BKe", "BΦZ", "BΦE"]):
         df[col] = boundary_list[i]
     df["M"] = mass_residual

@@ -5,9 +5,14 @@ Analytic regression tests for the Lorenz Energy Cycle equations.
 
 Every expectation in this file is derived either in closed form from the
 prescribed synthetic fields, or from a short NumPy transcription of the
-published equation.  None of them re-uses the implementation under test, so a
-formula error changes the implementation's answer without changing the
-expectation.
+published equation, so a formula error changes the implementation's answer
+without changing the expectation.
+
+Two helpers -- ``_ca_term1_transcription`` and ``_ck_transcription`` -- restate
+the toolkit's own expression in order to isolate a single subterm.  They are
+not expectations: each is pinned to an independent reference, and the public
+``calc_*`` method is then pinned to them, so the chain from the published
+equation to the production code path is closed at both ends.
 
 Primary sources used for the expectations:
   * Muench, H. S. (1965), J. Atmos. Sci. 22, 349-360, pp. 351-352.
@@ -114,8 +119,15 @@ def test_eddy_covariances_match_closed_form(box):
 # 2. C_A  (LCT-REV-001 spurious cos(phi); LCT-REV-002 spurious factor 1/2)
 # ===========================================================================
 
-def _ca_term1_implementation(box):
-    """Re-run exactly what calc_ca computes for its first term."""
+def _ca_term1_transcription(box):
+    """
+    Restate calc_ca's first term, to isolate it from the vertical term.
+
+    This does NOT exercise the production code path: see
+    ``test_ca_term1_written_by_calc_ca_matches_primary_source`` and
+    ``test_ca_total_from_calc_ca_matches_closed_form``, which pin
+    ``ConversionTerms.calc_ca`` itself to the same closed form.
+    """
     return CalcAreaAverage(
         (box.v_ZE * box.tair_ZE * box.tair_AE.differentiate("rlats"))
         / (Re * box.sigma_AA),
@@ -138,7 +150,7 @@ def test_ca_horizontal_term_matches_primary_source(box, conversions):
     """
     conversions.calc_ca()  # exercise the real code path as well
 
-    got = _level_profile(_ca_term1_implementation(box), box)
+    got = _level_profile(_ca_term1_transcription(box), box)
     expected = (syn.GRAD_T * syn.A_V * syn.A_T / 2.0) / (A * _sigma(box))
 
     assert np.allclose(got, expected, rtol=2e-6), (
@@ -151,7 +163,7 @@ def test_ca_has_no_factor_one_half(box):
     Explicit check of the LCT-REV-002 decision: the implemented Ca_1 must equal
     the no-1/2 expectation and must NOT equal half of it.
     """
-    got = _level_profile(_ca_term1_implementation(box), box)
+    got = _level_profile(_ca_term1_transcription(box), box)
     expected = (syn.GRAD_T * syn.A_V * syn.A_T / 2.0) / (A * _sigma(box))
 
     assert np.allclose(got, expected, rtol=2e-6)
@@ -193,15 +205,59 @@ def test_ca_vertical_term_vanishes_for_barotropic_tstar(box):
     term2 = CalcAreaAverage(
         box.omega_ZE * box.tair_ZE * dTstar_dp, box.ylength, xlength=box.xlength
     ) / box.sigma_AA
-    term1 = _level_profile(_ca_term1_implementation(box), box)
+    term1 = _level_profile(_ca_term1_transcription(box), box)
     ratio = np.max(np.abs(_level_profile(term2, box))) / np.max(np.abs(term1))
-    # Not identically zero at machine precision: the trapezoidal area mean of a
-    # constant differs from that constant by O(dphi^2) (int cos phi dphi is only
-    # approximately sin phi_n - sin phi_s on a finite grid), so T* retains a
-    # residual ~1e-5 fraction of the horizontal-mean temperature, which is
-    # pressure dependent. That artefact is a property of the averaging
-    # quadrature, identical in the baseline and corrected code.
-    assert ratio < 1e-4, f"Ca_2 should be negligible here, got ratio {ratio:.2e}"
+    # The area mean of a constant is exact (numerator and denominator use the
+    # same trapezoidal rule), so T* carries no pressure-dependent quadrature
+    # residual and Ca_2 vanishes to roundoff rather than to O(dphi^2).
+    assert ratio < 1e-10, f"Ca_2 should vanish here, got ratio {ratio:.2e}"
+
+
+def test_ca_term1_written_by_calc_ca_matches_primary_source(tmp_path):
+    """
+    Close the chain on the production code path.
+
+    The ``Ca_1`` profile that ``ConversionTerms.calc_ca`` archives must equal
+    the closed form of Brennan and Vincent (1980, p. 964):
+
+        (1/(a sigma)) * GRAD_T * A_V * A_T / 2 .
+
+    Reintroducing the spurious ``cos(phi)`` in the latitude derivative, or the
+    factor ``1/2`` in the leading coefficient, breaks this test.
+    """
+    fresh_box = syn.make_box(tmp_path)
+    ConversionTerms(fresh_box, "fixed", syn.SilentLogger()).calc_ca()
+
+    saved = pd.read_csv(
+        f"{fresh_box.results_subdirectory_vertical_levels}/"
+        f"Ca_1_{fresh_box.VerticalCoordIndexer}.csv",
+        header=None,
+    )
+    got = saved.iloc[0, 1:].to_numpy(dtype=float)
+    expected = (syn.GRAD_T * syn.A_V * syn.A_T / 2.0) / (A * _sigma(fresh_box))
+
+    assert np.allclose(got, expected, rtol=2e-6), (
+        f"archived Ca_1 mismatch.\n got      = {got}\n expected = {expected}"
+    )
+
+
+def test_ca_total_from_calc_ca_matches_closed_form(tmp_path):
+    """
+    C_A returned by calc_ca must equal -int (term 1) dp for this field.
+
+    T* is independent of pressure here, so the vertical term vanishes and the
+    whole of C_A is the closed form of the meridional term.
+    """
+    fresh_box = syn.make_box(tmp_path)
+    ca = _dequant(ConversionTerms(fresh_box, "fixed", syn.SilentLogger()).calc_ca())
+
+    integrand = (syn.GRAD_T * syn.A_V * syn.A_T / 2.0) / (A * _sigma(fresh_box))
+    expected = -np.trapezoid(integrand, _levels(fresh_box))
+
+    assert np.isclose(ca[0], expected, rtol=2e-6), (
+        f"C_A mismatch: got {ca[0]}, expected {expected}"
+    )
+    assert not np.isclose(ca[0], 0.5 * expected, rtol=1e-3)
 
 
 # ===========================================================================
@@ -232,6 +288,68 @@ def test_c_overturning_matches_positive_constant_ascent_solution(tmp_path):
     assert expected > 0.0
     assert np.all(got > 0.0)
     assert np.allclose(got, expected, rtol=1e-10, atol=1e-10)
+
+
+# ===========================================================================
+# 2c. Mass-continuity residual M
+# ===========================================================================
+
+def test_mass_residual_vanishes_for_nondivergent_flow(tmp_path):
+    """
+    M == 0 in the continuum: with u, v and omega all constant, each of the
+    three summands vanishes separately (equal east/west faces, no meridional
+    flux, no vertical stretching).
+    """
+    ds = syn.make_dataset()
+    ds["U"] = xr.full_like(ds["U"], 10.0)
+    ds["V"] = xr.full_like(ds["V"], 0.0)
+    ds["W"] = xr.full_like(ds["W"], -0.05)
+    box = _box_from_dataset(tmp_path, ds)
+
+    mc = MassContinuity(box, "fixed", syn.SilentLogger())
+    profile = _level_profile(mc.calc_mass_residual_profile(), box)
+    column = _dequant(mc.calc_mass_residual())
+
+    # |M| is O(1e-7) for this box when it does not vanish, so 1e-18 is a
+    # genuine zero and not the default atol quietly passing everything.
+    assert np.allclose(profile, 0.0, atol=1e-18)
+    assert np.allclose(column, 0.0, atol=1e-18)
+
+
+def test_mass_residual_meridional_term_matches_closed_form(tmp_path):
+    """
+    With constant u and omega, M reduces to its meridional term,
+
+        M(p) = ([v] cos phi)_n - ([v] cos phi)_s / (a int cos phi dphi) ,
+
+    normalised by the SAME trapezoidal measure the toolkit's area operator
+    uses.  Normalising by the analytic sin(phi_n) - sin(phi_s) instead moves
+    the answer by O(dphi^2) and breaks this test.
+    """
+    ds = syn.make_dataset()
+    ds["U"] = xr.full_like(ds["U"], 10.0)
+    ds["W"] = xr.full_like(ds["W"], -0.05)
+    box = _box_from_dataset(tmp_path, ds)
+
+    rlats, levels = _rlats(box), _levels(box)
+    # The zonal wave averages out exactly, so [v] is the prescribed mean part.
+    v_zm = (
+        syn.V0
+        + syn.GRAD_V * rlats[:, None]
+        + syn.DVDP * (levels[None, :] - 100000.0)
+    )
+    flux = v_zm * np.cos(rlats)[:, None]
+    expected = (flux[-1] - flux[0]) / (A * np.trapezoid(np.cos(rlats), rlats))
+
+    got = _level_profile(
+        MassContinuity(box, "fixed", syn.SilentLogger()).calc_mass_residual_profile(),
+        box,
+    )
+    # atol=0: |M| is O(1e-7) here, so the default atol=1e-8 would swamp the
+    # O(dphi^2) normalisation difference this test exists to detect.
+    assert np.allclose(got, expected, rtol=1e-8, atol=0.0), (
+        f"M profile mismatch.\n got      = {got}\n expected = {expected}"
+    )
 
 
 # ===========================================================================
@@ -276,7 +394,7 @@ def _ck_reference(box):
     ]
 
 
-def _ck_implementation(box):
+def _ck_transcription(box):
     tan_lats = np.tan(box.tair["rlats"])
     d_u_over_cos = (box.u_ZA / box.u_ZA["coslats"]).differentiate("rlats")
     dudp = box.u_ZA.differentiate(box.VerticalCoordIndexer) / (
@@ -305,7 +423,7 @@ def _ck_implementation(box):
 def test_ck_all_five_subterms(box):
     """Every C_K subterm must match its independently evaluated expectation."""
     expected = _ck_reference(box)
-    got_terms = _ck_implementation(box)
+    got_terms = _ck_transcription(box)
 
     for i, (term, exp) in enumerate(zip(got_terms, expected), start=1):
         got = _level_profile(term, box)
@@ -344,7 +462,7 @@ def test_ck_fifth_subterm_uses_meridional_shear(box):
 def test_ck_total_equals_sum_of_subterms(box, conversions):
     """C_K = (1/g) int sum_i C_K,i dp, checked against the class output."""
     ck = _dequant(conversions.calc_ck())
-    subterms = _ck_implementation(box)
+    subterms = _ck_transcription(box)
     total_integrand = sum(_level_profile(t, box) for t in subterms)
     levels = _levels(box)
     expected = np.trapezoid(total_integrand, levels) / G
@@ -411,13 +529,12 @@ def _bphi_reference(box, eddy):
             np.trapezoid(face_ew[-1] - face_ew[0], rlats, axis=0), levels
         ) * c1
     else:
-        # Normalise the trapezoidal area operator by its mean of one.  This is
-        # the numerical form of Phi*=[Phi]-mean(Phi) and omega*=[omega]-mean(omega),
-        # and makes a pressure-only geopotential reference cancel to roundoff.
-        ones = np.ones_like(ph_zm)
-        quadrature_norm = syn.area_mean(ones, rlats, axis=0)
-        ph_star = ph_zm - syn.area_mean(ph_zm, rlats, axis=0) / quadrature_norm
-        w_star = w_zm - syn.area_mean(w_zm, rlats, axis=0) / quadrature_norm
+        # Phi* = [Phi] - mean(Phi) and omega* = [omega] - mean(omega).  The
+        # area operator averages a constant exactly, so a pressure-only
+        # geopotential reference cancels to roundoff with no extra
+        # renormalisation.
+        ph_star = ph_zm - syn.area_mean(ph_zm, rlats, axis=0)
+        w_star = w_zm - syn.area_mean(w_zm, rlats, axis=0)
         face_ns = v_zm * ph_star * np.cos(rlats)[:, None] / G
         vert = syn.area_mean(w_star * ph_star, rlats, axis=0) / G
         # Michaelides' printed ([v] Phi*)|lambda_1^lambda_2 has no longitude
@@ -709,9 +826,23 @@ def test_canonicalize_box_rejects_wrapped_domain():
     with pytest.raises(ValueError, match="coordinate seam"):
         canonicalize_box(170.0, 190.0, lons)
 
+    # Limits given in decreasing order are caught by the swapped-limits test
+    # first: they are far more often a typo than a deliberate wrapped domain,
+    # and both are rejected.
     lons360 = np.arange(0.0, 360.0, 1.0)
-    with pytest.raises(ValueError, match="coordinate seam"):
+    with pytest.raises(ValueError, match="greater than max_lon"):
         canonicalize_box(350.0, 10.0, lons360)
+
+
+def test_canonicalize_box_rejects_swapped_limits():
+    """
+    Swapped box limits must be diagnosed as swapped limits, and not as a
+    dataset in the wrong longitude convention: the fix is to swap two numbers
+    in the box-limits file, not to re-express the data.
+    """
+    lons = np.arange(-80.0, 0.1, 0.5)
+    with pytest.raises(ValueError, match=r"min_lon \(-30.0\) is greater"):
+        canonicalize_box(-30.0, -60.0, lons, context="box_limits(test)")
 
 
 def test_canonicalize_box_accepts_ordinary_domain():

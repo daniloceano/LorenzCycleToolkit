@@ -70,13 +70,14 @@ def elapsed_seconds(dates: np.ndarray, app_logger: logging.Logger = None) -> np.
         unique = np.unique(np.round(steps, 6))
         if unique.size > 1:
             app_logger.info(
-                "⏱️ Irregular time sampling detected: %d distinct step lengths "
-                "(min %.1f s, max %.1f s). Tendencies use the actual time "
-                "coordinate." % (unique.size, steps.min(), steps.max())
+                f"⏱️ Irregular time sampling detected: {unique.size} distinct "
+                f"step lengths (min {steps.min():.1f} s, max "
+                f"{steps.max():.1f} s). Tendencies use the actual time "
+                "coordinate."
             )
         else:
             app_logger.debug(
-                "Regular time sampling: constant step of %.1f s." % steps[0]
+                f"Regular time sampling: constant step of {steps[0]:.1f} s."
             )
 
     return seconds

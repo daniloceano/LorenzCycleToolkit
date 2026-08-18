@@ -181,6 +181,13 @@ The toolkit also exports the pressure-coordinate mass-continuity residual
    \frac{\partial([v]\cos\varphi)}{\partial\varphi}\right\rangle
    +\frac{\partial\overline{\omega}}{\partial p}.
 
+The two horizontal terms are evaluated in their telescoped boundary forms and
+normalised by the same trapezoidal measure :math:`\int\cos\varphi\,d\varphi`
+used by :math:`\langle\cdot\rangle` elsewhere, so all three summands of
+:math:`M` share one area-averaging convention; otherwise the mismatch between
+them would itself be :math:`O(\Delta\varphi^2)`, the same order as the
+inconsistency :math:`M` exists to measure.
+
 The per-level file ``M_<pressure-coordinate>.csv`` contains :math:`M(p)` in
 :math:`\mathrm{s^{-1}}`; the ``M`` column in the main result is
 :math:`\int M\,dp/g` in :math:`\mathrm{kg\,m^{-2}\,s^{-1}}`.  The continuum

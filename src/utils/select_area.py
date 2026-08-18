@@ -28,13 +28,13 @@ from cartopy.feature import BORDERS, COASTLINE, NaturalEarthFeature
 from metpy.calc import vorticity
 from shapely.geometry.polygon import Polygon
 
+from .input_files import read_box_limits
 from .longitude import canonicalize_box, verify_selected_domain
 
 nclicks = 2
 
-# after `process_data`, the vertical coordinate is in Pa, so the
-# 850 hPa surface used by the interactive `--choose` diagnostic is 85000 Pa.
-# The previous value of 8500 selected the level nearest 85 hPa.
+# process_data converts the vertical coordinate to Pa, so the 850 hPa surface
+# used by the interactive `--choose` diagnostic is 85000 Pa.
 LEVEL_850_HPA_IN_PA = 85000
 
 # define all CRS
@@ -277,22 +277,15 @@ def slice_domain(NetCDF_data, args, variable_list_df):
     LevelIndexer = variable_list_df.loc["Vertical Level"]["Variable"]
 
     if args.fixed:
-        # use the box-limits file the user actually requested.
-        # This previously read the hard-coded "inputs/box_limits", so a run
-        # with --box_limits <other file> silently sliced the dataset with one
-        # domain and then computed the energetics on the intersection with
-        # another.
-        box_limits_file = getattr(args, "box_limits", None) or "inputs/box_limits"
-        if not os.path.exists(box_limits_file) and os.path.exists(
-            f"{box_limits_file}.default"
-        ):
-            box_limits_file = f"{box_limits_file}.default"
-        dfbox = pd.read_csv(box_limits_file, header=None, delimiter=";", index_col=0)
-
-        requested_min_lon = float(dfbox.loc["min_lon"].values[0])
-        requested_max_lon = float(dfbox.loc["max_lon"].values[0])
-        requested_min_lat = float(dfbox.loc["min_lat"].values[0])
-        requested_max_lat = float(dfbox.loc["max_lat"].values[0])
+        # The domain sliced here is the domain the energetics are computed on,
+        # so both read the same file through the same helper.
+        (
+            box_limits_file,
+            requested_min_lon,
+            requested_max_lon,
+            requested_min_lat,
+            requested_max_lat,
+        ) = read_box_limits(args.box_limits)
 
         # express the request in the dataset's own longitude
         # convention, and fail explicitly on wrapped domains.

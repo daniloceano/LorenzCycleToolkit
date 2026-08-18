@@ -22,7 +22,7 @@ Latitude structure is linear in phi and vertical structure is linear in p, so
 that d[T]/dphi, d[u]/dphi, d[u]/dp and d[v]/dp are represented exactly by
 centred (and one-sided) finite differences.
 
-Created for the audit-fixes branch.
+Created for the 2.0.0 equation audit.
 """
 
 import argparse
@@ -190,9 +190,16 @@ def zonal_mean(field, rlons, axis=0):
 
 
 def area_mean(zonal_field, rlats, axis=0):
-    """mean(X) = (1/(sin phi_n - sin phi_s)) int [X] cos(phi) dphi."""
+    """
+    mean(X) = int [X] cos(phi) dphi / int cos(phi) dphi.
+
+    The denominator is the trapezoidal measure of the cosine weight, matching
+    docs/source/math.rst and src/utils/calc_averages.py: the analytic
+    sin(phi_n) - sin(phi_s) differs by O(dphi^2) and would make the area mean
+    of a constant inexact.
+    """
     weight = np.cos(rlats)
-    denom = np.sin(rlats[-1]) - np.sin(rlats[0])
+    denom = np.trapezoid(weight, rlats)
     shape = [1] * zonal_field.ndim
     shape[axis] = weight.size
     return (

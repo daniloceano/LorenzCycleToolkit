@@ -27,10 +27,28 @@ TERM_DETAILS = {
         "label": "Conversion",
         "unit": "W·m⁻²",
     },
+    # The four transport terms only. plot_LEC.py draws one arrow per term in
+    # this group and knows the geometry of these four alone, so the pressure
+    # work terms have their own group below rather than being appended here.
     "boundary": {
         "terms": ["BAz", "BAe", "BKz", "BKe"],
         "label": "Transport across boundaries",
         "unit": "W·m⁻²",
+    },
+    "boundary_pressure_work": {
+        "terms": ["BΦZ", "BΦE"],
+        "label": "Pressure work across boundaries",
+        "unit": "W·m⁻²",
+    },
+    "diagnostics": {
+        "terms": ["C_overturning"],
+        "label": "Domain-mean overturning (diagnostic, outside the budget)",
+        "unit": "W·m⁻²",
+    },
+    "mass_continuity": {
+        "terms": ["M"],
+        "label": "Mass-continuity residual (numerical noise floor)",
+        "unit": "kg·m⁻²·s⁻¹",
     },
     "budget_diff": {
         "terms": [

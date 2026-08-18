@@ -16,12 +16,13 @@ danilo.oceano@gmail.com
 """
 
 import logging
-import os
 
 import numpy as np
 from metpy.calc import potential_temperature
 from metpy.constants import Cp_d, Rd, Re, g
 from metpy.units import units
+
+from .calc_averages import CalcAreaAverage, CalcZonalAverage
 
 
 # ---------------------------------------------------------------------------
@@ -37,8 +38,10 @@ from metpy.units import units
 # the 1/sigma weighting of Az, Ae, Ca, Gz and Ge blow up.  The legacy value is
 # retained as the default so that earlier results remain reproducible.
 #
-# To disable it for a diagnostic experiment, pass ``apply_floor=False`` to
-# StaticStability (or set the environment variable LEC_SIGMA_FLOOR_DISABLE=1).
+# EXPERIMENTAL: passing ``apply_floor=False`` to StaticStability disables it
+# for a diagnostic experiment. That path is not exercised by the shipped
+# workflows and changes Az, Ae, Ca, Gz and Ge, so results obtained with it are
+# not comparable with the defaults; it is reported at INFO level when used.
 # Typical free-tropospheric sigma is 0.5-5 K^2 m^-1, so the floor is expected
 # to be inactive except in nearly neutral layers, usually near the surface.
 SIGMA_FLOOR = 0.03
@@ -46,14 +49,13 @@ SIGMA_FLOOR = 0.03
 
 def apply_sigma_floor(sigma, floor=SIGMA_FLOOR, app_logger=None):
     """
-    Apply the legacy static-stability floor while preserving NaNs and
-    reporting diagnostics.
+    Apply the static-stability floor while preserving NaNs and reporting
+    diagnostics.
 
-    Unlike a plain ``sigma.where(sigma > floor, floor)`` expression,
-    this helper does NOT convert NaN into ``floor``: ``NaN > floor`` is False,
-    so the original expression silently replaced missing data by the smallest
-    admissible stability, which *maximises* 1/sigma exactly where the data are
-    absent.  Here NaNs are propagated unchanged.
+    NaN is preserved: because ``NaN > floor`` is False, a plain
+    ``sigma.where(sigma > floor, floor)`` expression would replace missing data
+    by the smallest admissible stability, *maximising* 1/sigma exactly where
+    the data are absent.  Here only finite values below the floor are clipped.
 
     Parameters
     ----------
@@ -96,30 +98,24 @@ def apply_sigma_floor(sigma, floor=SIGMA_FLOOR, app_logger=None):
     }
 
     log(
-        "Static stability diagnostics: n=%d, NaN=%d, negative=%d, <=floor=%d "
-        "(%.3f%%), raw min/median/max = %.4g / %.4g / %.4g, floor=%s"
-        % (
-            n_total,
-            n_nan,
-            n_negative,
-            n_below,
-            100.0 * diagnostics["fraction_floored"],
-            diagnostics["raw_min"],
-            diagnostics["raw_median"],
-            diagnostics["raw_max"],
-            str(floor),
-        )
+        f"Static stability diagnostics: n={n_total}, NaN={n_nan}, "
+        f"negative={n_negative}, <=floor={n_below} "
+        f"({100.0 * diagnostics['fraction_floored']:.3f}%), "
+        f"raw min/median/max = {diagnostics['raw_min']:.4g} / "
+        f"{diagnostics['raw_median']:.4g} / {diagnostics['raw_max']:.4g}, "
+        f"floor={floor}"
     )
     if n_nan:
         log(
-            "Static stability: %d NaN value(s) preserved as NaN (they are NOT "
-            "replaced by the floor)." % n_nan
+            f"Static stability: {n_nan} NaN value(s) preserved as NaN (they "
+            "are NOT replaced by the floor)."
         )
     if n_negative:
         log(
-            "Static stability: %d negative value(s) found (statically unstable "
-            "mean stratification); these are raised to the floor when it is "
-            "enabled, which inverts the sign of the APE weighting." % n_negative
+            f"Static stability: {n_negative} negative value(s) found "
+            "(statically unstable mean stratification); these are raised to "
+            "the floor when it is enabled, which inverts the sign of the APE "
+            "weighting."
         )
 
     if floor is None:
@@ -169,9 +165,13 @@ def StaticStability(
     VerticalCoordIndexer: str
         name of the vertical coordinate
     xlength, ylength: float
-        zonal width in radians and (sin(phi_n) - sin(phi_s)) respectively
+        Zonal width in radians and (sin(phi_n) - sin(phi_s)) respectively.
+        Passed through to CalcZonalAverage/CalcAreaAverage, which normalise by
+        their own quadrature measure, so neither value is used.
     apply_floor: bool
-        whether to apply the legacy SIGMA_FLOOR numerical safeguard
+        Whether to apply the legacy SIGMA_FLOOR numerical safeguard. Setting it
+        to False is EXPERIMENTAL: it changes Az, Ae, Ca, Gz and Ge, and the
+        results are not comparable with the defaults.
     app_logger: logging.Logger, optional
         logger used for the stability diagnostics
 
@@ -188,12 +188,18 @@ def StaticStability(
     SecondTerm = PressureData * g / Rd
     ThirdTerm = TemperatureData.differentiate(VerticalCoordIndexer) / units("Pa")
     function = FirstTerm - (SecondTerm * ThirdTerm)
-    sigma_ZA = function.integrate("rlons") / xlength
-    sigma_AA = (sigma_ZA * sigma_ZA["coslats"]).integrate("rlats") / ylength
+    sigma_ZA = CalcZonalAverage(function, xlength)
+    sigma_AA = CalcAreaAverage(sigma_ZA, ylength)
 
     floor = SIGMA_FLOOR if apply_floor else None
-    if os.environ.get("LEC_SIGMA_FLOOR_DISABLE", "").strip() in ("1", "true", "True"):
-        floor = None
+    if floor is None:
+        # Disabling the floor changes Az, Ae, Ca, Gz and Ge. Report it at INFO
+        # level so that the reason is recorded in the run's log file.
+        info = app_logger.info if app_logger is not None else logging.info
+        info(
+            f"⚠️ apply_floor=False: the sigma = {SIGMA_FLOOR} static-stability "
+            "floor is DISABLED for this run (experimental)."
+        )
 
     sigma_AA_filtered, diagnostics = apply_sigma_floor(
         sigma_AA, floor=floor, app_logger=app_logger

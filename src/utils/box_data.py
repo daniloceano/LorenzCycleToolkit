@@ -118,9 +118,7 @@ class BoxData:
         A level is retained only if all of the core fields are finite
         everywhere inside the box and at every time.  Levels that fail are
         removed from the dataset here, so all terms share one vertical control
-        volume.  Previously each term called ``dropna`` on its own integrand,
-        which could give different terms different integration depths and break
-        the budget identities.
+        volume.
 
         No value is invented and nothing is extrapolated: unusable levels are
         excluded and reported.
@@ -133,10 +131,7 @@ class BoxData:
             else ["Geopotential Height"]
         )
 
-        box = {
-            self.LatIndexer: slice(self.southern_limit, self.northern_limit),
-            self.LonIndexer: slice(self.western_limit, self.eastern_limit),
-        }
+        box = self._box_slice()
 
         levels = data[self.VerticalCoordIndexer]
         valid = xr.ones_like(levels, dtype=bool)
@@ -259,25 +254,36 @@ class BoxData:
 
     def _process_friction_terms(self, data, variable_list_df, args):
         """
-        Extract and process friction terms.
+        Extract the friction-force components used by the direct dissipation terms.
 
-        The direct (non-residual) dissipation pathway is not supported.  Brennan and Vincent (1980, pp. 964-965)
-        require the two independent friction-force components ``F_lambda`` and
-        ``F_phi`` on every pressure level; operational reanalyses such as ERA5
-        do not distribute those fields.  The supported
-        pathway is the residual formulation (``-r`` / ``--residuals``).
+        Brennan and Vincent (1980, pp. 964-965) require the eastward and
+        northward friction-force components ``F_lambda`` and ``F_phi`` on every
+        pressure level.  They are read from the namelist rows 'Zonal Friction
+        Force' and 'Meridional Friction Force' (units m s^-2).  When those rows
+        are absent, the direct pathway raises NotImplementedError and the
+        residual formulation (``-r`` / ``--residuals``) must be used instead.
+
+        Args:
+            data (xr.Dataset): The dataset to read the components from.
+            variable_list_df (pd.DataFrame): The parsed namelist.
+            args (argparse.Namespace): Command line arguments; ``args.residuals``
+                selects the residual pathway.
+
+        Raises:
+            NotImplementedError: If the direct pathway is requested and the two
+                namelist rows are absent.
         """
         if args.residuals:
-            self.ust = self.tair * np.nan
-            self.vst = self.tair * np.nan
+            self.fric_u = self.tair * np.nan
+            self.fric_v = self.tair * np.nan
 
         else:
             required = {"Zonal Friction Force", "Meridional Friction Force"}
             if required.issubset(set(variable_list_df.index)):
-                self.ust = self._extract_data(
+                self.fric_u = self._extract_data(
                     data, variable_list_df, "Zonal Friction Force", "m/s**2"
                 )
-                self.vst = self._extract_data(
+                self.fric_v = self._extract_data(
                     data, variable_list_df, "Meridional Friction Force", "m/s**2"
                 )
             else:
@@ -298,15 +304,15 @@ class BoxData:
                     "not friction alone."
                 )
 
-        self.ust_ZA = CalcZonalAverage(self.ust, self.xlength)
-        self.ust_AA = CalcAreaAverage(self.ust_ZA, self.ylength)
-        self.ust_ZE = self.ust - self.ust_ZA
-        self.ust_AE = self.ust_ZA - self.ust_AA
+        self.fric_u_ZA = CalcZonalAverage(self.fric_u, self.xlength)
+        self.fric_u_AA = CalcAreaAverage(self.fric_u_ZA, self.ylength)
+        self.fric_u_ZE = self.fric_u - self.fric_u_ZA
+        self.fric_u_AE = self.fric_u_ZA - self.fric_u_AA
 
-        self.vst_ZA = CalcZonalAverage(self.vst, self.xlength)
-        self.vst_AA = CalcAreaAverage(self.vst_ZA, self.ylength)
-        self.vst_ZE = self.vst - self.vst_ZA
-        self.vst_AE = self.vst_ZA - self.vst_AA
+        self.fric_v_ZA = CalcZonalAverage(self.fric_v, self.xlength)
+        self.fric_v_AA = CalcAreaAverage(self.fric_v_ZA, self.ylength)
+        self.fric_v_ZE = self.fric_v - self.fric_v_ZA
+        self.fric_v_AE = self.fric_v_ZA - self.fric_v_AA
 
     def _process_omega(self, data, variable_list_df):
         """Extract and process vertical velocity."""
@@ -407,10 +413,18 @@ class BoxData:
         return (
             (data[var_key] * unit_to_convert)
             .metpy.convert_units(unit)
-            .sel(
-                **{
-                    self.LatIndexer: slice(self.southern_limit, self.northern_limit),
-                    self.LonIndexer: slice(self.western_limit, self.eastern_limit),
-                }
-            )
+            .sel(**self._box_slice())
         )
+
+    def _box_slice(self):
+        """
+        Build the latitude/longitude selector of the bounding box.
+
+        Returns:
+            dict: Mapping of the latitude and longitude indexers to the slices
+            delimiting the domain, for use with ``DataArray.sel``.
+        """
+        return {
+            self.LatIndexer: slice(self.southern_limit, self.northern_limit),
+            self.LonIndexer: slice(self.western_limit, self.eastern_limit),
+        }

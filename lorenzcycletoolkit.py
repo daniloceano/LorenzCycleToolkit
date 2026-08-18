@@ -38,6 +38,7 @@ from metpy.units import units
 
 from src.frameworks.lec_fixed_framework import lec_fixed
 from src.frameworks.lec_moving_framework import lec_moving
+from src.utils.input_files import resolve_input_file
 from src.utils.tools import initialize_logging, prepare_data
 
 # Suppress specific RuntimeWarning from xarray
@@ -197,22 +198,6 @@ def run_lec_analysis(data, args, results_subdirectory, figures_directory, result
         app_logger.info(
             "🎉 Analysis complete! Moving framework ran in %.2f seconds" % (time.time() - start_time)
         )
-
-
-def resolve_input_file(path: str) -> str:
-    """Return ``path``, falling back to its shipped ``.default`` companion.
-
-    The working copies of ``inputs/namelist`` and ``inputs/box_limits`` are not
-    tracked by git, so that editing them for a run does not show up as a change
-    to the repository.  The defaults distributed with the toolkit are used when
-    no working copy is present.
-    """
-    if os.path.exists(path):
-        return path
-    fallback = f"{path}.default"
-    if os.path.exists(fallback):
-        return fallback
-    return path
 
 
 def main():

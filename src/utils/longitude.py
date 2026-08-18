@@ -97,10 +97,11 @@ def canonicalize_box(
     Raises
     ------
     ValueError
-        If the requested arc crosses the dataset's coordinate seam.  Wrapped
-        domains are not supported by the zonal-average operator, and a
-        silent partial selection would corrupt every zonal mean, so this is
-        raised explicitly rather than handled implicitly.
+        If ``min_lon`` is greater than ``max_lon`` (swapped limits), or if the
+        requested arc crosses the dataset's coordinate seam.  Wrapped domains
+        are not supported by the zonal-average operator, and a silent partial
+        selection would corrupt every zonal mean, so both are raised
+        explicitly rather than handled implicitly.
     """
     values = np.asarray(lons, dtype=float)
     convention = dataset_longitude_convention(values)
@@ -114,6 +115,22 @@ def canonicalize_box(
         raise ValueError(
             f"{context}: a full 360-degree longitude band is not supported by "
             "the limited-area zonal operator."
+        )
+
+    # A request whose own numbers run backwards is, in the overwhelming
+    # majority of cases, two swapped values in the box-limits file.  The only
+    # other reading -- a domain that wraps across the coordinate seam -- is not
+    # supported either, so both are rejected here, with the cheap fix named
+    # first.  The seam test below then handles the remaining case: limits given
+    # in increasing order that still wrap once expressed in the dataset's
+    # convention (e.g. 170 to 190 on a -180..180 dataset).
+    if min_lon > max_lon:
+        raise ValueError(
+            f"{context}: min_lon ({min_lon}) is greater than max_lon "
+            f"({max_lon}). If the two values are swapped, swap them back in "
+            "the box-limits file. If a domain crossing the coordinate seam "
+            "was intended, it is not supported: the zonal average requires "
+            "one contiguous arc of increasing longitude."
         )
 
     if east <= west:
@@ -130,9 +147,9 @@ def canonicalize_box(
 
     if app_logger is not None and (west != min_lon or east != max_lon):
         app_logger.info(
-            "🌐 %s: longitude limits [%.3f, %.3f] canonicalised to [%.3f, %.3f] "
-            "for dataset convention %s."
-            % (context, min_lon, max_lon, west, east, convention)
+            f"🌐 {context}: longitude limits [{min_lon:.3f}, {max_lon:.3f}] "
+            f"canonicalised to [{west:.3f}, {east:.3f}] for dataset "
+            f"convention {convention}."
         )
 
     return west, east
@@ -205,29 +222,16 @@ def verify_selected_domain(
 
     if app_logger is not None:
         app_logger.info(
-            "🗺️ %s requested: lon=[%.3f, %.3f], lat=[%.3f, %.3f]"
-            % (
-                context,
-                requested["min_lon"],
-                requested["max_lon"],
-                requested["min_lat"],
-                requested["max_lat"],
-            )
+            f"🗺️ {context} requested: "
+            f"lon=[{requested['min_lon']:.3f}, {requested['max_lon']:.3f}], "
+            f"lat=[{requested['min_lat']:.3f}, {requested['max_lat']:.3f}]"
         )
         app_logger.info(
-            "🗺️ %s realised (nearest grid): lon=[%.3f, %.3f] (%d pts, d=%.3f), "
-            "lat=[%.3f, %.3f] (%d pts, d=%.3f)"
-            % (
-                context,
-                realised["min_lon"],
-                realised["max_lon"],
-                realised["n_lon"],
-                realised["dlon"],
-                realised["min_lat"],
-                realised["max_lat"],
-                realised["n_lat"],
-                realised["dlat"],
-            )
+            f"🗺️ {context} realised (nearest grid): "
+            f"lon=[{realised['min_lon']:.3f}, {realised['max_lon']:.3f}] "
+            f"({realised['n_lon']} pts, d={realised['dlon']:.3f}), "
+            f"lat=[{realised['min_lat']:.3f}, {realised['max_lat']:.3f}] "
+            f"({realised['n_lat']} pts, d={realised['dlat']:.3f})"
         )
 
     tol_lon = max(abs(dlon), 1e-6) * 1.001

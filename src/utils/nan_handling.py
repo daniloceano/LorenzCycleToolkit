@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Shared NaN and unit-conversion helpers for the Lorenz Energy Cycle terms.
+Shared NaN and unit-conversion policy for the Lorenz Energy Cycle terms.
 
-This module centralises two policies:
+Two invariants of the toolkit live here:
 
-1. Each term class used to call ``dropna(dim=level)`` on its own integrand.
-   Because ``dropna`` defaults to ``how="any"``, a single missing value at one
-   time removed that pressure level for the whole series, and it did so
-   independently for every term.  Different terms of the same budget could
-   therefore be integrated over different vertical control volumes, which
-   breaks the budget identities and silently dumps the mismatch into the
-   residuals.  The vertical control volume is now decided once, in
-   :class:`~src.utils.box_data.BoxData`, and every term inherits it.
+1. **The vertical control volume is fixed once**, in
+   :class:`~src.utils.box_data.BoxData`, and every term inherits it.  Terms
+   never drop pressure levels of their own: :func:`handle_nans` interpolates
+   interior gaps along the vertical, never extrapolates, and preserves any NaN
+   that survives, so a term whose integration depth would change becomes NaN
+   instead of silently changing depth.  All terms of a budget are therefore
+   integrated over the same levels and the budget identities hold.
 
-2. ``except ValueError`` never caught pint's ``DimensionalityError``, which
-   derives from ``TypeError``.  The intended diagnostic message was dead code
-   and unit errors surfaced as unrelated exceptions.
+2. **Unit errors are reported, not swallowed.** :func:`convert_units` catches
+   pint's ``DimensionalityError`` (a ``TypeError`` subclass) as well as
+   ``ValueError``, and re-raises a ``ValueError`` naming the variable, its
+   current units and the target.
 
 """
 
@@ -118,9 +118,9 @@ def convert_units(function, target, variable_name, app_logger=None):
     Raises
     ------
     ValueError
-        If the conversion is not dimensionally possible.  pint raises
-        ``DimensionalityError`` (a ``TypeError`` subclass), which the previous
-        ``except ValueError`` guard could not catch.
+        If the conversion is not dimensionally possible.  pint signals this
+        with ``DimensionalityError``, a ``TypeError`` subclass, so the guard
+        here catches ``TypeError`` as well as ``ValueError``.
     """
     log = app_logger if app_logger is not None else logging.getLogger(
         "lorenzcycletoolkit"

@@ -18,11 +18,13 @@ The `LorenzCycleToolkit` generates a directory structure to store the results of
     │   │   ├── Az_level.csv
     │   │   ├── Ca_1_level.csv
     │   │   ├── Ck_1_level.csv
+    │   │   ├── C_overturning_level.csv
     │   │   ├── Cz_1_level.csv
     │   │   ├── Ge_level.csv
     │   │   ├── Gz_level.csv
     │   │   ├── Ke_level.csv
     │   │   ├── Kz_level.csv
+    │   │   ├── M_level.csv
     │   ├── testdata_ERA5_fixed_results.csv
 
 Each subdirectory within the `LEC_Results` directory corresponds to a different dataset or analysis run. The structure of each subdirectory includes:
@@ -41,12 +43,16 @@ Each subdirectory within the `LEC_Results` directory corresponds to a different 
   - `Ca_1_level.csv`, `Ca_2_level.csv`: Contains the values of the conversion term Ca at different levels, split into multiple sub-terms.
   - `Ck_1_level.csv`, `Ck_2_level.csv`, `Ck_3_level.csv`, `Ck_4_level.csv`, `Ck_5_level.csv`: Contains the values of the conversion term Ck at different levels, split into multiple sub-terms.
   - `Cz_1_level.csv`, `Cz_2_level.csv`: Contains the values of the conversion term Cz at different levels, split into multiple sub-terms.
+  - `C_overturning_level.csv`: Contains the domain-mean overturning pressure work at each level. This is a diagnostic and does not enter the budget.
+  - `M_level.csv`: Contains the mass-continuity residual M(p), in s⁻¹, which sets the numerical noise floor of the budget.
   - `Ge_level.csv`: Contains the values of the generation term Ge at different levels.
   - `Gz_level.csv`: Contains the values of the generation term Gz at different levels.
   - `Ke_level.csv`: Contains the values of the eddy component of Kinetic Energy (Ke) at different levels.
   - `Kz_level.csv`: Contains the values of the zonal component of Kinetic Energy (Kz) at different levels.
 
-- **testdata_*_fixed_results.csv**: This CSV file contains the overall results of the LEC calculations for the given dataset.
+- **testdata_*_fixed_results.csv**: This CSV file contains the overall results of the LEC calculations for the given dataset. Besides the energy, conversion, boundary, generation and residual terms, it carries the boundary pressure work terms ``BΦZ`` and ``BΦE`` (W·m⁻²), the overturning diagnostic ``C_overturning`` (W·m⁻²) and the mass-continuity residual ``M`` (kg·m⁻²·s⁻¹). None of these three enters the residuals.
+
+  **Note**: Hovmöller diagrams and boxplots are produced for the energy, conversion and generation/dissipation groups only, so ``C_overturning_level.csv`` and ``M_level.csv`` are archived for analysis but are not plotted at vertical levels. Their column integrals do appear in the time series figures.
 
 ### Log File
 

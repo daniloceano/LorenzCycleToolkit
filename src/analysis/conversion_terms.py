@@ -32,10 +32,10 @@ from metpy.constants import Rd, Re, g
 
 from ..utils.box_data import BoxData
 from ..utils.calc_averages import CalcAreaAverage
-from ..utils.nan_handling import convert_units, handle_nans
+from ..utils.term_output import TermOutputMixin
 
 
-class ConversionTerms:
+class ConversionTerms(TermOutputMixin):
     """
     Class to compute energy conversion terms of the Lorenz Energy Cycle.
 
@@ -309,53 +309,3 @@ class ConversionTerms:
 
         self.app_logger.debug("Done.")
         return Ck
-
-    def _handle_nans(self, function, variable_name=""):
-        """Delegate to the shared NaN policy.
-
-        Interior NaNs are interpolated along the vertical coordinate and
-        reported; pressure levels are never dropped here, because the vertical
-        control volume is fixed once for the whole budget in BoxData.
-        """
-        return handle_nans(
-            function,
-            self.VerticalCoordIndexer,
-            variable_name=variable_name,
-            app_logger=getattr(self, "app_logger", None),
-        )
-
-    def _convert_units(self, function, variable_name):
-        """Delegate to the shared unit conversion.
-
-        pint raises DimensionalityError, which subclasses TypeError, so a
-        ``ValueError`` guard would not catch it.
-        """
-        return convert_units(
-            function,
-            "W/m^2",
-            variable_name,
-            app_logger=getattr(self, "app_logger", None),
-        )
-
-    def _save_vertical_levels(self, function, variable_name):
-        """Save computed energy data to a CSV file."""
-        df = function.to_dataframe(name=variable_name)
-        df.reset_index(inplace=True)
-
-        if self.method == "fixed":
-            if self.TimeName not in function.dims:
-                df = df.T
-            else:
-                df = df.pivot(index=self.TimeName, columns=self.VerticalCoordIndexer)
-
-        else:
-            df.set_index(self.TimeName, inplace=True)
-            df.index = df.index.strftime("%Y-%m-%d %H:%M:%S")
-            df = df.pivot(columns=self.VerticalCoordIndexer, values=variable_name)
-            df.columns.name = None
-
-        df.to_csv(
-            f"{self.results_subdirectory_vertical_levels}/{variable_name}_{self.VerticalCoordIndexer}.csv",
-            mode="a",
-            header=None,
-        )
