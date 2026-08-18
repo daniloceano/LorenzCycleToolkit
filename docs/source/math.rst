@@ -108,6 +108,19 @@ Similarly, we define the deviation of the zonal mean from the domain mean:
    ([X]_\lambda)_\phi &= [X]_\lambda - [X]_{\lambda\phi}
    \end{align*}
 
+.. note::
+
+   The averages above are evaluated on the model grid with the trapezoidal
+   rule, and are normalised by that same rule rather than by the analytic
+   :math:`\lambda_2-\lambda_1` and :math:`\sin\phi_2-\sin\phi_1`. The two
+   differ by :math:`O(\Delta\phi^2)`, about :math:`1.6\times10^{-4}` on a
+   2.5 degree grid. Matching them makes the average of a constant exact, so
+   the departures :math:`([X]_\lambda)_\phi` and :math:`(X)_\lambda` satisfy
+   their defining identity to roundoff. This matters for the geopotential,
+   whose zero point is arbitrary: without it the diagnosed boundary fluxes
+   would depend on the reference level chosen for :math:`\Phi`.
+
+
 From the definitions above, the four energy components used in the LEC computation are defined as follows:
 
 .. math::

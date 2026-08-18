@@ -208,7 +208,7 @@ def test_ca_vertical_term_vanishes_for_barotropic_tstar(box):
 # 2b. Domain-mean pressure-work overlap conversion
 # ===========================================================================
 
-def test_c_sobreposicao_matches_positive_constant_ascent_solution(tmp_path):
+def test_c_overturning_matches_positive_constant_ascent_solution(tmp_path):
     """Constant mean ascent has the closed-form positive overlap conversion."""
     temperature = 270.0
     omega = -0.12
@@ -224,18 +224,9 @@ def test_c_sobreposicao_matches_positive_constant_ascent_solution(tmp_path):
     )
 
     levels = _levels(overlap_box)
-    # CalcAreaAverage uses an analytic area denominator with trapezoidal
-    # quadrature.  Its mean of one is therefore included explicitly in this
-    # independent NumPy evaluation of <omega> and <T>.
-    qnorm = syn.area_mean(
-        np.ones((_rlats(overlap_box).size, levels.size)),
-        _rlats(overlap_box),
-        axis=0,
-    )
-    profile = (
-        -omega * float(Rd.magnitude) * temperature * qnorm**2
-        / (G * levels)
-    )
+    # The area average of a constant is that constant, so the closed form
+    # needs no quadrature correction.
+    profile = -omega * float(Rd.magnitude) * temperature / (G * levels)
     expected = np.trapezoid(profile, levels)
 
     assert expected > 0.0
@@ -517,8 +508,7 @@ def test_bphi_z_and_e_are_invariant_to_constant_geopotential_gauge(tmp_path):
 def test_bphi_z_east_west_term_vanishes_for_periodic_longitude(box):
     """Term (I) is zero when the two longitude faces coincide."""
     bt = BoundaryTerms(box, "fixed", syn.SilentLogger())
-    geopt_star, _ = bt._area_anomalies()
-    term_i = _dequant(bt._east_west_pressure_work(geopt_star))
+    term_i = _dequant(bt._east_west_pressure_work())
     assert np.max(np.abs(term_i)) < 1e-12
 
 

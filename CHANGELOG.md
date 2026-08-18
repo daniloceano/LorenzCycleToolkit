@@ -29,6 +29,13 @@ onwards; see the notes below for which terms are affected.
   reported when it engages.
 - **Residual plot labels**: `RG` and `RK` are labelled as composite residuals
   rather than as named physical processes.
+- **Zonal and area averages** are normalised by the same trapezoidal rule used
+  to integrate the field, rather than by the analytic domain width. The two
+  differ by `O(dphi^2)`, about `1.6e-4` on a 2.5 degree grid and `1.6e-6` on a
+  0.25 degree grid, so most terms move by that amount. The average of a
+  constant is now exact, which makes the departures from the zonal and area
+  means satisfy their defining identity and makes every diagnosed flux
+  independent of the arbitrary reference level of the geopotential.
 
 ### Added
 

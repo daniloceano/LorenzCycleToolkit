@@ -365,21 +365,13 @@ class BoundaryTerms:
         """
         self.app_logger.debug("Calculating BΦZ...")
 
-        # ``CalcAreaAverage`` uses the analytic spherical area in its
-        # denominator but a trapezoidal numerator.  Re-centering the existing
-        # BoxData anomalies by the quadrature's mean-of-one enforces the
-        # defining identities mean(Phi*) = mean(omega*) = 0 to roundoff.  In
-        # particular, adding any pressure-only reference Phi_ref(p) then leaves
-        # BΦZ invariant at machine precision.
-        geopt_star, omega_star = self._area_anomalies()
-
         # First term: east/west faces.  Both contributions are mean-by-eddy
         # products evaluated on the walls, and both vanish on a periodic
         # (global) domain, where the two walls coincide.
-        term1 = self._east_west_pressure_work(geopt_star)
+        term1 = self._east_west_pressure_work()
 
         # Second term: north/south faces, area-anomalous zonal geopotential.
-        term2 = (self.v_ZA * geopt_star) * self.v_ZA["coslats"] / g
+        term2 = (self.v_ZA * self.geopt_AE) * self.v_ZA["coslats"] / g
         term2 = term2.sel(**{self.LatIndexer: self.northern_limit}) - term2.sel(
             **{self.LatIndexer: self.southern_limit}
         )
@@ -391,7 +383,7 @@ class BoundaryTerms:
         )
 
         # Third term: top/bottom faces, using omega* Phi*.
-        term3 = CalcAreaAverage(omega_star * geopt_star, self.ylength) / g
+        term3 = CalcAreaAverage(self.omega_AE * self.geopt_AE, self.ylength) / g
         term3 = self._handle_nans(term3)
         term3 = term3.isel(**{self.VerticalCoordIndexer: -1}) - term3.isel(
             **{self.VerticalCoordIndexer: 0}
@@ -404,57 +396,9 @@ class BoundaryTerms:
         self.app_logger.debug("Done.")
         return Boz
 
-    def _area_anomalies(self):
-        """Return quadrature-centred ``Phi*`` and ``omega*``."""
-        geopt_zonal, _ = self._zonal_geopotential_decomposition()
-        area_quadrature_norm = (
-            geopt_zonal["coslats"].integrate("rlats") / self.ylength
-        )
-        # Remove a latitude-independent reference *before* the meridional
-        # quadrature.  The expression is algebraically unchanged, but avoids
-        # integrating an artificial O(1e6) gauge and then subtracting two large
-        # nearly equal numbers on NCEP's float32 coordinates.
-        geopt_relative = geopt_zonal - geopt_zonal.isel(
-            **{self.LatIndexer: 0}, drop=True
-        )
-        geopt_star = geopt_relative - (
-            CalcAreaAverage(geopt_relative, self.ylength)
-            / area_quadrature_norm
-        )
-        omega_star = self.omega_AE - (
-            CalcAreaAverage(self.omega_AE, self.ylength) / area_quadrature_norm
-        )
-        # At a pole-to-pole domain xarray may drop this auxiliary coordinate
-        # while aligning the two separately centred arrays.  It is the shared
-        # latitude weight required by CalcAreaAverage, so restore it explicitly.
-        geopt_star = geopt_star.assign_coords(coslats=geopt_zonal["coslats"])
-        omega_star = omega_star.assign_coords(coslats=self.omega_AE["coslats"])
-        return geopt_star, omega_star
-
-    def _zonal_geopotential_decomposition(self):
-        """Return quadrature-normalised ``[Phi]`` and ``Phi'``.
-
-        NCEP longitude coordinates are stored as float32.  Accumulating the
-        trapezoidal integral over a wide box can therefore make the zonal mean
-        of one differ from one by O(1e-8).  Dividing by that measured norm
-        enforces the defining identities and prevents a large constant gauge
-        from leaking into ``Phi'``.
-        """
-        zonal_norm = CalcZonalAverage(
-            self.geopt.metpy.dequantify() * 0 + 1, self.xlength
-        )
-        geopt_zonal = self.geopt_ZA / zonal_norm
-        geopt_eddy = self.geopt - geopt_zonal
-        return geopt_zonal, geopt_eddy
-
-    def _east_west_pressure_work(self, geopt_star):
-        """Pressure work through the east and west faces (term I of BΦZ).
-
-        Uses the quadrature-normalised zonal eddy geopotential, so that a
-        constant added to the geopotential leaves the result unchanged.
-        """
-        _, geopt_eddy = self._zonal_geopotential_decomposition()
-        face_flux = (self.u_ZA * geopt_eddy + geopt_star * self.u_ZE) / g
+    def _east_west_pressure_work(self):
+        """Pressure work through the east and west faces (term I of BΦZ)."""
+        face_flux = (self.u_ZA * self.geopt_ZE + self.geopt_AE * self.u_ZE) / g
         term = face_flux.sel(**{self.LonIndexer: self.eastern_limit}) - face_flux.sel(
             **{self.LonIndexer: self.western_limit}
         )
@@ -485,8 +429,7 @@ class BoundaryTerms:
         self.app_logger.debug("Calculating BΦE...")
 
         # First term: east/west faces, zonal eddy covariance u'Phi'.
-        _, geopt_eddy = self._zonal_geopotential_decomposition()
-        term1 = (self.u_ZE * geopt_eddy) / g
+        term1 = (self.u_ZE * self.geopt_ZE) / g
         term1 = term1.sel(**{self.LonIndexer: self.eastern_limit}) - term1.sel(
             **{self.LonIndexer: self.western_limit}
         )
@@ -499,7 +442,7 @@ class BoundaryTerms:
         )
 
         # Second term: north/south faces, zonal average of the eddy covariance.
-        term2 = CalcZonalAverage(self.v_ZE * geopt_eddy, self.xlength)
+        term2 = CalcZonalAverage(self.v_ZE * self.geopt_ZE, self.xlength)
         term2 = term2 * term2["coslats"] / g
         term2 = term2.sel(**{self.LatIndexer: self.northern_limit}) - term2.sel(
             **{self.LatIndexer: self.southern_limit}
@@ -514,7 +457,7 @@ class BoundaryTerms:
         # Third term: top/bottom faces.
         term3 = (
             CalcAreaAverage(
-                self.omega_ZE * geopt_eddy, self.ylength, xlength=self.xlength
+                self.omega_ZE * self.geopt_ZE, self.ylength, xlength=self.xlength
             )
             / g
         )
