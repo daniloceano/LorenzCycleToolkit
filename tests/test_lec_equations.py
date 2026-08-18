@@ -220,7 +220,7 @@ def test_c_sobreposicao_matches_positive_constant_ascent_solution(tmp_path):
     got = _dequant(
         ConversionTerms(
             overlap_box, "fixed", syn.SilentLogger()
-        ).calc_c_sobreposicao()
+        ).calc_c_overturning()
     )
 
     levels = _levels(overlap_box)

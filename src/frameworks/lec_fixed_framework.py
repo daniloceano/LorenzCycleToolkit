@@ -139,7 +139,7 @@ def lec_fixed(
     for term in [
         "Az", "Ae", "Kz", "Ke", "Ge", "Gz",
         "Cz", "Cz_1", "Cz_2", "Ca", "Ca_1", "Ca_2",
-        "Ce", "Ce_1", "Ce_2", "C_sobreposicao", "M",
+        "Ce", "Ce_1", "Ce_2", "C_overturning", "M",
         "Ck", "Ck_1", "Ck_2", "Ck_3", "Ck_4", "Ck_5",
     ]:
         columns = [TimeName] + used_levels
@@ -170,7 +170,7 @@ def lec_fixed(
             ct_obj.calc_ca(),
             ct_obj.calc_ck(),
             ct_obj.calc_ce(),
-            ct_obj.calc_c_sobreposicao(),
+            ct_obj.calc_c_overturning(),
         ]
     except Exception:
         app_logger.exception(
@@ -178,7 +178,7 @@ def lec_fixed(
         )
         raise
     app_logger.info(
-        "🔄 Computed conversion terms (Cz, Ca, Ck, Ce, C_sobreposicao)"
+        "🔄 Computed conversion terms (Cz, Ca, Ck, Ce, C_overturning)"
     )
 
     try:
@@ -232,7 +232,7 @@ def lec_fixed(
     df = pd.DataFrame(index=dates.astype("datetime64"))
     for i, col in enumerate(["Az", "Ae", "Kz", "Ke"]):
         df[col] = energy_list[i]
-    for i, col in enumerate(["Cz", "Ca", "Ck", "Ce", "C_sobreposicao"]):
+    for i, col in enumerate(["Cz", "Ca", "Ck", "Ce", "C_overturning"]):
         df[col] = conversion_list[i]
     # all six boundary diagnostics are computed, so all six are
     # exported. Previously BΦZ and BΦE were computed and then discarded, which

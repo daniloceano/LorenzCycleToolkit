@@ -48,7 +48,7 @@ class ConversionTerms:
         calc_cz: Computes the zonal energy conversion term (CZ).
         calc_ca: Computes the available potential energy conversion term (CA).
         calc_ck: Computes the kinetic energy conversion term (CK).
-        calc_c_sobreposicao: Diagnoses domain-mean overturning pressure work.
+        calc_c_overturning: Diagnoses domain-mean overturning pressure work.
 
     Source for formulas used here:
         Brennan, F. E., & Vincent, D. G. (1980).
@@ -190,11 +190,11 @@ class ConversionTerms:
         self.app_logger.debug("Done.")
         return Ce
 
-    def calc_c_sobreposicao(self):
+    def calc_c_overturning(self):
         r"""Diagnose domain-mean overturning pressure work.
 
         .. math::
-            C_{\mathrm{sobreposicao}} = -\int_{p_t}^{p_b}
+            C_{\mathrm{overturning}} = -\int_{p_t}^{p_b}
                 \overline{\omega}\,\alpha\,\frac{dp}{g},
             \qquad \alpha = \frac{R_d\overline{T}}{p}.
 
@@ -204,19 +204,19 @@ class ConversionTerms:
         geopotential flux.  It is therefore exported for interpretation but
         correctly remains outside ``RGz`` and ``RKz``.  With the toolkit sign
         convention, mean ascent (``omega < 0``) gives positive
-        ``C_sobreposicao``.
+        ``C_overturning``.
         """
-        self.app_logger.debug("Calculating C_sobreposicao...")
+        self.app_logger.debug("Calculating C_overturning...")
 
         alpha = Rd * self.tair_AA / self.PressureData
         function = -(self.omega_AA * alpha) / g
-        function = self._handle_nans(function, "C_sobreposicao")
-        self._save_vertical_levels(function, "C_sobreposicao")
+        function = self._handle_nans(function, "C_overturning")
+        self._save_vertical_levels(function, "C_overturning")
         result = (
             function.integrate(self.VerticalCoordIndexer)
             * self.PressureData.metpy.units
         )
-        result = self._convert_units(result, "C_sobreposicao")
+        result = self._convert_units(result, "C_overturning")
 
         self.app_logger.debug("Done.")
         return result

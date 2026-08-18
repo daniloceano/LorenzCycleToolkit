@@ -134,7 +134,7 @@ The four conversion terms are defined as follows, integrating over the atmospher
    \begin{aligned}
        &C_Z = \int_{p_t}^{p_b} - [\left([T]_\lambda)_\phi ([\omega]_\lambda\right)_\phi]_{\lambda\phi} \ \frac{R}{gp} \ dp \label{eq:CZ} \\
        &C_E = \int_{p_t}^{p_b} - [(T)_\lambda (\omega)_\lambda]_{\lambda\phi} \ \frac{R}{gp} \ dp \label{eq:CE} \\
-       &C_{\mathrm{sobreposicao}} = -\int_{p_t}^{p_b} [\omega]_{\lambda\phi}\,\alpha\,\frac{dp}{g},
+       &C_{\mathrm{overturning}} = -\int_{p_t}^{p_b} [\omega]_{\lambda\phi}\,\alpha\,\frac{dp}{g},
        \qquad \alpha=\frac{R[T]_{\lambda\phi}}{p} \label{eq:Coverlap} \\
        &C_A = \int_{p_t}^{p_b} - \left( \frac{1}{a\sigma}  \left[ (v)_\lambda (T)_\lambda  \frac{\partial  ([T]_\lambda)_\phi}{\partial \phi} \right]_{\lambda\phi} + \frac{1}{\sigma}  \left[ (\omega)_\lambda (T)_\lambda \frac{\partial  ([T]_\lambda)_\phi}{\partial p} \right]_{\lambda\phi} \right) dp \label{eq:CA} \\
        &C_K = \int_{p_t}^{p_b} \frac{1}{g} \left(\left[ \frac{\cos\phi}{a} (u)_\lambda (v)_\lambda \frac{\partial}{\partial\phi} \left(\frac{[u]_\lambda}{\cos\phi}\right)\right]_{\lambda\phi} + \left[ \frac{(v)_\lambda^2}{a} \frac{\partial [v]_\lambda}{\partial\phi}  \right]_{\lambda\phi}  \right.
@@ -142,7 +142,7 @@ The four conversion terms are defined as follows, integrating over the atmospher
    \end{aligned}
 
 where :math:`a` is the Earth's radius and :math:`\omega` is the vertical velocity in isobaric coordinates.
-The separately exported :math:`C_{\mathrm{sobreposicao}}` diagnoses the
+The separately exported :math:`C_{\mathrm{overturning}}` diagnoses the
 strength of domain-mean overturning.  It is **not** a missing conversion in
 the Lorenz-cycle budget: in the exact pressure-work identity it cancels the
 :math:`\overline{\Phi}\,\overline{\omega}` part of the top/bottom
@@ -268,4 +268,4 @@ full geopotential instead; in a limited domain that form additionally carries
 the domain-mean overturning conversion proportional to
 :math:`\int\overline{\omega}\,\alpha\,dp/g`, which is an interior
 conversion rather than a boundary flux and is diagnosed separately as
-:math:`C_{\mathrm{sobreposicao}}`.
+:math:`C_{\mathrm{overturning}}`.

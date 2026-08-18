@@ -44,7 +44,7 @@ def create_terms_dict(args):
         dict: Dictionary with keys for each meteorological term initialized to empty lists.
     """
     energy_terms = ["Az", "Ae", "Kz", "Ke"]
-    conversion_terms = ["Cz", "Ca", "Ck", "Ce", "C_sobreposicao"]
+    conversion_terms = ["Cz", "Ca", "Ck", "Ce", "C_overturning"]
     diagnostic_terms = ["M"]
     boundary_terms = ["BAz", "BAe", "BKz", "BKe", "BΦZ", "BΦE"]
     generation_dissipation_terms = (
@@ -465,7 +465,7 @@ def compute_and_store_terms(box_obj, terms_dict, app_logger):
         terms_dict["Ca"].append(ct_obj.calc_ca())
         terms_dict["Ck"].append(ct_obj.calc_ck())
         terms_dict["Ce"].append(ct_obj.calc_ce())
-        terms_dict["C_sobreposicao"].append(ct_obj.calc_c_sobreposicao())
+        terms_dict["C_overturning"].append(ct_obj.calc_c_overturning())
     except Exception as e:
         app_logger.exception(f"❌ Error in computing Conversion Terms: {e}")
         raise
@@ -614,7 +614,7 @@ def lec_moving(
         "Ce",
         "Ce_1",
         "Ce_2",
-        "C_sobreposicao",
+        "C_overturning",
         "M",
         "Ck",
         "Ck_1",

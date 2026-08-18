@@ -32,7 +32,7 @@ onwards; see the notes below for which terms are affected.
 
 ### Added
 
-- **`C_sobreposicao`**: domain-mean overturning diagnostic. Exported for
+- **`C_overturning`**: domain-mean overturning diagnostic. Exported for
   interpretation; it does not enter `RGz` or `RKz`.
 - **`M`**: mass-continuity residual, exported as a vertical profile and as a
   column integral. It sets the numerical noise floor of the budget.
