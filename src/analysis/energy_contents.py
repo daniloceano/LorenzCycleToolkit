@@ -32,6 +32,7 @@ from metpy.constants import g
 
 from ..utils.box_data import BoxData
 from ..utils.calc_averages import CalcAreaAverage
+from ..utils.nan_handling import convert_units, handle_nans
 
 
 class EnergyContents:
@@ -165,47 +166,31 @@ class EnergyContents:
         return Ke
 
     def _convert_units(self, function, variable_name):
+        """Delegate to the shared unit conversion.
+
+        pint raises DimensionalityError, which subclasses TypeError, so a
+        ``ValueError`` guard would not catch it.
         """
-        Converts the units of a given function to 'J/m^2'.
+        return convert_units(
+            function,
+            "J/m^2",
+            variable_name,
+            app_logger=getattr(self, "app_logger", None),
+        )
 
-        Parameters:
-            function (type): The function to be converted.
-            variable_name (type): The name of the variable associated with the function.
+    def _handle_nans(self, function, variable_name=""):
+        """Delegate to the shared NaN policy.
 
-        Raises:
-            ValueError: If there is a unit error in the given variable.
-
-        Returns:
-            None
+        Interior NaNs are interpolated along the vertical coordinate and
+        reported; pressure levels are never dropped here, because the vertical
+        control volume is fixed once for the whole budget in BoxData.
         """
-        try:
-            function = function.metpy.convert_units("J/m^2")
-        except ValueError as e:
-            error_message = f"Unit error in {variable_name}"
-            self.app_logger.exception(error_message)
-            raise ValueError(error_message) from e
-
-        return function
-
-    def _handle_nans(self, function):
-        """
-        If there are any, interpolate them and drop any remaining NaN values.
-        If there are still NaN values after interpolation, drop the dimensions that contain NaN values.
-
-        Parameters:
-            function (np.ndarray): The function to handle NaN values for.
-
-        Returns:
-            None
-        """
-        if np.isnan(function).any():
-            function = (
-                function.interpolate_na(dim=self.VerticalCoordIndexer)
-                * function.metpy.units
-            )
-            if np.isnan(function).any():
-                function = function.dropna(dim=self.VerticalCoordIndexer)
-        return function
+        return handle_nans(
+            function,
+            self.VerticalCoordIndexer,
+            variable_name=variable_name,
+            app_logger=getattr(self, "app_logger", None),
+        )
 
     def _save_vertical_levels(self, function, variable_name):
         """Save computed energy data to a CSV file."""

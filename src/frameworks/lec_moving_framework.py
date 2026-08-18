@@ -26,6 +26,7 @@ from ..analysis.conversion_terms import ConversionTerms
 from ..analysis.energy_contents import EnergyContents
 from ..analysis.generation_and_dissipation_terms import \
     GenerationDissipationTerms
+from ..analysis.mass_continuity import MassContinuity
 from ..utils.box_data import BoxData
 from ..utils.calc_budget_and_residual import calc_budget_diff, calc_residuals
 from ..utils.select_area import draw_box_map, plot_domain_attributes
@@ -43,14 +44,19 @@ def create_terms_dict(args):
         dict: Dictionary with keys for each meteorological term initialized to empty lists.
     """
     energy_terms = ["Az", "Ae", "Kz", "Ke"]
-    conversion_terms = ["Cz", "Ca", "Ck", "Ce"]
+    conversion_terms = ["Cz", "Ca", "Ck", "Ce", "C_sobreposicao"]
+    diagnostic_terms = ["M"]
     boundary_terms = ["BAz", "BAe", "BKz", "BKe", "BΦZ", "BΦE"]
     generation_dissipation_terms = (
         ["Gz", "Ge", "Dz", "De"] if not args.residuals else ["Gz", "Ge"]
     )
 
     terms = (
-        energy_terms + conversion_terms + boundary_terms + generation_dissipation_terms
+        energy_terms
+        + conversion_terms
+        + boundary_terms
+        + diagnostic_terms
+        + generation_dissipation_terms
     )
     return {term: [] for term in terms}
 
@@ -459,6 +465,7 @@ def compute_and_store_terms(box_obj, terms_dict, app_logger):
         terms_dict["Ca"].append(ct_obj.calc_ca())
         terms_dict["Ck"].append(ct_obj.calc_ck())
         terms_dict["Ce"].append(ct_obj.calc_ce())
+        terms_dict["C_sobreposicao"].append(ct_obj.calc_c_sobreposicao())
     except Exception as e:
         app_logger.exception(f"❌ Error in computing Conversion Terms: {e}")
         raise
@@ -475,6 +482,17 @@ def compute_and_store_terms(box_obj, terms_dict, app_logger):
         terms_dict["BΦE"].append(bt_obj.calc_boe())
     except Exception as e:
         app_logger.exception(f"❌ Error in computing Boundary Terms: {e}")
+        raise
+
+    # Mass-continuity diagnostic (profile plus column-integrated residual).
+    app_logger.info("⚖️ Computing mass-continuity residual...")
+    try:
+        terms_dict["M"].append(
+            MassContinuity(box_obj, method="moving", app_logger=app_logger)
+            .calc_mass_residual()
+        )
+    except Exception as e:
+        app_logger.exception(f"❌ Error in computing mass continuity: {e}")
         raise
 
     # Generation/Dissipation Terms
@@ -596,6 +614,8 @@ def lec_moving(
         "Ce",
         "Ce_1",
         "Ce_2",
+        "C_sobreposicao",
+        "M",
         "Ck",
         "Ck_1",
         "Ck_2",

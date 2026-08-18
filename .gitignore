@@ -7,10 +7,13 @@ LEC_Results/
 # data wit nc files
 netCDF_data/
 
-# inputs
+# inputs: the working copies are user-edited per run; the shipped defaults
+# (*.default) and the named per-dataset variants stay tracked.
 inputs/box_limits*
+inputs/namelist
 inputs/fvars*
 inputs/track*
+!inputs/*.default
 
 # automation
 src/automate-SWSA-cyclones_energetic-analysis.sh
@@ -220,12 +223,11 @@ src/error_log.txt
 src/plots/.vscode/settings.json
 *.nc
 
-# Input files
-inputs/namelist
-inputs/box_limits
-inputs/fvars
-inputs/track
-inputs/namelist
-
 # VSCode settings folder
 .vscode/
+
+# Large generated validation artefacts (regenerate with build_full_validation_report.py)
+validation/full_validation_report.html
+validation/full_validation_report.pdf
+validation/paper_style_validation.html
+validation/paper_style_validation.pdf

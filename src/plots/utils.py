@@ -42,9 +42,13 @@ TERM_DETAILS = {
         "label": "Energy budgets (estimated using finite diffs.)",
         "unit": "W·m⁻²",
     },
+    # RGz/RGe and RKz/RKe are composite residuals, not named
+    # physical processes. RG = G + numerical error; RK = BPhi + D + unresolved
+    # transfer + numerical error (Brennan and Vincent 1980, p. 963;
+    # Dias Pinto and da Rocha 2011, Eqs. 8-11).
     "residuals": {
         "terms": ["RGz", "RKz", "RGe", "RKe"],
-        "label": "Residuals",
+        "label": "Residuals (RG = generation + error; RK = pressure work + friction + error)",
         "unit": "W·m⁻²",
     },
     "generation_dissipation": {
@@ -59,7 +63,7 @@ TERM_DETAILS = {
     },
     "comparing_dissipation": {
         "terms": ["RKz", "Dz", "RKe", "De"],
-        "label": "Comparing Dissipation",
+        "label": "Kinetic residuals (RK) vs direct dissipation (D) — RK is not friction alone",
         "unit": "W·m⁻²",
     },
 }

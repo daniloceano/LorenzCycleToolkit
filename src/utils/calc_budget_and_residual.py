@@ -29,9 +29,67 @@ import numpy as np
 import pandas as pd
 
 
+def elapsed_seconds(dates: np.ndarray, app_logger: logging.Logger = None) -> np.ndarray:
+    """
+    Convert an array of datetimes into elapsed seconds relative to the first
+    sample, validating that the series is strictly increasing.
+
+    Args:
+        dates (Array-like): datetime64 values (or anything pandas can parse).
+        app_logger (logging.Logger): optional logger.
+
+    Returns:
+        np.ndarray: elapsed time in seconds, float.
+
+    Raises:
+        ValueError: if fewer than two samples are supplied, or if the
+            timestamps are not strictly increasing.
+    """
+    times = pd.to_datetime(np.asarray(dates))
+    values = np.asarray(times, dtype="datetime64[ns]")
+
+    if values.size < 2:
+        raise ValueError(
+            "At least two time steps are required to compute a tendency; "
+            f"got {values.size}."
+        )
+
+    seconds = (values - values[0]) / np.timedelta64(1, "s")
+    seconds = np.asarray(seconds, dtype=float)
+
+    steps = np.diff(seconds)
+    if np.any(steps <= 0):
+        bad = int(np.argmin(steps))
+        raise ValueError(
+            "Time coordinate must be strictly increasing to compute tendencies; "
+            f"found a non-positive step of {steps[bad]:.1f} s between "
+            f"index {bad} ({values[bad]}) and index {bad + 1} ({values[bad + 1]})."
+        )
+
+    if app_logger is not None and steps.size:
+        unique = np.unique(np.round(steps, 6))
+        if unique.size > 1:
+            app_logger.info(
+                "⏱️ Irregular time sampling detected: %d distinct step lengths "
+                "(min %.1f s, max %.1f s). Tendencies use the actual time "
+                "coordinate." % (unique.size, steps.min(), steps.max())
+            )
+        else:
+            app_logger.debug(
+                "Regular time sampling: constant step of %.1f s." % steps[0]
+            )
+
+    return seconds
+
+
 def calc_budget_diff(df: pd.DataFrame, dates: np.ndarray, app_logger: logging.Logger):
     """
-    Estimate budget values for energy terms using finite differences method.
+    Estimate budget values for energy terms using finite differences.
+
+    The derivative is taken with respect to the ACTUAL time coordinate rather
+    than a single leading interval, so that irregular or incomplete sampling is
+    handled correctly.  For a perfectly regular series the result is identical
+    to the previous behaviour to within floating-point precision.
 
     Args:
         df (DataFrame): DataFrame containing energy terms.
@@ -42,12 +100,18 @@ def calc_budget_diff(df: pd.DataFrame, dates: np.ndarray, app_logger: logging.Lo
     """
     app_logger.debug("Estimating budget values using finite differences...")
 
-    dt = float((dates[1] - dates[0]) / np.timedelta64(1, "s"))
+    seconds = elapsed_seconds(dates, app_logger)
     energy_terms = ["Az", "Ae", "Kz", "Ke"]
 
     try:
         for term in energy_terms:
-            df[f"∂{term}/∂t (finite diff.)"] = np.gradient(df[term], dt)
+            values = np.asarray(df[term], dtype=float)
+            if values.size != seconds.size:
+                raise ValueError(
+                    f"Length mismatch for '{term}': {values.size} values for "
+                    f"{seconds.size} time steps."
+                )
+            df[f"∂{term}/∂t (finite diff.)"] = np.gradient(values, seconds)
     except Exception as e:
         app_logger.error(f"Error in calc_budget_diff: {e}")
         raise
@@ -70,7 +134,15 @@ def calc_budget_diff_4th(
         DataFrame: Updated DataFrame with budget values.
     """
     app_logger.debug("Estimating budget values using 4th order finite differences...")
-    dt = float((time[1] - time[0]) / np.timedelta64(1, "s"))
+    seconds = elapsed_seconds(time, app_logger)
+    steps = np.diff(seconds)
+    if np.ptp(steps) > 1e-6:
+        raise ValueError(
+            "calc_budget_diff_4th requires a uniformly sampled time series; "
+            f"step lengths range from {steps.min():.1f} s to {steps.max():.1f} s. "
+            "Use calc_budget_diff instead."
+        )
+    dt = float(steps[0])
     energy_terms = ["Az", "Ae", "Kz", "Ke"]
 
     try:

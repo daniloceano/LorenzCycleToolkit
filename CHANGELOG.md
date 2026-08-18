@@ -2,6 +2,73 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - 2026-08-18
+
+Numerical results change in this release. Diagnostics produced with earlier
+versions are not directly comparable with diagnostics produced from 2.0.0
+onwards; see the notes below for which terms are affected.
+
+### Changed
+
+- **`C_A`, meridional term**: the latitude derivative now acts on `T*` alone.
+  It previously acted on `T* cos(phi)`, which introduced a spurious
+  `cos(phi)` factor and an additional `-T* sin(phi)` contribution. The
+  leading factor is now `1/(a sigma)` rather than `1/(2 a sigma)`, consistent
+  with the reservoir definition `A_E = int T'^2 / (2 sigma) dp` used by the
+  toolkit. `C_A` typically grows by a factor of 2.5 to 3.0.
+- **`C_K`, fifth term**: the eddy momentum flux now acts on the vertical shear
+  of the zonal-mean meridional wind, `d[v]/dp`, in place of `d[u]/dp`. The
+  effect is case-dependent and can reverse the sign of `C_K`.
+- **`BPhi_Z`**: the east and west faces are now diagnosed. The previous
+  expression evaluated a product of two zonal means across those faces, which
+  is identically zero. The north/south and top/bottom faces use the area
+  departures `Phi*` and `omega*`.
+- **`BPhi_E`**: all three faces now use eddy covariances.
+- **Static stability floor**: the `sigma = 0.03` floor is retained as the
+  default but is now explicit, reversible via `apply_floor=False`, and
+  reported when it engages.
+- **Residual plot labels**: `RG` and `RK` are labelled as composite residuals
+  rather than as named physical processes.
+
+### Added
+
+- **`C_sobreposicao`**: domain-mean overturning diagnostic. Exported for
+  interpretation; it does not enter `RGz` or `RKz`.
+- **`M`**: mass-continuity residual, exported as a vertical profile and as a
+  column integral. It sets the numerical noise floor of the budget.
+- Analytic test suite for the energy, conversion and boundary equations.
+
+### Fixed
+
+- **`--box_limits` was ignored**: `slice_domain` read the hard-coded
+  `inputs/box_limits`, so a run passing a different file sliced the dataset
+  with one domain and computed the energetics on the intersection with
+  another. The requested and realised domains are now logged.
+- **Longitude conventions**: box limits are translated into the dataset's own
+  convention, and wrapped domains fail explicitly instead of silently
+  selecting the wrong region.
+- **850 hPa constant**: the interactive `--choose` diagnostic used `8500`
+  where the vertical coordinate is in Pa, selecting the level nearest
+  85 hPa. It is now `85000`.
+- **Vertical-level output**: column headers are written after the vertical
+  control volume is fixed, so the per-level CSV files line up with the levels
+  actually used.
+- **Time tendencies**: finite differences now use elapsed seconds rather than
+  assuming a uniform time step.
+- **NaN policy**: missing values are interpolated along the vertical without
+  dropping pressure levels, and the control volume is decided once for all
+  terms instead of independently per term.
+- **Unit-error handling**: `pint` raises `DimensionalityError`, a subclass of
+  `TypeError`, which the previous `ValueError` guard could not catch.
+- **Direct dissipation**: the non-residual dissipation pathway now raises
+  `NotImplementedError` instead of returning a value built from a single
+  scalar friction field. Use the residual formulation (`-r`).
+
+### Documentation
+
+- `docs/source/math.rst` updated for the equations above, with the source of
+  each adopted form recorded alongside it.
+
 ## [1.1.7] - 2026-01-25
 
 ### Fixed

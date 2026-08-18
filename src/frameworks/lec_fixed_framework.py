@@ -23,8 +23,10 @@ from ..analysis.conversion_terms import ConversionTerms
 from ..analysis.energy_contents import EnergyContents
 from ..analysis.generation_and_dissipation_terms import \
     GenerationDissipationTerms
+from ..analysis.mass_continuity import MassContinuity
 from ..utils.box_data import BoxData
 from ..utils.calc_budget_and_residual import calc_budget_diff, calc_residuals
+from ..utils.longitude import canonicalize_box
 
 
 def lec_fixed(
@@ -57,19 +59,40 @@ def lec_fixed(
     logging.info("📊 Computing energetics using fixed framework...")
 
     box_limits_file = args.box_limits
+    if not os.path.exists(box_limits_file) and os.path.exists(
+        f"{box_limits_file}.default"
+    ):
+        box_limits_file = f"{box_limits_file}.default"
+    app_logger.info(f"📐 Fixed-domain limits read from: {box_limits_file}")
     dfbox = pd.read_csv(box_limits_file, header=None, delimiter=";", index_col=0)
-    min_lon, max_lon = dfbox.loc["min_lon"].iloc[0], dfbox.loc["max_lon"].iloc[0]
-    min_lat, max_lat = dfbox.loc["min_lat"].iloc[0], dfbox.loc["max_lat"].iloc[0]
-
-    if min_lon > max_lon:
-        error_message = f"❌ Error in box_limits: min_lon ({min_lon}) is greater than max_lon ({max_lon})"
-        app_logger.error(error_message)
-        raise ValueError(error_message)
+    min_lon, max_lon = float(dfbox.loc["min_lon"].iloc[0]), float(
+        dfbox.loc["max_lon"].iloc[0]
+    )
+    min_lat, max_lat = float(dfbox.loc["min_lat"].iloc[0]), float(
+        dfbox.loc["max_lat"].iloc[0]
+    )
 
     if min_lat > max_lat:
         error_message = f"❌ Error in box_limits: min_lat ({min_lat}) is greater than max_lat ({max_lat})"
         app_logger.error(error_message)
         raise ValueError(error_message)
+
+    # express the requested longitudes in the dataset's own
+    # convention. A wrapped interval raises an explicit, actionable error
+    # rather than being rejected as a malformed input or, worse, silently
+    # producing a partial slice.
+    LonIndexerForBox = variable_list_df.loc["Longitude"]["Variable"]
+    try:
+        min_lon, max_lon = canonicalize_box(
+            min_lon,
+            max_lon,
+            data[LonIndexerForBox].values,
+            app_logger=app_logger,
+            context=f"box_limits ({box_limits_file})",
+        )
+    except ValueError as exc:
+        app_logger.error(f"❌ {exc}")
+        raise
 
     app_logger.debug("💾 Loading data into memory..")
     data = data.compute()
@@ -87,32 +110,6 @@ def lec_fixed(
         f"🗺️ Bounding box: lon=[{min_lon}, {max_lon}], lat=[{min_lat}, {max_lat}]"
     )
 
-    for term in [
-        "Az",
-        "Ae",
-        "Kz",
-        "Ke",
-        "Ge",
-        "Gz",
-        "Cz",
-        "Cz_1",
-        "Cz_2",
-        "Ca",
-        "Ca_1",
-        "Ca_2",
-        "Ce",
-        "Ce_1",
-        "Ce_2",
-        "Ck",
-        "Ck_1",
-        "Ck_2",
-        "Ck_3",
-        "Ck_4",
-        "Ck_5",
-    ]:
-        columns = [TimeName] + [float(i) for i in PressureData.values]
-        output_path = Path(results_subdirectory_vertical_levels, f"{term}_{VerticalCoordIndexer}.csv")
-        pd.DataFrame(columns=columns).to_csv(output_path, index=None)
 
     try:
         box_obj = BoxData(
@@ -129,6 +126,27 @@ def lec_fixed(
     except Exception:
         app_logger.exception("❌ An exception occurred while creating BoxData object")
         raise
+
+    # The per-level CSV headers must list the levels ACTUALLY used, which are
+    # only known after BoxData has fixed the vertical control volume
+    #. Creating them earlier from the full level set silently
+    # misaligned every archived profile whenever a level was excluded.
+    used_levels = [float(i) for i in box_obj.PressureData.metpy.dequantify().values]
+    app_logger.info(
+        f"🧾 Vertical-level CSVs will carry {len(used_levels)} levels: "
+        f"{used_levels[0]:.0f} Pa to {used_levels[-1]:.0f} Pa"
+    )
+    for term in [
+        "Az", "Ae", "Kz", "Ke", "Ge", "Gz",
+        "Cz", "Cz_1", "Cz_2", "Ca", "Ca_1", "Ca_2",
+        "Ce", "Ce_1", "Ce_2", "C_sobreposicao", "M",
+        "Ck", "Ck_1", "Ck_2", "Ck_3", "Ck_4", "Ck_5",
+    ]:
+        columns = [TimeName] + used_levels
+        output_path = Path(
+            results_subdirectory_vertical_levels, f"{term}_{VerticalCoordIndexer}.csv"
+        )
+        pd.DataFrame(columns=columns).to_csv(output_path, index=None)
 
     try:
         ec_obj = EnergyContents(box_obj, "fixed", app_logger)
@@ -152,13 +170,16 @@ def lec_fixed(
             ct_obj.calc_ca(),
             ct_obj.calc_ck(),
             ct_obj.calc_ce(),
+            ct_obj.calc_c_sobreposicao(),
         ]
     except Exception:
         app_logger.exception(
             "❌ An exception occurred while computing ConversionTerms"
         )
         raise
-    app_logger.info("🔄 Computed conversion terms (Cz, Ca, Ck, Ce)")
+    app_logger.info(
+        "🔄 Computed conversion terms (Cz, Ca, Ck, Ce, C_sobreposicao)"
+    )
 
     try:
         bt_obj = BoundaryTerms(box_obj, "fixed", app_logger)
@@ -176,6 +197,17 @@ def lec_fixed(
         )
         raise
     app_logger.info("🏁 Computed boundary terms (BAz, BAe, BKz, BKe, BΦZ, BΦE)")
+
+    try:
+        mass_residual = MassContinuity(
+            box_obj, "fixed", app_logger
+        ).calc_mass_residual()
+    except Exception:
+        app_logger.exception(
+            "❌ An exception occurred while computing mass continuity"
+        )
+        raise
+    app_logger.info("⚖️ Computed mass-continuity residual M")
 
     try:
         gdt_obj = GenerationDissipationTerms(box_obj, "fixed", app_logger)
@@ -200,12 +232,18 @@ def lec_fixed(
     df = pd.DataFrame(index=dates.astype("datetime64"))
     for i, col in enumerate(["Az", "Ae", "Kz", "Ke"]):
         df[col] = energy_list[i]
-    for i, col in enumerate(["Cz", "Ca", "Ck", "Ce"]):
+    for i, col in enumerate(["Cz", "Ca", "Ck", "Ce", "C_sobreposicao"]):
         df[col] = conversion_list[i]
-    for i, col in enumerate(
-        ["BAz", "BAe", "BKz", "BKe", "Gz", "Ge", "Dz", "De"][: len(gen_diss_list) + 4]
-    ):
-        df[col] = boundary_list[i] if i < 4 else gen_diss_list[i - 4]
+    # all six boundary diagnostics are computed, so all six are
+    # exported. Previously BΦZ and BΦE were computed and then discarded, which
+    # also made the fixed and moving frameworks emit different column sets.
+    # They are exported here now that their formulations have been re-derived
+    # They do NOT enter the residuals.
+    for i, col in enumerate(["BAz", "BAe", "BKz", "BKe", "BΦZ", "BΦE"]):
+        df[col] = boundary_list[i]
+    df["M"] = mass_residual
+    for i, col in enumerate(["Gz", "Ge", "Dz", "De"][: len(gen_diss_list)]):
+        df[col] = gen_diss_list[i]
 
     df = calc_budget_diff(df, dates, app_logger)
     df = calc_residuals(df, app_logger)

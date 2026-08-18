@@ -44,6 +44,7 @@ Contact:
 """
 
 import argparse
+import logging
 
 import numpy as np
 import pandas as pd
@@ -94,6 +95,7 @@ class BoxData:
         self.results_subdirectory = results_subdirectory
         self.results_subdirectory_vertical_levels = results_subdirectory_vertical_levels
 
+        self.app_logger = logging.getLogger("lorenzcycletoolkit")
         self.dx = float(data[self.LatIndexer][1] - data[self.LatIndexer][0])
 
         # Set domain limits and calculate lengths for averaging
@@ -101,8 +103,83 @@ class BoxData:
             data, western_limit, eastern_limit, southern_limit, northern_limit
         )
 
+        # decide the vertical control volume ONCE, before any term
+        # is computed, so that every term of the budget is integrated over the
+        # same set of pressure levels.
+        data = self._restrict_to_valid_levels(data, variable_list_df)
+
         # Extract and process meteorological data within the defined box
         self._process_meteorological_data(data, variable_list_df, dTdt)
+
+    def _restrict_to_valid_levels(self, data, variable_list_df):
+        """
+        Determine, once, the pressure levels usable by every LEC term.
+
+        A level is retained only if all of the core fields are finite
+        everywhere inside the box and at every time.  Levels that fail are
+        removed from the dataset here, so all terms share one vertical control
+        volume.  Previously each term called ``dropna`` on its own integrand,
+        which could give different terms different integration depths and break
+        the budget identities.
+
+        No value is invented and nothing is extrapolated: unusable levels are
+        excluded and reported.
+        """
+        core = ["Air Temperature", "Eastward Wind Component",
+                "Northward Wind Component", "Omega Velocity"]
+        core += (
+            ["Geopotential"]
+            if "Geopotential" in variable_list_df.index
+            else ["Geopotential Height"]
+        )
+
+        box = {
+            self.LatIndexer: slice(self.southern_limit, self.northern_limit),
+            self.LonIndexer: slice(self.western_limit, self.eastern_limit),
+        }
+
+        levels = data[self.VerticalCoordIndexer]
+        valid = xr.ones_like(levels, dtype=bool)
+        for name in core:
+            if name not in variable_list_df.index:
+                continue
+            var = data[variable_list_df.loc[name]["Variable"]].sel(**box)
+            other = [d for d in var.dims if d != self.VerticalCoordIndexer]
+            valid = valid & var.notnull().all(dim=other)
+
+        n_total = int(levels.size)
+        n_valid = int(valid.sum())
+        self.valid_levels = [float(v) for v in levels.values[valid.values]]
+        self.dropped_levels = [
+            float(v) for v in levels.values[~valid.values]
+        ]
+
+        if n_valid == 0:
+            raise ValueError(
+                "No pressure level has complete data inside the requested box; "
+                "cannot compute the Lorenz Energy Cycle."
+            )
+
+        if self.dropped_levels:
+            self.app_logger.warning(
+                "⚠️ Vertical control volume: %d of %d pressure levels contain "
+                "missing data inside the box and are excluded from ALL terms "
+                "(consistently): %s",
+                n_total - n_valid,
+                n_total,
+                ", ".join(f"{p:.0f} Pa" for p in self.dropped_levels),
+            )
+            data = data.sel({self.VerticalCoordIndexer: self.valid_levels})
+            self.PressureData = data[self.VerticalCoordIndexer] * units("Pa")
+
+        self.app_logger.info(
+            "📏 Vertical control volume: %d levels, %.0f Pa (top) to %.0f Pa "
+            "(bottom).",
+            n_valid,
+            min(self.valid_levels),
+            max(self.valid_levels),
+        )
+        return data
 
     def _initialize_indices(self, variable_list_df, data):
         """Initialize indices from the variable list DataFrame."""
@@ -181,18 +258,45 @@ class BoxData:
         self.v_AE = self.v_ZA - self.v_AA
 
     def _process_friction_terms(self, data, variable_list_df, args):
-        """Extract and process friction terms."""
+        """
+        Extract and process friction terms.
+
+        The direct (non-residual) dissipation pathway is not supported.  Brennan and Vincent (1980, pp. 964-965)
+        require the two independent friction-force components ``F_lambda`` and
+        ``F_phi`` on every pressure level; operational reanalyses such as ERA5
+        do not distribute those fields.  The supported
+        pathway is the residual formulation (``-r`` / ``--residuals``).
+        """
         if args.residuals:
             self.ust = self.tair * np.nan
             self.vst = self.tair * np.nan
 
         else:
-            self.ust = self._extract_data(
-                data, variable_list_df, "Friction Velocity", "m/s"
-            )
-            self.vst = self._extract_data(
-                data, variable_list_df, "Friction Velocity", "m/s"
-            )
+            required = {"Zonal Friction Force", "Meridional Friction Force"}
+            if required.issubset(set(variable_list_df.index)):
+                self.ust = self._extract_data(
+                    data, variable_list_df, "Zonal Friction Force", "m/s**2"
+                )
+                self.vst = self._extract_data(
+                    data, variable_list_df, "Meridional Friction Force", "m/s**2"
+                )
+            else:
+                raise NotImplementedError(
+                    "Direct computation of the frictional dissipation terms "
+                    "(Dz, De) is not supported.\n"
+                    "  Brennan and Vincent (1980) require the eastward and "
+                    "northward friction-force components on every pressure "
+                    "level; the namelist would need rows named 'Zonal Friction "
+                    "Force' and 'Meridional Friction Force' (units m s^-2).\n"
+                    "  Standard reanalysis workflows (including the ERA5 CDS "
+                    "pathway shipped with this toolkit) do not provide them, "
+                    "so this diagnostic cannot be formed from them.\n"
+                    "  Use the residual formulation instead: add -r "
+                    "(--residuals) to the command line. Note that the residuals "
+                    "RKz/RKe combine boundary pressure work, friction, "
+                    "unresolved-scale transfer and numerical error; they are "
+                    "not friction alone."
+                )
 
         self.ust_ZA = CalcZonalAverage(self.ust, self.xlength)
         self.ust_AA = CalcAreaAverage(self.ust_ZA, self.ylength)
@@ -292,7 +396,9 @@ class BoxData:
             self.VerticalCoordIndexer,
             self.xlength,
             self.ylength,
+            app_logger=self.app_logger,
         )
+        self.sigma_diagnostics = self.sigma_AA.attrs.get("sigma_diagnostics", {})
 
     def _extract_data(self, data, variable_list_df, variable_name, unit):
         """Extract data for a specific variable and convert to the specified unit."""
