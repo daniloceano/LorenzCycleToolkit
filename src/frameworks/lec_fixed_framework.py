@@ -6,7 +6,7 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:32:59 by daniloceano       #+#    #+#              #
-#    Updated: 2026/01/25 17:40:26 by daniloceano      ###   ########.fr        #
+#    Updated: 2026/02/26 10:53:21 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -60,14 +60,25 @@ def lec_fixed(
     logging.info("📊 Computing energetics using fixed framework...")
 
     box_limits_file, min_lon, max_lon, min_lat, max_lat = read_box_limits(
-        args.box_limits
+        args.box_limits, app_logger
     )
     app_logger.info(f"📐 Fixed-domain limits read from: {box_limits_file}")
 
     if min_lat > max_lat:
-        error_message = f"❌ Error in box_limits: min_lat ({min_lat}) is greater than max_lat ({max_lat})"
-        app_logger.error(error_message)
-        raise ValueError(error_message)
+        app_logger.error("❌ Invalid box limits: min_lat > max_lat!")
+        app_logger.error("\n" + "="*70)
+        app_logger.error("🗺️  INVALID BOX LIMITS - LATITUDE")
+        app_logger.error("="*70)
+        app_logger.error(f"min_lat: {min_lat}")
+        app_logger.error(f"max_lat: {max_lat}")
+        app_logger.error("\n💡 Solution:")
+        app_logger.error("   Ensure min_lat < max_lat in your box_limits file")
+        app_logger.error(f"   File: {box_limits_file}")
+        app_logger.error("="*70 + "\n")
+        raise ValueError(
+            f"Invalid box_limits: min_lat ({min_lat}) > max_lat ({max_lat}). "
+            f"Check {box_limits_file}"
+        )
 
     # Express the requested longitudes in the dataset's own convention. A
     # wrapped interval raises an explicit, actionable error rather than

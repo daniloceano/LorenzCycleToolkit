@@ -40,9 +40,11 @@ Save this file (e.g., as ``inputs/track_19790205.csv``).
 - Track ending at 15:00 on last day → Downloads stop at 15:00 (not 23:00)
 - Middle days are always downloaded completely (00:00 to 23:00)
 
-**3. Configure Namelist for ERA5**
+**3. Namelist Configuration (Automatic)**
 
-Copy the ERA5-specific namelist:
+When using the ``--cdsapi`` flag, the toolkit **automatically** uses the ERA5-compatible namelist (``inputs/namelist_ERA5-cdsapi``). You do not need to manually create or copy the namelist file.
+
+If you're using ERA5 data from other sources (not via ``--cdsapi``), you need to manually configure the namelist:
 
 .. code-block:: bash
 

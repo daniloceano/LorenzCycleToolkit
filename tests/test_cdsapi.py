@@ -326,7 +326,7 @@ class TestGetCDSAPIData:
 
         # Don't create the file to simulate failure (retrieve does nothing)
         # This will cause the daily file check to fail
-        with pytest.raises(FileNotFoundError, match="Daily file not created"):
+        with pytest.raises(FileNotFoundError, match="CDS API file not created at expected path"):
             get_cdsapi_data(sample_args, sample_track, app_logger)
 
     @patch('cdsapi.Client')

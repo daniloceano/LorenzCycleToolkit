@@ -39,7 +39,8 @@ from metpy.units import units
 from src.frameworks.lec_fixed_framework import lec_fixed
 from src.frameworks.lec_moving_framework import lec_moving
 from src.utils.input_files import resolve_input_file
-from src.utils.tools import initialize_logging, prepare_data
+from src.utils.preprocessing import prepare_data
+from src.utils.tools import initialize_logging
 
 # Suppress specific RuntimeWarning from xarray
 warnings.filterwarnings(

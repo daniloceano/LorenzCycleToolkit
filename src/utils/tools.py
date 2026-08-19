@@ -6,22 +6,27 @@
 #    By: daniloceano <danilo.oceano@gmail.com>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/12/19 17:33:03 by daniloceano       #+#    #+#              #
-#    Updated: 2026/01/25 17:33:29 by daniloceano      ###   ########.fr        #
+#    Updated: 2025/02/26 11:00:00 by daniloceano      ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
+"""
+Utility functions for the Lorenz Energy Cycle Toolkit.
+
+This module contains general utility functions including logging initialization,
+coordinate conversion, CDS API data retrieval, and helper functions for
+finding extremum coordinates.
+"""
+
 import argparse
 import logging
+import math
 import os
-from datetime import timedelta
+import tempfile
 
-import dask
 import numpy as np
 import pandas as pd
 import xarray as xr
-from metpy.units import units
-
-from .select_area import slice_domain
 
 
 def initialize_logging(results_subdirectory, args):
@@ -309,15 +314,67 @@ def get_cdsapi_data(
                 
                 # Verify file was created
                 if not os.path.exists(temp_file):
+                    app_logger.error("❌ CDS API file creation failed!")
+                    app_logger.error("\n" + "="*70)
+                    app_logger.error("☁️  CDS API DOWNLOAD ERROR")
+                    app_logger.error("="*70)
+                    app_logger.error(f"Expected file: {temp_file}")
+                    app_logger.error(f"Date: {year}-{month}-{day}")
+                    app_logger.error("\n💡 Possible causes:")
+                    app_logger.error("   1. CDS API request succeeded but file wasn't written")
+                    app_logger.error("   2. Disk space full")
+                    app_logger.error("   3. Permission issues in temp directory")
+                    app_logger.error("\n🔧 Developer Info:")
+                    app_logger.error(f"   Request: {request}")
+                    app_logger.error(f"   Temp dir: {temp_dir}")
+                    app_logger.error("="*70 + "\n")
                     raise FileNotFoundError(
-                        f"Daily file not created at expected path: {temp_file}"
+                        f"CDS API file not created at expected path: {temp_file}"
                     )
                 
                 file_size = os.path.getsize(temp_file)
                 app_logger.info(f"  ✓ Downloaded successfully: {file_size / (1024**2):.2f} MB")
                 
+            except FileNotFoundError:
+                raise  # Re-raise the FileNotFoundError we just created
+            except KeyError as e:
+                app_logger.error(f"❌ CDS API authentication or configuration error!")
+                app_logger.error("\n" + "="*70)
+                app_logger.error("🔑 CDS API AUTHENTICATION ERROR")
+                app_logger.error("="*70)
+                app_logger.error(f"Date: {year}-{month}-{day}")
+                app_logger.error(f"Error: {e}")
+                app_logger.error("\n💡 User Solutions:")
+                app_logger.error("   1. Check if ~/.cdsapirc file exists and is configured:")
+                app_logger.error("      url: https://cds.climate.copernicus.eu/api/v2")
+                app_logger.error("      key: YOUR_UID:YOUR_API_KEY")
+                app_logger.error("   2. Register at: https://cds.climate.copernicus.eu/")
+                app_logger.error("   3. Get your API key from your profile page")
+                app_logger.error("\n🔧 Developer Info:")
+                app_logger.error(f"   Exception: {type(e).__name__}: {str(e)}")
+                app_logger.error("="*70 + "\n")
+                raise
             except Exception as e:
-                app_logger.error(f"✗ Error downloading data for {year}-{month}-{day}: {e}")
+                app_logger.error(f"❌ Error downloading CDS API data for {year}-{month}-{day}!")
+                app_logger.error("\n" + "="*70)
+                app_logger.error("☁️  CDS API REQUEST ERROR")
+                app_logger.error("="*70)
+                app_logger.error(f"Date: {year}-{month}-{day}")
+                app_logger.error(f"Error type: {type(e).__name__}")
+                app_logger.error(f"Error message: {str(e)}")
+                app_logger.error("\n💡 Common causes:")
+                app_logger.error("   1. Network connectivity issues")
+                app_logger.error("   2. CDS API service is down or overloaded")
+                app_logger.error("   3. Invalid request parameters")
+                app_logger.error("   4. API quota exceeded")
+                app_logger.error("   5. Timeout (large requests)")
+                app_logger.error("\n🔍 Check CDS API status:")
+                app_logger.error("   https://cds.climate.copernicus.eu/live/queue")
+                app_logger.error("\n🔧 Developer Info:")
+                app_logger.error(f"   Request parameters: {request}")
+                app_logger.error(f"   Exception: {type(e).__name__}")
+                app_logger.error(f"   Message: {str(e)}")
+                app_logger.error("="*70 + "\n")
                 raise
         
         app_logger.info("=" * 60)
@@ -348,8 +405,24 @@ def get_cdsapi_data(
         
         # Verify the final file was created
         if not os.path.exists(args.infile):
+            app_logger.error("❌ Final CDS API file was not created!")
+            app_logger.error("\n" + "="*70)
+            app_logger.error("📦 FILE CONCATENATION ERROR")
+            app_logger.error("="*70)
+            app_logger.error(f"Expected file: {args.infile}")
+            app_logger.error(f"Daily files downloaded: {len(daily_files)}")
+            app_logger.error("\n💡 Possible causes:")
+            app_logger.error("   1. Error during dataset concatenation")
+            app_logger.error("   2. Disk space full")
+            app_logger.error("   3. Permission issues")
+            app_logger.error("\n🔧 Developer Info:")
+            app_logger.error(f"   Target file: {args.infile}")
+            app_logger.error(f"   Daily files: {len(daily_files)}")
+            app_logger.error(f"   Temp directory: {temp_dir}")
+            app_logger.error("="*70 + "\n")
             raise FileNotFoundError(
-                f"❌ CDS API file not created at expected path: {args.infile}"
+                f"CDS API file not created at expected path: {args.infile}. "
+                f"Check disk space and permissions."
             )
         
         final_file_size = os.path.getsize(args.infile)
@@ -378,209 +451,3 @@ def get_cdsapi_data(
             app_logger.warning(f"⚠️ Could not delete temporary directory {temp_dir}: {e}")
     
     return args.infile
-
-
-def get_data(args: argparse.Namespace, app_logger: logging.Logger) -> xr.Dataset:
-    """
-    Opens a NetCDF file and extracts variables specified in a CSV file.
-
-    Args:
-        args (argparse.Namespace): Command-line arguments.
-        variable_list_df (pd.DataFrame): DataFrame containing the variables to extract.
-        app_logger (logging.Logger): Logger for the application.
-
-    Returns:
-        xr.Dataset: Dataset containing extracted variables.
-
-    Raises:
-        FileNotFoundError: If CSV file or NetCDF file is not found.
-        Exception: For other errors occurring during file opening.
-    """
-    infile = args.infile
-
-    if args.cdsapi:
-        if not os.path.exists(infile):
-            app_logger.debug(
-                "🌐 CDS API data not found. Attempting to retrieve data from CDS API..."
-            )
-            track = pd.read_csv(
-                args.trackfile, parse_dates=[0], delimiter=";", index_col="time"
-            )
-            infile = get_cdsapi_data(args, track, app_logger)
-            app_logger.debug(f"✅ CDS API data ready: {infile}")
-        else:
-            app_logger.info("✅ CDS API data already exists, skipping download.")
-
-    app_logger.debug("📂 Opening input data... ")
-    try:
-        with dask.config.set(array={"slicing": {"split_large_chunks": True}}):
-            data = xr.open_dataset(infile)
-    except FileNotFoundError:
-        app_logger.error(
-            "❌ Could not open file. Check if path, namelist file, and file format (.nc) are correct."
-        )
-        raise
-    except Exception as e:
-        app_logger.exception("❌ An exception occurred: {}".format(e))
-        raise
-    app_logger.debug("✅ Data opened successfully.")
-
-    return data
-
-
-def process_data(
-    data: xr.Dataset,
-    args: argparse.Namespace,
-    variable_list_df: pd.DataFrame,
-    app_logger: logging.Logger,
-) -> xr.Dataset:
-    """
-    Process the given data and return a modified dataset.
-
-    Parameters:
-    - data: A dataset containing the data to be processed (type: xr.Dataset).
-    - args: An argparse.Namespace object containing the command line arguments (type: argparse.Namespace).
-    - variable_list_df: A DataFrame containing a list of variables (type: pd.DataFrame).
-    - app_logger: A logger object for logging debug messages (type: logging.Logger).
-
-    Returns:
-    - data: A modified dataset after processing (type: xr.Dataset).
-    """
-    # Select only data matching the track dates
-    if args.track:
-        app_logger.debug("📅 Selecting only data matching the track dates... ")
-        track_file = args.trackfile
-        track = pd.read_csv(
-            track_file, parse_dates=[0], delimiter=";", index_col="time"
-        )
-        TimeIndexer = variable_list_df.loc["Time"]["Variable"]
-        # Check input data and track time steps
-        data_time_delta = int(
-            (data[TimeIndexer][1] - data[TimeIndexer][0]) / np.timedelta64(1, "h")
-        )
-        track_time_delta = int(
-            (track.index[1] - track.index[0]) / np.timedelta64(1, "h")
-        )
-        # If track dt is higher than data dt, raise error
-        if track_time_delta > data_time_delta:
-            app_logger.error(
-                "❌ Track time step is higher than data time step. Please resample the track to match the data time step."
-            )
-            raise ValueError(
-                "Track time step is higher than data time step. Please resample the track to match the data time step."
-            )
-        # Check data and track initial and final timestamps
-        if track.index[0] < data[TimeIndexer][0].values:
-            app_logger.error(
-                "❌ Track initial timestamp is earlier than data initial timestamp. Please adjust the track file."
-            )
-            raise ValueError(
-                "Track initial timestamp is earlier than data initial timestamp. Please adjust the track file."
-            ) 
-        if track.index[-1] > data[TimeIndexer][-1].values:
-            app_logger.error(
-                f"❌ Track final timestamp ({track.index[-1]}) is later than data final timestamp ({data[TimeIndexer][-1].values}). "
-                f"Please adjust the track file or re-download the data."
-            )
-            raise ValueError(
-                f"Track final timestamp ({track.index[-1]}) is later than data final timestamp ({data[TimeIndexer][-1].values}). "
-                f"Please adjust the track file or re-download the data."
-            )
-        # If using CDS API, resample track to data time step
-        if args.cdsapi:
-            time_delta = int(
-                (data[TimeIndexer][1] - data[TimeIndexer][0]) / np.timedelta64(1, "h")
-            )
-            track = track[track.index.hour % time_delta == 0]
-        data = data.sel({TimeIndexer: track.index.values})
-        app_logger.debug("✅ Track dates selection complete.")
-    if (
-        data[variable_list_df.loc["Longitude"]["Variable"]].min() < -180
-        or data[variable_list_df.loc["Longitude"]["Variable"]].max() > 180
-    ):
-        data = convert_longitude_range(
-            data, variable_list_df.loc["Longitude"]["Variable"]
-        )
-
-    LonIndexer = variable_list_df.loc["Longitude"]["Variable"]
-    LatIndexer = variable_list_df.loc["Latitude"]["Variable"]
-    LevelIndexer = variable_list_df.loc["Vertical Level"]["Variable"]
-
-    app_logger.debug("🌐 Assigning geospatial coordinates in radians... ")
-    data = data.assign_coords({"rlats": np.deg2rad(data[LatIndexer])})
-    data = data.assign_coords({"coslats": np.cos(np.deg2rad(data[LatIndexer]))})
-    data = data.assign_coords({"rlons": np.deg2rad(data[LonIndexer])})
-    app_logger.debug("✅ Geospatial coordinates assigned.")
-
-    # Drop unnecessary dimensions
-    if 'expver' in data.coords:
-        data = data.drop('expver')
-    if 'number' in data.coords:
-        data = data.drop('number')
-
-    levels_Pa = (
-        data[LevelIndexer] * units(str(data[LevelIndexer].units))
-    ).metpy.convert_units("Pa")
-    data = data.assign_coords({LevelIndexer: levels_Pa})
-
-    data = (
-        data.sortby(LonIndexer)
-        .sortby(LevelIndexer, ascending=True)
-        .sortby(LatIndexer, ascending=True)
-    )
-
-    lowest_level = float(data[LevelIndexer].max())
-    data = data.sel({LevelIndexer: slice(1000, lowest_level)})
-
-    if args.mpas:
-        data = data.drop_dims("standard_height")
-
-    app_logger.debug("✅ Data processing complete.")
-    return data
-
-
-def prepare_data(
-    args, varlist: str = "inputs/namelist", app_logger: logging.Logger = None
-) -> xr.Dataset:
-    """
-    Prepare the data for further analysis.
-
-    Parameters:
-        args (object): The arguments for the function.
-        varlist (str): The file path to the variable list file (namelist).
-        app_logger (logging.Logger): The logger for the application.
-
-    Returns:
-        method (str): The method used for the analysis: fixed, track or choose.
-        xr.Dataset: The prepared dataset for analysis.
-    """
-    # Automatically use ERA5-cdsapi namelist when --cdsapi flag is set
-    if args.cdsapi:
-        varlist = "inputs/namelist_ERA5-cdsapi"
-        app_logger.info("🌐 CDS API mode detected: automatically using ERA5-compatible namelist")
-        app_logger.debug(f"📋 Using namelist: {varlist}")
-
-    app_logger.debug(f"📝 Variables specified by the user in: {varlist}")
-    app_logger.debug(f"📂 Attempting to read {varlist} file...")
-    try:
-        variable_list_df = pd.read_csv(varlist, sep=";", index_col=0, header=0)
-    except FileNotFoundError:
-        app_logger.error("❌ The 'namelist' text file could not be found.")
-        raise
-    except pd.errors.EmptyDataError:
-        app_logger.error("❌ The 'namelist' text file is empty.")
-        raise
-    app_logger.debug("✅ Variable list loaded:\n" + str(variable_list_df))
-
-    data = get_data(args, app_logger)
-
-    # Check if variable_list_df matches the data
-    if not set(variable_list_df["Variable"]).issubset(set(data.variables)):
-        app_logger.error(
-            "❌ The variable list does not match the data. Check if the 'namelist' text file is correct."
-        )
-        raise ValueError("'namelist' text file does not match the data.")
-
-    processed_data = process_data(data, args, variable_list_df, app_logger)
-    sliced_data = slice_domain(processed_data, args, variable_list_df)
-    return sliced_data

@@ -14,14 +14,15 @@ Welcome to the LorenzCycleToolkit documentation! This toolkit is designed to cal
 
    overview
    installation
-   usage
    configuration
-   cdsapi_example
-   file_naming_convention
+   usage
    examples_and_tutorials
+   cdsapi_example
    results
+   troubleshooting
+   file_naming_convention
    math
    contributing
    support
-   license
    references
+   license

@@ -109,6 +109,155 @@ onwards; see the notes below for which terms are affected.
 
 - `docs/source/math.rst` updated for the equations above, with the source of
   each adopted form recorded alongside it.
+## [1.1.11] - 2025-02-26
+
+### Changed
+
+- **Code Organization**: Refactored `src/utils/tools.py` (1096 lines) into three focused modules:
+  - `tools.py`: Utility functions (logging, CDS API, coordinate conversions) - 453 lines
+  - `validation.py`: Input validation functions (track files, namelists, coordinates) - 449 lines
+  - `preprocessing.py`: Data preprocessing functions (loading, processing, preparation) - 592 lines
+  
+- **Improved Maintainability**:
+  - Separation of concerns: utilities, validation, and preprocessing logic are now separate
+  - Better testability with focused modules
+  - Clearer import statements showing dependencies
+  - Module-level docstrings explaining each module's purpose
+
+- **Import Updates**:
+  - `lorenzcycletoolkit.py`: Now imports `prepare_data` from `src.utils.preprocessing`
+  - `initialize_logging` remains in `src.utils.tools`
+  - `get_cdsapi_data` remains in `src.utils.tools` (no changes to tests)
+  
+- **Module Structure**:
+  - `tools.py` contains:
+    - `initialize_logging()` - Setup application logging
+    - `convert_longitude_range()` - Coordinate conversion utility
+    - `find_extremum_coordinates()` - Find min/max points
+    - `get_cdsapi_data()` - ERA5 data download from CDS API
+    
+  - `validation.py` contains:
+    - `validate_track_file()` - Track file format validation
+    - `validate_namelist_file()` - Namelist loading and validation
+    - `validate_variable_match()` - Check namelist-dataset variable matching
+    - `validate_required_coordinates()` - Validate presence of required coordinates
+    
+  - `preprocessing.py` contains:
+    - `get_data()` - NetCDF file opening with error handling
+    - `process_data()` - Data preprocessing (timestep validation, coordinate conversion, unit conversion)
+    - `prepare_data()` - Main orchestration function
+
+### Developer Notes
+
+- No breaking changes for end users - all functionality remains the same
+- Test suite remains unchanged (all tests use functions that stayed in `tools.py`)
+- Error messages and logging behavior unchanged
+- This refactoring improves code navigation and makes future maintenance easier
+
+## [1.1.10] - 2026-02-26
+
+### Improved
+
+- **Comprehensive Error Messages**: All error messages now include:
+  - Clear description of the problem
+  - Specific solutions for users
+  - Developer information (file paths, exception details, context)
+  - Visual formatting with emojis and separators for better readability
+
+- **File Opening Errors**: Enhanced error handling when opening NetCDF files:
+  - FileNotFoundError: Shows absolute path, current directory, existence check
+  - OSError: Displays file permissions, size, readability status
+  - Generic errors: Includes full traceback and diagnostic information
+
+- **Namelist Validation**: Improved namelist file error messages:
+  - FileNotFoundError: Shows available preset namelists and copy commands
+  - EmptyDataError: Explains the issue with clear solution
+  - Parsing errors: Indicates format requirements and encoding issues
+
+- **Coordinate Validation**: Added validation for required coordinates:
+  - Checks for longitude, latitude, vertical level, and time coordinates
+  - Shows which coordinates are missing vs available in dataset
+  - Provides examples of common coordinate names
+  - Lists dataset dimensions and coordinates for debugging
+
+- **Unit Conversion Errors**: Enhanced pressure level unit conversion handling:
+  - Assumes hPa if units attribute is missing (with warning)
+  - Detailed error messages showing current and target units
+  - Suggestions for fixing units with ncatted command
+  - Developer info includes MetPy error details
+
+- **Box Limits Validation** (Fixed Framework):
+  - FileNotFoundError: Shows absolute path and example format
+  - Missing fields: Lists required vs found fields
+  - Invalid ranges: Explains min/max relationship requirements
+  - All errors include file path and clear solutions
+
+- **CDS API Error Handling**: Comprehensive error messages for:
+  - Authentication errors: Links to registration and API key setup
+  - Network errors: Suggests checking CDS API status page
+  - File creation errors: Checks disk space and permissions
+  - Download errors: Shows request parameters and common causes
+
+### Added
+
+- **Developer Information**: All error messages now include technical details:
+  - Exception types and messages
+  - File paths (both relative and absolute)
+  - Variable values at point of failure
+  - Stack traces where relevant
+  - Configuration parameters
+
+## [1.1.9] - 2026-02-26
+
+### Added
+
+- **Track File Format Validation**: Added comprehensive validation for track file format:
+  - Automatic delimiter detection (`;` or `,`)
+  - Validation of required columns (`time`, `Lat`, `Lon`)
+  - Validation of date format (`YYYY-MM-DD-HHMM`)
+  - Clear error messages showing expected format with examples
+  - Support for both semicolon and comma delimiters
+
+### Fixed
+
+- **Track/Data Timestep Comparison**: Fixed inverted logic in timestep validation:
+  - Now correctly allows track with larger timesteps than data (e.g., 6h track on 1h data)
+  - Properly errors when data has larger timesteps than track (missing timesteps)
+  - Added detailed error messages showing both data and track temporal information
+
+### Improved
+
+- **Enhanced Error Messages for Timestep Issues**: When timestep or timestamp mismatches occur, error messages now display:
+  - Data time resolution (e.g., 1 hour, 6 hours)
+  - Track time resolution
+  - First and last timestamps for both data and track
+  - Clear explanation of the problem
+  - Actionable solutions for resolving the issue
+  - Visual indicators (arrows, emojis) highlighting problematic timestamps
+
+## [1.1.8] - 2026-02-26
+
+### Changed
+
+- **Namelist File Management**: The `inputs/namelist` file is now excluded from version control to prevent conflicts, as it should be customized by each user for their specific dataset.
+
+### Improved
+
+- **Enhanced Error Messages**: When the namelist doesn't match the dataset, the error message now displays:
+  - Available coordinates in the dataset (with units and long names when available)
+  - Available variables in the dataset (with units, long names, and standard names when available)
+  - Helpful suggestions for which preset namelist to use
+  - This makes it much easier for users to configure the correct namelist for their data
+
+### Documentation
+
+- **Configuration Guide**: Clarified that users must create an `inputs/namelist` file from one of the provided presets before running the toolkit
+- **Usage Guide**: Added comprehensive sections on:
+  - Prerequisites for each framework (fixed, moving, interactive)
+  - Input data requirements (regular grid, isobaric levels, required variables)
+  - Data preparation best practices to avoid memory issues
+  - Examples of data preprocessing using both Python (xarray) and CDO
+  - Links to the Configuration page for detailed setup instructions
 
 ## [1.1.7] - 2026-01-25
 

@@ -80,3 +80,12 @@ Troubleshooting
 **Issue**: Tests failing with import errors.
 
 **Solution**: Ensure all dependencies are installed by running ``pip install -r requirements.txt`` in your activated environment
+
+Next Steps
+----------
+
+After successful installation, proceed to:
+
+- :doc:`configuration` - Set up your namelist and domain files before running analyses
+- :doc:`usage` - Learn about command-line options and frameworks
+- :doc:`examples_and_tutorials` - Follow step-by-step examples with sample data
