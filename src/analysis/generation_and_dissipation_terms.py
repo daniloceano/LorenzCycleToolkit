@@ -27,15 +27,15 @@ Contact:
 
 import logging
 
-import numpy as np
 from metpy.constants import Cp_d, g
 from metpy.units import units
 
 from ..utils.box_data import BoxData
 from ..utils.calc_averages import CalcAreaAverage
+from ..utils.term_output import TermOutputMixin
 
 
-class GenerationDissipationTerms:
+class GenerationDissipationTerms(TermOutputMixin):
     """
     Class to compute generation and dissipation terms of the Lorenz Energy Cycle.
 
@@ -99,11 +99,11 @@ class GenerationDissipationTerms:
         self.v_ZA = box_obj.v_ZA
         self.v_ZE = box_obj.v_ZE
 
-        # Initialize attributes related to wind stress
-        self.ust_ZA = box_obj.ust_ZA
-        self.ust_ZE = box_obj.ust_ZE
-        self.vst_ZE = box_obj.vst_ZE
-        self.vst_ZA = box_obj.vst_ZA
+        # Initialize attributes related to the friction force (m s^-2)
+        self.fric_u_ZA = box_obj.fric_u_ZA
+        self.fric_u_ZE = box_obj.fric_u_ZE
+        self.fric_v_ZE = box_obj.fric_v_ZE
+        self.fric_v_ZA = box_obj.fric_v_ZA
 
         # Initialize attributes related to vertical velocity
         self.omega = box_obj.omega
@@ -130,7 +130,7 @@ class GenerationDissipationTerms:
             function.integrate(self.VerticalCoordIndexer)
             * self.PressureData.metpy.units
         )
-        self._convert_units(Gz, "Gz")
+        Gz = self._convert_units(Gz, "Gz")
         self.app_logger.debug("Ok.")
         return Gz
 
@@ -147,7 +147,7 @@ class GenerationDissipationTerms:
             function.integrate(self.VerticalCoordIndexer)
             * self.PressureData.metpy.units
         )
-        self._convert_units(Ge, "Ge")
+        Ge = self._convert_units(Ge, "Ge")
         self.app_logger.debug("Ok.")
         return Ge
 
@@ -159,13 +159,13 @@ class GenerationDissipationTerms:
         """
         self.app_logger.debug("Computing Dz...")
         # Here we will use only the lowest vertical level
-        term = (self.u_ZA.isel({self.VerticalCoordIndexer: 0}) * self.ust_ZA) + (
-            self.v_ZA.isel({self.VerticalCoordIndexer: 0}) * self.vst_ZA
+        term = (self.u_ZA.isel({self.VerticalCoordIndexer: 0}) * self.fric_u_ZA) + (
+            self.v_ZA.isel({self.VerticalCoordIndexer: 0}) * self.fric_v_ZA
         )
         function = CalcAreaAverage(term, self.ylength) / g
         self._save_vertical_levels(function, "Dz")
         Dz = units.Pa * function
-        self._convert_units(Dz, "Dz")
+        Dz = self._convert_units(Dz, "Dz")
         self.app_logger.debug("Ok.")
         return Dz
 
@@ -177,70 +177,12 @@ class GenerationDissipationTerms:
         """
         self.app_logger.debug("Computing De...")
         # Here we will use only the lowest vertical level
-        term = (self.u_ZE.isel({self.VerticalCoordIndexer: 0}) * self.ust_ZE) + (
-            self.v_ZE.isel({self.VerticalCoordIndexer: 0}) * self.vst_ZE
+        term = (self.u_ZE.isel({self.VerticalCoordIndexer: 0}) * self.fric_u_ZE) + (
+            self.v_ZE.isel({self.VerticalCoordIndexer: 0}) * self.fric_v_ZE
         )
         function = CalcAreaAverage(term, self.ylength) / g
         self._save_vertical_levels(function, "De")
         De = units.Pa * function
-        self._convert_units(De, "De")
+        De = self._convert_units(De, "De")
         self.app_logger.debug("Ok.")
         return De
-
-    def _handle_nans(self, function):
-        """
-        If there are any, interpolate them and drop any remaining NaN values.
-        If there are still NaN values after interpolation, drop the dimensions that contain NaN values.
-
-        Parameters:
-            function (np.ndarray): The function to handle NaN values for.
-
-        Returns:
-            None
-        """
-        if np.isnan(function).any():
-            function = (
-                function.interpolate_na(dim=self.VerticalCoordIndexer)
-                * function.metpy.units
-            )
-            if np.isnan(function).any():
-                function = function.dropna(dim=self.VerticalCoordIndexer)
-        return function
-
-    def _convert_units(self, function, variable_name):
-        """
-        Converts the units of a given function to 'J/m^2'.
-
-        Parameters:
-            function (type): The function to be converted.
-            variable_name (type): The name of the variable associated with the function.
-
-        Raises:
-            ValueError: If there is a unit error in the given variable.
-
-        Returns:
-            None
-        """
-        try:
-            function = function.metpy.convert_units("W/m^2")
-        except ValueError as e:
-            raise ValueError(f"Unit error in {variable_name}") from e
-        return function
-
-    def _save_vertical_levels(self, function, variable_name):
-        """Save computed energy data to a CSV file."""
-        df = function.to_dataframe(name=variable_name)
-        df.reset_index(inplace=True)
-        if self.method == "fixed":
-            df = df.pivot(index=self.TimeName, columns=self.VerticalCoordIndexer)
-        else:
-            df.set_index(self.TimeName, inplace=True)
-            df.index = df.index.strftime("%Y-%m-%d %H:%M:%S")
-            df = df.pivot(columns=self.VerticalCoordIndexer, values=variable_name)
-            df.columns.name = None
-
-        df.to_csv(
-            f"{self.results_subdirectory_vertical_levels}/{variable_name}_{self.VerticalCoordIndexer}.csv",
-            mode="a",
-            header=None,
-        )

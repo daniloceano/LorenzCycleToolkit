@@ -23,8 +23,11 @@ from ..analysis.conversion_terms import ConversionTerms
 from ..analysis.energy_contents import EnergyContents
 from ..analysis.generation_and_dissipation_terms import \
     GenerationDissipationTerms
+from ..analysis.mass_continuity import MassContinuity
 from ..utils.box_data import BoxData
 from ..utils.calc_budget_and_residual import calc_budget_diff, calc_residuals
+from ..utils.input_files import read_box_limits
+from ..utils.longitude import canonicalize_box
 
 
 def lec_fixed(
@@ -56,86 +59,10 @@ def lec_fixed(
     """
     logging.info("📊 Computing energetics using fixed framework...")
 
-    box_limits_file = args.box_limits
-    
-    # Read and validate box_limits file
-    try:
-        dfbox = pd.read_csv(box_limits_file, header=None, delimiter=";", index_col=0)
-    except FileNotFoundError:
-        app_logger.error("❌ Box limits file not found!")
-        app_logger.error("\n" + "="*70)
-        app_logger.error("📁 BOX LIMITS FILE NOT FOUND")
-        app_logger.error("="*70)
-        app_logger.error(f"Looking for: {os.path.abspath(box_limits_file)}")
-        app_logger.error(f"Current directory: {os.getcwd()}")
-        app_logger.error("\n💡 User Solutions:")
-        app_logger.error("   1. Create a box_limits file with the domain boundaries")
-        app_logger.error("   2. Use the default: inputs/box_limits")
-        app_logger.error("   3. Specify custom file with: --box_limits <path>")
-        app_logger.error("\n📝 Expected format:")
-        app_logger.error("   min_lon;-60")
-        app_logger.error("   max_lon;-30")
-        app_logger.error("   min_lat;-50")
-        app_logger.error("   max_lat;-20")
-        app_logger.error("\n🔧 Developer Info:")
-        app_logger.error(f"   args.box_limits: {box_limits_file}")
-        app_logger.error("="*70 + "\n")
-        raise FileNotFoundError(
-            f"Box limits file not found: {os.path.abspath(box_limits_file)}. "
-            f"Create one or use --box_limits to specify path."
-        )
-    except pd.errors.EmptyDataError:
-        app_logger.error("❌ Box limits file is empty!")
-        app_logger.error(f"File: {os.path.abspath(box_limits_file)}")
-        raise pd.errors.EmptyDataError(f"Box limits file is empty: {box_limits_file}")
-    except Exception as e:
-        app_logger.error(f"❌ Error reading box_limits file!")
-        app_logger.error(f"File: {os.path.abspath(box_limits_file)}")
-        app_logger.error(f"Error: {type(e).__name__}: {e}")
-        app_logger.error("\n💡 Check file format (should be CSV with ';' delimiter)")
-        raise
-    
-    # Validate required fields exist
-    required_fields = ["min_lon", "max_lon", "min_lat", "max_lat"]
-    missing_fields = [field for field in required_fields if field not in dfbox.index]
-    
-    if missing_fields:
-        app_logger.error("❌ Box limits file is missing required fields!")
-        app_logger.error("\n" + "="*70)
-        app_logger.error("📋 MISSING BOX LIMITS FIELDS")
-        app_logger.error("="*70)
-        app_logger.error(f"File: {box_limits_file}")
-        app_logger.error(f"Missing fields: {missing_fields}")
-        app_logger.error(f"Found fields: {list(dfbox.index)}")
-        app_logger.error("\n📝 Required format:")
-        app_logger.error("   min_lon;<value>")
-        app_logger.error("   max_lon;<value>")
-        app_logger.error("   min_lat;<value>")
-        app_logger.error("   max_lat;<value>")
-        app_logger.error("="*70 + "\n")
-        raise ValueError(
-            f"Box limits file missing required fields: {missing_fields}. "
-            f"Found: {list(dfbox.index)}"
-        )
-    
-    min_lon, max_lon = dfbox.loc["min_lon"].iloc[0], dfbox.loc["max_lon"].iloc[0]
-    min_lat, max_lat = dfbox.loc["min_lat"].iloc[0], dfbox.loc["max_lat"].iloc[0]
-
-    if min_lon > max_lon:
-        app_logger.error("❌ Invalid box limits: min_lon > max_lon!")
-        app_logger.error("\n" + "="*70)
-        app_logger.error("🗺️  INVALID BOX LIMITS - LONGITUDE")
-        app_logger.error("="*70)
-        app_logger.error(f"min_lon: {min_lon}")
-        app_logger.error(f"max_lon: {max_lon}")
-        app_logger.error("\n💡 Solution:")
-        app_logger.error("   Ensure min_lon < max_lon in your box_limits file")
-        app_logger.error(f"   File: {box_limits_file}")
-        app_logger.error("="*70 + "\n")
-        raise ValueError(
-            f"Invalid box_limits: min_lon ({min_lon}) > max_lon ({max_lon}). "
-            f"Check {box_limits_file}"
-        )
+    box_limits_file, min_lon, max_lon, min_lat, max_lat = read_box_limits(
+        args.box_limits, app_logger
+    )
+    app_logger.info(f"📐 Fixed-domain limits read from: {box_limits_file}")
 
     if min_lat > max_lat:
         app_logger.error("❌ Invalid box limits: min_lat > max_lat!")
@@ -153,6 +80,22 @@ def lec_fixed(
             f"Check {box_limits_file}"
         )
 
+    # Express the requested longitudes in the dataset's own convention. A
+    # wrapped interval raises an explicit, actionable error rather than
+    # silently producing a partial slice.
+    LonIndexerForBox = variable_list_df.loc["Longitude"]["Variable"]
+    try:
+        min_lon, max_lon = canonicalize_box(
+            min_lon,
+            max_lon,
+            data[LonIndexerForBox].values,
+            app_logger=app_logger,
+            context=f"box_limits ({box_limits_file})",
+        )
+    except ValueError as exc:
+        app_logger.error(f"❌ {exc}")
+        raise
+
     app_logger.debug("💾 Loading data into memory..")
     data = data.compute()
     app_logger.debug("✅ Data loaded into memory.")
@@ -164,37 +107,10 @@ def lec_fixed(
         variable_list_df.loc["Vertical Level"]["Variable"],
     )
 
-    PressureData = data[VerticalCoordIndexer] * data[VerticalCoordIndexer].metpy.units
     app_logger.info(
         f"🗺️ Bounding box: lon=[{min_lon}, {max_lon}], lat=[{min_lat}, {max_lat}]"
     )
 
-    for term in [
-        "Az",
-        "Ae",
-        "Kz",
-        "Ke",
-        "Ge",
-        "Gz",
-        "Cz",
-        "Cz_1",
-        "Cz_2",
-        "Ca",
-        "Ca_1",
-        "Ca_2",
-        "Ce",
-        "Ce_1",
-        "Ce_2",
-        "Ck",
-        "Ck_1",
-        "Ck_2",
-        "Ck_3",
-        "Ck_4",
-        "Ck_5",
-    ]:
-        columns = [TimeName] + [float(i) for i in PressureData.values]
-        output_path = Path(results_subdirectory_vertical_levels, f"{term}_{VerticalCoordIndexer}.csv")
-        pd.DataFrame(columns=columns).to_csv(output_path, index=None)
 
     try:
         box_obj = BoxData(
@@ -211,6 +127,25 @@ def lec_fixed(
     except Exception:
         app_logger.exception("❌ An exception occurred while creating BoxData object")
         raise
+
+    # The per-level CSV headers list the levels actually used, which are only
+    # known after BoxData has fixed the vertical control volume.
+    used_levels = [float(i) for i in box_obj.PressureData.metpy.dequantify().values]
+    app_logger.info(
+        f"🧾 Vertical-level CSVs will carry {len(used_levels)} levels: "
+        f"{used_levels[0]:.0f} Pa to {used_levels[-1]:.0f} Pa"
+    )
+    for term in [
+        "Az", "Ae", "Kz", "Ke", "Ge", "Gz",
+        "Cz", "Cz_1", "Cz_2", "Ca", "Ca_1", "Ca_2",
+        "Ce", "Ce_1", "Ce_2", "C_overturning", "M",
+        "Ck", "Ck_1", "Ck_2", "Ck_3", "Ck_4", "Ck_5",
+    ]:
+        columns = [TimeName] + used_levels
+        output_path = Path(
+            results_subdirectory_vertical_levels, f"{term}_{VerticalCoordIndexer}.csv"
+        )
+        pd.DataFrame(columns=columns).to_csv(output_path, index=None)
 
     try:
         ec_obj = EnergyContents(box_obj, "fixed", app_logger)
@@ -234,13 +169,16 @@ def lec_fixed(
             ct_obj.calc_ca(),
             ct_obj.calc_ck(),
             ct_obj.calc_ce(),
+            ct_obj.calc_c_overturning(),
         ]
     except Exception:
         app_logger.exception(
             "❌ An exception occurred while computing ConversionTerms"
         )
         raise
-    app_logger.info("🔄 Computed conversion terms (Cz, Ca, Ck, Ce)")
+    app_logger.info(
+        "🔄 Computed conversion terms (Cz, Ca, Ck, Ce, C_overturning)"
+    )
 
     try:
         bt_obj = BoundaryTerms(box_obj, "fixed", app_logger)
@@ -258,6 +196,17 @@ def lec_fixed(
         )
         raise
     app_logger.info("🏁 Computed boundary terms (BAz, BAe, BKz, BKe, BΦZ, BΦE)")
+
+    try:
+        mass_residual = MassContinuity(
+            box_obj, "fixed", app_logger
+        ).calc_mass_residual()
+    except Exception:
+        app_logger.exception(
+            "❌ An exception occurred while computing mass continuity"
+        )
+        raise
+    app_logger.info("⚖️ Computed mass-continuity residual M")
 
     try:
         gdt_obj = GenerationDissipationTerms(box_obj, "fixed", app_logger)
@@ -282,12 +231,16 @@ def lec_fixed(
     df = pd.DataFrame(index=dates.astype("datetime64"))
     for i, col in enumerate(["Az", "Ae", "Kz", "Ke"]):
         df[col] = energy_list[i]
-    for i, col in enumerate(["Cz", "Ca", "Ck", "Ce"]):
+    for i, col in enumerate(["Cz", "Ca", "Ck", "Ce", "C_overturning"]):
         df[col] = conversion_list[i]
-    for i, col in enumerate(
-        ["BAz", "BAe", "BKz", "BKe", "Gz", "Ge", "Dz", "De"][: len(gen_diss_list) + 4]
-    ):
-        df[col] = boundary_list[i] if i < 4 else gen_diss_list[i - 4]
+    # All six boundary diagnostics are computed and all six are exported, so
+    # the fixed and moving frameworks emit the same column set. BΦZ and BΦE do
+    # NOT enter the residuals.
+    for i, col in enumerate(["BAz", "BAe", "BKz", "BKe", "BΦZ", "BΦE"]):
+        df[col] = boundary_list[i]
+    df["M"] = mass_residual
+    for i, col in enumerate(["Gz", "Ge", "Dz", "De"][: len(gen_diss_list)]):
+        df[col] = gen_diss_list[i]
 
     df = calc_budget_diff(df, dates, app_logger)
     df = calc_residuals(df, app_logger)

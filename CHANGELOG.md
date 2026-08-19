@@ -2,6 +2,113 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - 2026-08-18
+
+Numerical results change in this release. Diagnostics produced with earlier
+versions are not directly comparable with diagnostics produced from 2.0.0
+onwards; see the notes below for which terms are affected.
+
+### Changed
+
+- **`C_A`, meridional term**: the latitude derivative now acts on `T*` alone.
+  It previously acted on `T* cos(phi)`, which introduced a spurious
+  `cos(phi)` factor and an additional `-T* sin(phi)` contribution. The
+  leading factor is now `1/(a sigma)` rather than `1/(2 a sigma)`, consistent
+  with the reservoir definition `A_E = int T'^2 / (2 sigma) dp` used by the
+  toolkit. `C_A` typically grows by a factor of 2.5 to 3.0.
+- **`C_K`, fifth term**: the eddy momentum flux now acts on the vertical shear
+  of the zonal-mean meridional wind, `d[v]/dp`, in place of `d[u]/dp`. The
+  effect is case-dependent and can reverse the sign of `C_K`.
+- **`BPhi_Z`**: the east and west faces are now diagnosed. The previous
+  expression evaluated a product of two zonal means across those faces, which
+  is identically zero. The north/south and top/bottom faces use the area
+  departures `Phi*` and `omega*`.
+- **`BPhi_E`**: all three faces now use eddy covariances.
+- **Static stability floor**: the `sigma = 0.03` floor is retained as the
+  default but is now explicit, reversible via `apply_floor=False`, and
+  reported when it engages.
+- **Residual plot labels**: `RG` and `RK` are labelled as composite residuals
+  rather than as named physical processes.
+- **Main results CSV schema**: the fixed framework now emits the columns
+  `C_overturning`, `BPhi_Z`, `BPhi_E` and `M` alongside the existing terms, so
+  the fixed and moving frameworks share one column set. Downstream scripts
+  that read the CSV by column *position* must be updated; scripts that read by
+  column *name* are unaffected. None of the four enters the residuals.
+- **Input file resolution**: `inputs/namelist` and `inputs/box_limits` are no
+  longer tracked by git. Only `inputs/namelist.default` and
+  `inputs/box_limits.default` are distributed, and the toolkit falls back to
+  the `.default` companion when the working copy is absent, so a clean clone
+  runs out of the box. Copy the `.default` file to the name without the suffix
+  to customise a run.
+- **Zonal and area averages** are normalised by the same trapezoidal rule used
+  to integrate the field, rather than by the analytic domain width. The two
+  differ by `O(dphi^2)`, about `1.6e-4` on a 2.5 degree grid and `1.6e-6` on a
+  0.25 degree grid, so most terms move by that amount. The average of a
+  constant is now exact, which makes the departures from the zonal and area
+  means satisfy their defining identity and makes every diagnosed flux
+  independent of the arbitrary reference level of the geopotential. The static
+  stability `sigma` and the two horizontal terms of `M` use that same
+  normalisation, so a single area-averaging convention holds throughout.
+
+### Added
+
+- **`C_overturning`**: domain-mean overturning diagnostic. Exported for
+  interpretation; it does not enter `RGz` or `RKz`.
+- **`M`**: mass-continuity residual, exported as a vertical profile and as a
+  column integral. It sets the numerical noise floor of the budget.
+- Analytic test suite for the energy, conversion and boundary equations.
+- Disabling the `sigma = 0.03` static-stability floor is now reported at INFO
+  level in the run log. The floor is disabled by passing `apply_floor=False` to
+  `StaticStability`, which is **experimental** and documented as such in
+  `docs/source/usage.rst`: `sigma` sits in the denominator of `Az`, `Ae`, `Ca`,
+  `Gz` and `Ge`, so those results are not comparable with the defaults. There
+  is deliberately no command-line or environment-variable switch for it.
+- Time series figures for the new outputs: `BPhi_Z`/`BPhi_E`,
+  `C_overturning` and `M` now have their own groups in
+  `src/plots/utils.py::TERM_DETAILS`. Hovmoller diagrams and boxplots still
+  cover the energy, conversion and generation/dissipation groups only.
+
+### Fixed
+
+- **`Gz`, `Ge`, `Dz` and `De` were returned unconverted**: the unit conversion
+  was computed and its result discarded, so the four terms carried whatever
+  units the formula produced instead of `W/m^2`. The magnitudes are unchanged
+  (the conversion is 1:1), but the returned values now carry the declared
+  units, and a dimensional error in any of the four raises instead of passing
+  silently.
+- **`--box_limits` was ignored**: `slice_domain` read the hard-coded
+  `inputs/box_limits`, so a run passing a different file sliced the dataset
+  with one domain and computed the energetics on the intersection with
+  another. The requested and realised domains are now logged.
+- **Longitude conventions**: box limits are translated into the dataset's own
+  convention, and wrapped domains fail explicitly instead of silently
+  selecting the wrong region. Limits given in decreasing order (`min_lon`
+  greater than `max_lon`) are reported as swapped values in the box-limits
+  file, rather than as a dataset in the wrong longitude convention.
+- **850 hPa constant**: the interactive `--choose` diagnostic used `8500`
+  where the vertical coordinate is in Pa, selecting the level nearest
+  85 hPa. It is now `85000`.
+- **Vertical-level output**: column headers are written after the vertical
+  control volume is fixed, so the per-level CSV files line up with the levels
+  actually used.
+- **Time tendencies**: finite differences now use elapsed seconds rather than
+  assuming a uniform time step.
+- **NaN policy**: missing values are interpolated along the vertical without
+  dropping pressure levels, and the control volume is decided once for all
+  terms instead of independently per term.
+- **Unit-error handling**: `pint` raises `DimensionalityError`, a subclass of
+  `TypeError`, which the previous `ValueError` guard could not catch.
+- **Direct dissipation**: the non-residual dissipation pathway now raises
+  `NotImplementedError` instead of returning a value built from a single
+  scalar friction field. Use the residual formulation (`-r`). The `BoxData`
+  attributes carrying the friction components were renamed from `ust`/`vst`
+  (a conventional name for friction *velocity*, m s^-1) to `fric_u`/`fric_v`,
+  since they now hold friction *forces* in m s^-2.
+
+### Documentation
+
+- `docs/source/math.rst` updated for the equations above, with the source of
+  each adopted form recorded alongside it.
 ## [1.1.11] - 2025-02-26
 
 ### Changed

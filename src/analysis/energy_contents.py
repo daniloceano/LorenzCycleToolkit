@@ -27,14 +27,14 @@ Contact:
 
 import logging
 
-import numpy as np
 from metpy.constants import g
 
 from ..utils.box_data import BoxData
 from ..utils.calc_averages import CalcAreaAverage
+from ..utils.term_output import TermOutputMixin
 
 
-class EnergyContents:
+class EnergyContents(TermOutputMixin):
     """
     Class to compute partitioned energy contents of the Lorenz Energy Cycle.
 
@@ -55,6 +55,10 @@ class EnergyContents:
         Monthly Weather Review, 108(7), 954-965. Retrieved Jan 25, 2022, from:
         https://journals.ametsoc.org/view/journals/mwre/108/7/1520-0493_1980_108_0954_zaecot_2_0_co_2.xml
     """
+
+    # The energy contents are reservoirs, not fluxes: they are archived in
+    # J/m^2, while every other term class keeps the mixin default of W/m^2.
+    OUTPUT_UNITS = "J/m^2"
 
     def __init__(self, box_obj: BoxData, method: str, app_logger: logging.Logger):
         """Initialize the EnergyContents object with a BoxData object and a method."""
@@ -163,64 +167,3 @@ class EnergyContents:
         Ke = Ke.metpy.dequantify()
         self.app_logger.debug("Ok.")
         return Ke
-
-    def _convert_units(self, function, variable_name):
-        """
-        Converts the units of a given function to 'J/m^2'.
-
-        Parameters:
-            function (type): The function to be converted.
-            variable_name (type): The name of the variable associated with the function.
-
-        Raises:
-            ValueError: If there is a unit error in the given variable.
-
-        Returns:
-            None
-        """
-        try:
-            function = function.metpy.convert_units("J/m^2")
-        except ValueError as e:
-            error_message = f"Unit error in {variable_name}"
-            self.app_logger.exception(error_message)
-            raise ValueError(error_message) from e
-
-        return function
-
-    def _handle_nans(self, function):
-        """
-        If there are any, interpolate them and drop any remaining NaN values.
-        If there are still NaN values after interpolation, drop the dimensions that contain NaN values.
-
-        Parameters:
-            function (np.ndarray): The function to handle NaN values for.
-
-        Returns:
-            None
-        """
-        if np.isnan(function).any():
-            function = (
-                function.interpolate_na(dim=self.VerticalCoordIndexer)
-                * function.metpy.units
-            )
-            if np.isnan(function).any():
-                function = function.dropna(dim=self.VerticalCoordIndexer)
-        return function
-
-    def _save_vertical_levels(self, function, variable_name):
-        """Save computed energy data to a CSV file."""
-        df = function.to_dataframe(name=variable_name)
-        df.reset_index(inplace=True)
-        if self.method == "fixed":
-            df = df.pivot(index=self.TimeName, columns=self.VerticalCoordIndexer)
-        else:
-            df.set_index(self.TimeName, inplace=True)
-            df.index = df.index.strftime("%Y-%m-%d %H:%M:%S")
-            df = df.pivot(columns=self.VerticalCoordIndexer, values=variable_name)
-            df.columns.name = None
-
-        df.to_csv(
-            f"{self.results_subdirectory_vertical_levels}/{variable_name}_{self.VerticalCoordIndexer}.csv",
-            mode="a",
-            header=None,
-        )

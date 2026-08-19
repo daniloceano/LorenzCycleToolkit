@@ -144,6 +144,14 @@ The fixed framework analyzes a stationary spatial domain over time.
 - ``inputs/namelist`` file (see :doc:`configuration`)
 - ``inputs/box_limits`` file defining the domain (see :doc:`configuration`)
 
+.. note::
+   A clean clone ships ``inputs/box_limits.default`` and ``inputs/namelist.default``
+   rather than the working copies, which are untracked so that editing them for a
+   run does not show up as a change to the repository. When ``inputs/box_limits``
+   or ``inputs/namelist`` is absent, the toolkit falls back to the corresponding
+   ``.default`` file automatically. To customise a run, copy the ``.default``
+   file to the name without the suffix and edit that copy.
+
 **Command**
 ::
 
@@ -357,6 +365,21 @@ Flags
 - `--box_limits`: Specify a custom box limits file path (default: ``inputs/box_limits``).
 
 Ensure that the provided NetCDF file and the `namelist` configuration align with the selected flags.
+
+Experimental options
+--------------------
+
+``apply_floor`` (:func:`src.utils.thermodynamics.StaticStability`)
+   The ``sigma = 0.03`` static-stability floor is a numerical safeguard, not
+   part of the Lorenz Energy Cycle equations. It is applied by default.
+   Passing ``apply_floor=False`` disables it for a diagnostic experiment, and
+   the run log records that at INFO level.
+
+   This is **experimental**: it is not reachable from the command line, it is
+   not exercised by the shipped workflows, and because ``sigma`` sits in the
+   denominator of ``Az``, ``Ae``, ``Ca``, ``Gz`` and ``Ge``, results obtained
+   with the floor disabled are not comparable with the defaults. Use the
+   default for production runs.
 
 Common Issues and Questions
 ===========================

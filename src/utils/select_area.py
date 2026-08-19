@@ -28,7 +28,14 @@ from cartopy.feature import BORDERS, COASTLINE, NaturalEarthFeature
 from metpy.calc import vorticity
 from shapely.geometry.polygon import Polygon
 
+from .input_files import read_box_limits
+from .longitude import canonicalize_box, verify_selected_domain
+
 nclicks = 2
+
+# process_data converts the vertical coordinate to Pa, so the 850 hPa surface
+# used by the interactive `--choose` diagnostic is 85000 Pa.
+LEVEL_850_HPA_IN_PA = 85000
 
 # define all CRS
 crs_longlat = ccrs.PlateCarree()
@@ -270,27 +277,43 @@ def slice_domain(NetCDF_data, args, variable_list_df):
     LevelIndexer = variable_list_df.loc["Vertical Level"]["Variable"]
 
     if args.fixed:
-        dfbox = pd.read_csv(
-            "inputs/box_limits", header=None, delimiter=";", index_col=0
+        # The domain sliced here is the domain the energetics are computed on,
+        # so both read the same file through the same helper.
+        (
+            box_limits_file,
+            requested_min_lon,
+            requested_max_lon,
+            requested_min_lat,
+            requested_max_lat,
+        ) = read_box_limits(args.box_limits)
+
+        # express the request in the dataset's own longitude
+        # convention, and fail explicitly on wrapped domains.
+        requested_min_lon, requested_max_lon = canonicalize_box(
+            requested_min_lon,
+            requested_max_lon,
+            NetCDF_data[LonIndexer].values,
+            context=f"slice_domain({box_limits_file})",
         )
+
         WesternLimit = float(
             NetCDF_data[LonIndexer].sel(
-                {LonIndexer: float(dfbox.loc["min_lon"].values[0])}, method="nearest"
+                {LonIndexer: requested_min_lon}, method="nearest"
             )
         )
         EasternLimit = float(
             NetCDF_data[LonIndexer].sel(
-                {LonIndexer: float(dfbox.loc["max_lon"].values[0])}, method="nearest"
+                {LonIndexer: requested_max_lon}, method="nearest"
             )
         )
         SouthernLimit = float(
             NetCDF_data[LatIndexer].sel(
-                {LatIndexer: float(dfbox.loc["min_lat"].values[0])}, method="nearest"
+                {LatIndexer: requested_min_lat}, method="nearest"
             )
         )
         NorthernLimit = float(
             NetCDF_data[LatIndexer].sel(
-                {LatIndexer: float(dfbox.loc["max_lat"].values[0])}, method="nearest"
+                {LatIndexer: requested_max_lat}, method="nearest"
             )
         )
 
@@ -314,10 +337,10 @@ def slice_domain(NetCDF_data, args, variable_list_df):
 
     elif args.choose:
         iu_850 = NetCDF_data.isel({TimeIndexer: 0}).sel(
-            {LevelIndexer: 8500}, method="nearest"
+            {LevelIndexer: LEVEL_850_HPA_IN_PA}, method="nearest"
         )[variable_list_df.loc["Eastward Wind Component"]["Variable"]]
         iv_850 = NetCDF_data.isel({TimeIndexer: 0}).sel(
-            {LevelIndexer: 8500}, method="nearest"
+            {LevelIndexer: LEVEL_850_HPA_IN_PA}, method="nearest"
         )[variable_list_df.loc["Northward Wind Component"]["Variable"]]
         zeta = vorticity(iu_850, iv_850).metpy.dequantify()
 
@@ -334,6 +357,22 @@ def slice_domain(NetCDF_data, args, variable_list_df):
             LonIndexer: slice(WesternLimit, EasternLimit),
         }
     )
+
+    # confirm the slice really covers the request
+    # instead of silently returning a shrunken or empty subset.
+    if args.fixed:
+        verify_selected_domain(
+            NetCDF_data[LonIndexer].values,
+            NetCDF_data[LatIndexer].values,
+            {
+                "min_lon": WesternLimit,
+                "max_lon": EasternLimit,
+                "min_lat": SouthernLimit,
+                "max_lat": NorthernLimit,
+            },
+            app_logger=logging.getLogger("lorenzcycletoolkit"),
+            context=f"slice_domain (fixed, {box_limits_file})",
+        )
 
     return NetCDF_data
 

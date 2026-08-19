@@ -38,6 +38,7 @@ from metpy.units import units
 
 from src.frameworks.lec_fixed_framework import lec_fixed
 from src.frameworks.lec_moving_framework import lec_moving
+from src.utils.input_files import resolve_input_file
 from src.utils.preprocessing import prepare_data
 from src.utils.tools import initialize_logging
 
@@ -172,7 +173,7 @@ def run_lec_analysis(data, args, results_subdirectory, figures_directory, result
     """
     start_time = time.time()
 
-    variable_list_df = pd.read_csv("inputs/namelist", sep=";", index_col=0, header=0)
+    variable_list_df = pd.read_csv(resolve_input_file("inputs/namelist"), sep=";", index_col=0, header=0)
 
     if args.fixed:
         lec_fixed(data, variable_list_df, results_subdirectory, results_subdirectory_vertical_levels, app_logger, args)
@@ -255,7 +256,7 @@ def main():
     app_logger.info(f"⚙️ Command line arguments: {args}")
 
     # Prepare data
-    data = prepare_data(args, "inputs/namelist", app_logger)
+    data = prepare_data(args, resolve_input_file("inputs/namelist"), app_logger)
 
     # Run LEC analysis
     run_lec_analysis(data, args, results_subdirectory, figures_directory, results_subdirectory_vertical_levels, app_logger)

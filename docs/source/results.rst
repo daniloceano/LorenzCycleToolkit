@@ -18,11 +18,13 @@ The `LorenzCycleToolkit` generates a directory structure to store the results of
     │   │   ├── Az_level.csv
     │   │   ├── Ca_1_level.csv
     │   │   ├── Ck_1_level.csv
+    │   │   ├── C_overturning_level.csv
     │   │   ├── Cz_1_level.csv
     │   │   ├── Ge_level.csv
     │   │   ├── Gz_level.csv
     │   │   ├── Ke_level.csv
     │   │   ├── Kz_level.csv
+    │   │   ├── M_level.csv
     │   ├── testdata_ERA5_fixed_results.csv
 
 Each subdirectory within the `LEC_Results` directory corresponds to a different dataset or analysis run. The structure of each subdirectory includes:
@@ -44,12 +46,16 @@ Each subdirectory within the `LEC_Results` directory corresponds to a different 
   - ``Ce_level.csv``: Contains the values of the conversion term Ce at different levels.
   - ``Ck_1_level.csv``, ``Ck_2_level.csv``, ``Ck_3_level.csv``, ``Ck_4_level.csv``, ``Ck_5_level.csv``: Contains the values of the conversion term Ck at different levels, split into five sub-terms representing different physical processes (horizontal shear, meridional momentum transport, Coriolis effect, vertical shear).
   - ``Cz_1_level.csv``, ``Cz_2_level.csv``: Contains the values of the conversion term Cz at different levels, split into horizontal and vertical components.
+  - ``C_overturning_level.csv``: Contains the domain-mean overturning pressure work at each level. This is a diagnostic and does not enter the budget.
   - ``Ge_level.csv``: Contains the values of the generation term Ge (eddy) at different levels.
   - ``Gz_level.csv``: Contains the values of the generation term Gz (zonal) at different levels.
   - ``Ke_level.csv``: Contains the values of the eddy component of Kinetic Energy (Ke) at different levels.
   - ``Kz_level.csv``: Contains the values of the zonal component of Kinetic Energy (Kz) at different levels.
+  - ``M_level.csv``: Contains the mass-continuity residual M(p), in s⁻¹, which sets the numerical noise floor of the budget.
   
   **Note**: The split of conversion terms into sub-components allows for detailed analysis of the physical processes contributing to energy transformations at each vertical level.
+
+  **Note**: Hovmöller diagrams and boxplots are produced for the energy, conversion and generation/dissipation groups only, so ``C_overturning_level.csv`` and ``M_level.csv`` are archived for analysis but are not plotted at vertical levels. Their column integrals do appear in the time series figures.
 
 Main Results File
 ~~~~~~~~~~~~~~~~~
@@ -75,6 +81,12 @@ The main CSV file (e.g., ``testdata_ERA5_fixed_results.csv``) contains the integ
 
 - **BAz, BAe, BKz, BKe**: Boundary terms (W/m²), energy transport across domain boundaries (only for regional analyses)
 
+- **BΦZ, BΦE**: Boundary pressure work terms (W/m²), always exported
+
+- **C_overturning**: Domain-mean overturning pressure work (W/m²). A diagnostic; it does **not** enter ``RGz`` or ``RKz``.
+
+- **M**: Mass-continuity residual (kg·m⁻²·s⁻¹). Sets the numerical noise floor of the budget; it does **not** enter the residuals.
+
 - **Generation and Dissipation terms** (W/m²):
   
   When using ``-r/--residuals`` flag:
@@ -84,9 +96,10 @@ The main CSV file (e.g., ``testdata_ERA5_fixed_results.csv``) contains the integ
   
   When **not** using ``-r`` flag:
   
-  - ``Gz, Ge``: Generation terms (computed from diabatic heating)
   - ``Dz, De``: Dissipation terms (computed from friction)
-  - ``BΦz, BΦe``: Geopotential flux terms
+
+  ``Gz, Ge`` (generation, computed from diabatic heating) are exported in both
+  modes.
 
 **Usage Example**:
 

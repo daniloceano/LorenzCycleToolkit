@@ -32,9 +32,10 @@ from metpy.constants import Rd, Re, g
 
 from ..utils.box_data import BoxData
 from ..utils.calc_averages import CalcAreaAverage
+from ..utils.term_output import TermOutputMixin
 
 
-class ConversionTerms:
+class ConversionTerms(TermOutputMixin):
     """
     Class to compute energy conversion terms of the Lorenz Energy Cycle.
 
@@ -47,6 +48,7 @@ class ConversionTerms:
         calc_cz: Computes the zonal energy conversion term (CZ).
         calc_ca: Computes the available potential energy conversion term (CA).
         calc_ck: Computes the kinetic energy conversion term (CK).
+        calc_c_overturning: Diagnoses domain-mean overturning pressure work.
 
     Source for formulas used here:
         Brennan, F. E., & Vincent, D. G. (1980).
@@ -81,6 +83,7 @@ class ConversionTerms:
         self.ylength = box_obj.ylength
 
         # Initialize attributes related to temperature
+        self.tair_AA = box_obj.tair_AA
         self.tair_AE = box_obj.tair_AE
         self.tair_ZE = box_obj.tair_ZE
 
@@ -91,6 +94,7 @@ class ConversionTerms:
         self.v_ZE = box_obj.v_ZE
 
         # Initialize attirbutes related to vertical velocity
+        self.omega_AA = box_obj.omega_AA
         self.omega_ZE = box_obj.omega_ZE
         self.omega_AE = box_obj.omega_AE
 
@@ -104,15 +108,36 @@ class ConversionTerms:
         """
         Computes conversion between the two available potential energy forms (AZ and AE).
 
-        Note: on the first term of the integral, on Brennan et al. (1980), it is missing
-        a 2 in the multiplication Re * self.sigma_AA. This is confirmed by looking to the
-        paper by Muench (1965).
+        .. math::
+            C_A = -\\int_{p_t}^{p_b}\\left(
+                  \\frac{1}{a\\sigma}\\overline{v'T'\\frac{\\partial T^*}{\\partial\\phi}}
+                + \\frac{1}{\\sigma}\\overline{\\omega'T'\\frac{\\partial T^*}{\\partial p}}
+                  \\right)dp
+
+        Sources
+        -------
+        Latitude derivative: acts on ``T*`` alone.  Muench (1965),
+        Norquist et al. (1977), Brennan and Vincent (1980), Michaelides (1987)
+        and Michaelides et al. (1999) all print it this way.
+
+        Leading factor: ``1/(a sigma)``, with no factor ``1/2``.  Muench (1965)
+        and Michaelides (1987) print ``1/(2 a sigma)``; Norquist et al. (1977),
+        who state that they follow Muench's notation, together with Brennan and
+        Vincent (1980) and Michaelides et al. (1999), print it without.  The
+        form used here is the one consistent with the reservoir definition
+        adopted by the toolkit, ``A_E = int T'^2 / (2 sigma) dp``:
+        differentiating that expression supplies a chain-rule factor 2 which
+        cancels the 2 in the denominator.
+
+        Vertical term: the reduced form ``(1/sigma) dT*/dp`` of Brennan and
+        Vincent (1980), rather than the fuller
+        ``p^-k d/dp (T* p^k / sigma)`` of Muench (1965) and Michaelides (1987).
         """
         self.app_logger.debug("Calculating CA...")
 
         # First term of the integral
-        DelPhi_tairAE = (self.tair_AE * self.tair_AE["coslats"]).differentiate("rlats")
-        term1 = (self.v_ZE * self.tair_ZE * DelPhi_tairAE) / (2 * Re * self.sigma_AA)
+        DelPhi_tairAE = self.tair_AE.differentiate("rlats")
+        term1 = (self.v_ZE * self.tair_ZE * DelPhi_tairAE) / (Re * self.sigma_AA)
         term1 = CalcAreaAverage(term1, self.ylength, xlength=self.xlength)
         self._save_vertical_levels(term1, "Ca_1")
 
@@ -165,6 +190,37 @@ class ConversionTerms:
         self.app_logger.debug("Done.")
         return Ce
 
+    def calc_c_overturning(self):
+        r"""Diagnose domain-mean overturning pressure work.
+
+        .. math::
+            C_{\mathrm{overturning}} = -\int_{p_t}^{p_b}
+                \overline{\omega}\,\alpha\,\frac{dp}{g},
+            \qquad \alpha = \frac{R_d\overline{T}}{p}.
+
+        This is an overturning-strength diagnostic, not a missing conversion
+        in the Lorenz-cycle budget.  In the exact pressure-work identity it
+        cancels the ``Phi_bar * omega_bar`` part of the top/bottom
+        geopotential flux.  It is therefore exported for interpretation but
+        correctly remains outside ``RGz`` and ``RKz``.  With the toolkit sign
+        convention, mean ascent (``omega < 0``) gives positive
+        ``C_overturning``.
+        """
+        self.app_logger.debug("Calculating C_overturning...")
+
+        alpha = Rd * self.tair_AA / self.PressureData
+        function = -(self.omega_AA * alpha) / g
+        function = self._handle_nans(function, "C_overturning")
+        self._save_vertical_levels(function, "C_overturning")
+        result = (
+            function.integrate(self.VerticalCoordIndexer)
+            * self.PressureData.metpy.units
+        )
+        result = self._convert_units(result, "C_overturning")
+
+        self.app_logger.debug("Done.")
+        return result
+
     def calc_cz(self):
         """Computes conversion between the two zonal energy forms (ZE and KE)."""
         self.app_logger.debug("Calculating CZ...")
@@ -192,7 +248,13 @@ class ConversionTerms:
         return Cz
 
     def calc_ck(self):
-        """Computes conversion between the two eddy kinetic energy forms (KE and KZ)."""
+        """Computes conversion between the two eddy kinetic energy forms (KE and KZ).
+
+        Sources
+        -------
+        Muench (1965), Norquist et al. (1977, Eq. 6), Brennan and Vincent
+        (1980, p. 964) and Michaelides (1987, p. 24) for the five sub-terms.
+        """
         self.app_logger.debug("Calculating CK...")
 
         # First term of the integral
@@ -221,9 +283,13 @@ class ConversionTerms:
         term4 = CalcAreaAverage(term4, self.ylength, xlength=self.xlength)
         self._save_vertical_levels(term4, "Ck_4")
 
-        # Fifth term of the integral
+        # Fifth term of the integral: the eddy momentum flux acts on the
+        # vertical shear of the zonal-mean MERIDIONAL wind, d[v]/dp.
+        # Muench (1965), Norquist et al. (1977, Eq. 6), Brennan and Vincent
+        # (1980, p. 964) and Michaelides (1987, p. 24) all print d[v]/dp;
+        # Michaelides et al. (1999, Eq. 12) prints d[u]/dp.
         DelPres_vZAp = (
-            self.u_ZA.differentiate(self.VerticalCoordIndexer)
+            self.v_ZA.differentiate(self.VerticalCoordIndexer)
             / self.PressureData.metpy.units
         )
         term5 = self.omega_ZE * self.v_ZE * DelPres_vZAp
@@ -243,66 +309,3 @@ class ConversionTerms:
 
         self.app_logger.debug("Done.")
         return Ck
-
-    def _handle_nans(self, function):
-        """
-        If there are any, interpolate them and drop any remaining NaN values.
-        If there are still NaN values after interpolation, drop the dimensions that contain NaN values.
-
-        Parameters:
-            function (np.ndarray): The function to handle NaN values for.
-
-        Returns:
-            None
-        """
-        if np.isnan(function).any():
-            function = (
-                function.interpolate_na(dim=self.VerticalCoordIndexer)
-                * function.metpy.units
-            )
-            if np.isnan(function).any():
-                function = function.dropna(dim=self.VerticalCoordIndexer)
-        return function
-
-    def _convert_units(self, function, variable_name):
-        """
-        Converts the units of a given function to 'J/m^2'.
-
-        Parameters:
-            function (type): The function to be converted.
-            variable_name (type): The name of the variable associated with the function.
-
-        Raises:
-            ValueError: If there is a unit error in the given variable.
-
-        Returns:
-            None
-        """
-        try:
-            function = function.metpy.convert_units("W/m^2")
-        except ValueError as e:
-            raise ValueError(f"Unit error in {variable_name}") from e
-        return function
-
-    def _save_vertical_levels(self, function, variable_name):
-        """Save computed energy data to a CSV file."""
-        df = function.to_dataframe(name=variable_name)
-        df.reset_index(inplace=True)
-
-        if self.method == "fixed":
-            if self.TimeName not in function.dims:
-                df = df.T
-            else:
-                df = df.pivot(index=self.TimeName, columns=self.VerticalCoordIndexer)
-
-        else:
-            df.set_index(self.TimeName, inplace=True)
-            df.index = df.index.strftime("%Y-%m-%d %H:%M:%S")
-            df = df.pivot(columns=self.VerticalCoordIndexer, values=variable_name)
-            df.columns.name = None
-
-        df.to_csv(
-            f"{self.results_subdirectory_vertical_levels}/{variable_name}_{self.VerticalCoordIndexer}.csv",
-            mode="a",
-            header=None,
-        )

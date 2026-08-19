@@ -27,14 +27,14 @@ Contact:
 
 import logging
 
-import numpy as np
 from metpy.constants import Re, g
 
 from ..utils.box_data import BoxData
 from ..utils.calc_averages import CalcAreaAverage, CalcZonalAverage
+from ..utils.term_output import TermOutputMixin
 
 
-class BoundaryTerms:
+class BoundaryTerms(TermOutputMixin):
     """
     Class to compute boundary terms of the Lorenz Energy Cycle.
 
@@ -327,23 +327,47 @@ class BoundaryTerms:
 
     def calc_boz(self):
         """
-        Computes the appearence of Zonal Kinetic Energy associated with work produced at its boundaries (BΦZ).
+        Computes the rate of change of Zonal Kinetic Energy due to work done by
+        pressure forces at the boundaries of the control volume (BΦZ).
 
-        Note: Cannot perform eastern boundary minus western boundary on the first term
+        .. math::
+            B\\Phi_Z = c_1\\int\\!\\!\\int
+                       \\frac{[u]\\,\\Delta_{EW}\\Phi'
+                             + \\Phi^*\\,\\Delta_{EW}u'}{g}\\,d\\phi\\,dp
+                     + c_2\\int \\left.\\frac{[v]\\Phi^*\\cos\\phi}{g}
+                       \\right|_{\\phi_s}^{\\phi_n} dp
+                     - \\left.\\frac{\\overline{\\omega^*\\Phi^*}}{g}
+                       \\right|_{p_t}^{p_b}
+
+        where :math:`\\Delta_{EW}X = X|_{\\lambda_e} - X|_{\\lambda_w}`.
+
+        Sources
+        -------
+        East/west walls: Brennan and Vincent (1980, Appendix) write this wall as
+        the flux ``u*Phi - u'*Phi'`` evaluated from west to east.  Expanding that
+        east-minus-west difference gives ``[u] * D_EW(Phi')`` plus a second piece
+        carrying ``D_EW(u')``.  The form used here takes that second piece with
+        the area departure ``Phi*`` in place of the zonal mean ``[Phi]``: a
+        limited-area box carries a net mass flux through its walls, so with the
+        full geopotential the term would change when an arbitrary constant is
+        added to Phi, whereas ``Phi*`` leaves it unchanged.
+
+        Michaelides (1987, Appendix) writes this wall as ``[v] * Phi*`` evaluated
+        from west to east.  Both factors are zonal means and so do not depend on
+        longitude, which makes that expression identically zero.
+
+        North/south and top/bottom walls: Muench (1965) and Michaelides (1987),
+        with the area departure ``Phi*`` used throughout.  Brennan and Vincent
+        (1980) write these two walls with the full geopotential instead.
         """
         self.app_logger.debug("Calculating BΦZ...")
 
-        # First term
-        term1 = (self.v_ZA * self.geopt_AE) / g
-        term1 = term1.integrate("rlats")
-        term1 = self._handle_nans(term1)
-        term1 = (
-            term1.integrate(self.VerticalCoordIndexer)
-            * self.PressureData.metpy.units
-            * self.c1
-        )
+        # First term: east/west faces.  Both contributions are mean-by-eddy
+        # products evaluated on the walls, and both vanish on a periodic
+        # (global) domain, where the two walls coincide.
+        term1 = self._east_west_pressure_work()
 
-        # Second term
+        # Second term: north/south faces, area-anomalous zonal geopotential.
         term2 = (self.v_ZA * self.geopt_AE) * self.v_ZA["coslats"] / g
         term2 = term2.sel(**{self.LatIndexer: self.northern_limit}) - term2.sel(
             **{self.LatIndexer: self.southern_limit}
@@ -355,7 +379,7 @@ class BoundaryTerms:
             * self.c2
         )
 
-        # Third term
+        # Third term: top/bottom faces, using omega* Phi*.
         term3 = CalcAreaAverage(self.omega_AE * self.geopt_AE, self.ylength) / g
         term3 = self._handle_nans(term3)
         term3 = term3.isel(**{self.VerticalCoordIndexer: -1}) - term3.isel(
@@ -370,11 +394,26 @@ class BoundaryTerms:
         return Boz
 
     def calc_boe(self):
-        """Computes the appearence of Eddy Kinetic Energy associated with work produced at its boundaries (BΦE)."""
+        """
+        Computes the appearence of Eddy Kinetic Energy associated with work
+        produced at its boundaries (BΦE).
+
+        .. math::
+            B\\Phi_E = c_1\\int\\!\\!\\int \\left.\\frac{u'\\Phi'}{g}
+                       \\right|_{\\lambda_w}^{\\lambda_e} d\\phi\\,dp
+                     + c_2\\int \\left.\\frac{\\overline{v'\\Phi'}\\cos\\phi}{g}
+                       \\right|_{\\phi_s}^{\\phi_n} dp
+                     - \\left.\\frac{\\overline{\\omega'\\Phi'}}{g}
+                       \\right|_{p_t}^{p_b}
+
+        Brennan and Vincent (1980, pp. 964-965) and Michaelides (1987, p. 25)
+        agree on this expression, and so does ``docs/source/math.rst``.  Every
+        factor is an eddy covariance.
+        """
         self.app_logger.debug("Calculating BΦE...")
 
-        # First term
-        term1 = (self.v_ZE * self.geopt_AE) / g
+        # First term: east/west faces, zonal eddy covariance u'Phi'.
+        term1 = (self.u_ZE * self.geopt_ZE) / g
         term1 = term1.sel(**{self.LonIndexer: self.eastern_limit}) - term1.sel(
             **{self.LonIndexer: self.western_limit}
         )
@@ -386,19 +425,20 @@ class BoundaryTerms:
             * self.c1
         )
 
-        # Second term
-        term2 = (self.v_ZA * self.geopt_AE) * self.v_ZA["coslats"] / g
-        term2 = self._handle_nans(term2)
+        # Second term: north/south faces, zonal average of the eddy covariance.
+        term2 = CalcZonalAverage(self.v_ZE * self.geopt_ZE, self.xlength)
+        term2 = term2 * term2["coslats"] / g
         term2 = term2.sel(**{self.LatIndexer: self.northern_limit}) - term2.sel(
             **{self.LatIndexer: self.southern_limit}
         )
+        term2 = self._handle_nans(term2)
         term2 = (
             term2.integrate(self.VerticalCoordIndexer)
             * self.PressureData.metpy.units
             * self.c2
         )
 
-        # Third term
+        # Third term: top/bottom faces.
         term3 = (
             CalcAreaAverage(
                 self.omega_ZE * self.geopt_ZE, self.ylength, xlength=self.xlength
@@ -417,45 +457,15 @@ class BoundaryTerms:
         self.app_logger.debug("Done.")
         return Boe
 
-    def _handle_nans(self, function):
-        """
-        If there are any, interpolate them and drop any remaining NaN values.
-        If there are still NaN values after interpolation, drop the dimensions that contain NaN values.
-
-        Parameters:
-            function (np.ndarray): The function to handle NaN values for.
-
-        Returns:
-            None
-        """
-        if np.isnan(function).any():
-            function = (
-                function.interpolate_na(dim=self.VerticalCoordIndexer)
-                * function.metpy.units
-            )
-            if np.isnan(function).any():
-                function = function.dropna(dim=self.VerticalCoordIndexer)
-        return function
-
-    def _convert_units(self, function, variable_name):
-        """
-        Converts the units of a given function to 'J/m^2'.
-
-        Parameters:
-            function (type): The function to be converted.
-            variable_name (type): The name of the variable associated with the function.
-
-        Raises:
-            ValueError: If there is a unit error in the given variable.
-
-        Returns:
-            None
-        """
-        try:
-            function = function.metpy.convert_units("W/m^2")
-        except ValueError as e:
-            error_message = f"Unit error in {variable_name}"
-            self.app_logger.exception(error_message)
-            raise ValueError(error_message) from e
-
-        return function
+    def _east_west_pressure_work(self):
+        """Pressure work through the east and west faces (term I of BΦZ)."""
+        face_flux = (self.u_ZA * self.geopt_ZE + self.geopt_AE * self.u_ZE) / g
+        term = face_flux.sel(**{self.LonIndexer: self.eastern_limit}) - face_flux.sel(
+            **{self.LonIndexer: self.western_limit}
+        )
+        term = self._handle_nans(term.integrate("rlats"), "BΦZ_east_west")
+        return (
+            term.integrate(self.VerticalCoordIndexer)
+            * self.PressureData.metpy.units
+            * self.c1
+        )
