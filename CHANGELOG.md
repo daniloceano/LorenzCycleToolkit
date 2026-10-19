@@ -18,6 +18,10 @@ All notable changes to this project will be documented in this file.
 
 ### Tests
 
+- **Run logs are checked after the whole session** (E0-09): the suite fails if
+  any run log grows after its test has ended, holds another run, or has lines
+  after "Analysis complete"; a pair of tests also fails if log handlers are
+  inherited from an earlier test.
 - **Integration tests check their outputs** (E0-08): required files, terms,
   time steps and finite values, and, for the ERA5 fixed and track cases, a
   cell-by-cell comparison with reference outputs (`tests/data/reference`) under

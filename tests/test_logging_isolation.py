@@ -70,3 +70,32 @@ def test_previous_file_handler_is_closed(tmp_path):
     initialize_logging(str(tmp_path / "b"), _args("samples/b.nc"))
     assert previous not in logger.handlers
     assert previous.stream is None
+
+
+# The next two tests run in this order (pytest keeps the definition order
+# within a module). The first configures the toolkit logger and returns
+# without closing it, as an integration test does; the second must start
+# with no handler attached, which holds only if the handlers of the previous
+# test are closed after it (tests/conftest.py).
+_CONFIGURED_LOG = {}
+
+
+def test_handlers_closed_after_test_part1_configure(tmp_path, request):
+    logger = initialize_logging(str(tmp_path), _args("samples/part1.nc"))
+    logger.info("message of part 1")
+    _flush(logger)
+    log = tmp_path / "log.part1"
+    _CONFIGURED_LOG["path"] = log
+    # Also hand the log to the end-of-session check (tests/conftest.py),
+    # which fails the run if it grows after this test.
+    if not hasattr(request.config, "_lectk_log_sizes"):
+        request.config._lectk_log_sizes = {}
+    request.config._lectk_log_sizes[log] = log.stat().st_size
+
+
+def test_handlers_closed_after_test_part2_no_inherited_handler():
+    logger = logging.getLogger("lorenzcycletoolkit")
+    assert logger.handlers == [], f"handlers inherited from an earlier test: {logger.handlers}"
+    logger.warning("message emitted by a later test")
+    if "path" in _CONFIGURED_LOG:
+        assert "message emitted by a later test" not in _CONFIGURED_LOG["path"].read_text()

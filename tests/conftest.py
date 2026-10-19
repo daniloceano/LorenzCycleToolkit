@@ -6,7 +6,8 @@ so the personal configuration files a user keeps in ``inputs/`` of the
 repository (``namelist``, ``track``, ``box_limits``) are never read or
 overwritten by the suite.  A session check also fails the run if anything
 under ``inputs/`` or ``samples/`` of the repository changed while the tests
-were running.
+were running, and, after all tests have run, if the log file of any run
+holds messages of another run or of a later test.
 """
 
 import hashlib
@@ -39,6 +40,40 @@ def pytest_sessionstart(session):
     session.config._lectk_protected_before = _digest_protected(REPO_ROOT)
 
 
+def _log_isolation_problems(workdirs, sizes_at_test_end):
+    """
+    Return the problems found in the run logs written under ``workdirs``.
+
+    A run log must hold one run ("Starting LEC analysis" once), name only its
+    own input file, end with the run (nothing after the last "Analysis
+    complete" line) and must not grow after the test that wrote it has
+    finished.  Lines added later come from later tests through the same
+    logger, which the per-test checks cannot see because they run first.
+    """
+    problems = []
+    for log, size in sorted(sizes_at_test_end.items()):
+        if log.stat().st_size != size:
+            grown = log.stat().st_size - size
+            problems.append(f"{'/'.join(log.parts[-4:])}: {grown} bytes written after its test ended")
+    for workdir in workdirs:
+        for log in sorted(Path(workdir).glob("LEC_Results/*/log.*")):
+            lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
+            where = f"{Path(workdir).parent.name}/{log.relative_to(workdir)}"
+            starts = sum("Starting LEC analysis" in line for line in lines)
+            if starts != 1:
+                problems.append(f"{where}: {starts} runs logged, expected 1")
+            stem = log.name[len("log."):]
+            infiles = [line.split("infile='", 1)[1].split("'", 1)[0] for line in lines if "infile='" in line]
+            foreign = sorted({f for f in infiles if Path(f).name != f"{stem}.nc"})
+            if foreign:
+                problems.append(f"{where}: arguments of other runs logged: {foreign}")
+            complete = [i for i, line in enumerate(lines) if "Analysis complete" in line]
+            if complete and complete[-1] != len(lines) - 1:
+                extra = len(lines) - 1 - complete[-1]
+                problems.append(f"{where}: {extra} lines written after the run completed")
+    return problems
+
+
 def pytest_sessionfinish(session, exitstatus):
     before = getattr(session.config, "_lectk_protected_before", None)
     if before is None:
@@ -48,6 +83,13 @@ def pytest_sessionfinish(session, exitstatus):
     if changed:
         session.config._lectk_protected_changed = changed
         session.exitstatus = pytest.ExitCode.TESTS_FAILED
+    problems = _log_isolation_problems(
+        getattr(session.config, "_lectk_workdirs", []),
+        getattr(session.config, "_lectk_log_sizes", {}),
+    )
+    if problems:
+        session.config._lectk_log_problems = problems
+        session.exitstatus = pytest.ExitCode.TESTS_FAILED
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
@@ -56,6 +98,11 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         terminalreporter.section("protected repository files changed", sep="=", red=True)
         for rel in changed:
             terminalreporter.write_line(f"modified, created or removed during the tests: {rel}")
+    problems = getattr(config, "_lectk_log_problems", None)
+    if problems:
+        terminalreporter.section("run logs not isolated", sep="=", red=True)
+        for problem in problems:
+            terminalreporter.write_line(problem)
 
 
 @pytest.fixture(autouse=True)
@@ -75,7 +122,7 @@ def _close_lectk_log_handlers():
 
 
 @pytest.fixture
-def lectk_workdir(tmp_path, monkeypatch):
+def lectk_workdir(tmp_path, monkeypatch, request):
     """
     Prepare a private working directory for one toolkit run and chdir into it.
 
@@ -86,9 +133,13 @@ def lectk_workdir(tmp_path, monkeypatch):
     ``LEC_Results/`` inside it, so each test owns its inputs and outputs.
     """
 
+    workdir = tmp_path / "work"
+
     def _prepare(namelist, box_limits=None, track=None):
-        workdir = tmp_path / "work"
         (workdir / "inputs").mkdir(parents=True)
+        if not hasattr(request.config, "_lectk_workdirs"):
+            request.config._lectk_workdirs = []
+        request.config._lectk_workdirs.append(workdir)
         os.symlink(REPO_ROOT / "samples", workdir / "samples")
         copies = {"namelist": namelist, "box_limits": box_limits, "track": track}
         for target, template in copies.items():
@@ -97,4 +148,11 @@ def lectk_workdir(tmp_path, monkeypatch):
         monkeypatch.chdir(workdir)
         return workdir
 
-    return _prepare
+    yield _prepare
+
+    # Record the size of every run log at the end of the test; the session
+    # check fails if any of them grows afterwards.
+    if not hasattr(request.config, "_lectk_log_sizes"):
+        request.config._lectk_log_sizes = {}
+    for log in workdir.glob("LEC_Results/*/log.*"):
+        request.config._lectk_log_sizes[log] = log.stat().st_size
