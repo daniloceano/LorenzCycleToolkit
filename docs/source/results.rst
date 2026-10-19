@@ -25,6 +25,7 @@ The `LorenzCycleToolkit` generates a directory structure to store the results of
     │   │   ├── Ke_level.csv
     │   │   ├── Kz_level.csv
     │   │   ├── M_level.csv
+    │   ├── run_status.json
     │   ├── testdata_ERA5_fixed_results.csv
 
 Each subdirectory within the `LEC_Results` directory corresponds to a different dataset or analysis run. The structure of each subdirectory includes:
@@ -37,6 +38,8 @@ Each subdirectory within the `LEC_Results` directory corresponds to a different 
   - **timeseries/**: Contains time series plots of the LEC terms.
   
 - **log.*** (log file): Contains detailed information about the processing and calculations performed during the analysis.
+
+- **run_status.json**: Status of the run: whether the computation completed and whether each requested product was generated (see `Run Status File`_).
 
 - **results_vertical_levels/**: Contains CSV files for each LEC term at various vertical levels. Each conversion term may be split into multiple sub-terms for detailed analysis. For example:
   
@@ -129,5 +132,44 @@ The log file (``log.<filename>``) provides detailed information about the proces
 - Processing steps and timing information
 - Any errors or warnings encountered during execution
 - Download progress (when using ``--cdsapi``)
+
+Run Status File
+~~~~~~~~~~~~~~~
+
+``run_status.json`` is written by every command-line run, first with the state ``running`` before the data are read and then with the final state. It is an additional file: the CSV files are not changed. The file is replaced in one step (temporary file and rename), so a run that is killed leaves ``running``, never a complete-looking status. Schema version 1:
+
+- ``schema_version`` (``1``), ``lectk_version``, ``command`` (arguments, method, input file), ``started_utc``, ``finished_utc``, ``log_file``.
+- ``status``: ``success`` (computation complete, every requested product generated), ``partial`` (computation complete, at least one requested figure failed), ``failed`` (the computation or the run failed) or ``running``.
+- ``exit_code``: the exit status of the command line (0, 3 or 1; ``null`` while running or after an interruption). ``allow_partial_plots`` and ``plots_requested`` record the options.
+- ``scientific``: ``status`` of the computation and the ``error`` (type and message) when it failed. ``interrupted`` and ``error`` describe a run stopped by an exception.
+- ``summary``: number of products in each state.
+- ``products``: one entry per product with ``name``, ``kind`` (``scientific``, ``figure`` or ``diagnostic``), ``required``, ``status``, ``expected`` (files the product must write), ``written`` (files written by this run), ``missing``, ``reason``, ``error``, ``failures`` (one per failed call, e.g. per time step), ``depends_on`` and ``consequences``. Paths are relative to the results directory.
+
+Product states: ``success`` (requested and every expected file written by this run), ``failed`` (requested and not, or not completely, generated), ``unavailable`` (not applicable to the data for a documented reason; not used in this version), ``not_requested`` (optional product without ``-p``). ``pending`` appears only while the run is in progress.
+
+Required products: ``results_csv``, ``vertical_level_csvs`` and, in the moving framework, ``trackfile``. Optional products with ``-p`` — fixed framework: ``timeseries``, ``box_limits_map``, ``boxplots``, ``hovmoller``, ``lec_cycle``; moving framework: ``domain_maps`` (one map per time step), ``track_map``, ``zeta_hgt_timeseries``, ``timeseries``, ``hovmoller``, ``boxplots``, ``periods`` (cyclophaser life-cycle periods and ``periods.csv``), ``lec_cycle``, ``lec_periods`` and ``lps`` (these two need ``periods``).
+
+Example (moving framework, a series too short for the cyclophaser filter):
+
+.. code-block:: json
+
+   {
+     "schema_version": 1,
+     "status": "partial",
+     "exit_code": 3,
+     "scientific": {"status": "success", "error": null},
+     "products": [
+       {"name": "results_csv", "kind": "scientific", "required": true, "status": "success",
+        "written": ["testdata_ERA5_track_results.csv"]},
+       {"name": "periods", "kind": "diagnostic", "required": false, "status": "failed",
+        "reason": "ValueError: polyorder must be less than window_length.",
+        "consequences": ["lec_periods", "lps"]},
+       {"name": "lps", "kind": "figure", "required": false, "status": "failed",
+        "depends_on": ["periods"],
+        "reason": "not generated: requires 'periods', which failed (ValueError: polyorder must be less than window_length.)"}
+     ]
+   }
+
+(Abridged: the file lists every product and every field.)
 
 Use the ``-v/--verbosity`` flag for more detailed debug-level logging.

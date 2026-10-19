@@ -4,7 +4,42 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **`run_status.json`** (DEC-02): every command-line run writes, next to its
+  results, the state of the computation and of each requested product
+  (`success`, `failed`, `unavailable`, `not_requested`), the cause of each
+  failure and the exit status. It is written atomically, first as `running`.
+  The CSV files are unchanged. Schema version 1, described in the results
+  documentation.
+- **`--allow-partial-plots`** (DEC-02): exit with status 0 when the
+  computation is complete but some requested figures failed; the run is still
+  reported as partial.
+
 ### Changed
+
+- **Exit status 3 for partial output** (DEC-02, behaviour change): when the
+  computation is complete but a requested figure could not be generated, the
+  command now exits with status 3. It used to exit with status 0 when the
+  error was only logged (fixed framework; cyclophaser in the moving
+  framework) and with status 1 and a traceback when a moving-framework
+  figure raised. Errors of the computation still exit with status 1 and are
+  never reported as partial.
+- **Figure failures are reported, not hidden** (E0-07): a figure counts as
+  generated only if its files were written by the run. "🎉 Analysis
+  complete!" and "🎉 All plots generated successfully!" are written only when
+  every requested product was generated; otherwise the log ends with an
+  "Analysis complete with PARTIAL output" warning naming the figures.
+- **Moving framework: a map failure no longer stops the computation**
+  (E0-05): the map drawn at each time step with `-p` failed the whole run
+  before the CSV was written when Natural Earth data could not be obtained
+  (e.g. offline). The failure is now recorded and the energetics are
+  computed; the figures after the results are each attempted and recorded.
+- **Cyclophaser errors are reported** (E0-06): `plot_periods` logged and
+  hid them; the periods, and the Lorenz cycle diagrams of the periods and the
+  Lorenz Phase Space that need them, are now reported as failed with the
+  cyclophaser error. When a short series is inapplicable to the periods is
+  not decided in this release.
 
 - **Log handlers** (E0-09): `initialize_logging` now closes and removes the
   handlers of a previous run in the same Python process, so each run writes
@@ -18,6 +53,18 @@ All notable changes to this project will be documented in this file.
 
 ### Tests
 
+- **Offline maps** (DEC-03): the tests that draw maps require
+  `CARTOPY_DATA_DIR` to point to a copy of the Natural Earth files listed,
+  with their sha256, in `tests/data/naturalearth_manifest.tsv`, and fail
+  explicitly otherwise; the shapefiles are not in the repository. A session
+  guard blocks and records every network attempt and fails the run on an
+  unexpected one. New tests cover maps with the complete copy and without
+  any data (results unchanged, maps reported as failed).
+- **Run status and exit status** (DEC-02, E0-05, E0-06, E0-07): unit tests of
+  `run_status.json`; integration tests check the status of every product;
+  injected figure failures, silent plotting functions and errors of the
+  computation; the real command line in a subprocess for exit statuses 0, 3,
+  0 with `--allow-partial-plots`, 1 and 2.
 - **Run logs are checked after the whole session** (E0-09): the suite fails if
   any run log grows after its test has ended, holds another run, or has lines
   after "Analysis complete"; a pair of tests also fails if log handlers are

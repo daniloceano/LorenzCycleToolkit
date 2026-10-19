@@ -520,6 +520,32 @@ CDS API download is very slow
       # Use 6-hour instead of 3-hour
       python lorenzcycletoolkit.py file.nc -t -r --cdsapi --time-resolution 6
 
+Figures and Maps
+----------------
+
+The run ends with "PARTIAL output" and exit status 3
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Problem**: With ``-p``, the log ends with "Analysis complete with PARTIAL output" and the command exits with status 3.
+
+**Meaning**: The computation is complete and the CSV results are written, but at least one requested figure was not generated. ``run_status.json`` in the results directory lists, for each figure, its state and the cause (``reason`` and ``error``). The other figures were still attempted. Use ``--allow-partial-plots`` if a workflow must accept partial figures with exit status 0; the run is still reported as partial.
+
+Maps fail when working offline
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Problem**: ``box_limits_map``, ``domain_maps`` or ``track_map`` fail with a ``URLError`` (for example "nodename nor servname provided").
+
+**Cause**: The maps use Natural Earth shapefiles (coastline, land, ocean and land borders at 110m, 50m or 10m depending on the map extent; countries, states and cities at 50m). Cartopy downloads a missing file the first time it is needed, which fails without network access.
+
+**Solution**: Set ``CARTOPY_DATA_DIR`` to a directory holding the files listed in ``tests/data/naturalearth_manifest.tsv`` (layout ``shapefiles/natural_earth/{physical,cultural}/``), or run once with network access so that Cartopy stores them. The computation does not depend on the maps: without them the results are the same and the run is reported as partial.
+
+The life-cycle periods and the Lorenz Phase Space are missing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Problem**: In the moving framework, ``periods`` fails (for example "polyorder must be less than window_length") and ``lec_periods`` and ``lps`` are reported as failed because they depend on it.
+
+**Cause**: The cyclophaser filter and smoothing windows are derived from the length of the series; very short series (such as the 5 hourly steps of the ERA5 sample) are rejected by the filter. The CSV results are not affected.
+
 Still Having Issues?
 --------------------
 
