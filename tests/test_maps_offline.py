@@ -117,6 +117,64 @@ def test_scenario_b_no_cache_maps_fail_computation_preserved(monkeypatch, lectk_
     assert [p for p in (tmp_path / 'cartopy_download_dir').rglob('*') if p.is_file()] == []
 
 
+@pytest.mark.parametrize('case', [FIXED, TRACK], ids=['fixed', 'track'])
+def test_offline_maps_with_complete_cache(monkeypatch, lectk_workdir, naturalearth_reads, network_attempts, case):
+    """--offline-maps reads the local copy: every map generated, no network attempt."""
+    results_dir, downloads = run_case(monkeypatch, lectk_workdir, case, '--offline-maps')
+    method = case[1]
+    data = oc.check_run_status(results_dir, 'success', 0,
+                               oc.products(method, **(NO_PERIODS if method == 'track' else {})))
+    assert data['offline_maps'] is True
+    assert len(network_attempts) == 0 and downloads == []
+    assert naturalearth_reads
+
+
+@pytest.mark.parametrize('case', [FIXED, TRACK], ids=['fixed', 'track'])
+def test_offline_maps_without_cache_never_reach_the_network(monkeypatch, lectk_workdir, naturalearth_absent,
+                                                           network_attempts, tmp_path, case):
+    """
+    Without data, --offline-maps fails the maps before any network access:
+    the session guard records no attempt at all (it would record, and block,
+    one without the option; see scenario B), nothing is announced as a
+    download, and the computation is unchanged.
+    """
+    results_dir, downloads = run_case(monkeypatch, lectk_workdir, case, '--offline-maps')
+    argv, method, stem, _ = case
+
+    reference = oc.REFERENCE_DIR / ('ERA5_fixed' if method == 'fixed' else 'ERA5_track')
+    assert_csv_outputs_identical_to_reference(results_dir, stem, reference)
+
+    overrides = {name: 'failed' for name in MAPS[method]}
+    if method == 'track':
+        overrides.update(NO_PERIODS)
+    data = oc.check_run_status(results_dir, 'partial', 3, oc.products(method, **overrides))
+    for product in data['products']:
+        if product['name'] in MAPS[method]:
+            assert product['error']['type'] == 'NaturalEarthOfflineError', product['error']
+            assert '--offline-maps forbids downloading it' in product['reason']
+    assert len(network_attempts) == 0
+    assert downloads == []
+    assert not (tmp_path / 'cartopy_download_dir').exists()
+
+
+def test_offline_maps_restore_cartopy_downloaders():
+    """Outside --offline-maps, and after it (also after an error), Cartopy is unchanged."""
+    import cartopy
+    import cartopy.io.shapereader  # noqa: F401
+
+    from src.utils.offline_maps import NE_KEY, offline_maps
+
+    before = dict(cartopy.config['downloaders'])
+    with offline_maps(False):
+        assert cartopy.config['downloaders'] == before
+    with pytest.raises(KeyError):
+        with offline_maps(True):
+            assert cartopy.config['downloaders'][NE_KEY] is not before[NE_KEY]
+            raise KeyError('error inside the run')
+    assert cartopy.config['downloaders'] == before
+    assert all(cartopy.config['downloaders'][k] is v for k, v in before.items())
+
+
 def test_manifest_covers_every_scale_used_by_the_code():
     """Adaptive features may need 110m, 50m or 10m; the fixed features use 50m."""
     rows = read_manifest(NATURALEARTH_MANIFEST)

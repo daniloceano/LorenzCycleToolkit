@@ -39,6 +39,7 @@ from metpy.units import units
 from src.frameworks.lec_fixed_framework import lec_fixed
 from src.frameworks.lec_moving_framework import lec_moving
 from src.utils.input_files import resolve_input_file
+from src.utils.offline_maps import offline_maps
 from src.utils.preprocessing import prepare_data
 from src.utils.run_status import EXIT_PARTIAL, RunStatus
 from src.utils.tools import initialize_logging
@@ -106,6 +107,15 @@ def create_arg_parser():
             "Exit with status 0 when the computation is complete but some requested "
             f"figures could not be generated (default: exit status {EXIT_PARTIAL}). "
             "run_status.json still reports the run as partial."
+        ),
+    )
+    parser.add_argument(
+        "--offline-maps",
+        action="store_true",
+        help=(
+            "Draw maps from local Natural Earth data only (CARTOPY_DATA_DIR or Cartopy's "
+            "data directory) and never download them; a map whose data are missing is "
+            "reported as failed (partial output)."
         ),
     )
     parser.add_argument(
@@ -190,7 +200,7 @@ def run_lec_analysis(data, args, results_subdirectory, figures_directory, result
         run_status = RunStatus(args, results_subdirectory, app_logger)
         run_status.write()
 
-    with run_status.guard():
+    with run_status.guard(), offline_maps(getattr(args, "offline_maps", False)):
         variable_list_df = pd.read_csv(resolve_input_file("inputs/namelist"), sep=";", index_col=0, header=0)
 
         if args.fixed:

@@ -103,6 +103,7 @@ class RunStatus:
         self.logger = app_logger
         self.plots_requested = bool(getattr(args, "plots", False))
         self.allow_partial_plots = bool(getattr(args, "allow_partial_plots", False))
+        self.offline_maps = bool(getattr(args, "offline_maps", False))
         if getattr(args, "fixed", False):
             self.method = "fixed"
         elif getattr(args, "track", False):
@@ -400,6 +401,7 @@ class RunStatus:
             "exit_code": self.exit_code,
             "allow_partial_plots": self.allow_partial_plots,
             "plots_requested": self.plots_requested,
+            "offline_maps": self.offline_maps,
             "interrupted": self.interrupted,
             "error": self.run_error,
             "command": self.command,

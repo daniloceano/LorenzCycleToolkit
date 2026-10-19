@@ -75,12 +75,25 @@ def test_cli_partial_output_exits_3(lectk_workdir, tmp_path):
     assert BLOCKED in run.stderr  # default mode: Cartopy tries the network, the guard blocks it
 
 
+def test_cli_offline_maps_exit_3_without_network_attempt(lectk_workdir, tmp_path):
+    lectk_workdir(namelist='namelist_ERA5', track='track_testdata_ERA5')
+    run = cli('samples/testdata_ERA5.nc', '-t', '-r', '-p', '--offline-maps', env=no_naturalearth(tmp_path))
+    assert run.returncode == 3, run.stderr[-2000:]
+    data = oc.check_run_status(TRACK_RESULTS, 'partial', 3, oc.products('track', **NO_MAPS))
+    assert data['offline_maps'] is True
+    assert BLOCKED not in run.stderr
+    assert 'Downloading' not in run.stderr
+    oc.assert_matches_reference(TRACK_RESULTS, oc.REFERENCE_DIR / 'ERA5_track', 'testdata_ERA5_track', 'level')
+
+
 def test_cli_allow_partial_plots_exits_0_and_stays_partial(lectk_workdir, tmp_path):
     lectk_workdir(namelist='namelist_ERA5', track='track_testdata_ERA5')
-    run = cli("samples/testdata_ERA5.nc", "-t", "-r", "-p", "--allow-partial-plots", env=no_naturalearth(tmp_path))
+    run = cli('samples/testdata_ERA5.nc', '-t', '-r', '-p', '--offline-maps', '--allow-partial-plots',
+              env=no_naturalearth(tmp_path))
     assert run.returncode == 0, run.stderr[-2000:]
     data = oc.check_run_status(TRACK_RESULTS, 'partial', 0, oc.products('track', **NO_MAPS))
-    assert data["allow_partial_plots"] is True
+    assert data['allow_partial_plots'] is True and data['offline_maps'] is True
+    assert BLOCKED not in run.stderr
     oc.check_final_messages(TRACK_RESULTS, 'testdata_ERA5', complete=False)
     log = (TRACK_RESULTS / 'log.testdata_ERA5').read_text(encoding='utf-8')
     assert 'exit status 0 because --allow-partial-plots was given' in log
