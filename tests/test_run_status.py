@@ -181,6 +181,24 @@ def test_time_step_products_accumulate(tmp_path):
     assert product["reason"] == "2 calls failed; first: OSError: no shapefile"
 
 
+def test_time_step_product_is_complete_only_when_closed(tmp_path):
+    """Maps written for the first steps of a run that then stops are not a generated product."""
+    status = _record(tmp_path, "-t", "-p")
+    status.run_product("domain_maps", _writer(tmp_path / "Figures/boxes/box_1.png"),
+                       expected=["Figures/boxes/box_1.png"], step="1")
+    assert status.products["domain_maps"]["status"] == "pending"
+    with pytest.raises(FloatingPointError):
+        with status.guard():
+            raise FloatingPointError("computation of step 1 failed")
+    assert status.products["domain_maps"]["status"] == "failed"
+
+    closed = _record(tmp_path, "-t", "-p")
+    closed.run_product("domain_maps", _writer(tmp_path / "Figures/boxes/box_2.png"),
+                       expected=["Figures/boxes/box_2.png"], step="2")
+    closed.close_product("domain_maps")
+    assert closed.products["domain_maps"]["status"] == "success"
+
+
 def test_dependency_failure_is_recorded_on_both_products(tmp_path):
     status = _record(tmp_path, "-t", "-p")
 

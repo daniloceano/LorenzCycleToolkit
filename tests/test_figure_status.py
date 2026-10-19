@@ -7,6 +7,7 @@ writing its figure, or an error inside the scientific computation. The run
 status, the log messages and the CSV outputs are then checked.
 """
 
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -85,3 +86,61 @@ def test_fixed_scientific_error_is_not_partial(monkeypatch, lectk_workdir):
     assert not [p['name'] for p in data['products'] if p['status'] == 'success']
     log = (results_dir / 'log.testdata_ERA5').read_text(encoding='utf-8')
     assert 'Analysis complete' not in log
+
+
+TRACK_ARGV = ['samples/testdata_ERA5.nc', '-r', '-t', '-p']
+
+
+def _broken_map(*args, **kwargs):
+    raise OSError("injected cartographic failure")
+
+
+def test_track_map_failure_does_not_stop_the_computation(monkeypatch, lectk_workdir):
+    """A failing map inside the time loop used to abort the run before the CSV (E0-05)."""
+    lectk_workdir(namelist='namelist_ERA5', track='track_testdata_ERA5')
+    monkeypatch.setattr('src.frameworks.lec_moving_framework.plot_domain_attributes', _broken_map)
+
+    results_dir, status = run_case(monkeypatch, TRACK_ARGV, 'track')
+
+    times = oc.track_times('inputs/track')
+    oc.check_main_results(results_dir, 'testdata_ERA5_track', times)
+    oc.check_trackfile(results_dir, 'testdata_ERA5_track', times)
+    oc.assert_matches_reference(results_dir, oc.REFERENCE_DIR / 'ERA5_track', 'testdata_ERA5_track', 'level')
+
+    data = oc.check_run_status(
+        results_dir, 'partial', 3,
+        oc.products('track', domain_maps='failed', periods='failed', lec_periods='failed', lps='failed'),
+    )
+    maps = next(p for p in data['products'] if p['name'] == 'domain_maps')
+    assert [f['step'] for f in maps['failures']] == [
+        datetime.strptime(t, '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%d-%H%M') for t in times
+    ]
+    assert maps['error'] == {'type': 'OSError', 'message': 'injected cartographic failure'}
+    assert maps['reason'] == '5 calls failed; first: OSError: injected cartographic failure'
+    assert len(maps['missing']) == 5 and maps['written'] == []
+    oc.check_final_messages(results_dir, 'testdata_ERA5', complete=False)
+
+
+@pytest.mark.parametrize('with_map_failure', [False, True], ids=['maps_ok', 'maps_failing'])
+def test_track_scientific_error_is_not_partial(monkeypatch, lectk_workdir, with_map_failure):
+    """An error of the computation is fatal even when a map failure was recorded before it."""
+    lectk_workdir(namelist='namelist_ERA5', track='track_testdata_ERA5')
+
+    def broken_kz(self):
+        raise FloatingPointError("injected error in Kz")
+
+    monkeypatch.setattr('src.analysis.energy_contents.EnergyContents.calc_kz', broken_kz)
+    if with_map_failure:
+        monkeypatch.setattr('src.frameworks.lec_moving_framework.plot_domain_attributes', _broken_map)
+
+    with pytest.raises(FloatingPointError, match="injected error in Kz"):
+        run_case(monkeypatch, TRACK_ARGV, 'track')
+
+    results_dir = Path('LEC_Results/testdata_ERA5_track')
+    assert not (results_dir / 'testdata_ERA5_track_results.csv').exists()
+    data = oc.load_run_status(results_dir)
+    assert (data['status'], data['exit_code']) == ('failed', 1)
+    assert data['scientific']['status'] == 'failed'
+    assert data['scientific']['error']['type'] == 'FloatingPointError'
+    assert not [p['name'] for p in data['products'] if p['status'] == 'success']
+    assert 'Analysis complete' not in (results_dir / 'log.testdata_ERA5').read_text(encoding='utf-8')

@@ -53,3 +53,19 @@ def test_different_args(monkeypatch, lectk_workdir):
     oc.check_vertical_levels(results_dir, 'level', 'time', times, 'track')
     oc.check_log(results_dir, 'testdata_ERA5')
     oc.assert_matches_reference(results_dir, oc.REFERENCE_DIR / 'ERA5_track', 'testdata_ERA5_track', 'level')
+
+    # Run status: the 5 hourly steps of this sample are too short for the
+    # cyclophaser filter, so the periods, the Lorenz cycle diagrams of the
+    # periods and the Lorenz Phase Space are not generated. This is reported
+    # as a partial run, not as success (the "unavailable" rule for short
+    # series awaits a separate decision, E0-06).
+    data = oc.check_run_status(
+        results_dir, 'partial', 3,
+        oc.products('track', periods='failed', lec_periods='failed', lps='failed'),
+    )
+    by_name = {p['name']: p for p in data['products']}
+    assert by_name['lec_periods']['depends_on'] == ['periods']
+    assert by_name['lps']['depends_on'] == ['periods']
+    assert by_name['periods']['consequences'] == ['lec_periods', 'lps']
+    assert not (results_dir / 'periods.csv').exists()
+    oc.check_final_messages(results_dir, 'testdata_ERA5', complete=False)

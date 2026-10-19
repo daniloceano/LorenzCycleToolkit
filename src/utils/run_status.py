@@ -207,8 +207,9 @@ class RunStatus:
         Only the call ``func(*args, **kwargs)`` is guarded. The product is a
         success when the call returns and every expected file was written by
         it (created or modified); otherwise it is failed, with the exception or
-        the missing files as the reason. Calls with the same name (one per time
-        step) are accumulated into one product.
+        the missing files as the reason. Calls with the same name and a
+        ``step`` (one per time step) are accumulated into one product, which
+        stays pending until ``close_product`` is called after the last step.
 
         Returns:
             bool: True if this call generated all its expected files.
@@ -227,13 +228,13 @@ class RunStatus:
         written = sorted(p for p, s in after.items() if before.get(p) != s)
         missing = [e for e in expected if e not in written]
 
-        first_call = product["status"] == "pending"
         product["expected"].extend(e for e in expected if e not in product["expected"])
         product["written"].extend(w for w in written if w not in product["written"])
         product["missing"].extend(m for m in missing if m not in product["missing"])
         label = f" ({step})" if step else ""
         if error is None and not missing:
-            if first_call:
+            # a product made of time steps is complete only after the last one
+            if product["status"] == "pending" and step is None:
                 product["status"] = "success"
             self._log("info", f"  ✅ {DESCRIPTIONS[name]}{label} generated")
             return True
@@ -255,6 +256,12 @@ class RunStatus:
         self._log("error", f"  ❌ {DESCRIPTIONS[name]}{label} not generated: {cause}; "
                            f"expected {', '.join(missing) or ', '.join(expected)}")
         return False
+
+    def close_product(self, name):
+        """Mark a product made of time steps as complete after its last step."""
+        product = self.products[name]
+        if product["status"] == "pending":
+            product["status"] = "success"
 
     def fail_products(self, names, exc, reason):
         """Mark requested products as failed without calling them (e.g. import error)."""

@@ -51,3 +51,9 @@ def test_different_args(monkeypatch, lectk_workdir):
     oc.check_trackfile(results_dir, 'testdata_NCEP-R2_track', times)
     oc.check_vertical_levels(results_dir, 'lv_ISBL3', 'initial_time0_hours', times, 'track')
     oc.check_log(results_dir, 'testdata_NCEP-R2')
+
+    # Run status: every requested figure, including the periods and the
+    # Lorenz Phase Space, generated; success declared.
+    oc.check_run_status(results_dir, 'success', 0, oc.products('track'))
+    oc.check_final_messages(results_dir, 'testdata_NCEP-R2', complete=True)
+    assert (results_dir / 'periods.csv').is_file()

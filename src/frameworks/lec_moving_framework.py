@@ -736,9 +736,14 @@ def lec_moving(
             out_track = pd.concat([out_track, new_entry], ignore_index=True)
 
         # Save figure with the domain box, extreme values, vorticity and
-        # geopotential height
+        # geopotential height. Only this call is guarded: a cartographic
+        # failure (e.g. Natural Earth data unavailable offline) is recorded
+        # and the computation of this time step goes on (E0-05).
         if args.plots:
-            plot_domain_attributes(data850, limits, position, figures_directory)
+            run_status.run_product(
+                "domain_maps", plot_domain_attributes, data850, limits, position, figures_directory,
+                expected=[f"Figures/boxes/box_{limits['datestr']}.png"], step=limits["datestr"],
+            )
 
         # Create box object
         app_logger.info("📦 Creating box object...")
@@ -766,6 +771,9 @@ def lec_moving(
         # Log that the processing for this time is done
         app_logger.info("✅ Timestep complete.\n")
 
+    if args.plots:
+        run_status.close_product("domain_maps")
+
     # Finalize and process results
     results_file, df = finalize_results(
         times, terms_dict, args, results_subdirectory, out_track, app_logger
@@ -787,30 +795,84 @@ def lec_moving(
         app_logger.info("✅ Cleanup complete.")
 
     if args.plots:
-        from glob import glob
+        app_logger.info("🎨 Generating plots...")
+        figures_directory = os.path.join(results_subdirectory, "Figures")
+        generate_moving_figures(
+            run_status, args, results_file, track_file, df, out_track, times, lat,
+            track if args.track else None, results_subdirectory, figures_directory, app_logger,
+        )
+        if run_status.figures_ok():
+            app_logger.info("🎉 All plots generated successfully!")
+        else:
+            app_logger.warning(
+                "⚠️ Plots finished with failures: "
+                + ", ".join(run_status.failed_figures())
+                + f" (see {run_status.path})"
+            )
 
+
+def generate_moving_figures(
+    run_status, args, results_file, track_file, df, out_track, times, lat, track,
+    results_subdirectory, figures_directory, app_logger,
+):
+    """
+    Generate the figures of the moving framework after the results are saved.
+
+    Each figure is recorded in run_status.json and counts as generated only if
+    its call returns and writes its expected files. A failure is logged and
+    the remaining figures are still attempted. The Lorenz cycle diagrams of
+    the periods and the Lorenz Phase Space need periods.csv: when the periods
+    were not determined they are reported as failed because of that.
+    """
+    figures = (
+        "track_map", "zeta_hgt_timeseries", "timeseries", "hovmoller", "boxplots",
+        "periods", "lec_cycle", "lec_periods", "lps",
+    )
+    try:
         from ..plots.map_track import map_track
         from ..plots.plot_boxplot import boxplot_terms
         from ..plots.plot_hovmoller import plot_hovmoller
-        from ..plots.plot_LEC import plot_lorenzcycletoolkit
+        from ..plots.plot_LEC import (plot_lorenzcycletoolkit,
+                                      plot_lorenzcycletoolkit_periods)
         from ..plots.plot_LPS import plot_LPS
         from ..plots.plot_periods import plot_periods
         from ..plots.timeseries_terms import plot_timeseries
         from ..plots.timeseries_zeta_and_Z import plot_min_zeta_hgt
+        from ..plots.utils import TERM_DETAILS
+        from .lec_fixed_framework import lec_daily_figures
+    except Exception as exc:
+        run_status.fail_products(figures, exc, "plotting modules could not be imported")
+        return
 
-        app_logger.info("🎨 Generating plots...")
-        figures_directory = os.path.join(results_subdirectory, "Figures")
-        track_file = glob(os.path.join(results_subdirectory, "*trackfile"))[0]
+    # Basic diagnostics plots
+    run_status.run_product(
+        "track_map", map_track, results_file, track_file, figures_directory, app_logger,
+        expected=["Figures/track.png"],
+    )
+    run_status.run_product(
+        "zeta_hgt_timeseries", plot_min_zeta_hgt, track_file, figures_directory, app_logger,
+        expected=["Figures/timeseries-min_zeta_hgt.png"],
+    )
+    run_status.run_product(
+        "timeseries", plot_timeseries, results_file, figures_directory, app_logger,
+        expected=[f"Figures/timeseries/timeseires_{k}.png" for k in TERM_DETAILS],
+    )
+    run_status.run_product(
+        "hovmoller", plot_hovmoller, results_file, figures_directory, app_logger,
+        expected=["Figures/hovmollers/hovmoller_energy.png"],
+    )
+    run_status.run_product(
+        "boxplots", boxplot_terms, results_file, results_subdirectory, figures_directory, app_logger,
+        expected=[
+            "Figures/boxplots/boxplot_terms_energy.png",
+            "Figures/boxplots/boxplot_vertical_levels_energy.png",
+            "Figures/boxplots/vertical_timeseries_energy.png",
+        ],
+    )
 
-        # Basic diagnostics plots
-        map_track(results_file, track_file, figures_directory, app_logger)
-        plot_min_zeta_hgt(track_file, figures_directory, app_logger)
-        plot_timeseries(results_file, figures_directory, app_logger)
-        plot_hovmoller(results_file, figures_directory, app_logger)
-        boxplot_terms(results_file, results_subdirectory, figures_directory, app_logger)
-
-        # Determine periods: if vorticity is already processed, don't filter
-        # the series
+    # Determine periods: if vorticity is already processed, don't filter
+    # the series
+    def determine_periods():
         processed_vorticity = (
             True if args.zeta and "min_max_zeta_850" in track.columns else False
         )
@@ -824,16 +886,57 @@ def lec_moving(
             processed_vorticity=processed_vorticity,
         )
 
-        # Use found periods for other plots
-        plot_lorenzcycletoolkit(
-            results_file,
-            figures_directory,
-            os.path.join(results_subdirectory, "periods.csv"),
-            app_logger,
-        )
-        plot_LPS(df, args.infile, results_subdirectory, figures_directory, app_logger)
+    periods_file = os.path.join(results_subdirectory, "periods.csv")
+    run_status.run_product(
+        "periods", determine_periods,
+        expected=["periods.csv", "Figures/Periods/periods.png", "Figures/Periods/periods_steps.png"],
+    )
 
-        app_logger.info("🎉 All plots generated successfully!")
+    # Daily Lorenz cycle diagrams (do not need the periods)
+    run_status.run_product(
+        "lec_cycle", plot_lorenzcycletoolkit, results_file, figures_directory, app_logger=app_logger,
+        expected=lec_daily_figures(df.index),
+    )
+
+    # Use found periods for other plots
+    dt_hours = int((df.index[1] - df.index[0]).total_seconds() / 3600) if len(df.index) > 1 else None
+    lps_figures = [
+        f"Figures/LPS/LPS_{kind}{zoom}.png"
+        for kind in (f"{dt_hours}h", "periods", "1d") for zoom in ("", "_zoom")
+    ]
+    if not run_status.succeeded("periods"):
+        run_status.dependency_failed("lec_periods", "periods")
+        run_status.dependency_failed("lps", "periods", expected=lps_figures)
+        return
+
+    try:
+        expected_periods = period_figures(periods_file, df.index)
+    except Exception as exc:
+        run_status.fail_products(["lec_periods"], exc, "periods.csv could not be read")
+    else:
+        run_status.run_product(
+            "lec_periods", plot_lorenzcycletoolkit_periods, results_file, figures_directory, periods_file,
+            app_logger, expected=expected_periods,
+        )
+    run_status.run_product(
+        "lps", plot_LPS, df, args.infile, results_subdirectory, figures_directory, app_logger,
+        expected=lps_figures,
+    )
+
+
+def period_figures(periods_file, index):
+    """
+    Lorenz cycle diagrams expected for the periods in periods.csv: one per
+    period that contains at least one time of the results (periods without
+    data are skipped, with a warning, by plot_period_means).
+    """
+    periods = pd.read_csv(periods_file, parse_dates=["start", "end"], index_col=0)
+    times = pd.DatetimeIndex(index)
+    return [
+        f"Figures/LEC/LEC_{name}.png"
+        for name, row in periods.iterrows()
+        if ((times >= row["start"]) & (times <= row["end"])).any()
+    ]
 
 
 if __name__ == "__main__":
