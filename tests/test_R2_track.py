@@ -1,6 +1,10 @@
+from pathlib import Path
+
 from lorenzcycletoolkit import (create_arg_parser, initialize_logging,
                                 prepare_data, run_lec_analysis,
                                 setup_results_directory)
+
+from tests import output_checks as oc
 
 # TO DO: slice nc file for smaller time steps and improve testing
 
@@ -37,3 +41,13 @@ def test_different_args(monkeypatch, lectk_workdir):
 
     # Run LEC analysis
     run_lec_analysis(data, args, results_subdirectory, figures_directory, results_subdirectory_vertical_levels, app_logger)
+
+    # Verify the outputs (E0-08): required files, time steps, terms and finite
+    # values. No approved numerical reference exists for the NCEP-R2 cases.
+    results_dir = Path(results_subdirectory)
+    times = oc.track_times('inputs/track')
+    assert len(times) == 5
+    oc.check_main_results(results_dir, 'testdata_NCEP-R2_track', times)
+    oc.check_trackfile(results_dir, 'testdata_NCEP-R2_track', times)
+    oc.check_vertical_levels(results_dir, 'lv_ISBL3', 'initial_time0_hours', times, 'track')
+    oc.check_log(results_dir, 'testdata_NCEP-R2')

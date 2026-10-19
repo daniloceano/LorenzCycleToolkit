@@ -1,6 +1,10 @@
+from pathlib import Path
+
 from lorenzcycletoolkit import (create_arg_parser, initialize_logging,
                                 prepare_data, run_lec_analysis,
                                 setup_results_directory)
+
+from tests import output_checks as oc
 
 
 def test_example_args(monkeypatch, lectk_workdir):
@@ -36,3 +40,12 @@ def test_example_args(monkeypatch, lectk_workdir):
 
     # Run LEC analysis
     run_lec_analysis(data, args, results_subdirectory, figures_directory, results_subdirectory_vertical_levels, app_logger)
+
+    # Verify the outputs (E0-08): required files, time steps, terms and finite
+    # values. No approved numerical reference exists for the NCEP-R2 cases.
+    results_dir = Path(results_subdirectory)
+    times = oc.input_times('samples/testdata_NCEP-R2.nc', 'initial_time0_hours')
+    assert len(times) == 5
+    oc.check_main_results(results_dir, 'testdata_NCEP-R2_fixed', times)
+    oc.check_vertical_levels(results_dir, 'lv_ISBL3', 'initial_time0_hours', times, 'fixed')
+    oc.check_log(results_dir, 'testdata_NCEP-R2')
