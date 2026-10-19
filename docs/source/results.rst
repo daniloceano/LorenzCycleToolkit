@@ -143,30 +143,31 @@ Run Status File
 - ``exit_code``: the exit status of the command line (0, 3 or 1; ``null`` while running or after an interruption). ``allow_partial_plots`` and ``plots_requested`` record the options.
 - ``scientific``: ``status`` of the computation and the ``error`` (type and message) when it failed. ``interrupted`` and ``error`` describe a run stopped by an exception.
 - ``summary``: number of products in each state.
-- ``products``: one entry per product with ``name``, ``kind`` (``scientific``, ``figure`` or ``diagnostic``), ``required``, ``status``, ``expected`` (files the product must write), ``written`` (files written by this run), ``missing``, ``reason``, ``error``, ``failures`` (one per failed call, e.g. per time step), ``depends_on`` and ``consequences``. Paths are relative to the results directory.
+- ``products``: one entry per product with ``name``, ``kind`` (``scientific``, ``figure`` or ``diagnostic``), ``required``, ``status``, ``expected`` (files the product must write), ``written`` (files written by this run), ``missing``, ``reason``, ``error``, ``failures`` (one per failed call, e.g. per time step), ``depends_on``, ``consequences`` and ``notes`` (caveats that do not change the state, e.g. that the cyclophaser periods are a technical result only, or that with fewer than 20 steps cyclophaser 1.7.3 replaces the whole band-pass series with its low-pass series). ``offline_maps`` records the ``--offline-maps`` option. Paths are relative to the results directory.
 
-Product states: ``success`` (requested and every expected file written by this run), ``failed`` (requested and not, or not completely, generated), ``unavailable`` (not applicable to the data for a documented reason; not used in this version), ``not_requested`` (optional product without ``-p``). ``pending`` appears only while the run is in progress.
+Product states: ``success`` (requested and every expected file written by this run), ``failed`` (requested and not, or not completely, generated), ``unavailable`` (not applicable to the data for a known reason checked before the call; not a failure: currently the cyclophaser periods of series shorter than the tested minimum, and the products that need them), ``not_requested`` (optional product without ``-p``). ``pending`` appears only while the run is in progress.
 
 Required products: ``results_csv``, ``vertical_level_csvs`` and, in the moving framework, ``trackfile``. Optional products with ``-p`` — fixed framework: ``timeseries``, ``box_limits_map``, ``boxplots``, ``hovmoller``, ``lec_cycle``; moving framework: ``domain_maps`` (one map per time step), ``track_map``, ``zeta_hgt_timeseries``, ``timeseries``, ``hovmoller``, ``boxplots``, ``periods`` (cyclophaser life-cycle periods and ``periods.csv``), ``lec_cycle``, ``lec_periods`` and ``lps`` (these two need ``periods``).
 
-Example (moving framework, a series too short for the cyclophaser filter):
+Example (moving framework, ERA5 sample: 5 hourly steps, fewer than the 8 needed for the periods):
 
 .. code-block:: json
 
    {
      "schema_version": 1,
-     "status": "partial",
-     "exit_code": 3,
+     "status": "success",
+     "exit_code": 0,
+     "offline_maps": false,
      "scientific": {"status": "success", "error": null},
      "products": [
        {"name": "results_csv", "kind": "scientific", "required": true, "status": "success",
         "written": ["testdata_ERA5_track_results.csv"]},
-       {"name": "periods", "kind": "diagnostic", "required": false, "status": "failed",
-        "reason": "ValueError: polyorder must be less than window_length.",
+       {"name": "periods", "kind": "diagnostic", "required": false, "status": "unavailable",
+        "reason": "5 usable time steps < minimum 8 for the high_res options of cyclophaser 1.7.3 (Savitzky-Golay window not larger than the polynomial order); cyclophaser not called",
         "consequences": ["lec_periods", "lps"]},
-       {"name": "lps", "kind": "figure", "required": false, "status": "failed",
+       {"name": "lps", "kind": "figure", "required": false, "status": "unavailable",
         "depends_on": ["periods"],
-        "reason": "not generated: requires 'periods', which failed (ValueError: polyorder must be less than window_length.)"}
+        "reason": "not generated: requires 'periods', which is unavailable (5 usable time steps < minimum 8 ...)"}
      ]
    }
 

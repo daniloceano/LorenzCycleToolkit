@@ -537,14 +537,21 @@ Maps fail when working offline
 
 **Cause**: The maps use Natural Earth shapefiles (coastline, land, ocean and land borders at 110m, 50m or 10m depending on the map extent; countries, states and cities at 50m). Cartopy downloads a missing file the first time it is needed, which fails without network access.
 
-**Solution**: Set ``CARTOPY_DATA_DIR`` to a directory holding the files listed in ``tests/data/naturalearth_manifest.tsv`` (layout ``shapefiles/natural_earth/{physical,cultural}/``), or run once with network access so that Cartopy stores them. The computation does not depend on the maps: without them the results are the same and the run is reported as partial.
+**Solution**: Set ``CARTOPY_DATA_DIR`` to a directory holding the files listed in ``tests/data/naturalearth_manifest.tsv`` (layout ``shapefiles/natural_earth/{physical,cultural}/``), or run once with network access so that Cartopy stores them. Use ``--offline-maps`` to forbid any download attempt: the maps are then drawn from local data only, and a missing file is reported as ``NaturalEarthOfflineError``. The computation does not depend on the maps: without them the results are the same and the run is reported as partial.
 
-The life-cycle periods and the Lorenz Phase Space are missing
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The life-cycle periods and the Lorenz Phase Space are unavailable
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Problem**: In the moving framework, ``periods`` fails (for example "polyorder must be less than window_length") and ``lec_periods`` and ``lps`` are reported as failed because they depend on it.
+**Problem**: In the moving framework, ``periods`` is ``unavailable`` ("usable time steps < minimum ...") and ``lec_periods`` and ``lps`` are unavailable because they depend on it.
 
-**Cause**: The cyclophaser filter and smoothing windows are derived from the length of the series; very short series (such as the 5 hourly steps of the ERA5 sample) are rejected by the filter. The CSV results are not affected.
+**Cause**: The cyclophaser filter and smoothing windows are derived from the length of the series; cyclophaser 1.7.3 rejects series shorter than 8 time steps with the high-resolution or processed-vorticity options (3 with the low-resolution ones). Such series, like the 5 hourly steps of the ERA5 sample, are not passed to cyclophaser. The CSV results are not affected and the run is complete (exit status 0).
+
+**Note**: Longer series are accepted by cyclophaser, but acceptance does not make the phases physically meaningful; ``run_status.json`` records this, and for fewer than 20 steps it also notes that cyclophaser replaces the whole band-pass filtered series with its low-pass series.
+
+The periods fail with CyclophaserCompatibilityError
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Cause**: The minimum lengths are known only for cyclophaser 1.7.3, the options of the toolkit and regular time steps of 1, 3 or 6 hours. With another version, other options or another time step the periods are reported as failed without calling cyclophaser, rather than applying limits that may be wrong. Use the tested cyclophaser version, or ask for the limits to be established for your configuration.
 
 Still Having Issues?
 --------------------

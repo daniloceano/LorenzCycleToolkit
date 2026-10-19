@@ -359,6 +359,7 @@ Flags
 - `-m`, `--mpas`: Specify this flag if working with MPAS-A data processed with MPAS-BR routines.
 - `-p`, `--plots`: Generate plots.
 - `--allow-partial-plots`: Exit with status 0 when the computation is complete but some requested figures could not be generated (default: exit status 3). The run is still reported as ``partial`` in ``run_status.json`` and in the log. See `Exit Status`_.
+- `--offline-maps`: Draw maps from local Natural Earth data only (``CARTOPY_DATA_DIR`` or Cartopy's data directory) and never download them. A map whose data are missing is reported as failed (partial output); the computation is unaffected. Without this option Cartopy downloads missing Natural Earth files as usual.
 - `-v`, `--verbosity`: Enable debug logging for detailed output.
 - `--cdsapi`: Automatically download ERA5 data from CDS API based on track file (experimental).
 - `--time-resolution`: Temporal resolution in hours for CDS API downloads (default: 3). Recommended values: 3, 6, or 12 hours to avoid exceeding API cost limits.
@@ -376,6 +377,8 @@ Every run writes ``run_status.json`` in its results directory (see :doc:`results
 - **3** — the computation is complete and the CSV results are written, but at least one requested figure could not be generated (``partial``). The log ends with "Analysis complete with PARTIAL output" and names the figures; ``run_status.json`` gives the cause of each failure. With ``--allow-partial-plots`` the exit status is **0**, but the run is still ``partial`` and the warning is still written.
 - **1** — the computation failed. The error and its traceback are shown as before, and ``run_status.json`` records the run as ``failed``. An error of the computation is never reported as partial output.
 - **2** — invalid command-line arguments (usage message; no results directory and no status file are created).
+
+A product that does not apply to the data is reported as ``unavailable``, which is not a failure (exit status 0). This is the case of the cyclophaser life-cycle periods (and of the Lorenz cycle diagrams of the periods and the Lorenz Phase Space, which need them) when the series has fewer usable time steps than cyclophaser 1.7.3 accepts with the options used by the toolkit: 8 for high-resolution data (grid spacing below 2°) or vorticity taken from the track file, 3 otherwise. These limits are technical; they do not establish that the phases found for longer series are physically meaningful. With another cyclophaser version, other options or a time step other than 1, 3 or 6 hours the limits are not known: the periods are reported as failed with a ``CyclophaserCompatibilityError`` and cyclophaser is not called.
 
 Figures are optional products: a figure failure never stops the computation, and the remaining figures are still attempted. In the moving framework, a map that cannot be drawn at a time step (for instance because Natural Earth data are unavailable offline) is reported and the energetics of that step are still computed. The messages "🎉 Analysis complete!" and "🎉 All plots generated successfully!" are written only when every requested product was generated.
 

@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
   failure and the exit status. It is written atomically, first as `running`.
   The CSV files are unchanged. Schema version 1, described in the results
   documentation.
+- **`--offline-maps`**: draw maps from local Natural Earth data only and never
+  download them; a map whose data are missing is reported as failed (partial
+  output). Cartopy's default behaviour is unchanged without the option.
 - **`--allow-partial-plots`** (DEC-02): exit with status 0 when the
   computation is complete but some requested figures failed; the run is still
   reported as partial.
@@ -38,8 +41,17 @@ All notable changes to this project will be documented in this file.
 - **Cyclophaser errors are reported** (E0-06): `plot_periods` logged and
   hid them; the periods, and the Lorenz cycle diagrams of the periods and the
   Lorenz Phase Space that need them, are now reported as failed with the
-  cyclophaser error. When a short series is inapplicable to the periods is
-  not decided in this release.
+  cyclophaser error.
+- **Periods unavailable for short series** (E0-06): series with fewer usable
+  time steps than cyclophaser 1.7.3 accepts with the toolkit options (8 for
+  high-resolution data or vorticity from the track file, 3 otherwise) are not
+  passed to cyclophaser; the periods and the products that need them are
+  reported as `unavailable`, which is not a failure (the ERA5 sample with `-p`
+  now exits with status 0). These are technical limits, recorded with a note
+  that the phases are not physically validated. Another cyclophaser version,
+  other options or a time step other than 1, 3 or 6 hours give a
+  `CyclophaserCompatibilityError` instead. The cyclophaser options are
+  unchanged.
 
 - **Log handlers** (E0-09): `initialize_logging` now closes and removes the
   handlers of a previous run in the same Python process, so each run writes
