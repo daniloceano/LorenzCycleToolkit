@@ -18,6 +18,11 @@ All notable changes to this project will be documented in this file.
 
 ### Tests
 
+- **Integration tests check their outputs** (E0-08): required files, terms,
+  time steps and finite values, and, for the ERA5 fixed and track cases, a
+  cell-by-cell comparison with reference outputs (`tests/data/reference`) under
+  the tolerances registered for the audit baseline. Negative controls in
+  `tests/test_output_checks.py`.
 - **Integration tests no longer touch `inputs/`** (E0-10): each test runs in a
   private temporary directory with copies of the templates it needs; the
   session fails if any file under `inputs/` or `samples/` changes.
