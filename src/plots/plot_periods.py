@@ -49,6 +49,45 @@ def plot_periods(
 
     periods_figure_directory = os.path.join(figures_directory, "Periods")
     os.makedirs(periods_figure_directory, exist_ok=True)
+
+    vorticity_data, branch, options, dx = cyclophaser_inputs(out_track, lat, processed_vorticity)
+    if branch == "high_res":
+        app_logger.info(
+            f"Using high resolution options for cyclophaser (dx = {dx}): %s", options
+        )
+    elif branch == "low_res":
+        app_logger.info(
+            f"Using low resolution options for cyclophaser (dx = {dx}): %s", options
+        )
+    else:
+        app_logger.info(
+            "Vorticity already processed, using default smoothing options for cyclophaser: %s",
+            options,
+        )
+
+    periods_args = {
+        "plot": os.path.join(periods_figure_directory, "periods"),
+        "plot_steps": os.path.join(periods_figure_directory, "periods_steps"),
+        "export_dict": os.path.join(results_subdirectory, "periods"),
+        "process_vorticity_args": options,
+    }
+
+    try:
+        determine_periods(vorticity_data, x=times, **periods_args)
+    except Exception as e:
+        app_logger.error(f"Error calling cyclophaser: {e}")
+        raise
+
+
+def cyclophaser_inputs(out_track, lat, processed_vorticity=False):
+    """
+    Series and options passed to cyclophaser by plot_periods.
+
+    Returns:
+        tuple: (vorticity_data, branch, options, dx), where branch is
+        "high_res" (grid spacing below 2 degrees), "low_res" or "processed"
+        (vorticity taken already processed from the track file).
+    """
     vorticity_data = out_track["min_max_zeta_850"].to_list()
 
     if out_track['central_lat'].mean() > 0:
@@ -79,38 +118,17 @@ def plot_periods(
     # Select options based on data resolution
     dx = float(np.abs(lat[1] - lat[0]).values)
     if dx < 2:
-        options = options_high_res
-        app_logger.info(
-            f"Using high resolution options for cyclophaser (dx = {dx}): %s", options
-        )
+        branch, options = "high_res", options_high_res
     else:
-        options = options_low_res
-        app_logger.info(
-            f"Using low resolution options for cyclophaser (dx = {dx}): %s", options
-        )
+        branch, options = "low_res", options_low_res
 
     # If vorticity is given and the information is on trackfile, it means that
     # it is already processed
     if processed_vorticity:
-        options = {
+        branch, options = "processed", {
             "use_filter": False,
             "use_smoothing": "auto",
             "use_smoothing_twice": "auto",
         }
-        app_logger.info(
-            "Vorticity already processed, using default smoothing options for cyclophaser: %s",
-            options,
-        )
 
-    periods_args = {
-        "plot": os.path.join(periods_figure_directory, "periods"),
-        "plot_steps": os.path.join(periods_figure_directory, "periods_steps"),
-        "export_dict": os.path.join(results_subdirectory, "periods"),
-        "process_vorticity_args": options,
-    }
-
-    try:
-        determine_periods(vorticity_data, x=times, **periods_args)
-    except Exception as e:
-        app_logger.error(f"Error calling cyclophaser: {e}")
-        raise
+    return vorticity_data, branch, options, dx

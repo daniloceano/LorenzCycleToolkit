@@ -213,6 +213,44 @@ def test_dependency_failure_is_recorded_on_both_products(tmp_path):
     assert status.products["periods"]["consequences"] == ["lps"]
 
 
+def test_unavailable_products_are_not_a_failure(tmp_path):
+    """Periods not applicable to the series: success, exit 0, dependents unavailable, said in the log line."""
+    status = _record(tmp_path, "-t", "-p")
+    _complete_science(status, tmp_path)
+    for name in rs.MOVING_FIGURES:
+        if name not in ("periods", "lec_periods", "lps"):
+            status.run_product(name, _writer(tmp_path / "Figures" / f"{name}.png"), expected=[f"Figures/{name}.png"])
+    status.mark_unavailable("periods", "5 usable time steps < minimum 8", expected=["periods.csv"])
+    status.dependency_failed("lec_periods", "periods")
+    status.dependency_failed("lps", "periods")
+    status.finish()
+    data = _read(tmp_path)
+    assert (data["status"], data["exit_code"]) == ("success", 0)
+    by_name = {p["name"]: p for p in data["products"]}
+    assert [by_name[n]["status"] for n in ("periods", "lec_periods", "lps")] == ["unavailable"] * 3
+    assert by_name["lps"]["depends_on"] == ["periods"]
+    assert data["summary"]["unavailable"] == 3
+    message = status.final_message("Moving", 1.0)
+    assert message.startswith("🎉 Analysis complete!")
+    assert "3 requested products unavailable for these data: periods, lec_periods, lps" in message
+
+
+def test_dependency_of_a_failed_product_is_failed(tmp_path):
+    status = _record(tmp_path, "-t", "-p")
+    status.run_product("periods", lambda: None, expected=["periods.csv"])
+    status.dependency_failed("lps", "periods")
+    assert status.products["lps"]["status"] == "failed"
+
+
+def test_notes_do_not_change_the_state(tmp_path):
+    status = _record(tmp_path, "-t", "-p")
+    status.run_product("periods", _writer(tmp_path / "periods.csv"), expected=["periods.csv"])
+    status.add_notes("periods", ["technical acceptance only"])
+    status.add_notes("periods", ["technical acceptance only"])
+    assert status.products["periods"]["status"] == "success"
+    assert status.products["periods"]["notes"] == ["technical acceptance only"]
+
+
 def test_scientific_error_is_failed_never_partial(tmp_path):
     status = _record(tmp_path, "-f", "-p")
     status.write()

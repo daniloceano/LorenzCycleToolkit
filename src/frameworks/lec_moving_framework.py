@@ -801,8 +801,14 @@ def lec_moving(
             run_status, args, results_file, track_file, df, out_track, times, lat,
             track if args.track else None, results_subdirectory, figures_directory, app_logger,
         )
-        if run_status.figures_ok():
+        if run_status.figures_ok() and not run_status.unavailable_products():
             app_logger.info("🎉 All plots generated successfully!")
+        elif run_status.figures_ok():
+            app_logger.info(
+                "🎨 Plots generated; unavailable for these data: "
+                + ", ".join(run_status.unavailable_products())
+                + f" (see {run_status.path})"
+            )
         else:
             app_logger.warning(
                 "⚠️ Plots finished with failures: "
@@ -835,7 +841,9 @@ def generate_moving_figures(
         from ..plots.plot_LEC import (plot_lorenzcycletoolkit,
                                       plot_lorenzcycletoolkit_periods)
         from ..plots.plot_LPS import plot_LPS
-        from ..plots.plot_periods import plot_periods
+        from ..plots.plot_periods import cyclophaser_inputs, plot_periods
+        from ..utils.cyclophaser_compat import CyclophaserCompatibilityError
+        from ..utils.cyclophaser_compat import assess as assess_cyclophaser
         from ..plots.timeseries_terms import plot_timeseries
         from ..plots.timeseries_zeta_and_Z import plot_min_zeta_hgt
         from ..plots.utils import TERM_DETAILS
@@ -871,26 +879,31 @@ def generate_moving_figures(
     )
 
     # Determine periods: if vorticity is already processed, don't filter
-    # the series
-    def determine_periods():
+    # the series. Before calling cyclophaser, check that the series is long
+    # enough for the tested version and options (E0-06): below the minimum
+    # the periods are unavailable and cyclophaser is not called.
+    periods_file = os.path.join(results_subdirectory, "periods.csv")
+    periods_expected = ["periods.csv", "Figures/Periods/periods.png", "Figures/Periods/periods_steps.png"]
+    try:
         processed_vorticity = (
             True if args.zeta and "min_max_zeta_850" in track.columns else False
         )
-        plot_periods(
-            out_track,
-            times,
-            lat,
-            results_subdirectory,
-            figures_directory,
-            app_logger,
-            processed_vorticity=processed_vorticity,
-        )
-
-    periods_file = os.path.join(results_subdirectory, "periods.csv")
-    run_status.run_product(
-        "periods", determine_periods,
-        expected=["periods.csv", "Figures/Periods/periods.png", "Figures/Periods/periods_steps.png"],
-    )
+        vorticity_data, branch, options, _ = cyclophaser_inputs(out_track, lat, processed_vorticity)
+        assessment = assess_cyclophaser(vorticity_data, times, branch, options)
+    except CyclophaserCompatibilityError as exc:
+        run_status.fail_products(["periods"], exc, "cyclophaser compatibility check failed")
+    except Exception as exc:
+        run_status.fail_products(["periods"], exc, "cyclophaser inputs could not be prepared")
+    else:
+        if not assessment.applicable:
+            run_status.mark_unavailable("periods", assessment.reason, expected=periods_expected)
+        else:
+            run_status.run_product(
+                "periods", plot_periods, out_track, times, lat, results_subdirectory,
+                figures_directory, app_logger, processed_vorticity=processed_vorticity,
+                expected=periods_expected,
+            )
+            run_status.add_notes("periods", assessment.notes)
 
     # Daily Lorenz cycle diagrams (do not need the periods)
     run_status.run_product(

@@ -32,7 +32,15 @@ def cli(*args, env=None):
 
 FIXED_RESULTS = Path('LEC_Results/testdata_ERA5_fixed')
 TRACK_RESULTS = Path('LEC_Results/testdata_ERA5_track')
-NO_PERIODS = dict(periods='failed', lec_periods='failed', lps='failed')
+# 5-step ERA5 sample: below the 8 steps of the high-resolution cyclophaser options.
+NO_PERIODS = dict(periods='unavailable', lec_periods='unavailable', lps='unavailable')
+NO_MAPS = dict(domain_maps='failed', track_map='failed', **NO_PERIODS)
+
+
+def no_naturalearth(tmp_path):
+    empty = tmp_path / 'no_naturalearth'
+    empty.mkdir()
+    return {'CARTOPY_DATA_DIR': str(empty), 'XDG_DATA_HOME': str(tmp_path / 'xdg_data')}
 
 
 def test_cli_without_plots_exits_0(lectk_workdir):
@@ -47,22 +55,32 @@ def test_cli_without_plots_exits_0(lectk_workdir):
     assert BLOCKED not in run.stderr
 
 
-def test_cli_partial_output_exits_3(lectk_workdir, naturalearth_cache):
+def test_cli_unavailable_periods_exit_0(lectk_workdir, naturalearth_cache):
+    """Periods unavailable for a 5-step series are not a failure (E0-06)."""
     lectk_workdir(namelist='namelist_ERA5', track='track_testdata_ERA5')
     run = cli('samples/testdata_ERA5.nc', '-t', '-r', '-p')
-    assert run.returncode == 3, run.stderr[-2000:]
-    data = oc.check_run_status(TRACK_RESULTS, 'partial', 3, oc.products('track', **NO_PERIODS))
-    assert data['allow_partial_plots'] is False
-    oc.check_final_messages(TRACK_RESULTS, 'testdata_ERA5', complete=False)
+    assert run.returncode == 0, run.stderr[-2000:]
+    oc.check_run_status(TRACK_RESULTS, 'success', 0, oc.products('track', **NO_PERIODS))
+    oc.check_final_messages(TRACK_RESULTS, 'testdata_ERA5', complete=True)
     assert BLOCKED not in run.stderr
 
 
-def test_cli_allow_partial_plots_exits_0_and_stays_partial(lectk_workdir, naturalearth_cache):
+def test_cli_partial_output_exits_3(lectk_workdir, tmp_path):
     lectk_workdir(namelist='namelist_ERA5', track='track_testdata_ERA5')
-    run = cli('samples/testdata_ERA5.nc', '-t', '-r', '-p', '--allow-partial-plots')
+    run = cli('samples/testdata_ERA5.nc', '-t', '-r', '-p', env=no_naturalearth(tmp_path))
+    assert run.returncode == 3, run.stderr[-2000:]
+    data = oc.check_run_status(TRACK_RESULTS, 'partial', 3, oc.products('track', **NO_MAPS))
+    assert data['allow_partial_plots'] is False
+    oc.check_final_messages(TRACK_RESULTS, 'testdata_ERA5', complete=False)
+    assert BLOCKED in run.stderr  # default mode: Cartopy tries the network, the guard blocks it
+
+
+def test_cli_allow_partial_plots_exits_0_and_stays_partial(lectk_workdir, tmp_path):
+    lectk_workdir(namelist='namelist_ERA5', track='track_testdata_ERA5')
+    run = cli("samples/testdata_ERA5.nc", "-t", "-r", "-p", "--allow-partial-plots", env=no_naturalearth(tmp_path))
     assert run.returncode == 0, run.stderr[-2000:]
-    data = oc.check_run_status(TRACK_RESULTS, 'partial', 0, oc.products('track', **NO_PERIODS))
-    assert data['allow_partial_plots'] is True
+    data = oc.check_run_status(TRACK_RESULTS, 'partial', 0, oc.products('track', **NO_MAPS))
+    assert data["allow_partial_plots"] is True
     oc.check_final_messages(TRACK_RESULTS, 'testdata_ERA5', complete=False)
     log = (TRACK_RESULTS / 'log.testdata_ERA5').read_text(encoding='utf-8')
     assert 'exit status 0 because --allow-partial-plots was given' in log

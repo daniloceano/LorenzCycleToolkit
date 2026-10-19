@@ -145,6 +145,7 @@ class RunStatus:
             "name": name, "kind": kind, "required": required, "status": status,
             "expected": [], "written": [], "missing": [], "reason": None,
             "error": None, "depends_on": [], "consequences": [], "failures": [],
+            "notes": [],
         }
 
     def _relative(self, path):
@@ -271,19 +272,43 @@ class RunStatus:
                            reason=f"{reason}: {type(exc).__name__}: {exc}")
             self._log("error", f"  ❌ {DESCRIPTIONS[name]} not generated: {product['reason']}")
 
-    def dependency_failed(self, name, dependency, expected=()):
-        """Mark a product as failed because the product it needs is not available."""
-        dep = self.products[dependency]
+    def mark_unavailable(self, name, reason, expected=(), notes=()):
+        """
+        Record a requested product as not applicable to these data, for a
+        known and approved reason checked before any call. Not a failure.
+        """
         product = self.products[name]
         product.update(
-            status="failed", depends_on=[dependency],
+            status="unavailable", reason=reason,
+            expected=[self._relative(self.results_directory / e) for e in expected],
+        )
+        product["notes"].extend(notes)
+        self._log("warning", f"  ⚠️ {DESCRIPTIONS[name]} unavailable for these data: {reason}")
+
+    def add_notes(self, name, notes):
+        """Attach caveats to a product (they do not change its state)."""
+        self.products[name]["notes"].extend(n for n in notes if n not in self.products[name]["notes"])
+        for note in notes:
+            self._log("warning", f"  ⚠️ {DESCRIPTIONS[name]}: {note}")
+
+    def dependency_failed(self, name, dependency, expected=()):
+        """
+        Mark a product as not generated because the product it needs is
+        missing: unavailable when that product is unavailable, failed otherwise.
+        """
+        dep = self.products[dependency]
+        product = self.products[name]
+        state = "unavailable" if dep["status"] == "unavailable" else "failed"
+        product.update(
+            status=state, depends_on=[dependency],
             expected=[self._relative(self.results_directory / e) for e in expected],
             reason=f"not generated: requires '{dependency}', which {dep['status']} ({dep['reason']})",
         )
         if name not in dep["consequences"]:
             dep["consequences"].append(name)
-        self._log("error", f"  ❌ {DESCRIPTIONS[name]} not generated: requires "
-                           f"{DESCRIPTIONS[dependency].lower()}, which {dep['status']}")
+        level, mark = ("warning", "⚠️") if state == "unavailable" else ("error", "❌")
+        self._log(level, f"  {mark} {DESCRIPTIONS[name]} not generated: requires "
+                         f"{DESCRIPTIONS[dependency].lower()}, which {dep['status']}")
 
     def succeeded(self, name):
         return self.products[name]["status"] == "success"
@@ -294,6 +319,9 @@ class RunStatus:
 
     def failed_figures(self):
         return [n for n, p in self.products.items() if not p["required"] and p["status"] == "failed"]
+
+    def unavailable_products(self):
+        return [n for n, p in self.products.items() if p["status"] == "unavailable"]
 
     # ------------------------------------------------------------ global state
     @property
@@ -401,7 +429,12 @@ class RunStatus:
     def final_message(self, framework, seconds):
         """Closing log line: the success message only when it is true."""
         if self.status == "success":
-            return f"🎉 Analysis complete! {framework} framework ran in {seconds:.2f} seconds"
+            message = f"🎉 Analysis complete! {framework} framework ran in {seconds:.2f} seconds"
+            unavailable = self.unavailable_products()
+            if unavailable:
+                message += (f" ({len(unavailable)} requested products unavailable for these data: "
+                            f"{', '.join(unavailable)}; see {self.path})")
+            return message
         failed = self.failed_figures()
         requested = [n for n, p in self.products.items()
                      if not p["required"] and p["status"] != "not_requested"]

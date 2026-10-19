@@ -34,12 +34,14 @@ FIXED = (['samples/testdata_ERA5.nc', '-r', '-f', '-p'], 'fixed', 'testdata_ERA5
 TRACK = (['samples/testdata_ERA5.nc', '-r', '-t', '-p'], 'track', 'testdata_ERA5_track',
          dict(namelist='namelist_ERA5', track='track_testdata_ERA5'))
 MAPS = {'fixed': ('box_limits_map',), 'track': ('domain_maps', 'track_map')}
-# The 5-step ERA5 sample is too short for the cyclophaser filter (E0-06).
-NO_PERIODS = dict(periods='failed', lec_periods='failed', lps='failed')
+# The 5-step ERA5 sample is below the 8 steps of the high-resolution
+# cyclophaser options (E0-06): periods and dependent products unavailable.
+NO_PERIODS = dict(periods='unavailable', lec_periods='unavailable', lps='unavailable')
 
 
-def run_case(monkeypatch, lectk_workdir, case):
+def run_case(monkeypatch, lectk_workdir, case, *extra):
     argv, method, stem, inputs = case
+    argv = [*argv, *extra]
     lectk_workdir(**inputs)
     monkeypatch.setattr('sys.argv', ['lorenzcycletoolkit.py', *argv])
     args = create_arg_parser().parse_args(argv)
@@ -73,8 +75,7 @@ def test_scenario_a_complete_cache_maps_generated_offline(monkeypatch, lectk_wor
     results_dir, downloads = run_case(monkeypatch, lectk_workdir, case)
     method = case[1]
     overrides = NO_PERIODS if method == 'track' else {}
-    oc.check_run_status(results_dir, 'partial' if overrides else 'success', 3 if overrides else 0,
-                        oc.products(method, **overrides))
+    oc.check_run_status(results_dir, 'success', 0, oc.products(method, **overrides))
     assert len(network_attempts) == 0
     assert downloads == []
     # Cartopy read the maps from the verified copy only

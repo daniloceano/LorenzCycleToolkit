@@ -89,6 +89,9 @@ def test_fixed_scientific_error_is_not_partial(monkeypatch, lectk_workdir):
 
 
 TRACK_ARGV = ['samples/testdata_ERA5.nc', '-r', '-t', '-p']
+# The 5-step ERA5 sample is below the 8 steps of the high-resolution
+# cyclophaser options: periods and the products that need them unavailable.
+NO_PERIODS = dict(periods='unavailable', lec_periods='unavailable', lps='unavailable')
 
 
 def _broken_map(*args, **kwargs):
@@ -109,7 +112,7 @@ def test_track_map_failure_does_not_stop_the_computation(monkeypatch, lectk_work
 
     data = oc.check_run_status(
         results_dir, 'partial', 3,
-        oc.products('track', domain_maps='failed', periods='failed', lec_periods='failed', lps='failed'),
+        oc.products('track', domain_maps='failed', **NO_PERIODS),
     )
     maps = next(p for p in data['products'] if p['name'] == 'domain_maps')
     assert [f['step'] for f in maps['failures']] == [
@@ -144,3 +147,54 @@ def test_track_scientific_error_is_not_partial(monkeypatch, lectk_workdir, natur
     assert data['scientific']['error']['type'] == 'FloatingPointError'
     assert not [p['name'] for p in data['products'] if p['status'] == 'success']
     assert 'Analysis complete' not in (results_dir / 'log.testdata_ERA5').read_text(encoding='utf-8')
+
+
+def _no_cyclophaser(*args, **kwargs):
+    raise AssertionError("cyclophaser must not be called")
+
+
+def test_unrecognized_cyclophaser_version_fails_periods_without_calling_it(monkeypatch, lectk_workdir,
+                                                                           naturalearth_cache):
+    """The applicability limits are not applied silently to another cyclophaser version."""
+    lectk_workdir(namelist='namelist_ERA5', track='track_testdata_ERA5')
+    monkeypatch.setattr('src.utils.cyclophaser_compat.installed_version', lambda: '1.8.0')
+    monkeypatch.setattr('src.plots.plot_periods.plot_periods', _no_cyclophaser)
+
+    results_dir, status = run_case(monkeypatch, TRACK_ARGV, 'track')
+
+    data = oc.check_run_status(
+        results_dir, 'partial', 3,
+        oc.products('track', periods='failed', lec_periods='failed', lps='failed'),
+    )
+    periods = next(p for p in data['products'] if p['name'] == 'periods')
+    assert periods['error']['type'] == 'CyclophaserCompatibilityError'
+    assert 'cyclophaser 1.8.0 installed' in periods['reason']
+    assert periods['written'] == []
+    oc.assert_matches_reference(results_dir, oc.REFERENCE_DIR / 'ERA5_track', 'testdata_ERA5_track', 'level')
+    oc.check_final_messages(results_dir, 'testdata_ERA5', complete=False)
+
+
+def test_unexpected_cyclophaser_error_above_the_minimum_is_failed(monkeypatch, lectk_workdir, naturalearth_cache):
+    """Above the minimum, any cyclophaser error is a failure, never 'unavailable'."""
+    from src.utils import cyclophaser_compat as cc
+
+    lectk_workdir(namelist='namelist_ERA5', track='track_testdata_ERA5')
+
+    def long_enough(values, times, branch, options):
+        return cc.Assessment(True, 8, 8, branch, 8, notes=[cc.NOT_VALIDATED])
+
+    def broken(*args, **kwargs):
+        raise RuntimeError("unexpected cyclophaser error")
+
+    monkeypatch.setattr('src.utils.cyclophaser_compat.assess', long_enough)
+    monkeypatch.setattr('src.plots.plot_periods.plot_periods', broken)
+
+    results_dir, status = run_case(monkeypatch, TRACK_ARGV, 'track')
+
+    data = oc.check_run_status(
+        results_dir, 'partial', 3,
+        oc.products('track', periods='failed', lec_periods='failed', lps='failed'),
+    )
+    periods = next(p for p in data['products'] if p['name'] == 'periods')
+    assert periods['error'] == {'type': 'RuntimeError', 'message': 'unexpected cyclophaser error'}
+    assert cc.NOT_VALIDATED in periods['notes']

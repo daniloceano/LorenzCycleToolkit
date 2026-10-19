@@ -54,21 +54,25 @@ def test_different_args(monkeypatch, lectk_workdir, naturalearth_cache):
     oc.check_log(results_dir, 'testdata_ERA5')
     oc.assert_matches_reference(results_dir, oc.REFERENCE_DIR / 'ERA5_track', 'testdata_ERA5_track', 'level')
 
-    # Run status: the 5 hourly steps of this sample are too short for the
-    # cyclophaser filter, so the periods, the Lorenz cycle diagrams of the
-    # periods and the Lorenz Phase Space are not generated. This is reported
-    # as a partial run, not as success (the "unavailable" rule for short
-    # series awaits a separate decision, E0-06).
+    # Run status: the 5 hourly steps of this sample are fewer than the 8
+    # needed by the high-resolution cyclophaser options (E0-06, P1), so the
+    # periods are unavailable, cyclophaser is not called, and the Lorenz cycle
+    # diagrams of the periods and the Lorenz Phase Space are unavailable too.
+    # Unavailable is not a failure: the run is complete (exit status 0).
     data = oc.check_run_status(
-        results_dir, 'partial', 3,
-        oc.products('track', periods='failed', lec_periods='failed', lps='failed'),
+        results_dir, 'success', 0,
+        oc.products('track', periods='unavailable', lec_periods='unavailable', lps='unavailable'),
     )
     by_name = {p['name']: p for p in data['products']}
-    # the cyclophaser error itself is recorded (it used to be logged and hidden)
-    assert by_name['periods']['error'] == {
-        'type': 'ValueError', 'message': 'polyorder must be less than window_length.'}
+    assert by_name['periods']['reason'].startswith('5 usable time steps < minimum 8 for the high_res options')
+    assert by_name['periods']['error'] is None and by_name['periods']['written'] == []
     assert by_name['lec_periods']['depends_on'] == ['periods']
     assert by_name['lps']['depends_on'] == ['periods']
     assert by_name['periods']['consequences'] == ['lec_periods', 'lps']
     assert not (results_dir / 'periods.csv').exists()
-    oc.check_final_messages(results_dir, 'testdata_ERA5', complete=False)
+    assert not (results_dir / 'Figures' / 'Periods').exists() or not any((results_dir / 'Figures' / 'Periods').iterdir())
+    oc.check_final_messages(results_dir, 'testdata_ERA5', complete=True)
+    log = (results_dir / 'log.testdata_ERA5').read_text(encoding='utf-8')
+    assert 'Calling Cyclophaser' not in log
+    assert 'All plots generated successfully!' not in log
+    assert '3 requested products unavailable for these data: periods, lec_periods, lps' in log
