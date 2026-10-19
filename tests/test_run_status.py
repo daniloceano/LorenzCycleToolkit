@@ -229,6 +229,7 @@ def test_unavailable_products_are_not_a_failure(tmp_path):
     by_name = {p["name"]: p for p in data["products"]}
     assert [by_name[n]["status"] for n in ("periods", "lec_periods", "lps")] == ["unavailable"] * 3
     assert by_name["lps"]["depends_on"] == ["periods"]
+    assert by_name["lps"]["reason"].startswith("not generated: requires 'periods', which is unavailable (5 usable")
     assert data["summary"]["unavailable"] == 3
     message = status.final_message("Moving", 1.0)
     assert message.startswith("🎉 Analysis complete!")

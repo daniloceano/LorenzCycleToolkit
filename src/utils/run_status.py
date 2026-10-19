@@ -300,16 +300,17 @@ class RunStatus:
         dep = self.products[dependency]
         product = self.products[name]
         state = "unavailable" if dep["status"] == "unavailable" else "failed"
+        which = "failed" if dep["status"] == "failed" else f"is {dep['status']}"
         product.update(
             status=state, depends_on=[dependency],
             expected=[self._relative(self.results_directory / e) for e in expected],
-            reason=f"not generated: requires '{dependency}', which {dep['status']} ({dep['reason']})",
+            reason=f"not generated: requires '{dependency}', which {which} ({dep['reason']})",
         )
         if name not in dep["consequences"]:
             dep["consequences"].append(name)
         level, mark = ("warning", "⚠️") if state == "unavailable" else ("error", "❌")
         self._log(level, f"  {mark} {DESCRIPTIONS[name]} not generated: requires "
-                         f"{DESCRIPTIONS[dependency].lower()}, which {dep['status']}")
+                         f"{DESCRIPTIONS[dependency].lower()}, which {which}")
 
     def succeeded(self, name):
         return self.products[name]["status"] == "success"
