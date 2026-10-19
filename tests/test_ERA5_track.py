@@ -1,5 +1,3 @@
-import shutil
-
 from lorenzcycletoolkit import (create_arg_parser, initialize_logging,
                                 prepare_data, run_lec_analysis,
                                 setup_results_directory)
@@ -7,10 +5,10 @@ from lorenzcycletoolkit import (create_arg_parser, initialize_logging,
 # TO DO: slice nc file for smaller time steps and improve testing
 
 
-def test_different_args(monkeypatch):
-    # Prepare input data
-    shutil.copy('inputs/track_testdata_ERA5', 'inputs/track')
-    shutil.copy('inputs/namelist_ERA5', 'inputs/namelist')
+def test_different_args(monkeypatch, lectk_workdir):
+    # Prepare input data in a private working directory: the
+    # repository inputs/ (user configuration) is never touched.
+    lectk_workdir(namelist='namelist_ERA5', track='track_testdata_ERA5')
 
     test_args = ['lorenzcycletoolkit.py', 'samples/testdata_ERA5.nc', '-r', '-t', '-p', '-v']
     monkeypatch.setattr('sys.argv', test_args)

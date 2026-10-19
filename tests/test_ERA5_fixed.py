@@ -1,15 +1,13 @@
-import shutil
-
 from lorenzcycletoolkit import (create_arg_parser, initialize_logging,
                                 prepare_data, run_lec_analysis,
                                 setup_results_directory)
 
 
-def test_example_args(monkeypatch):
+def test_example_args(monkeypatch, lectk_workdir):
 
-    # Prepare input data
-    shutil.copy('inputs/box_limits_Reg1', 'inputs/box_limits')
-    shutil.copy('inputs/namelist_ERA5', 'inputs/namelist')
+    # Prepare input data in a private working directory: the
+    # repository inputs/ (user configuration) is never touched.
+    lectk_workdir(namelist='namelist_ERA5', box_limits='box_limits_Reg1')
 
     test_args = ['lorenzcycletoolkit.py', 'samples/testdata_ERA5.nc', '-r', '-f', '-p', '-v']
     monkeypatch.setattr('sys.argv', test_args)
