@@ -144,3 +144,31 @@ def test_value_within_registered_tolerance_is_accepted(fixed_copy):
         original = float(list(csv.reader(handle))[1][3])
     _edit_cell(path, 1, 3, repr(original + 1e-7))
     oc.assert_matches_reference(fixed_copy, FIXED, FIXED_STEM, "level")
+
+
+def _write_log(directory, lines):
+    path = directory / "log.testdata_ERA5"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+ARGS_LINE = "INFO - Command line arguments: Namespace(infile='{}', residuals=True)"
+
+
+def test_isolated_log_is_accepted(tmp_path):
+    _write_log(tmp_path, ["INFO - Starting LEC analysis", ARGS_LINE.format("samples/testdata_ERA5.nc")])
+    oc.check_log(tmp_path, "testdata_ERA5")
+
+
+def test_log_of_another_run_is_detected(tmp_path):
+    _write_log(tmp_path, [
+        "INFO - Starting LEC analysis", ARGS_LINE.format("samples/testdata_ERA5.nc"),
+        "INFO - Starting LEC analysis", ARGS_LINE.format("samples/testdata_NCEP-R2.nc"),
+    ])
+    with pytest.raises(AssertionError, match="2 runs logged"):
+        oc.check_log(tmp_path, "testdata_ERA5")
+
+
+def test_missing_log_is_detected(tmp_path):
+    with pytest.raises(AssertionError, match="log file is missing"):
+        oc.check_log(tmp_path, "testdata_ERA5")

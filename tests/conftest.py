@@ -10,6 +10,7 @@ were running.
 """
 
 import hashlib
+import logging
 import os
 import shutil
 from pathlib import Path
@@ -55,6 +56,22 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         terminalreporter.section("protected repository files changed", sep="=", red=True)
         for rel in changed:
             terminalreporter.write_line(f"modified, created or removed during the tests: {rel}")
+
+
+@pytest.fixture(autouse=True)
+def _close_lectk_log_handlers():
+    """
+    Close the log handlers of the toolkit logger after every test.
+
+    A run configures the "lorenzcycletoolkit" logger to write to its own log
+    file; without this, messages emitted by later tests through the same
+    logger would be appended to the log file of the last integration case.
+    """
+    yield
+    logger = logging.getLogger("lorenzcycletoolkit")
+    for handler in list(logger.handlers):
+        logger.removeHandler(handler)
+        handler.close()
 
 
 @pytest.fixture

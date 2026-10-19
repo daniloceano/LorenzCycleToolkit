@@ -53,6 +53,13 @@ def initialize_logging(results_subdirectory, args):
     # Prevent the logger from propagating messages to the root logger
     app_logger.propagate = False
 
+    # Close and remove the handlers of a previous run in the same process, so
+    # each run writes only to its own log file and console lines are not
+    # repeated.
+    for handler in list(app_logger.handlers):
+        app_logger.removeHandler(handler)
+        handler.close()
+
     # Create file handler for saving logs
     log_file_name = f'log.{os.path.basename(args.infile).split(".")[0]}'
     log_file = os.path.join(results_subdirectory, log_file_name)

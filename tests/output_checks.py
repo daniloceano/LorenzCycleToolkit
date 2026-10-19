@@ -168,10 +168,22 @@ def check_trackfile(results_dir, stem, expected_times):
 
 
 def check_log(results_dir, infile_stem):
-    """The run log exists and is not empty."""
+    """
+    The run log exists, is not empty and holds the messages of this run only.
+
+    The integration tests log "Starting LEC analysis" and the parsed arguments
+    once per run; a second start, or arguments naming another input file,
+    mean that messages of another run were written to this log.
+    """
     path = Path(results_dir) / f"log.{infile_stem}"
     assert path.is_file(), f"log file is missing: {path}"
     assert path.stat().st_size > 0, f"log file is empty: {path}"
+    lines = path.read_text(encoding="utf-8").splitlines()
+    starts = sum("Starting LEC analysis" in line for line in lines)
+    assert starts == 1, f"{path.name}: {starts} runs logged, expected 1"
+    infiles = [line.split("infile='", 1)[1].split("'", 1)[0] for line in lines if "infile='" in line]
+    own = f"samples/{infile_stem}.nc"
+    assert infiles == [own], f"{path.name}: arguments of other runs logged: {infiles}"
     return path
 
 
