@@ -29,6 +29,7 @@ from ..analysis.generation_and_dissipation_terms import \
 from ..analysis.mass_continuity import MassContinuity
 from ..utils.box_data import BoxData
 from ..utils.calc_budget_and_residual import calc_budget_diff, calc_residuals
+from ..utils.run_status import RunStatus
 from ..utils.select_area import draw_box_map, plot_domain_attributes
 from ..utils.tools import find_extremum_coordinates, initialize_logging
 
@@ -570,6 +571,7 @@ def lec_moving(
     results_subdirectory_vertical_levels: str,
     app_logger: logging.Logger,
     args: argparse.Namespace,
+    run_status: RunStatus = None,
 ):
     """
     Computes the Lorenz Energy Cycle using a moving (semi-lagrangian) framework.
@@ -581,11 +583,14 @@ def lec_moving(
         results_subdirectory (str): Directory for saving results.
         figures_directory (str): Directory for saving figures.
         args (argparse.Namespace): Arguments provided to the script.
+        run_status (RunStatus): Status record of the run (outputs and figures).
 
     Returns:
         None
     """
     app_logger.info("🌀 Computing energetics using moving framework...")
+    if run_status is None:
+        run_status = RunStatus(args, results_subdirectory, app_logger)
 
     # Indexers
     LonIndexer, LatIndexer, TimeName, VerticalCoordIndexer = (
@@ -598,6 +603,7 @@ def lec_moving(
     PressureData = data[VerticalCoordIndexer]
 
     # Create csv files for storing vertical results
+    level_files = []
     for term in [
         "Az",
         "Ae",
@@ -628,6 +634,7 @@ def lec_moving(
         file_name = term + "_" + VerticalCoordIndexer + ".csv"
         file_path = os.path.join(results_subdirectory_vertical_levels, file_name)
         df.to_csv(file_path, index=None)
+        level_files.append(file_path)
         app_logger.info(f"{file_path} created (but still empty)")
 
     # Get the time array
@@ -762,6 +769,16 @@ def lec_moving(
     # Finalize and process results
     results_file, df = finalize_results(
         times, terms_dict, args, results_subdirectory, out_track, app_logger
+    )
+    method = "track" if args.track else "choose"
+    infile_name = os.path.basename(args.infile).split(".nc")[0]
+    track_file = os.path.join(results_subdirectory, f"{infile_name}_{method}_trackfile")
+    run_status.record_scientific_outputs(
+        {
+            "results_csv": [results_file],
+            "trackfile": [track_file],
+            "vertical_level_csvs": level_files,
+        }
     )
 
     if args.cdsapi:

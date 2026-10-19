@@ -28,6 +28,7 @@ from ..utils.box_data import BoxData
 from ..utils.calc_budget_and_residual import calc_budget_diff, calc_residuals
 from ..utils.input_files import read_box_limits
 from ..utils.longitude import canonicalize_box
+from ..utils.run_status import RunStatus
 
 
 def lec_fixed(
@@ -37,6 +38,7 @@ def lec_fixed(
     results_subdirectory_vertical_levels: str,
     app_logger: logging.Logger,
     args: argparse.Namespace,
+    run_status: RunStatus = None,
 ):
     """
     Computes the Lorenz Energy Cycle (LEC) using a fixed framework.
@@ -48,6 +50,7 @@ def lec_fixed(
         results_subdirectory_vertical_levels (str): Directory path to save the vertical level results.
         args (argparse.Namespace): Arguments provided to the script, including configurations
                                    for the LEC computation.
+        run_status (RunStatus): Status record of the run (outputs and figures).
 
     Raises:
         ValueError: If the bounding box limits are invalid.
@@ -58,6 +61,8 @@ def lec_fixed(
         It also triggers plotting scripts if specified in the arguments.
     """
     logging.info("📊 Computing energetics using fixed framework...")
+    if run_status is None:
+        run_status = RunStatus(args, results_subdirectory, app_logger)
 
     box_limits_file, min_lon, max_lon, min_lat, max_lat = read_box_limits(
         args.box_limits, app_logger
@@ -135,6 +140,7 @@ def lec_fixed(
         f"🧾 Vertical-level CSVs will carry {len(used_levels)} levels: "
         f"{used_levels[0]:.0f} Pa to {used_levels[-1]:.0f} Pa"
     )
+    level_files = []
     for term in [
         "Az", "Ae", "Kz", "Ke", "Ge", "Gz",
         "Cz", "Cz_1", "Cz_2", "Ca", "Ca_1", "Ca_2",
@@ -146,6 +152,7 @@ def lec_fixed(
             results_subdirectory_vertical_levels, f"{term}_{VerticalCoordIndexer}.csv"
         )
         pd.DataFrame(columns=columns).to_csv(output_path, index=None)
+        level_files.append(output_path)
 
     try:
         ec_obj = EnergyContents(box_obj, "fixed", app_logger)
@@ -254,6 +261,9 @@ def lec_fixed(
     results_file = Path(results_subdirectory, f"{results_filename}.csv")
     df.to_csv(results_file)
     app_logger.info(f"💾 Results saved to {results_file}")
+    run_status.record_scientific_outputs(
+        {"results_csv": [results_file], "vertical_level_csvs": level_files}
+    )
 
     if args.plots:
         from ..plots.map_box_limits import plot_box_limits
