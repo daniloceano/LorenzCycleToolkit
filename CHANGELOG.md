@@ -16,6 +16,12 @@ All notable changes to this project will be documented in this file.
   read `inputs/track` and started a CDS API download. Explicit `--cdsapi` runs
   are unchanged.
 
+### Tests
+
+- **Integration tests no longer touch `inputs/`** (E0-10): each test runs in a
+  private temporary directory with copies of the templates it needs; the
+  session fails if any file under `inputs/` or `samples/` changes.
+
 ## [2.0.0] - 2026-08-18
 
 Numerical results change in this release. Diagnostics produced with earlier
