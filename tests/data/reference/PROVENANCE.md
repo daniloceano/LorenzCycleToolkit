@@ -27,6 +27,12 @@ rates 1e-9 W m-2; column M 1e-10 kg m-2 s-1; per-level M and vorticity
 1e-12 s-1; coordinates 1e-9 degree with rtol = 0; other values 1e-12.
 Times, level headers and text cells must be identical.
 
+`MANIFEST.tsv` lists every reference file with its case, class, units,
+relation to the column integral, source run and path in the audit, sha256,
+code commit and command. These 49 files are regression fixtures for the
+tests; the complete audit baseline (154 files, including the moving-track
+case and the run logs) stays in the audit area and is not replaced.
+
 No approved numerical reference exists for the NCEP-R2 cases; their
 outputs are checked structurally only.
 
