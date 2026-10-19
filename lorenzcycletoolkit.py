@@ -29,7 +29,6 @@ Contact: danilo.oceano@gmail.com
 
 import argparse
 import os
-import sys
 import time
 import warnings
 
@@ -215,29 +214,10 @@ def main():
         None.
     """
 
-    # Parse command line arguments
-    if len(sys.argv) > 1:
-        parser = create_arg_parser()
-        args = parser.parse_args()
-
-    else:
-        # Example usage for debugging
-        parser = create_arg_parser()
-        print(
-            "----------------------------------------------------------------------------"
-        )
-        print("WARNING: USING EXAMPLE ARGUMENTS")
-        import shutil
-
-        # shutil.copy("inputs/namelist_NCEP-R2", "inputs/namelist")
-        # shutil.copy("inputs/track_testdata_NCEP-R2", "inputs/track")
-        # args = parser.parse_args(
-        #     ["samples/testdata_NCEP-R2.nc", "-t", "-r", "-p", "-v"]
-        # )
-        args = parser.parse_args(['test.nc', '-t', '-r', '-p', '-v', '--cdsapi'])
-        print(
-            "----------------------------------------------------------------------------"
-        )
+    # Parse command line arguments. With no arguments argparse prints the
+    # usage and exits with status 2; nothing is downloaded or written.
+    parser = create_arg_parser()
+    args = parser.parse_args()
 
     # Set method
     if args.fixed:
