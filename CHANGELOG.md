@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- **Log handlers** (E0-09): `initialize_logging` now closes and removes the
+  handlers of a previous run in the same Python process, so each run writes
+  only to its own `log.<input>` file and console lines are no longer repeated.
+  A single command-line run is unaffected.
 - **Running without arguments** now prints the usage and exits with status 2
   (E0-11). It previously replaced the empty command line with built-in example
   arguments (`test.nc -t -r -p -v --cdsapi`), which created a results directory,
