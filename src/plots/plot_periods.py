@@ -38,6 +38,10 @@ def plot_periods(
 
     Returns:
         The result of the determine_periods function.
+
+    Raises:
+        Any exception of cyclophaser, after logging it, so that the caller
+        records the periods as not determined instead of a silent success.
     """
     from cyclophaser import determine_periods
 
@@ -109,4 +113,4 @@ def plot_periods(
         determine_periods(vorticity_data, x=times, **periods_args)
     except Exception as e:
         app_logger.error(f"Error calling cyclophaser: {e}")
-        return
+        raise

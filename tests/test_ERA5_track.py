@@ -64,6 +64,9 @@ def test_different_args(monkeypatch, lectk_workdir):
         oc.products('track', periods='failed', lec_periods='failed', lps='failed'),
     )
     by_name = {p['name']: p for p in data['products']}
+    # the cyclophaser error itself is recorded (it used to be logged and hidden)
+    assert by_name['periods']['error'] == {
+        'type': 'ValueError', 'message': 'polyorder must be less than window_length.'}
     assert by_name['lec_periods']['depends_on'] == ['periods']
     assert by_name['lps']['depends_on'] == ['periods']
     assert by_name['periods']['consequences'] == ['lec_periods', 'lps']
