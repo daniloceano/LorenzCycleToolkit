@@ -95,7 +95,7 @@ def _broken_map(*args, **kwargs):
     raise OSError("injected cartographic failure")
 
 
-def test_track_map_failure_does_not_stop_the_computation(monkeypatch, lectk_workdir):
+def test_track_map_failure_does_not_stop_the_computation(monkeypatch, lectk_workdir, naturalearth_cache):
     """A failing map inside the time loop used to abort the run before the CSV (E0-05)."""
     lectk_workdir(namelist='namelist_ERA5', track='track_testdata_ERA5')
     monkeypatch.setattr('src.frameworks.lec_moving_framework.plot_domain_attributes', _broken_map)
@@ -122,7 +122,7 @@ def test_track_map_failure_does_not_stop_the_computation(monkeypatch, lectk_work
 
 
 @pytest.mark.parametrize('with_map_failure', [False, True], ids=['maps_ok', 'maps_failing'])
-def test_track_scientific_error_is_not_partial(monkeypatch, lectk_workdir, with_map_failure):
+def test_track_scientific_error_is_not_partial(monkeypatch, lectk_workdir, naturalearth_cache, with_map_failure):
     """An error of the computation is fatal even when a map failure was recorded before it."""
     lectk_workdir(namelist='namelist_ERA5', track='track_testdata_ERA5')
 

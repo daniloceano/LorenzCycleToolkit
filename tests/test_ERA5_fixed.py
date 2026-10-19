@@ -7,7 +7,7 @@ from lorenzcycletoolkit import (create_arg_parser, initialize_logging,
 from tests import output_checks as oc
 
 
-def test_example_args(monkeypatch, lectk_workdir):
+def test_example_args(monkeypatch, lectk_workdir, naturalearth_cache):
 
     # Prepare input data in a private working directory: the
     # repository inputs/ (user configuration) is never touched.

@@ -9,7 +9,7 @@ from tests import output_checks as oc
 # TO DO: slice nc file for smaller time steps and improve testing
 
 
-def test_different_args(monkeypatch, lectk_workdir):
+def test_different_args(monkeypatch, lectk_workdir, naturalearth_cache):
     # Prepare input data in a private working directory: the
     # repository inputs/ (user configuration) is never touched.
     lectk_workdir(namelist='namelist_ERA5', track='track_testdata_ERA5')

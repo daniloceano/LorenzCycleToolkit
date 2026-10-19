@@ -8,18 +8,150 @@ overwritten by the suite.  A session check also fails the run if anything
 under ``inputs/`` or ``samples/`` of the repository changed while the tests
 were running, and, after all tests have run, if the log file of any run
 holds messages of another run or of a later test.
+
+The suite runs offline: name resolution and connections are blocked for
+the whole session and every attempt is recorded. An attempt from a test
+not marked ``expect_network_attempts`` fails the run. The tests that draw
+maps use a verified Natural Earth copy (``naturalearth_cache``).
 """
 
 import hashlib
 import logging
 import os
 import shutil
+import socket
 from pathlib import Path
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PROTECTED_DIRS = ("inputs", "samples")
+NATURALEARTH_MANIFEST = REPO_ROOT / "tests" / "data" / "naturalearth_manifest.tsv"
+
+# ------------------------------------------------------------------ network
+NETWORK_ATTEMPTS = []  # (test node id, call, target)
+_CURRENT_TEST = {"nodeid": None}
+_SOCKET_FUNCTIONS = (
+    (socket.socket, "connect"),
+    (socket.socket, "connect_ex"),
+    (socket, "getaddrinfo"),
+    (socket, "create_connection"),
+)
+
+
+class NetworkAccessBlocked(OSError):
+    """Raised by the session network guard of the test suite."""
+
+
+def _blocked(call):
+    def guard(*args, **kwargs):
+        target = args[1] if call.startswith("connect") and len(args) > 1 else (args[0] if args else None)
+        NETWORK_ATTEMPTS.append((_CURRENT_TEST["nodeid"], call, repr(target)))
+        raise NetworkAccessBlocked(f"network access blocked by the test suite: {call}({target!r})")
+    return guard
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "expect_network_attempts: the test checks that an attempt to reach the network is blocked",
+    )
+    config._lectk_socket_saved = [(owner, name, getattr(owner, name)) for owner, name in _SOCKET_FUNCTIONS]
+    for owner, name in _SOCKET_FUNCTIONS:
+        setattr(owner, name, _blocked(name))
+
+
+def pytest_unconfigure(config):
+    for owner, name, original in getattr(config, "_lectk_socket_saved", []):
+        setattr(owner, name, original)
+
+
+def pytest_collection_modifyitems(session, config, items):
+    config._lectk_network_expected = {
+        item.nodeid for item in items if item.get_closest_marker("expect_network_attempts")
+    }
+
+
+@pytest.fixture(autouse=True)
+def _network_guard_scope(request):
+    _CURRENT_TEST["nodeid"] = request.node.nodeid
+    yield
+    _CURRENT_TEST["nodeid"] = None
+
+
+@pytest.fixture
+def network_attempts(request):
+    """The network attempts blocked during the current test."""
+    class _View:
+        def __iter__(self):
+            return iter([a for a in NETWORK_ATTEMPTS if a[0] == request.node.nodeid])
+
+        def __len__(self):
+            return len(list(iter(self)))
+
+    return _View()
+
+
+# ------------------------------------------------------------ Natural Earth
+@pytest.fixture(scope="session")
+def naturalearth_cache():
+    """The verified Natural Earth copy named by CARTOPY_DATA_DIR (explicit error if absent)."""
+    from tests.naturalearth import cache_from_environment
+
+    return cache_from_environment(NATURALEARTH_MANIFEST)
+
+
+def _fresh_cartopy(monkeypatch, pre_existing, data_dir):
+    """Point Cartopy to the given directories and forget geometries read before."""
+    import cartopy
+    import cartopy.feature
+
+    monkeypatch.setitem(cartopy.config, "pre_existing_data_dir", Path(pre_existing))
+    monkeypatch.setitem(cartopy.config, "data_dir", Path(data_dir))
+    saved = dict(cartopy.feature._NATURAL_EARTH_GEOM_CACHE)
+    cartopy.feature._NATURAL_EARTH_GEOM_CACHE.clear()
+    return saved
+
+
+@pytest.fixture
+def naturalearth_reads(naturalearth_cache, monkeypatch, tmp_path):
+    """
+    Cartopy reads Natural Earth only from the verified copy (no download
+    directory content, no geometries kept from earlier tests); returns the
+    (resolution, category, name) sets requested during the test.
+    """
+    import cartopy.feature
+    import cartopy.io.shapereader as shapereader
+
+    saved = _fresh_cartopy(monkeypatch, naturalearth_cache, tmp_path / "cartopy_download_dir")
+    requested = []
+    original = shapereader.natural_earth
+
+    def spy(resolution="110m", category="physical", name="coastline"):
+        requested.append((resolution, category, name))
+        return original(resolution=resolution, category=category, name=name)
+
+    monkeypatch.setattr(shapereader, "natural_earth", spy)
+    yield requested
+    cartopy.feature._NATURAL_EARTH_GEOM_CACHE.clear()
+    cartopy.feature._NATURAL_EARTH_GEOM_CACHE.update(saved)
+
+
+@pytest.fixture
+def naturalearth_absent(monkeypatch, tmp_path):
+    """
+    No Natural Earth data available: empty pre-existing and download
+    directories and no geometries kept from earlier tests. Any download
+    attempt meets the session network guard.
+    """
+    import cartopy.feature
+
+    empty = tmp_path / "naturalearth_absent"
+    empty.mkdir()
+    saved = _fresh_cartopy(monkeypatch, empty, tmp_path / "cartopy_download_dir")
+    yield empty
+    cartopy.feature._NATURAL_EARTH_GEOM_CACHE.clear()
+    cartopy.feature._NATURAL_EARTH_GEOM_CACHE.update(saved)
 
 
 def _digest_protected(root):
@@ -90,6 +222,11 @@ def pytest_sessionfinish(session, exitstatus):
     if problems:
         session.config._lectk_log_problems = problems
         session.exitstatus = pytest.ExitCode.TESTS_FAILED
+    expected = getattr(session.config, "_lectk_network_expected", set())
+    unexpected = [a for a in NETWORK_ATTEMPTS if a[0] not in expected]
+    if unexpected:
+        session.config._lectk_network_unexpected = unexpected
+        session.exitstatus = pytest.ExitCode.TESTS_FAILED
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
@@ -103,6 +240,15 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         terminalreporter.section("run logs not isolated", sep="=", red=True)
         for problem in problems:
             terminalreporter.write_line(problem)
+    unexpected = getattr(config, "_lectk_network_unexpected", None)
+    if unexpected:
+        terminalreporter.section("network access attempted", sep="=", red=True)
+        for nodeid, call, target in unexpected:
+            terminalreporter.write_line(f"{nodeid or '(outside a test)'}: {call}({target}) blocked")
+    terminalreporter.write_line(
+        f"network attempts blocked by the session guard: {len(NETWORK_ATTEMPTS)} "
+        f"({len(unexpected or [])} unexpected)"
+    )
 
 
 @pytest.fixture(autouse=True)
