@@ -50,3 +50,7 @@ def test_example_args(monkeypatch, lectk_workdir):
     oc.check_vertical_levels(results_dir, 'level', 'time', times, 'fixed')
     oc.check_log(results_dir, 'testdata_ERA5')
     oc.assert_matches_reference(results_dir, oc.REFERENCE_DIR / 'ERA5_fixed', 'testdata_ERA5_fixed', 'level')
+
+    # Run status (E0-07): every requested figure generated, success declared.
+    oc.check_run_status(results_dir, 'success', 0, oc.products('fixed'))
+    oc.check_final_messages(results_dir, 'testdata_ERA5', complete=True)

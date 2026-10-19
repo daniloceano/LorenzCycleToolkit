@@ -266,46 +266,56 @@ def lec_fixed(
     )
 
     if args.plots:
-        from ..plots.map_box_limits import plot_box_limits
-        from ..plots.plot_boxplot import boxplot_terms
-        from ..plots.plot_hovmoller import plot_hovmoller
-        from ..plots.plot_LEC import plot_lorenzcycletoolkit
-        from ..plots.timeseries_terms import plot_timeseries
-
         app_logger.info("🎨 Generating plots...")
         figures_directory = os.path.join(results_subdirectory, "Figures")
 
-        # Plot time series
+        # Each figure is recorded in run_status.json: it counts as generated
+        # only if the call returns and writes its files. A failure is logged
+        # and the remaining figures are still attempted (E0-07).
         try:
-            plot_timeseries(results_file, figures_directory, app_logger)
-            app_logger.info("  ✅ Time series plot generated")
-        except Exception as e:
-            app_logger.error(f"  ❌ Error generating time series plot: {e}")
+            from ..plots.map_box_limits import plot_box_limits
+            from ..plots.plot_boxplot import boxplot_terms
+            from ..plots.plot_hovmoller import plot_hovmoller
+            from ..plots.plot_LEC import plot_lorenzcycletoolkit
+            from ..plots.timeseries_terms import plot_timeseries
+            from ..plots.utils import TERM_DETAILS
+        except Exception as exc:
+            run_status.fail_products(
+                ["timeseries", "box_limits_map", "boxplots", "hovmoller", "lec_cycle"],
+                exc, "plotting modules could not be imported",
+            )
+        else:
+            run_status.run_product(
+                "timeseries", plot_timeseries, results_file, figures_directory, app_logger,
+                expected=[f"Figures/timeseries/timeseires_{k}.png" for k in TERM_DETAILS],
+            )
+            run_status.run_product(
+                "box_limits_map", plot_box_limits, box_limits_file, figures_directory, app_logger,
+                expected=["Figures/box_limits.png"],
+            )
+            run_status.run_product(
+                "boxplots", boxplot_terms, results_file, results_subdirectory, figures_directory, app_logger,
+                expected=[
+                    "Figures/boxplots/boxplot_terms_energy.png",
+                    "Figures/boxplots/boxplot_vertical_levels_energy.png",
+                    "Figures/boxplots/vertical_timeseries_energy.png",
+                ],
+            )
+            run_status.run_product(
+                "hovmoller", plot_hovmoller, results_file, figures_directory, app_logger,
+                expected=["Figures/hovmollers/hovmoller_energy.png"],
+            )
+            run_status.run_product(
+                "lec_cycle", plot_lorenzcycletoolkit, results_file, figures_directory, app_logger=app_logger,
+                expected=lec_daily_figures(df.index),
+            )
 
-        # Plot box limits
-        try:
-            plot_box_limits(box_limits_file, figures_directory, app_logger)
-            app_logger.info("  ✅ Box limits plot generated")
-        except Exception as e:
-            app_logger.error(f"  ❌ Error generating box limits plot: {e}")
 
-        # Plot boxplot terms
-        try:
-            boxplot_terms(results_file, results_subdirectory, figures_directory, app_logger)
-            app_logger.info("  ✅ Boxplot terms generated")
-        except Exception as e:
-            app_logger.error(f"  ❌ Error generating boxplot terms: {e}")
-
-        # Plot Hovmöller diagram
-        try:
-            plot_hovmoller(results_file, figures_directory, app_logger)
-            app_logger.info("  ✅ Hovmöller plot generated")
-        except Exception as e:
-            app_logger.error(f"  ❌ Error generating Hovmöller plot: {e}")
-
-        # Plot Lorenz cycle toolkit
-        try:
-            plot_lorenzcycletoolkit(results_file, figures_directory, app_logger=app_logger)
-            app_logger.info("  ✅ Lorenz cycle plot generated")
-        except Exception as e:
-            app_logger.error(f"  ❌ Error generating Lorenz cycle plot: {e}")
+def lec_daily_figures(index):
+    """
+    Files written by plot_lorenzcycletoolkit without periods: the example
+    diagram and one diagram per calendar day spanned by the results.
+    """
+    times = pd.DatetimeIndex(index)
+    days = pd.date_range(times.min().normalize(), times.max().normalize(), freq="1D")
+    return ["Figures/LEC/LEC_example.png"] + [f"Figures/LEC/LEC_{d:%Y-%m-%d}.png" for d in days]

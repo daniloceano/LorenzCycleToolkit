@@ -49,3 +49,7 @@ def test_example_args(monkeypatch, lectk_workdir):
     oc.check_main_results(results_dir, 'testdata_NCEP-R2_fixed', times)
     oc.check_vertical_levels(results_dir, 'lv_ISBL3', 'initial_time0_hours', times, 'fixed')
     oc.check_log(results_dir, 'testdata_NCEP-R2')
+
+    # Run status (E0-07): every requested figure generated, success declared.
+    oc.check_run_status(results_dir, 'success', 0, oc.products('fixed'))
+    oc.check_final_messages(results_dir, 'testdata_NCEP-R2', complete=True)

@@ -11,6 +11,7 @@ are compared exactly as written, without another parser in between.
 """
 
 import csv
+import json
 import math
 from datetime import datetime
 from pathlib import Path
@@ -185,6 +186,82 @@ def check_log(results_dir, infile_stem):
     own = f"samples/{infile_stem}.nc"
     assert infiles == [own], f"{path.name}: arguments of other runs logged: {infiles}"
     return path
+
+
+# Products of run_status.json (pre-registered inventory, Onda 1B): required
+# scientific outputs and optional figures/diagnostics requested with --plots.
+SCIENTIFIC_PRODUCTS = {
+    "fixed": ("results_csv", "vertical_level_csvs"),
+    "track": ("results_csv", "vertical_level_csvs", "trackfile"),
+}
+FIGURE_PRODUCTS = {
+    "fixed": ("timeseries", "box_limits_map", "boxplots", "hovmoller", "lec_cycle"),
+    "track": ("domain_maps", "track_map", "zeta_hgt_timeseries", "timeseries", "hovmoller",
+              "boxplots", "periods", "lec_cycle", "lec_periods", "lps"),
+}
+
+
+def products(method, figures="success", **overrides):
+    """Expected state of every product: scientific outputs succeed, figures as given."""
+    states = {name: "success" for name in SCIENTIFIC_PRODUCTS[method]}
+    states.update({name: figures for name in FIGURE_PRODUCTS[method]})
+    states.update(overrides)
+    return states
+
+
+def load_run_status(results_dir):
+    """Return the parsed run_status.json of a run."""
+    path = Path(results_dir) / "run_status.json"
+    assert path.is_file(), f"run_status.json is missing in {results_dir}"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def check_run_status(results_dir, status, exit_code, products):
+    """
+    run_status.json agrees with the expected run and with the files on disk.
+
+    ``products`` maps every product name to its expected state. A product in
+    "success" must list expected files, all of them written by this run and
+    present; a "failed" one must give a reason and must not list as written
+    any file it is missing.
+    """
+    data = load_run_status(results_dir)
+    assert data["schema_version"] == 1, f"schema_version {data['schema_version']}"
+    assert data["status"] == status, f"run status {data['status']!r}, expected {status!r}"
+    assert data["exit_code"] == exit_code, f"exit_code {data['exit_code']!r}, expected {exit_code!r}"
+    by_name = {p["name"]: p for p in data["products"]}
+    assert set(by_name) == set(products), f"products {sorted(by_name)}, expected {sorted(products)}"
+    for name, expected in products.items():
+        product = by_name[name]
+        assert product["status"] == expected, (
+            f"{name}: status {product['status']!r}, expected {expected!r} (reason: {product['reason']})"
+        )
+        if expected == "success":
+            assert product["expected"], f"{name}: no expected files declared"
+            for rel in product["expected"]:
+                assert rel in product["written"], f"{name}: {rel} declared but not written by this run"
+                assert (Path(results_dir) / rel).is_file(), f"{name}: {rel} declared and missing"
+        if expected == "failed":
+            assert product["reason"], f"{name}: failed without a reason"
+            assert not set(product["missing"]) & set(product["written"]), f"{name}: missing files listed as written"
+    for state, count in data["summary"].items():
+        assert count == sum(p["status"] == state for p in data["products"]), f"summary count of {state!r}"
+    return data
+
+
+def check_final_messages(results_dir, infile_stem, complete):
+    """
+    The closing messages of the log tell the truth: the success messages only
+    when every requested product was generated, the PARTIAL message otherwise.
+    """
+    text = (Path(results_dir) / f"log.{infile_stem}").read_text(encoding="utf-8")
+    if complete:
+        assert "🎉 Analysis complete!" in text, "success message missing"
+        assert "PARTIAL" not in text, "PARTIAL message in a complete run"
+    else:
+        assert "Analysis complete with PARTIAL output" in text, "PARTIAL message missing"
+        assert "🎉 Analysis complete!" not in text, "success message in a partial run"
+        assert "All plots generated successfully!" not in text, "plots declared successful in a partial run"
 
 
 def _tolerance(kind, column_name):
