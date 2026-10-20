@@ -130,8 +130,9 @@ def boxplot_vertical(dict_vertical, figures_subdirectory, app_logger):
             if i % 2 == 0:
                 ax.set_ylabel(label, fontsize=18)
 
-            # Assuming second column onward are levels
-            levs = dict_vertical[term].columns[1:]
+            # get_data_vertical_levels reads the time column as the index, so
+            # every column is a pressure level.
+            levs = dict_vertical[term].columns
             for j, lev in enumerate(levs):
                 bplot = ax.boxplot(
                     dict_vertical[term][lev].values,
