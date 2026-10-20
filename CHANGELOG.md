@@ -18,6 +18,12 @@ All notable changes to this project will be documented in this file.
 - **`--allow-partial-plots`** (DEC-02): exit with status 0 when the
   computation is complete but some requested figures failed; the run is still
   reported as partial.
+- **`src/utils/output_spec.py`** (E0-14): `VERTICAL_PROFILE_SPEC` records,
+  for each of the 23 per-level CSV files, the quantity written, its units,
+  the column term and the factor in
+  `column = factor * integral(profile dp)`; `SPLIT_TERM_RELATIONS` records how
+  the split terms combine. The computation does not read it; no value
+  changes. `Dz`/`De` are listed apart as not verified.
 
 ### Changed
 
@@ -62,6 +68,38 @@ All notable changes to this project will be documented in this file.
   arguments (`test.nc -t -r -p -v --cdsapi`), which created a results directory,
   read `inputs/track` and started a CDS API download. Explicit `--cdsapi` runs
   are unchanged.
+- **Vertical-level figures: units of each term** (E0-15, N-07; figures only,
+  no CSV changes). The boxplots by level, the boxplots by time
+  (`vertical_timeseries_*.png`) and the Hovmöller diagrams labelled every
+  panel with the units of the column values ("Energy (J·m⁻²)",
+  "Conversion (W·m⁻²)", "Generation/Dissipation (W·m⁻²)"). The per-level
+  files hold other quantities, and each panel and colour bar is now labelled
+  with the quantity and units of its own term: J m⁻² Pa⁻¹ (Az, Ae),
+  m² s⁻² (Kz, Ke: ⟨[u]²+[v]²⟩ and ⟨u*²+v*²⟩, twice the kinetic energy per
+  unit mass), W m⁻² Pa⁻¹ (Cz, Ca, Ce, Gz, Ge) and W kg⁻¹ (Ck, g times its
+  value per unit pressure). The plotted values are unchanged. Pressure is
+  shown in hPa on the axis labels and ticks; the files keep Pa. A note under
+  each figure says when panels have different units and that the boxes are
+  unweighted statistics. The Hovmöller figures are wider.
+- **Boxplots by level include the first pressure level** (E0-16): the level
+  of lowest pressure (700 hPa in the samples) was dropped from every
+  `boxplot_vertical_levels_*.png`.
+- **Figures produced by earlier versions**: up to and including 2.0.0, the
+  vertical-level figures carried the units of the column values and the
+  boxplots by level omitted the first level. The plotted values were the
+  per-level values of the CSV files, which are unchanged. Regenerating the
+  figures with `-p` gives the corrected labels; see "Figures Produced by
+  Earlier Versions" in the results documentation.
+
+### Documentation
+
+- **Per-level files** (E0-13, E0-14, E0-18): table of the quantity, units,
+  column term and factor of every per-level file; `Kz_level.csv` and
+  `Ke_level.csv` hold ⟨[u]²+[v]²⟩ and ⟨u*²+v*²⟩ without 1/(2g), `Ck_level.csv`
+  is written without 1/g, and `M` has its own column relation. Units and
+  finite-difference scheme of the tendencies ∂X/∂t (W/m²). Meaning of the
+  boxplots (unweighted statistics) and how to recognise and regenerate
+  figures of earlier versions.
 
 ### Tests
 
@@ -89,6 +127,12 @@ All notable changes to this project will be documented in this file.
 - **Integration tests no longer touch `inputs/`** (E0-10): each test runs in a
   private temporary directory with copies of the templates it needs; the
   session fails if any file under `inputs/` or `samples/` changes.
+- **Per-level convention and vertical-level figures** (E0-13 to E0-16,
+  E0-18, N-07): units of every profile checked with Pint when it is written;
+  profile-to-column factors and split-term combinations on the reference
+  outputs; column relation of `M` against a closed form; labels of every
+  panel, levels drawn and values handed to matplotlib against the CSV files;
+  documentation table against `output_spec`.
 
 ## [2.0.0] - 2026-08-18
 

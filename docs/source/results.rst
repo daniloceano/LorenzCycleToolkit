@@ -41,24 +41,18 @@ Each subdirectory within the `LEC_Results` directory corresponds to a different 
 
 - **run_status.json**: Status of the run: whether the computation completed and whether each requested product was generated (see `Run Status File`_).
 
-- **results_vertical_levels/**: Contains CSV files for each LEC term at various vertical levels. Each conversion term may be split into multiple sub-terms for detailed analysis. For example:
-  
-  - ``Ae_level.csv``: Contains the values of the eddy component of Available Potential Energy (Ae) at different levels.
-  - ``Az_level.csv``: Contains the values of the zonal component of Available Potential Energy (Az) at different levels.
-  - ``Ca_1_level.csv``, ``Ca_2_level.csv``: Contains the values of the conversion term Ca at different levels, split into multiple sub-terms for detailed horizontal and vertical advection analysis.
-  - ``Ce_level.csv``: Contains the values of the conversion term Ce at different levels.
-  - ``Ck_1_level.csv``, ``Ck_2_level.csv``, ``Ck_3_level.csv``, ``Ck_4_level.csv``, ``Ck_5_level.csv``: Contains the values of the conversion term Ck at different levels, split into five sub-terms representing different physical processes (horizontal shear, meridional momentum transport, Coriolis effect, vertical shear).
-  - ``Cz_1_level.csv``, ``Cz_2_level.csv``: Contains the values of the conversion term Cz at different levels, split into horizontal and vertical components.
-  - ``C_overturning_level.csv``: Contains the domain-mean overturning pressure work at each level. This is a diagnostic and does not enter the budget.
-  - ``Ge_level.csv``: Contains the values of the generation term Ge (eddy) at different levels.
-  - ``Gz_level.csv``: Contains the values of the generation term Gz (zonal) at different levels.
-  - ``Ke_level.csv``: Contains the values of the eddy component of Kinetic Energy (Ke) at different levels.
-  - ``Kz_level.csv``: Contains the values of the zonal component of Kinetic Energy (Kz) at different levels.
-  - ``M_level.csv``: Contains the mass-continuity residual M(p), in s⁻¹, which sets the numerical noise floor of the budget.
-  
-  **Note**: The split of conversion terms into sub-components allows for detailed analysis of the physical processes contributing to energy transformations at each vertical level.
+- **results_vertical_levels/**: One CSV file per term with its vertical profile (rows: times; columns: pressure levels in Pa). The files do **not** all hold the same kind of quantity and do **not** share the units of the main results file: see `Per-Level Files: Quantities and Units`_ before plotting, comparing or integrating them.
 
-  **Note**: Hovmöller diagrams and boxplots are produced for the energy, conversion and generation/dissipation groups only, so ``C_overturning_level.csv`` and ``M_level.csv`` are archived for analysis but are not plotted at vertical levels. Their column integrals do appear in the time series figures.
+  - ``Az_level.csv``, ``Ae_level.csv``: zonal and eddy available potential energy per unit pressure.
+  - ``Kz_level.csv``, ``Ke_level.csv``: area means of the squared zonal-mean and eddy wind components, ⟨[u]²+[v]²⟩ and ⟨u*²+v*²⟩. They equal **twice** the kinetic energy per unit mass and are written **without** the factor 1/(2g) of the column integral.
+  - ``Cz_level.csv``, ``Ca_level.csv``, ``Ce_level.csv``: conversions per unit pressure.
+  - ``Ck_level.csv``: the Ck conversion per unit pressure multiplied by g (written **without** the factor 1/g of the column integral).
+  - ``Gz_level.csv``, ``Ge_level.csv``: generation of Az and Ae per unit pressure.
+  - ``C_overturning_level.csv``: domain-mean overturning pressure work per unit pressure. A diagnostic; it does not enter the budget.
+  - ``M_level.csv``: mass-continuity residual M(p), in s⁻¹, which sets the numerical noise floor of the budget.
+  - Split terms: ``Ca_1_level.csv`` and ``Ca_2_level.csv`` (horizontal and vertical parts of the Ca integrand), ``Ck_1_level.csv`` … ``Ck_5_level.csv`` (the five parts of the Ck integrand, multiplied by g), ``Cz_1_level.csv``/``Ce_1_level.csv`` (the pressure factor R/(p g)) and ``Cz_2_level.csv``/``Ce_2_level.csv`` (the omega–temperature covariances). In the fixed framework ``Cz_1`` and ``Ce_1`` do not depend on time and are written as two rows (the levels, then the factor).
+
+  **Note**: Hovmöller diagrams and boxplots are produced for the energy, conversion and generation groups only, so ``C_overturning_level.csv`` and ``M_level.csv`` are archived for analysis but are not plotted at vertical levels. Their column integrals do appear in the time series figures.
 
 Main Results File
 ~~~~~~~~~~~~~~~~~
@@ -89,6 +83,8 @@ The main CSV file (e.g., ``testdata_ERA5_fixed_results.csv``) contains the integ
 - **C_overturning**: Domain-mean overturning pressure work (W/m²). A diagnostic; it does **not** enter ``RGz`` or ``RKz``.
 
 - **M**: Mass-continuity residual (kg·m⁻²·s⁻¹). Sets the numerical noise floor of the budget; it does **not** enter the residuals.
+
+- **∂Az/∂t, ∂Ae/∂t, ∂Kz/∂t, ∂Ke/∂t (finite diff.)**: Tendencies of the energy reservoirs (W/m², i.e. J m⁻² s⁻¹), from ``numpy.gradient`` over the elapsed time in seconds: second-order centred differences at interior times (non-uniform spacing allowed) and first-order one-sided differences at the first and last times.
 
 - **Generation and Dissipation terms** (W/m²):
   
@@ -121,6 +117,75 @@ The main CSV file (e.g., ``testdata_ERA5_fixed_results.csv``) contains the integ
    ax.set_ylabel('Energy (J/m²)')
    ax.set_title('Lorenz Energy Cycle - Energy Reservoirs')
    plt.show()
+
+.. _per-level-units:
+
+Per-Level Files: Quantities and Units
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The column value of a term in the main results file is ``factor × ∫ profile dp``, with the trapezoidal rule over the pressure levels of the per-level file (pressure in Pa). The factor is **not the same for every term**: most profiles already contain every physical factor, but ``Kz``/``Ke`` are written without 1/(2g) and ``Ck`` without 1/g. Notation: [x] zonal mean, x* = x − [x], ⟨x⟩ area mean, [x]″ = [x] − ⟨[x]⟩, σ static stability, g gravitational acceleration, Q diabatic heating rate.
+
+.. Machine-checked against src/utils/output_spec.py (tests/test_docs_units.py).
+
+.. csv-table::
+   :header: "File", "Quantity written", "Units", "Column term", "Column units", "Factor"
+   :widths: 10, 40, 12, 10, 10, 8
+
+   "Az", "⟨[T]″²⟩/(2σ)", "J/m**2/Pa", "Az", "J/m**2", "1"
+   "Ae", "⟨T*²⟩/(2σ)", "J/m**2/Pa", "Ae", "J/m**2", "1"
+   "Kz", "⟨[u]²+[v]²⟩ (twice the zonal kinetic energy per unit mass)", "m**2/s**2", "Kz", "J/m**2", "1/(2g)"
+   "Ke", "⟨u*²+v*²⟩ (twice the eddy kinetic energy per unit mass)", "m**2/s**2", "Ke", "J/m**2", "1/(2g)"
+   "Cz", "−Cz_1·Cz_2 (positive: Az to Kz)", "W/m**2/Pa", "Cz", "W/m**2", "1"
+   "Ca", "−(Ca_1+Ca_2) (positive: Az to Ae)", "W/m**2/Pa", "Ca", "W/m**2", "1"
+   "Ce", "−Ce_1·Ce_2 (positive: Ae to Ke)", "W/m**2/Pa", "Ce", "W/m**2", "1"
+   "Ck", "Ck_1+…+Ck_5, g times Ck per unit pressure (positive: Ke to Kz)", "W/kg", "Ck", "W/m**2", "1/g"
+   "C_overturning", "−⟨ω⟩α/g, α = R⟨T⟩/p", "W/m**2/Pa", "C_overturning", "W/m**2", "1"
+   "Gz", "⟨[Q]″[T]″⟩/(c_p σ)", "W/m**2/Pa", "Gz", "W/m**2", "1"
+   "Ge", "⟨Q*T*⟩/(c_p σ)", "W/m**2/Pa", "Ge", "W/m**2", "1"
+   "M", "⟨D_EW⟩+⟨D_NS⟩+∂⟨ω⟩/∂p", "1/s", "M", "kg/m**2/s", "special"
+   "Ca_1", "⟨v*T* ∂[T]″/∂φ⟩/(aσ)", "W/m**2/Pa", "", "", ""
+   "Ca_2", "⟨ω*T* ∂[T]″/∂p⟩/σ", "W/m**2/Pa", "", "", ""
+   "Ck_1", "⟨u*v* cosφ ∂([u]/cosφ)/∂φ⟩/a", "W/kg", "", "", ""
+   "Ck_2", "⟨v*² ∂[v]/∂φ⟩/a", "W/kg", "", "", ""
+   "Ck_3", "⟨tanφ u*² [v]⟩/a", "W/kg", "", "", ""
+   "Ck_4", "⟨ω*u* ∂[u]/∂p⟩", "W/kg", "", "", ""
+   "Ck_5", "⟨ω*v* ∂[v]/∂p⟩", "W/kg", "", "", ""
+   "Cz_1", "R/(p g)", "m/Pa/K", "", "", ""
+   "Ce_1", "R/(p g)", "m/Pa/K", "", "", ""
+   "Cz_2", "⟨[ω]″[T]″⟩", "K*Pa/s", "", "", ""
+   "Ce_2", "⟨ω*T*⟩", "K*Pa/s", "", "", ""
+
+Units are written as Pint strings (``J/m**2/Pa`` is J m⁻² Pa⁻¹). The split terms combine as Ca = −(Ca_1 + Ca_2), Ck = Ck_1 + … + Ck_5, Cz = −Cz_1·Cz_2 and Ce = −Ce_1·Ce_2. For ``M`` the column is (∫(⟨D_EW⟩ + ⟨D_NS⟩) dp + ω_bottom − ω_top)/g: the vertical part uses the exact boundary difference of ω, so ∫ M dp / g does not reproduce the column value. The sign conventions are those of the budget residuals (e.g. RKz = ∂Kz/∂t − Cz − Ck − BKz).
+
+Consequences for users of the per-level files:
+
+- ``Kz_level.csv`` and ``Ke_level.csv`` are not energies per unit area or per unit mass. Integrating them in pressure and dividing by g gives **twice** the column value; divide by 2g.
+- ``Ck_level.csv`` is in W/kg, not W m⁻² Pa⁻¹: divide by g before comparing it level by level with Cz, Ca or Ce.
+- Profiles of different terms are comparable level by level only when their units in the table are the same.
+
+The same information is available in Python as ``src.utils.output_spec.VERTICAL_PROFILE_SPEC``. ``Dz_level.csv`` and ``De_level.csv``, written only by the direct dissipation pathway (without ``-r``, with friction fields in the input), are **not verified**: their units, level and column relation are under review and are not documented here.
+
+Vertical-Level Figures
+~~~~~~~~~~~~~~~~~~~~~~
+
+With ``-p``, three kinds of figures are drawn from the per-level files, each for the energy (Az, Ae, Kz, Ke), conversion (Cz, Ca, Ck, Ce) and generation (Gz, Ge) groups:
+
+- ``boxplots/boxplot_vertical_levels_<group>.png``: one box per pressure level, summarising the values at that level over all times. The statistics are **unweighted** by the interval between times.
+- ``boxplots/vertical_timeseries_<group>.png``: one box per time, summarising the values at all pressure levels at that time. The statistics are **unweighted** by layer thickness: a box is not a vertical integral or a mass-weighted vertical mean, and its median is not related to the column value.
+- ``hovmollers/hovmoller_<group>.png``: time–pressure diagrams of the profiles.
+
+Each panel (axis or colour bar) is labelled with the quantity and units of its own term, as in the table above; the panels of one figure can have different units, which a note under the figure recalls. The plotted values are those of the CSV files, unconverted. Pressure is shown in hPa on the axis labels and ticks only; the files keep it in Pa.
+
+Figures Produced by Earlier Versions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Versions up to and including 2.0.0 drew the vertical-level figures with the units of the column values:
+
+- **Affected files**: ``boxplots/boxplot_vertical_levels_{energy,conversion,generation_dissipation}.png``, ``boxplots/vertical_timeseries_{…}.png`` and ``hovmollers/hovmoller_{…}.png``. The time series, the boxplots of the column terms (``boxplots/boxplot_terms_*.png``), the LEC diagrams and the maps were not affected.
+- **What was wrong**: the labels. Every energy panel was labelled "Energy (J·m⁻²)", every conversion panel "Conversion (W·m⁻²)" and every generation panel "Generation/Dissipation (W·m⁻²)", with the label on the left panels only. The plotted values were the per-level values described in the table above (for Kz and Ke, ⟨[u]²+[v]²⟩ and ⟨u*²+v*²⟩ in m² s⁻²; for Ck, W/kg). These values are correct as per-level quantities of the version that produced them, but they are not in the labelled units.
+- **Missing level**: ``boxplot_vertical_levels_*.png`` omitted the first pressure level of the file (the level of lowest pressure, e.g. 700 hPa in the sample data). The Hovmöller diagrams and the boxplots by time included every level.
+- **How to recognise an affected figure**: group labels with column units (J·m⁻² or W·m⁻²) on a vertical-level figure; pressure ticks in Pa (e.g. "85000.0"); one box fewer than the number of levels in ``results_vertical_levels``.
+- **How to regenerate**: run the toolkit again with ``-p`` on the same input with this version; the CSV files of the computation are unchanged by this correction, so only the figures differ. Note that numerical results of versions before 2.0.0 differ for other reasons (see the 2.0.0 entry of the changelog).
 
 Log File
 ~~~~~~~~
