@@ -16,6 +16,7 @@ from glob import glob
 
 import cartopy
 import cartopy.feature as cfeature
+import matplotlib.dates as mdates
 import pandas as pd
 from cartopy.feature import NaturalEarthFeature
 
@@ -249,6 +250,27 @@ def add_vertical_figure_note(fig, terms, statistic=None):
         # Place the note under everything already drawn (tick labels included).
         bottom = fig.get_tightbbox(fig.canvas.get_renderer()).y0 / fig.get_figheight()
         fig.text(0.5, bottom - 0.02, "\n".join(lines), ha="center", va="top", fontsize=11)
+
+
+def format_time_axis(ax, max_ticks=4, labelsize=12):
+    """
+    Put a small number of readable date ticks on the x axis of a time panel.
+
+    Args:
+        ax (matplotlib.axes.Axes): The panel, with dates on its x axis.
+        max_ticks (int): Largest number of major ticks; four fit one panel
+            of a two-column figure without overlapping labels.
+        labelsize (int): Font size of the tick labels.
+
+    Returns:
+        None
+    """
+    locator = mdates.AutoDateLocator(minticks=2, maxticks=max_ticks)
+    ax.xaxis.set_major_locator(locator)
+    ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+    ax.tick_params(axis="x", labelrotation=0, labelsize=labelsize)
+    for label in ax.get_xticklabels():
+        label.set_horizontalalignment("center")
 
 
 def setup_gridlines(ax):

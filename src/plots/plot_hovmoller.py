@@ -19,7 +19,6 @@ Contact:
 import os
 
 import matplotlib.colors as colors
-import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
@@ -68,10 +67,10 @@ def _plotter(dict_vertical, figures_subdirectory, app_logger=False):
 def create_figure_for_term(term_type):
     if term_type == "energy":
         fig = plt.figure(figsize=(12, 10))
-        gs = gridspec.GridSpec(nrows=2, ncols=2, wspace=0.9, hspace=0.3, top=0.95)
+        gs = gridspec.GridSpec(nrows=2, ncols=2, wspace=0.9, hspace=0.35, top=0.95)
     elif term_type == "conversion":
         fig = plt.figure(figsize=(12, 10))
-        gs = gridspec.GridSpec(nrows=2, ncols=2, wspace=1.1, hspace=0.3, top=0.95)
+        gs = gridspec.GridSpec(nrows=2, ncols=2, wspace=1.1, hspace=0.35, top=0.95)
     elif term_type == "generation_dissipation":
         fig = plt.figure(figsize=(10, 5))
         gs = gridspec.GridSpec(nrows=1, ncols=2, right=1.2, wspace=0.8)
@@ -130,12 +129,10 @@ def get_cmap_norm_title_for_term(term, imin, imax, absmax):
 
 
 def finalize_plot(ax, term):
-    locator = mdates.AutoDateLocator(minticks=5, maxticks=12)
-    formatter = mdates.ConciseDateFormatter(locator)
-    ax.xaxis.set_major_locator(locator)
-    ax.xaxis.set_major_formatter(formatter)
-    ax.tick_params(axis="x", labelrotation=20)
-    ax.xaxis.set_tick_params(labelsize=16)
+    utils.format_time_axis(ax)
+    # The first time tick sits on the left edge, under the 1000 hPa label of
+    # the pressure axis: move the time labels down so the two do not touch.
+    ax.tick_params(axis="x", pad=10)
     ax.yaxis.set_tick_params(labelsize=16)
     ax.set_title(term, fontsize=20)
 

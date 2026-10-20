@@ -23,12 +23,42 @@ from datetime import datetime
 import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
+import numpy as np
 
 import src.plots.utils as utils
 from src.plots.utils import (add_vertical_figure_note, get_data_vertical_levels,
                              read_results)
 from src.utils.output_spec import (PRESSURE_AXIS_LABEL, profile_label,
                                    pressure_tick_label)
+
+
+def box_widths(positions, fraction=0.6, single_width=1.0 / 24.0):
+    """
+    Width of each box on a time axis, from the spacing of its neighbours.
+
+    Each box is drawn by its own call to ``Axes.boxplot`` with one position,
+    so matplotlib's default width (0.15 day) ignores the spacing of the times
+    and overlaps boxes one hour apart. Here each box takes ``fraction`` of the
+    smaller gap to its neighbours, so two boxes never overlap, also when the
+    times are irregular.
+
+    Args:
+        positions (list of float): Box positions in matplotlib date numbers
+            (days), in increasing order.
+        fraction (float): Share of the smaller neighbouring gap given to the
+            box; below 1, so adjacent boxes keep a gap between them.
+        single_width (float): Reference gap (days) when there is one time.
+
+    Returns:
+        list of float: One width (days) per position.
+    """
+    x = np.asarray(positions, dtype=float)
+    if x.size < 2:
+        return [fraction * single_width] * x.size
+    gaps = np.diff(x)
+    left = np.concatenate(([gaps[0]], gaps))
+    right = np.concatenate((gaps, [gaps[-1]]))
+    return list(fraction * np.minimum(left, right))
 
 
 def boxplot_time(dict_vertical, figures_subdirectory, app_logger):
@@ -53,6 +83,14 @@ def boxplot_time(dict_vertical, figures_subdirectory, app_logger):
     dummy_data = dict_vertical[next(iter(all_terms["energy"]), None)]  # Safe access
     t_id = dummy_data.columns[0]  # Time indexer
     times = dummy_data[t_id].index
+    positions = [
+        mdates.date2num(datetime.fromisoformat(t.strftime("%Y-%m-%d %H:%M")))
+        for t in times
+    ]
+    widths = box_widths(positions)
+    # Margin around the first and last boxes, so that the axis spans the
+    # times rather than the default width of a box.
+    margin = max(widths) if widths else 0.0
 
     for term_type, terms in all_terms.items():
         if not terms:
@@ -63,30 +101,25 @@ def boxplot_time(dict_vertical, figures_subdirectory, app_logger):
         fig = plt.figure(figsize=fig_layout)
         n_rows, n_cols = (2, 2) if len(terms) == 4 else (1, 2)
 
-        gs = gridspec.GridSpec(nrows=n_rows, ncols=n_cols, hspace=0.25, wspace=0.45)
+        gs = gridspec.GridSpec(nrows=n_rows, ncols=n_cols, hspace=0.35, wspace=0.45)
 
         for i, term in enumerate(terms):
             ax = fig.add_subplot(gs[i])
             # Each panel has the units of its own term: the per-level files
             # do not share the units of the column values in TERM_DETAILS.
             ax.set_ylabel(profile_label(term), fontsize=13)
-            for t in times:
+            for t, time_step, width in zip(times, positions, widths):
                 data = dict_vertical[term].loc[t].values
-                time_step = mdates.date2num(
-                    datetime.fromisoformat(t.strftime("%Y-%m-%d %H:%M"))
+                bplot = ax.boxplot(
+                    data, positions=[time_step], widths=[width], patch_artist=True
                 )
-                bplot = ax.boxplot(data, positions=[time_step], patch_artist=True)
                 bplot["boxes"][-1].set_facecolor(utils.COLORS[i % len(utils.COLORS)])
                 bplot["boxes"][-1].set_alpha(0.85)
                 for median in bplot["medians"]:
                     median.set_color("k")
 
-            locator = mdates.AutoDateLocator(minticks=5, maxticks=12)
-            formatter = mdates.ConciseDateFormatter(locator)
-            ax.xaxis.set_major_locator(locator)
-            ax.xaxis.set_major_formatter(formatter)
-            ax.tick_params(axis="x", labelrotation=20)
-            ax.xaxis.set_tick_params(labelsize=16)
+            ax.set_xlim(min(positions) - margin, max(positions) + margin)
+            utils.format_time_axis(ax)
             ax.yaxis.set_tick_params(labelsize=16)
             ax.set_title(term, fontsize=20)
 
