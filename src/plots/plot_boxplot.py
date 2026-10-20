@@ -25,7 +25,10 @@ import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 
 import src.plots.utils as utils
-from src.plots.utils import get_data_vertical_levels, read_results
+from src.plots.utils import (add_vertical_figure_note, get_data_vertical_levels,
+                             read_results)
+from src.utils.output_spec import (PRESSURE_AXIS_LABEL, profile_label,
+                                   pressure_tick_label)
 
 
 def boxplot_time(dict_vertical, figures_subdirectory, app_logger):
@@ -117,27 +120,26 @@ def boxplot_vertical(dict_vertical, figures_subdirectory, app_logger):
         fig = plt.figure(figsize=fig_layout)
         n_rows, n_cols = (2, 2) if len(terms) == 4 else (1, 2)
 
-        wspace = 0.3 if term_type != "generation_dissipation" else 0.4
+        wspace = 0.45 if term_type != "generation_dissipation" else 0.5
 
         gs = gridspec.GridSpec(nrows=n_rows, ncols=n_cols, hspace=0.15, wspace=wspace)
 
-        label = (
-            f'{term_details[term_type]["label"]} ({term_details[term_type]["unit"]})'
-        )
         for i, term in enumerate(terms):
             ax = fig.add_subplot(gs[i])
 
-            if i % 2 == 0:
-                ax.set_ylabel(label, fontsize=18)
+            # Each panel has the units of its own term: the per-level files
+            # do not share the units of the column values in TERM_DETAILS.
+            ax.set_ylabel(profile_label(term), fontsize=13)
 
             # get_data_vertical_levels reads the time column as the index, so
-            # every column is a pressure level.
+            # every column is a pressure level (Pa). Only the tick labels are
+            # shown in hPa.
             levs = dict_vertical[term].columns
             for j, lev in enumerate(levs):
                 bplot = ax.boxplot(
                     dict_vertical[term][lev].values,
                     positions=[j / 3],
-                    tick_labels=[lev],
+                    tick_labels=[pressure_tick_label(lev)],
                     patch_artist=True,
                 )
                 bplot["boxes"][-1].set_facecolor(linecolors[i % len(linecolors)])
@@ -148,10 +150,13 @@ def boxplot_vertical(dict_vertical, figures_subdirectory, app_logger):
             ax.tick_params(axis="x", labelrotation=60)
             if i < len(terms) - 2:  # Assuming last row should have x labels
                 ax.axes.xaxis.set_ticklabels([])
+            else:
+                ax.set_xlabel(PRESSURE_AXIS_LABEL, fontsize=13)
             ax.xaxis.set_tick_params(labelsize=16)
             ax.yaxis.set_tick_params(labelsize=16)
             ax.set_title(term, fontsize=20)
 
+        add_vertical_figure_note(fig, terms, statistic="over_time")
         outfile = f"{figures_subdirectory}/boxplot_vertical_levels_{term_type}.png"
         plt.savefig(outfile, bbox_inches="tight")
         (

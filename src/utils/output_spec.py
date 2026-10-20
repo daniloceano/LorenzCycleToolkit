@@ -361,15 +361,15 @@ def profile_label(term):
         term (str): Name of the per-level file.
 
     Returns:
-        str: The quantity and its units, e.g.
-        ``"Zonal APE per unit pressure (J m⁻² Pa⁻¹)"``.
+        str: The quantity and, on a second line, its units, e.g.
+        ``"Zonal APE per unit pressure\\n(J m⁻² Pa⁻¹)"``.
 
     Raises:
         KeyError: If the term has no stable entry, so that a figure never
         falls back to a generic label.
     """
     spec = VERTICAL_PROFILE_SPEC[term]
-    return f"{spec['label']} ({spec['display_units']})"
+    return f"{spec['label']}\n({spec['display_units']})"
 
 
 def pressure_tick_label(pressure_pa):
