@@ -22,8 +22,9 @@ Exit status of the command line (``exit_code``): 0 for success, 3 for partial
 (0 with ``--allow-partial-plots``; the status stays ``partial``), 1 when the
 scientific computation fails (the original exception propagates).
 
-The scientific outputs are required; the figures and the cyclophaser periods
-are optional diagnostics. A figure call is the only thing guarded: an error in
+The scientific outputs are required (main results CSV, per-level CSVs, the
+trackfile of the moving framework, lec_metadata.json and domain_selection.csv);
+the figures and the cyclophaser periods are optional diagnostics. A figure call is the only thing guarded: an error in
 the scientific computation is never turned into a partial result.
 """
 
@@ -55,6 +56,8 @@ DESCRIPTIONS = {
     "results_csv": "Main results CSV",
     "vertical_level_csvs": "Vertical-level CSVs",
     "trackfile": "System track file",
+    "lec_metadata": "Scientific metadata (lec_metadata.json)",
+    "domain_selection": "Selected domain (domain_selection.csv)",
     "domain_maps": "Domain map",
     "box_limits_map": "Box limits plot",
     "track_map": "Track map",
@@ -131,6 +134,7 @@ class RunStatus:
         required = ["results_csv", "vertical_level_csvs"]
         if self.method != "fixed":
             required.append("trackfile")
+        required += ["lec_metadata", "domain_selection"]
         for name in required:
             self.products[name] = self._new(name, "scientific", True, "pending")
         figures = FIXED_FIGURES if self.method == "fixed" else MOVING_FIGURES

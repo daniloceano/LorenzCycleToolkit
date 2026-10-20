@@ -28,6 +28,7 @@ from ..utils.box_data import BoxData
 from ..utils.calc_budget_and_residual import calc_budget_diff, calc_residuals
 from ..utils.input_files import read_box_limits
 from ..utils.longitude import canonicalize_box
+from ..utils.run_metadata import RunMetadata, input_extent
 from ..utils.run_status import RunStatus
 
 
@@ -101,6 +102,7 @@ def lec_fixed(
         app_logger.error(f"❌ {exc}")
         raise
 
+    extent = input_extent(data)
     app_logger.debug("💾 Loading data into memory..")
     data = data.compute()
     app_logger.debug("✅ Data loaded into memory.")
@@ -132,6 +134,14 @@ def lec_fixed(
     except Exception:
         app_logger.exception("❌ An exception occurred while creating BoxData object")
         raise
+
+    metadata = RunMetadata(args, "fixed", variable_list_df, extent)
+    metadata.record_box(
+        box_obj,
+        {"west": min_lon, "east": max_lon, "south": min_lat, "north": max_lat},
+        "all",
+        data[VerticalCoordIndexer].values,
+    )
 
     # The per-level CSV headers list the levels actually used, which are only
     # known after BoxData has fixed the vertical control volume.
@@ -261,8 +271,19 @@ def lec_fixed(
     results_file = Path(results_subdirectory, f"{results_filename}.csv")
     df.to_csv(results_file)
     app_logger.info(f"💾 Results saved to {results_file}")
+
+    domain_file = metadata.write_domain_selection(results_subdirectory)
+    metadata_file = metadata.write_metadata(
+        results_subdirectory, results_file, level_files, df.columns, df.index.values
+    )
+    app_logger.info(f"🧾 Metadata saved to {metadata_file} and {domain_file}")
     run_status.record_scientific_outputs(
-        {"results_csv": [results_file], "vertical_level_csvs": level_files}
+        {
+            "results_csv": [results_file],
+            "vertical_level_csvs": level_files,
+            "lec_metadata": [metadata_file],
+            "domain_selection": [domain_file],
+        }
     )
 
     if args.plots:

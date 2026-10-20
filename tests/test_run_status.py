@@ -49,7 +49,8 @@ def _read(tmp_path):
 
 def test_products_without_plots_are_not_requested(tmp_path):
     status = _record(tmp_path, "-f")
-    assert [n for n, p in status.products.items() if p["required"]] == ["results_csv", "vertical_level_csvs"]
+    assert [n for n, p in status.products.items() if p["required"]] == [
+        "results_csv", "vertical_level_csvs", "lec_metadata", "domain_selection"]
     assert {p["status"] for p in status.products.values() if not p["required"]} == {"not_requested"}
     track = _record(tmp_path, "-t")
     assert "trackfile" in track.products and track.products["trackfile"]["required"]
@@ -69,7 +70,7 @@ def test_success_without_plots(tmp_path):
     assert data["scientific"] == {"status": "success", "error": None}
     assert data["plots_requested"] is False
     assert data["summary"]["not_requested"] == len(rs.FIXED_FIGURES)
-    assert data["summary"]["success"] == 2
+    assert data["summary"]["success"] == 4
     assert sum(data["summary"].values()) == len(data["products"])
 
 

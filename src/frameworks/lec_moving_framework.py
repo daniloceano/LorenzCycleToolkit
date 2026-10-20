@@ -29,6 +29,7 @@ from ..analysis.generation_and_dissipation_terms import \
 from ..analysis.mass_continuity import MassContinuity
 from ..utils.box_data import BoxData
 from ..utils.calc_budget_and_residual import calc_budget_diff, calc_residuals
+from ..utils.run_metadata import RunMetadata, input_extent
 from ..utils.run_status import RunStatus
 from ..utils.select_area import draw_box_map, plot_domain_attributes
 from ..utils.tools import find_extremum_coordinates, initialize_logging
@@ -662,6 +663,9 @@ def lec_moving(
     # Dictionary for storing results
     terms_dict = create_terms_dict(args)
 
+    # What each time step actually used (domain_selection.csv, lec_metadata.json)
+    metadata = RunMetadata(args, "track" if args.track else "choose", variable_list_df, input_extent(data))
+
     # Iterating over times
     for t in times:
         app_logger.info(f"⏰ Processing data at time: {t}...")
@@ -764,6 +768,13 @@ def lec_moving(
             app_logger.exception(f"❌ Error creating BoxData object: {e}")
             raise
         app_logger.info("✅ Box object created.")
+        metadata.record_box(
+            box_obj,
+            {"west": limits["min_lon"], "east": limits["max_lon"],
+             "south": limits["min_lat"], "north": limits["max_lat"]},
+            t.strftime("%Y-%m-%d %H:%M:%S"),
+            idata[VerticalCoordIndexer].values,
+        )
 
         # Compute and store various meteorological terms
         terms_dict = compute_and_store_terms(box_obj, terms_dict, app_logger)
@@ -781,11 +792,18 @@ def lec_moving(
     method = "track" if args.track else "choose"
     infile_name = os.path.basename(args.infile).split(".nc")[0]
     track_file = os.path.join(results_subdirectory, f"{infile_name}_{method}_trackfile")
+    domain_file = metadata.write_domain_selection(results_subdirectory)
+    metadata_file = metadata.write_metadata(
+        results_subdirectory, results_file, level_files, df.columns, df.index.values, trackfile=track_file
+    )
+    app_logger.info(f"🧾 Metadata saved to {metadata_file} and {domain_file}")
     run_status.record_scientific_outputs(
         {
             "results_csv": [results_file],
             "trackfile": [track_file],
             "vertical_level_csvs": level_files,
+            "lec_metadata": [metadata_file],
+            "domain_selection": [domain_file],
         }
     )
 

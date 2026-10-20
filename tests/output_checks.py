@@ -188,11 +188,12 @@ def check_log(results_dir, infile_stem):
     return path
 
 
-# Products of run_status.json (pre-registered inventory, Onda 1B): required
-# scientific outputs and optional figures/diagnostics requested with --plots.
+# Products of run_status.json (pre-registered inventory, Onda 1B; Onda 3 adds
+# lec_metadata.json and domain_selection.csv): required scientific outputs and
+# optional figures/diagnostics requested with --plots.
 SCIENTIFIC_PRODUCTS = {
-    "fixed": ("results_csv", "vertical_level_csvs"),
-    "track": ("results_csv", "vertical_level_csvs", "trackfile"),
+    "fixed": ("results_csv", "vertical_level_csvs", "lec_metadata", "domain_selection"),
+    "track": ("results_csv", "vertical_level_csvs", "trackfile", "lec_metadata", "domain_selection"),
 }
 FIGURE_PRODUCTS = {
     "fixed": ("timeseries", "box_limits_map", "boxplots", "hovmoller", "lec_cycle"),
