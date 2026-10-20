@@ -28,6 +28,7 @@ from ..utils.box_data import BoxData
 from ..utils.calc_budget_and_residual import calc_budget_diff, calc_residuals
 from ..utils.input_files import read_box_limits
 from ..utils.longitude import canonicalize_box
+from ..utils.output_names import results_stem
 from ..utils.run_metadata import RunMetadata, input_extent
 from ..utils.run_status import RunStatus
 
@@ -263,12 +264,7 @@ def lec_fixed(
     df = calc_residuals(df, app_logger)
     app_logger.info("📈 Computed budget and residuals")
 
-    if args.outname:
-        results_filename = args.outname
-    else:
-        infile_name = os.path.basename(args.infile).split(".nc")[0]
-        results_filename = "".join(f"{infile_name}_fixed_results")
-    results_file = Path(results_subdirectory, f"{results_filename}.csv")
+    results_file = Path(results_subdirectory, f"{results_stem(args, 'fixed')}_results.csv")
     df.to_csv(results_file)
     app_logger.info(f"💾 Results saved to {results_file}")
 

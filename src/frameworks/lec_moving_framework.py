@@ -29,6 +29,7 @@ from ..analysis.generation_and_dissipation_terms import \
 from ..analysis.mass_continuity import MassContinuity
 from ..utils.box_data import BoxData
 from ..utils.calc_budget_and_residual import calc_budget_diff, calc_residuals
+from ..utils.output_names import results_stem
 from ..utils.run_metadata import RunMetadata, input_extent
 from ..utils.run_status import RunStatus
 from ..utils.select_area import draw_box_map, plot_domain_attributes
@@ -543,9 +544,7 @@ def finalize_results(
 
     # Constructing output filename
     method = "track" if args.track else "choose"
-    infile_name = os.path.basename(args.infile).split(".nc")[0]
-    results_filename = "".join(f"{infile_name}_{method}_results")
-    results_file = os.path.join(results_subdirectory, f"{results_filename}.csv")
+    results_file = os.path.join(results_subdirectory, f"{results_stem(args, method)}_results.csv")
 
     # Saving the DataFrame to a CSV file
     df.to_csv(results_file)
@@ -555,8 +554,7 @@ def finalize_results(
     out_track = out_track.rename(
         columns={"datestr": "time", "central_lat": "Lat", "central_lon": "Lon"}
     )
-    out_trackfile_name = "".join(f"{infile_name}_{method}_trackfile")
-    output_trackfile = os.path.join(results_subdirectory, out_trackfile_name)
+    output_trackfile = os.path.join(results_subdirectory, f"{results_stem(args, method)}_trackfile")
     out_track.to_csv(output_trackfile, index=False, sep=";")
     app_logger.info(f"📍 System track saved to {output_trackfile}")
 
@@ -790,8 +788,7 @@ def lec_moving(
         times, terms_dict, args, results_subdirectory, out_track, app_logger
     )
     method = "track" if args.track else "choose"
-    infile_name = os.path.basename(args.infile).split(".nc")[0]
-    track_file = os.path.join(results_subdirectory, f"{infile_name}_{method}_trackfile")
+    track_file = os.path.join(results_subdirectory, f"{results_stem(args, method)}_trackfile")
     domain_file = metadata.write_domain_selection(results_subdirectory)
     metadata_file = metadata.write_metadata(
         results_subdirectory, results_file, level_files, df.columns, df.index.values, trackfile=track_file

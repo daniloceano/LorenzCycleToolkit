@@ -28,6 +28,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from . import output_names
+
 
 def initialize_logging(results_subdirectory, args):
     """
@@ -61,7 +63,7 @@ def initialize_logging(results_subdirectory, args):
         handler.close()
 
     # Create file handler for saving logs
-    log_file_name = f'log.{os.path.basename(args.infile).split(".")[0]}'
+    log_file_name = output_names.log_file_name(args)
     log_file = os.path.join(results_subdirectory, log_file_name)
     file_handler = logging.FileHandler(log_file, mode="w")
     file_handler.setLevel(app_log_level)

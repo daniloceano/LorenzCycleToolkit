@@ -40,6 +40,7 @@ from src.frameworks.lec_fixed_framework import lec_fixed
 from src.frameworks.lec_moving_framework import lec_moving
 from src.utils.input_files import resolve_input_file
 from src.utils.offline_maps import offline_maps
+from src.utils.output_names import results_directory, validate_outname
 from src.utils.preprocessing import prepare_data
 from src.utils.run_status import EXIT_PARTIAL, RunStatus
 from src.utils.tools import initialize_logging
@@ -145,7 +146,13 @@ def create_arg_parser():
         help="Specify a custom box limits file. Default is 'inputs/box_limits'.",
     )
     parser.add_argument(
-        "-o", "--outname", type=str, help="Specify an output name for the results."
+        "-o",
+        "--outname",
+        type=str,
+        help=(
+            "Name of the results: LEC_Results/NAME_<method>/ with NAME_<method>_results.csv, "
+            "NAME_<method>_trackfile (track) and log.NAME. Default: the input file name."
+        ),
     )
     return parser
 
@@ -161,11 +168,7 @@ def setup_results_directory(args, method):
     Returns:
         tuple: A tuple containing the path to the results directory and the path to the figures directory.
     """
-    resuts_directory = "./LEC_Results/"
-    results_subdirectory = os.path.join(
-        resuts_directory,
-        "".join(args.infile.split("/")[-1].split(".nc")) + "_" + method,
-    )
+    results_subdirectory = results_directory(args, method)
     results_subdirectory_vertical_levels = os.path.join(
         results_subdirectory, "results_vertical_levels")
     figures_directory = os.path.join(results_subdirectory, "Figures")
@@ -268,6 +271,12 @@ def main():
         method = "track"
     elif args.choose:
         method = "choose"
+
+    if args.outname is not None:
+        try:
+            validate_outname(args.outname)
+        except ValueError as exc:
+            parser.error(f"argument -o/--outname: {exc}")
 
     # Setup results directory
     results_subdirectory, figures_directory, results_subdirectory_vertical_levels = setup_results_directory(args, method)

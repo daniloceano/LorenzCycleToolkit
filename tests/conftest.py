@@ -172,6 +172,15 @@ def pytest_sessionstart(session):
     session.config._lectk_protected_before = _digest_protected(REPO_ROOT)
 
 
+def _run_name(args_line):
+    """Name a logged run by its --outname, or by its input file (without .nc)."""
+    if "outname='" in args_line:
+        return args_line.split("outname='", 1)[1].split("'", 1)[0]
+    infile = args_line.split("infile='", 1)[1].split("'", 1)[0]
+    name = Path(infile).name
+    return name[: -len(".nc")] if name.endswith(".nc") else name
+
+
 def _log_isolation_problems(workdirs, sizes_at_test_end):
     """
     Return the problems found in the run logs written under ``workdirs``.
@@ -195,8 +204,10 @@ def _log_isolation_problems(workdirs, sizes_at_test_end):
             if starts != 1:
                 problems.append(f"{where}: {starts} runs logged, expected 1")
             stem = log.name[len("log."):]
-            infiles = [line.split("infile='", 1)[1].split("'", 1)[0] for line in lines if "infile='" in line]
-            foreign = sorted({f for f in infiles if Path(f).name != f"{stem}.nc"})
+            # A run is named by its --outname when given (log.NAME), otherwise
+            # by its input file (log.<infile>).
+            foreign = sorted({name for name in (_run_name(line) for line in lines if "infile='" in line)
+                              if name != stem})
             if foreign:
                 problems.append(f"{where}: arguments of other runs logged: {foreign}")
             complete = [i for i, line in enumerate(lines) if "Analysis complete" in line]
