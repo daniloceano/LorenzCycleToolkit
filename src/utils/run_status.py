@@ -80,6 +80,21 @@ def _error(exc):
     return {"type": type(exc).__name__, "message": str(exc)}
 
 
+def snapshot_directory(directory):
+    """
+    Return {relative path: (mtime_ns, size, inode)} of every file (or link)
+    under a directory, or {} if it does not exist. Links are not followed.
+    """
+    directory = Path(directory)
+    state = {}
+    if directory.is_dir():
+        for entry in directory.rglob("*"):
+            if entry.is_file() or entry.is_symlink():
+                st = entry.lstat()
+                state[entry.relative_to(directory).as_posix()] = (st.st_mtime_ns, st.st_size, st.st_ino)
+    return state
+
+
 def _version():
     try:
         from importlib.metadata import version
@@ -98,9 +113,13 @@ class RunStatus:
         results_directory (str): Directory of the results of this run.
         app_logger (logging.Logger): Logger of the run (optional).
         argv (list): Command line to record (defaults to ``sys.argv``).
+        previous_files (dict): Files already in the results directory before
+            this run, {relative path: (mtime_ns, size, inode)}, given by the
+            command line when ``--overwrite`` lets it reuse a directory. They
+            are never deleted; those this run does not rewrite are reported.
     """
 
-    def __init__(self, args, results_directory, app_logger=None, argv=None):
+    def __init__(self, args, results_directory, app_logger=None, argv=None, previous_files=None):
         self.results_directory = Path(results_directory)
         self.path = self.results_directory / STATUS_FILE
         self.logger = app_logger
@@ -124,6 +143,8 @@ class RunStatus:
         self.run_error = None
         self.interrupted = False
         self.log_file = None
+        self.overwrite = bool(getattr(args, "overwrite", False))
+        self.previous_files = previous_files
         if app_logger is not None:
             for handler in app_logger.handlers:
                 filename = getattr(handler, "baseFilename", None)
@@ -394,6 +415,26 @@ class RunStatus:
                 self._log("error", f"❌ Could not write {self.path}: {write_error}")
             raise
 
+    def previous_results(self):
+        """
+        Files of an earlier run found in the results directory (only when the
+        command line reused it with ``--overwrite``). ``stale_files`` are those
+        this run has not rewritten: they are left in place, untouched, and are
+        not results of this run.
+        """
+        if self.previous_files is None:
+            return None
+        current = snapshot_directory(self.results_directory)
+        stale = sorted(p for p, s in self.previous_files.items() if current.get(p) == s)
+        return {
+            "detected": bool(self.previous_files),
+            "overwrite": self.overwrite,
+            "n_files_before": len(self.previous_files),
+            "stale_files": stale,
+            "note": ("files present before this run and not rewritten by it; they were not "
+                     "deleted and do not belong to this run"),
+        }
+
     # ------------------------------------------------------------------ output
     def to_dict(self):
         products = list(self.products.values())
@@ -415,6 +456,7 @@ class RunStatus:
             "scientific": self.scientific,
             "summary": summary,
             "log_file": self.log_file,
+            "previous_results": self.previous_results(),
             "products": products,
         }
 

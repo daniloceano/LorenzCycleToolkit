@@ -42,7 +42,7 @@ from src.utils.input_files import resolve_input_file
 from src.utils.offline_maps import offline_maps
 from src.utils.output_names import results_directory, validate_outname
 from src.utils.preprocessing import prepare_data
-from src.utils.run_status import EXIT_PARTIAL, RunStatus
+from src.utils.run_status import EXIT_PARTIAL, RunStatus, snapshot_directory
 from src.utils.tools import initialize_logging
 
 # Suppress specific RuntimeWarning from xarray
@@ -152,6 +152,16 @@ def create_arg_parser():
         help=(
             "Name of the results: LEC_Results/NAME_<method>/ with NAME_<method>_results.csv, "
             "NAME_<method>_trackfile (track) and log.NAME. Default: the input file name."
+        ),
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help=(
+            "Reuse a results directory that already contains files. Without it the "
+            "program stops (exit status 2) before writing anything. Files are rewritten "
+            "in place; files of an earlier run that this run does not produce are kept "
+            "and listed in run_status.json (nothing is deleted)."
         ),
     )
     return parser
@@ -278,6 +288,18 @@ def main():
         except ValueError as exc:
             parser.error(f"argument -o/--outname: {exc}")
 
+    # Never overwrite the results of an earlier run unless asked to: stop
+    # before anything is written (no directory, log or status file changes).
+    previous_files = snapshot_directory(results_directory(args, method))
+    if previous_files and not args.overwrite:
+        listed = sorted(previous_files)
+        shown = ", ".join(listed[:5]) + (f", ... ({len(listed)} files)" if len(listed) > 5 else "")
+        parser.error(
+            f"the results directory {results_directory(args, method)} already contains "
+            f"files of an earlier run ({shown}). Use --overwrite to reuse it, or "
+            f"-o/--outname to write elsewhere."
+        )
+
     # Setup results directory
     results_subdirectory, figures_directory, results_subdirectory_vertical_levels = setup_results_directory(args, method)
 
@@ -288,7 +310,14 @@ def main():
 
     # Status of the run, written before any computation so that an
     # interrupted run never leaves a complete-looking status behind
-    run_status = RunStatus(args, results_subdirectory, app_logger)
+    run_status = RunStatus(args, results_subdirectory, app_logger,
+                           previous_files=previous_files if args.overwrite else None)
+    if previous_files:
+        app_logger.warning(
+            f"⚠️ --overwrite: reusing {results_subdirectory}, which already holds "
+            f"{len(previous_files)} files; they are rewritten in place and none is deleted. "
+            f"Files this run does not produce are listed in run_status.json (previous_results)."
+        )
     run_status.write()
 
     # Prepare data
