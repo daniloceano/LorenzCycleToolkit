@@ -155,6 +155,28 @@ def test_boxplot_by_level_on_a_synthetic_four_level_profile(tmp_path, monkeypatc
             assert np.array_equal(data, dv[term][lev].to_numpy())
 
 
+# ------------------------------------------------- boxplots by time
+
+def test_boxplot_by_time_has_the_units_of_each_term_and_all_levels(case, tmp_path, monkeypatch):
+    rec = _Recorder(monkeypatch)
+    dv = _vertical(case)
+    plot_boxplot.boxplot_time(dv, str(tmp_path), None)
+    for group, terms in GROUPS.items():
+        fig = rec.figure(f"vertical_timeseries_{group}.png")
+        panels = _panels(fig)
+        assert sorted(panels) == sorted(terms)
+        for term, ax in panels.items():
+            assert ax.get_ylabel() == profile_label(term)
+            calls = [c for c in rec.boxplots if c[0] is ax]
+            assert len(calls) == len(dv[term].index)
+            for (_, data, positions, _), t in zip(calls, dv[term].index):
+                assert np.array_equal(data, dv[term].loc[t].to_numpy())  # every level, CSV values
+                assert positions == [mdates.date2num(t.to_pydatetime())]  # time axis unchanged
+        for label in _all_labels(fig):
+            assert label not in GROUP_UNIT_LABELS
+        assert "unweighted" in _figure_texts(fig)
+
+
 # ------------------------------------------------- Hovmöller diagrams
 
 def test_hovmoller_colour_bars_have_the_units_of_each_term(case, tmp_path, monkeypatch):

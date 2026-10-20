@@ -63,13 +63,13 @@ def boxplot_time(dict_vertical, figures_subdirectory, app_logger):
         fig = plt.figure(figsize=fig_layout)
         n_rows, n_cols = (2, 2) if len(terms) == 4 else (1, 2)
 
-        gs = gridspec.GridSpec(nrows=n_rows, ncols=n_cols, hspace=0.25, wspace=0.3)
+        gs = gridspec.GridSpec(nrows=n_rows, ncols=n_cols, hspace=0.25, wspace=0.45)
 
         for i, term in enumerate(terms):
             ax = fig.add_subplot(gs[i])
-            if i % n_cols == 0:
-                label = f'{term_details[term_type]["label"]} ({term_details[term_type]["unit"]})'
-                ax.set_ylabel(label, fontsize=18)
+            # Each panel has the units of its own term: the per-level files
+            # do not share the units of the column values in TERM_DETAILS.
+            ax.set_ylabel(profile_label(term), fontsize=13)
             for t in times:
                 data = dict_vertical[term].loc[t].values
                 time_step = mdates.date2num(
@@ -90,6 +90,7 @@ def boxplot_time(dict_vertical, figures_subdirectory, app_logger):
             ax.yaxis.set_tick_params(labelsize=16)
             ax.set_title(term, fontsize=20)
 
+        add_vertical_figure_note(fig, terms, statistic="over_levels")
         file_name = f"{figures_subdirectory}/vertical_timeseries_{term_type}.png"
         plt.savefig(file_name, bbox_inches="tight")
         (
