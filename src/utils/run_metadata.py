@@ -44,7 +44,7 @@ from ..analysis.energy_contents import EnergyContents
 from ..analysis.mass_continuity import MassContinuity
 from .output_spec import TENDENCY_UNITS, VERTICAL_PROFILE_SPEC
 from .run_status import _version
-from .term_output import TermOutputMixin
+from .term_output import TermOutputMixin, header_levels
 
 SCHEMA_VERSION = 1
 METADATA_FILE = "lec_metadata.json"
@@ -175,6 +175,7 @@ class RunMetadata:
         self.domain_rows = []
         self.vertical_rows = []
         self.input_levels = None
+        self.harmonization = None
 
     def record_box(self, box_obj, requested, time_label, input_levels):
         """
@@ -228,12 +229,24 @@ class RunMetadata:
         row["fields_share_selection"] = all(c == coords[0] for c in coords)
         self.domain_rows.append(row)
 
+        # Dropped = input levels not used, also when the levels were removed
+        # before BoxData (common vertical volume of the moving framework).
         self.input_levels = [float(p) for p in input_levels]
+        used = [float(p) for p in box_obj.valid_levels]
         self.vertical_rows.append({
             "time": time_label,
-            "levels_used_Pa": [float(p) for p in box_obj.valid_levels],
-            "dropped_levels_Pa": [float(p) for p in box_obj.dropped_levels],
+            "levels_used_Pa": used,
+            "dropped_levels_Pa": [p for p in self.input_levels if p not in used],
         })
+
+    def record_harmonization(self, harmonization):
+        """
+        Record the levels common to all time steps of the moving framework.
+
+        Args:
+            harmonization (VerticalHarmonization): Result of ``harmonize_levels``.
+        """
+        self.harmonization = harmonization.as_metadata()
 
     # ------------------------------------------------------------------ files
     def write_domain_selection(self, results_directory):
@@ -250,7 +263,7 @@ class RunMetadata:
         used = [r["levels_used_Pa"] for r in self.vertical_rows]
         constant = all(u == used[0] for u in used)
         retained = sorted(set.intersection(*(set(u) for u in used))) if used else []
-        header = _header_levels(level_files[0]) if level_files else None
+        header = header_levels(level_files[0]) if level_files else None
         vertical = {
             "coordinate": self.variable_list_df.loc["Vertical Level"]["Variable"],
             "units": "Pa",
@@ -266,6 +279,8 @@ class RunMetadata:
         }
         if self.method != "fixed":
             vertical["by_time"] = self.vertical_rows
+        if self.harmonization is not None:
+            vertical["harmonization"] = self.harmonization
         return vertical
 
     def write_metadata(self, results_directory, results_file, level_files, columns, times,
@@ -380,12 +395,6 @@ def _relative(path, root):
         return Path(path).resolve().relative_to(Path(root).resolve()).as_posix()
     except ValueError:
         return str(path)
-
-
-def _header_levels(path):
-    with open(path, newline="", encoding="utf-8") as handle:
-        header = next(csv.reader(handle))
-    return [float(v) for v in header[1:]]
 
 
 def _layout(path):
