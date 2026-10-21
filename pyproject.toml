@@ -22,6 +22,11 @@ classifiers = [
 dependencies = [
     "cartopy>=0.21.0",
     "cdsapi>=0.5.1",
+    "cmocean>=4.0.3",
+    # src/utils/cyclophaser_compat.py accepts only the tested version
+    "cyclophaser==1.7.3",
+    "dask>=2024.7.0",
+    "lorenz-phase-space>=1.2.4",
     "matplotlib>=3.5.0",
     "metpy>=1.3.0",
     "netCDF4>=1.5.8",
@@ -29,6 +34,7 @@ dependencies = [
     "pandas>=1.4.0",
     "pint>=0.19",
     "scipy>=1.8.0",
+    "shapely>=2.0.5",
     "xarray>=2022.3.0",
 ]
 
