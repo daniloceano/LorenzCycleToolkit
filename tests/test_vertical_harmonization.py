@@ -232,8 +232,8 @@ def test_gap_outside_every_box_changes_nothing(monkeypatch, lectk_workdir):
     assert _harmonization(case)["harmonization"]["excluded_levels_Pa"] == []
 
 
-def test_choose_draws_every_box_before_computing(monkeypatch, lectk_workdir):
-    """--choose: all boxes are chosen before the first term is computed, and the levels are harmonised."""
+def test_choose_keeps_the_levels_of_each_time_step(monkeypatch, lectk_workdir):
+    """--choose (DEC-10-C pending): no harmonization; each box is drawn and computed in turn; values under their own level."""
     import src.frameworks.lec_moving_framework as moving
     import src.utils.select_area as select_area
 
@@ -257,9 +257,14 @@ def test_choose_draws_every_box_before_computing(monkeypatch, lectk_workdir):
     monkeypatch.setattr(moving, "draw_box_map", draw)
     monkeypatch.setattr(moving, "BoxData", box_data)
     results = _run(monkeypatch, infile, "--choose")
-    assert events == ["draw"] * 5 + ["box"] * 5
-    harmonization = _harmonization(results)["harmonization"]
-    assert harmonization["excluded_because_incomplete_at"] == [{"level_Pa": 70000.0, "times": [TIMES[2]]}]
+    assert events == ["draw", "box"] * 5
+    vertical = _harmonization(results)
+    assert "harmonization" not in vertical
+    assert vertical["levels_used_vary_with_time"] is True
+    assert {r["time"]: r["dropped_levels_Pa"] for r in vertical["by_time"]}[TIMES[2]] == [70000.0]
+    rows = _rows(results / "results_vertical_levels/Kz_level.csv")
+    assert [float(v) for v in rows[0][1:]] == LEVELS
+    assert rows[3][0] == TIMES[2] and rows[3][1] == "" and all(rows[3][2:])
 
 
 def test_align_to_header_puts_each_value_under_its_level(tmp_path):
