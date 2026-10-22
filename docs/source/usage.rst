@@ -204,11 +204,28 @@ By default, results are saved in ``LEC_Results/<inputfile>_<framework>/``. You c
 
 This creates the directory: ``LEC_Results/my_cyclone_analysis_fixed/``
 
+The name replaces the input-file name in every file of the run: ``my_cyclone_analysis_fixed_results.csv``, ``log.my_cyclone_analysis`` and, in the moving framework, ``my_cyclone_analysis_track_trackfile``. Without ``-o`` every name is derived from the input file, as before. The name must not be empty, ``.`` or ``..``, and must not contain ``/`` or ``\``; otherwise the program stops with exit status 2 before writing anything.
+
+Versions before this change used ``--outname`` only to rename the main CSV of the fixed framework (``LEC_Results/<inputfile>_fixed/NAME.csv``) and ignored it in the moving framework.
+
 **Use cases**:
 
 - Organizing multiple analyses of the same dataset with different configurations
 - Creating descriptive names for specific case studies
 - Avoiding overwriting previous results
+
+Existing Results and ``--overwrite``
+------------------------------------
+
+A run never overwrites the results of an earlier run by default. If its results directory (``LEC_Results/<name>_<framework>/``) already contains files, the program stops with exit status 2 before writing anything, names the files found and suggests ``--overwrite`` or ``-o/--outname``. An empty directory is not an earlier run.
+
+With ``--overwrite`` the run reuses the directory: its files are rewritten in place and **nothing is deleted**. Files of the earlier run that this run does not produce (for example the figures of a run with ``-p`` when the new run has no ``-p``) are kept, untouched, and listed in ``run_status.json`` under ``previous_results.stale_files``; they are not results of the new run. To start from an empty directory, remove or rename the old one yourself, or use another ``--outname``.
+
+.. code-block:: bash
+
+   python lorenzcycletoolkit.py data.nc -r -f              # first run
+   python lorenzcycletoolkit.py data.nc -r -f              # stops: exit status 2
+   python lorenzcycletoolkit.py data.nc -r -f --overwrite  # reuses the directory
 
 Using Pre-computed Vorticity
 -----------------------------

@@ -25,6 +25,8 @@ The `LorenzCycleToolkit` generates a directory structure to store the results of
     │   │   ├── Ke_level.csv
     │   │   ├── Kz_level.csv
     │   │   ├── M_level.csv
+    │   ├── domain_selection.csv
+    │   ├── lec_metadata.json
     │   ├── run_status.json
     │   ├── testdata_ERA5_fixed_results.csv
 
@@ -41,7 +43,12 @@ Each subdirectory within the `LEC_Results` directory corresponds to a different 
 
 - **run_status.json**: Status of the run: whether the computation completed and whether each requested product was generated (see `Run Status File`_).
 
-- **results_vertical_levels/**: One CSV file per term with its vertical profile (rows: times; columns: pressure levels in Pa). The files do **not** all hold the same kind of quantity and do **not** share the units of the main results file: see `Per-Level Files: Quantities and Units`_ before plotting, comparing or integrating them.
+- **lec_metadata.json**: What the computation used: input file and its SHA-256, namelist, times, the retained pressure layer, the units of every column of the main results file and, for every per-level file, its units, its relation to the column value and its layout (see `Scientific Metadata File`_).
+
+- **domain_selection.csv**: The box actually selected at each time step, compared with the box requested and with the extent of the input data (see `Domain Selection File`_).
+
+
+- **results_vertical_levels/**: One CSV file per term with its vertical profile (rows: times; columns: pressure levels in Pa). The header lists the levels actually used (with ``-t``, the levels common to all time steps; with ``--choose``, the levels of the input, and a cell is left empty where a level was excluded at that time step) and each value is written under its own level. The files do **not** all hold the same kind of quantity and do **not** share the units of the main results file: see `Per-Level Files: Quantities and Units`_ before plotting, comparing or integrating them.
 
   - ``Az_level.csv``, ``Ae_level.csv``: zonal and eddy available potential energy per unit pressure.
   - ``Kz_level.csv``, ``Ke_level.csv``: area means of the squared zonal-mean and eddy wind components, ⟨[u]²+[v]²⟩ and ⟨u*²+v*²⟩. They equal **twice** the kinetic energy per unit mass and are written **without** the factor 1/(2g) of the column integral.
@@ -57,7 +64,13 @@ Each subdirectory within the `LEC_Results` directory corresponds to a different 
 Main Results File
 ~~~~~~~~~~~~~~~~~
 
-The main CSV file (e.g., ``testdata_ERA5_fixed_results.csv``) contains the integrated LEC terms over the entire atmospheric column for each timestep. This file provides a time series of the energy cycle and is the primary output for analysis.
+The main CSV file (e.g., ``testdata_ERA5_fixed_results.csv``) contains, for each time step, the LEC terms integrated over the **retained pressure layer**: the pressure levels of the input that have complete data inside the box, from the top level to the bottom level of the input (for the ERA5 sample, 700 to 1000 hPa). It is not an integral over the entire atmospheric column. The retained levels, the top and bottom pressures and any excluded level are recorded in ``lec_metadata.json`` (``vertical``). This file provides a time series of the energy cycle and is the primary output for analysis.
+
+With a track file (``-t``) the same levels are used at every time step. Each time step has its own box, and a level whose data are incomplete inside the box of **any** time step is excluded from **all** of them, so every column value, tendency and residual covers the same layer. Nothing is interpolated and the input file is not modified. The terminal and the log list the excluded levels and the time steps that caused each exclusion. Excluding levels at the top or at the bottom only makes the layer thinner; the run stops with an error, before any result is written, when fewer than two levels remain or when an excluded level lies between the top and the bottom of the levels kept (an internal gap). Two levels are only the numerical minimum for the column integral and the vertical derivatives to exist: they do not make the result representative of the atmospheric column, and with few levels the static stability and the vertical derivatives at the top and bottom of the layer are coarse. Check ``vertical.harmonization`` in ``lec_metadata.json`` to see which layer was used.
+
+With ``--choose`` the levels are decided at each time step, as before: the harmonization is not applied, a level whose data are incomplete inside the box of one time step is excluded from that time step only, and the column values of consecutive time steps may then cover different layers. The levels of each time step are listed in ``vertical.by_time`` in ``lec_metadata.json``.
+
+The first column holds the time; its header cell is empty (the header line starts with a comma).
 
 **File Columns**:
 
@@ -212,7 +225,7 @@ Run Status File
 
 Product states: ``success`` (requested and every expected file written by this run), ``failed`` (requested and not, or not completely, generated), ``unavailable`` (not applicable to the data for a known reason checked before the call; not a failure: currently the cyclophaser periods of series shorter than the tested minimum, and the products that need them), ``not_requested`` (optional product without ``-p``). ``pending`` appears only while the run is in progress.
 
-Required products: ``results_csv``, ``vertical_level_csvs`` and, in the moving framework, ``trackfile``. Optional products with ``-p`` — fixed framework: ``timeseries``, ``box_limits_map``, ``boxplots``, ``hovmoller``, ``lec_cycle``; moving framework: ``domain_maps`` (one map per time step), ``track_map``, ``zeta_hgt_timeseries``, ``timeseries``, ``hovmoller``, ``boxplots``, ``periods`` (cyclophaser life-cycle periods and ``periods.csv``), ``lec_cycle``, ``lec_periods`` and ``lps`` (these two need ``periods``).
+Required products: ``results_csv``, ``vertical_level_csvs``, in the moving framework ``trackfile``, and ``lec_metadata`` and ``domain_selection``. Optional products with ``-p`` — fixed framework: ``timeseries``, ``box_limits_map``, ``boxplots``, ``hovmoller``, ``lec_cycle``; moving framework: ``domain_maps`` (one map per time step), ``track_map``, ``zeta_hgt_timeseries``, ``timeseries``, ``hovmoller``, ``boxplots``, ``periods`` (cyclophaser life-cycle periods and ``periods.csv``), ``lec_cycle``, ``lec_periods`` and ``lps`` (these two need ``periods``).
 
 Example (moving framework, ERA5 sample: 5 hourly steps, fewer than the 8 needed for the periods):
 
@@ -237,5 +250,54 @@ Example (moving framework, ERA5 sample: 5 hourly steps, fewer than the 8 needed 
    }
 
 (Abridged: the file lists every product and every field.)
+
+``previous_results`` is ``null`` unless the run reused, with ``--overwrite``, a results directory that already held files (see :doc:`usage`). Then it gives ``n_files_before`` and ``stale_files``: files of the earlier run that this run did not rewrite. They are left in place, untouched, and are **not** results of this run (for example the figures of an earlier run with ``-p`` when the new run has no ``-p``).
+
+Scientific Metadata File
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+``lec_metadata.json`` is written by every run once the computation is complete, before the figures. It is an additional file: no CSV file changes. Schema version 1:
+
+- ``lectk_version``, ``generated_utc``, ``command`` (method, ``-r``, ``--outname``, box-limits or track file, ``-z``, ``-m``).
+- ``input``: file name, ``sha256`` and size of the input file, and the namelist (variable name and declared units of each row).
+- ``time``: number of times, first and last time, and the distinct time steps in seconds.
+- ``horizontal``: the extent of the input data and the name of ``domain_selection.csv``.
+
+- ``vertical``: the input levels, the levels used (``levels_used_Pa``), the excluded levels (``dropped_levels_Pa``), ``p_top_Pa`` and ``p_bottom_Pa`` of the retained layer, and the levels in the header of the per-level files. In the moving framework ``by_time`` lists, for each time step, the levels used and the excluded levels. With ``-t`` the levels are common to all time steps (``levels_used_vary_with_time`` is ``false``). With ``--choose`` they are decided at each time step; when they vary with time, ``levels_used_Pa``, ``dropped_levels_Pa``, ``p_top_Pa`` and ``p_bottom_Pa`` are ``null`` and ``levels_used_at_every_time_Pa`` gives the common levels. ``harmonization`` (``-t`` only) records the rule, the levels available, used and excluded, the time steps that caused each exclusion (``excluded_because_incomplete_at``), the levels complete at each time step (``complete_levels_by_time``) and the input and effective layers (``input_layer_Pa``, ``effective_layer_Pa``).
+- ``main_results``: the file, the empty header of the time column and the units of every column (``J/m**2`` for Az, Ae, Kz, Ke; ``kg/m**2/s`` for M; ``W/m**2`` for the other terms, the tendencies and the residuals). ``Dz`` and ``De`` are marked ``NOT VERIFIED``.
+- ``vertical_level_files``: for each of the 23 per-level files, its ``units``, ``role``, ``column_term``, ``column_units`` and ``column_factor`` (as in `Per-Level Files: Quantities and Units`_) and its ``layout``: ``time_by_level`` (one row per time, one column per level) or ``time_invariant_profile`` (``Cz_1`` and ``Ce_1`` in the fixed framework: a row ``level`` with the levels, then a row with the values, which do not depend on time).
+
+Reading a per-level file in both layouts as a time × level table (example; not part of the toolkit's API):
+
+.. code-block:: python
+
+   import json
+   import pandas as pd
+
+   meta = json.load(open("LEC_Results/testdata_ERA5_fixed/lec_metadata.json"))
+   times = pd.read_csv("LEC_Results/testdata_ERA5_fixed/testdata_ERA5_fixed_results.csv",
+                       index_col=0, parse_dates=True).index
+   entry = {e["term"]: e for e in meta["vertical_level_files"]}["Cz_1"]
+   path = "LEC_Results/testdata_ERA5_fixed/" + entry["file"]
+   if entry["layout"] == "time_invariant_profile":
+       rows = pd.read_csv(path, index_col=0)          # rows "level" and "Cz_1"
+       profile = rows.iloc[-1].astype(float)          # values per level (Pa)
+       table = pd.DataFrame([profile.values] * len(times), index=times,
+                            columns=[float(c) for c in rows.columns])
+   else:
+       table = pd.read_csv(path, index_col=0, parse_dates=True)
+
+Domain Selection File
+~~~~~~~~~~~~~~~~~~~~~
+
+``domain_selection.csv`` has one row per time step (moving framework) or one row with time ``all`` (fixed framework). Limits are in degrees, in the longitude convention of the input data after preprocessing (for example −60 rather than 300):
+
+- ``requested_west/east/south/north``: the box limits given to the computation (the box-limits file, or the track centre ± width/2 and ± length/2).
+- ``selected_west/east/south/north``: the first and last longitude and latitude of the fields actually used. Each limit is the grid point nearest to the request.
+- ``offset_*``: selected minus requested.
+- ``n_lon``, ``n_lat``: number of grid points of the box.
+- ``input_west/east/south/north``: extent of the input data; ``*_at_input_edge``: whether the selected edge is the edge of the data.
+- ``requested_outside_input``: the edges requested beyond the data (``none`` otherwise). Such a box is cut at the edge of the data without an error; this file is where the cut shows.
+- ``fields_share_selection``: whether temperature, wind, omega and geopotential use the same grid points.
 
 Use the ``-v/--verbosity`` flag for more detailed debug-level logging.
