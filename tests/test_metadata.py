@@ -150,7 +150,7 @@ def test_box_beyond_the_data_is_recorded(monkeypatch, lectk_workdir):
 
 
 def test_level_dropped_at_one_time_is_recorded(monkeypatch, lectk_workdir):
-    """M2: omega missing at 700 hPa at one time only drops 700 hPa at that time only."""
+    """M2 with DEC-10 B: omega missing at 700 hPa at one time excludes 700 hPa at every time, and says why."""
     workdir = lectk_workdir(namelist="namelist_ERA5", track="track_testdata_ERA5")
     with xr.open_dataset("samples/testdata_ERA5.nc") as source:
         data = source.load()
@@ -160,16 +160,19 @@ def test_level_dropped_at_one_time_is_recorded(monkeypatch, lectk_workdir):
     data.to_netcdf(workdir / "case.nc")
     results, _ = _run(monkeypatch, "case.nc", "-t")
     vertical = _metadata(results)["vertical"]
-    assert vertical["levels_used_vary_with_time"] is True
-    assert vertical["levels_used_Pa"] is None and vertical["p_top_Pa"] is None
+    assert vertical["levels_used_vary_with_time"] is False
+    assert vertical["levels_used_Pa"] == LEVELS[1:] and vertical["dropped_levels_Pa"] == [70000.0]
+    assert vertical["p_top_Pa"] == 85000.0 and vertical["p_bottom_Pa"] == 100000.0
     assert vertical["levels_used_at_every_time_Pa"] == LEVELS[1:]
     by_time = {r["time"]: r for r in vertical["by_time"]}
     for time in TIMES:
-        dropped = [70000.0] if time == TIMES[2] else []
-        assert by_time[time]["dropped_levels_Pa"] == dropped, time
-        assert by_time[time]["levels_used_Pa"] == [p for p in LEVELS if p not in dropped], time
-    # the per-level files keep the header of the input levels (E0-21 is examined in Wave 4)
-    assert vertical["per_level_file_header_levels_Pa"] == LEVELS
+        assert by_time[time]["dropped_levels_Pa"] == [70000.0], time
+        assert by_time[time]["levels_used_Pa"] == LEVELS[1:], time
+    harmonization = vertical["harmonization"]
+    assert harmonization["excluded_because_incomplete_at"] == [{"level_Pa": 70000.0, "times": [TIMES[2]]}]
+    assert harmonization["complete_levels_by_time"][2] == {"time": TIMES[2], "levels_Pa": LEVELS[1:]}
+    # the per-level files list the levels used, as in the fixed framework (E0-21a)
+    assert vertical["per_level_file_header_levels_Pa"] == LEVELS[1:]
 
 
 @pytest.mark.parametrize("edge", ["west", "east", "south", "north"])

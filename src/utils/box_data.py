@@ -54,6 +54,7 @@ from metpy.units import units
 
 from ..utils.calc_averages import CalcAreaAverage, CalcZonalAverage
 from ..utils.thermodynamics import AdiabaticHEating, StaticStability
+from ..utils.vertical_harmonization import complete_levels
 
 
 class BoxData:
@@ -121,26 +122,13 @@ class BoxData:
         volume.
 
         No value is invented and nothing is extrapolated: unusable levels are
-        excluded and reported.
+        excluded and reported. In the moving framework the levels are already
+        common to all time steps (vertical_harmonization), so none is dropped here.
         """
-        core = ["Air Temperature", "Eastward Wind Component",
-                "Northward Wind Component", "Omega Velocity"]
-        core += (
-            ["Geopotential"]
-            if "Geopotential" in variable_list_df.index
-            else ["Geopotential Height"]
-        )
-
-        box = self._box_slice()
-
         levels = data[self.VerticalCoordIndexer]
-        valid = xr.ones_like(levels, dtype=bool)
-        for name in core:
-            if name not in variable_list_df.index:
-                continue
-            var = data[variable_list_df.loc[name]["Variable"]].sel(**box)
-            other = [d for d in var.dims if d != self.VerticalCoordIndexer]
-            valid = valid & var.notnull().all(dim=other)
+        valid = complete_levels(
+            data, variable_list_df, self.VerticalCoordIndexer, self._box_slice()
+        )
 
         n_total = int(levels.size)
         n_valid = int(valid.sum())

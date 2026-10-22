@@ -34,6 +34,7 @@ from ..utils.run_metadata import RunMetadata, input_extent
 from ..utils.run_status import RunStatus
 from ..utils.select_area import draw_box_map, plot_domain_attributes
 from ..utils.tools import find_extremum_coordinates, initialize_logging
+from ..utils.vertical_harmonization import harmonize_levels
 
 
 def create_terms_dict(args):
@@ -203,6 +204,60 @@ def extract_wind_and_height_components(idata, variable_list_df, args):
         ihgt = (ihgt / g).metpy.convert_units("gpm")
 
     return iu, iv, ihgt
+
+
+def select_time(data, dTdt, TimeName, t):
+    """
+    Select one time step of the data and of the temperature tendency.
+
+    Args:
+        data (xr.Dataset): The data of the run.
+        dTdt (xr.DataArray): Temperature tendency.
+        TimeName (str): Name of the time coordinate.
+        t (pd.Timestamp): Time step.
+
+    Returns:
+        tuple: The data and the temperature tendency at ``t``.
+
+    Raises:
+        KeyError: If ``t`` is not a time of the data.
+    """
+    idata, idTdt = data.sel({TimeName: t}), dTdt.sel({TimeName: t})
+    if idata[TimeName].shape != ():
+        idata, idTdt = data.isel({TimeName: 1}), dTdt.isel({TimeName: 1})
+    return idata, idTdt
+
+
+def fields_at_850(idata, variable_list_df, args, VerticalCoordIndexer, LatIndexer, LonIndexer):
+    """
+    Wind, geopotential height, wind speed and vorticity at 850 hPa for one time step.
+
+    They locate the system and draw the domain maps; the energetics are
+    computed over the levels of the vertical harmonization.
+
+    Returns:
+        dict: ``izeta_850``, ``ihgt_850``, ``iwspd_850``, ``iu_850``,
+        ``iv_850``, ``lat`` and ``lon``.
+    """
+    iu, iv, ihgt = extract_wind_and_height_components(idata, variable_list_df, args)
+    iu_850, iv_850, ihgt_850 = (
+        iu.sel({VerticalCoordIndexer: 85000}),
+        iv.sel({VerticalCoordIndexer: 85000}),
+        ihgt.sel({VerticalCoordIndexer: 85000}),
+    )
+    iwspd_850, izeta_850 = (
+        wind_speed(iu_850, iv_850),
+        vorticity(iu_850, iv_850).metpy.dequantify(),
+    )
+    return {
+        "izeta_850": izeta_850,
+        "ihgt_850": ihgt_850,
+        "iwspd_850": iwspd_850,
+        "iu_850": iu_850,
+        "iv_850": iv_850,
+        "lat": idata[LatIndexer],
+        "lon": idata[LonIndexer],
+    }
 
 
 def get_limits(args, t, data850, track=None):
@@ -599,9 +654,40 @@ def lec_moving(
         variable_list_df.loc["Vertical Level"]["Variable"],
     )
 
-    PressureData = data[VerticalCoordIndexer]
+    # Get the time array
+    times = pd.to_datetime(data[TimeName].values)
 
-    # Create csv files for storing vertical results
+    # Get the system track and check for errors
+    if args.track:
+        track = handle_track_file(
+            data, times, LonIndexer, LatIndexer, TimeName, args, app_logger
+        )
+
+    # With a track file the box of every time step is known before any term is
+    # computed, so all time steps share one vertical control volume (DEC-10 B):
+    # a level incomplete inside the box of any time step is excluded from all of
+    # them. With --choose the boxes are drawn one time step at a time and each
+    # step keeps its own levels until that mode has its own decision (DEC-10-C).
+    boxes, harmonization = {}, None
+    if args.track:
+        for t in times:
+            boxes[t] = get_limits(args, t, None, track)
+        harmonization = harmonize_levels(
+            [
+                (t, select_time(data, dTdt, TimeName, t)[0],
+                 (boxes[t]["min_lon"], boxes[t]["max_lon"], boxes[t]["min_lat"], boxes[t]["max_lat"]))
+                for t in times
+            ],
+            variable_list_df,
+            app_logger,
+        )
+    header_levels = (
+        harmonization.used_levels if harmonization
+        else [float(i) for i in data[VerticalCoordIndexer].values]
+    )
+
+    # Create csv files for storing vertical results. As in the fixed framework,
+    # the headers list the levels actually used (the input levels with --choose).
     level_files = []
     for term in [
         "Az",
@@ -628,22 +714,13 @@ def lec_moving(
         "Ck_4",
         "Ck_5",
     ]:
-        columns = [TimeName] + [float(i) for i in PressureData.values]
+        columns = [TimeName] + header_levels
         df = pd.DataFrame(columns=columns)
         file_name = term + "_" + VerticalCoordIndexer + ".csv"
         file_path = os.path.join(results_subdirectory_vertical_levels, file_name)
         df.to_csv(file_path, index=None)
         level_files.append(file_path)
         app_logger.info(f"{file_path} created (but still empty)")
-
-    # Get the time array
-    times = pd.to_datetime(data[TimeName].values)
-
-    # Get the system track and check for errors
-    if args.track:
-        track = handle_track_file(
-            data, times, LonIndexer, LatIndexer, TimeName, args, app_logger
-        )
 
     # Dictionary for saving system position and attributes
     results_keys = [
@@ -663,47 +740,25 @@ def lec_moving(
 
     # What each time step actually used (domain_selection.csv, lec_metadata.json)
     metadata = RunMetadata(args, "track" if args.track else "choose", variable_list_df, input_extent(data))
+    if harmonization is not None:
+        metadata.record_harmonization(harmonization)
 
     # Iterating over times
     for t in times:
         app_logger.info(f"⏰ Processing data at time: {t}...")
         try:
-            idata, idTdt = data.sel({TimeName: t}), dTdt.sel({TimeName: t})
-            if idata[TimeName].shape != ():
-                idata, idTdt = data.isel({TimeName: 1}), dTdt.isel({TimeName: 1})
+            idata, idTdt = select_time(data, dTdt, TimeName, t)
         except KeyError as e:
             app_logger.error(f"❌ Time indexing error: {e}")
             continue
 
-        # Wind components and geopotential height
-        iu, iv, ihgt = extract_wind_and_height_components(idata, variable_list_df, args)
+        # Wind, geopotential height, vorticity and wind speed at 850 hPa
+        data850 = fields_at_850(idata, variable_list_df, args, VerticalCoordIndexer, LatIndexer, LonIndexer)
+        izeta_850, ihgt_850, iwspd_850 = data850["izeta_850"], data850["ihgt_850"], data850["iwspd_850"]
+        lat = data850["lat"]
 
-        # Extract 850 hPa data
-        iu_850, iv_850, ihgt_850 = (
-            iu.sel({VerticalCoordIndexer: 85000}),
-            iv.sel({VerticalCoordIndexer: 85000}),
-            ihgt.sel({VerticalCoordIndexer: 85000}),
-        )
-
-        # Compute wind speed and vorticity at 850 hPa
-        iwspd_850, izeta_850 = (
-            wind_speed(iu_850, iv_850),
-            vorticity(iu_850, iv_850).metpy.dequantify(),
-        )
-        lat, lon = idata[LatIndexer], idata[LonIndexer]
-        # data850 = construct_data850(izeta_850, ihgt_850, iwspd_850, lat, lon)
-        data850 = {
-            "izeta_850": izeta_850,
-            "ihgt_850": ihgt_850,
-            "iwspd_850": iwspd_850,
-            "iu_850": iu_850,
-            "iv_850": iv_850,
-            "lat": lat,
-            "lon": lon,
-        }
-
-        # Get box attributes for current time
-        limits = get_limits(args, t, data850, track if args.track else None)
+        # Box of the current time (decided before the loop)
+        limits = boxes[t] if args.track else get_limits(args, t, data850, None)
         app_logger.info(
             f"🗺️ Box: center=({limits['central_lat']:.2f}, {limits['central_lon']:.2f}), "
             f"size={limits['length']}°x{limits['width']}°"
@@ -747,11 +802,11 @@ def lec_moving(
                 expected=[f"Figures/boxes/box_{limits['datestr']}.png"], step=limits["datestr"],
             )
 
-        # Create box object
+        # Create box object over the levels common to all time steps
         app_logger.info("📦 Creating box object...")
         try:
             box_obj = BoxData(
-                data=idata.compute(),
+                data=(harmonization.restrict(idata) if harmonization else idata).compute(),
                 variable_list_df=variable_list_df,
                 args=args,
                 western_limit=limits["min_lon"],
@@ -760,11 +815,16 @@ def lec_moving(
                 northern_limit=limits["max_lat"],
                 results_subdirectory=results_subdirectory,
                 results_subdirectory_vertical_levels=results_subdirectory_vertical_levels,
-                dTdt=idTdt,
+                dTdt=harmonization.restrict(idTdt) if harmonization else idTdt,
             )
         except Exception as e:
             app_logger.exception(f"❌ Error creating BoxData object: {e}")
             raise
+        if harmonization is not None and box_obj.dropped_levels:
+            raise RuntimeError(
+                f"BoxData dropped {box_obj.dropped_levels} at {t} although the vertical "
+                "harmonization found these levels complete in every box"
+            )
         app_logger.info("✅ Box object created.")
         metadata.record_box(
             box_obj,
