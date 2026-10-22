@@ -6,6 +6,25 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **`vertical.harmonization`** in `lec_metadata.json` (DEC-10 B, track mode
+  `-t`): the levels available, used and excluded, the time steps that
+  caused each exclusion, the levels complete at each time step and the input
+  and effective layers.
+
+- **`lec_metadata.json`** (E0-17, E0-18, E0-19, DEC-23): every run records the
+  input file and its SHA-256, the namelist, the time axis, the retained
+  pressure layer (levels used, excluded levels, top and bottom pressure), the
+  units of every column of the main results file and, for every per-level
+  file, its units, column relation and layout (`Cz_1`/`Ce_1` of the fixed
+  framework are time-invariant profiles). Additional file; no CSV changes.
+- **`domain_selection.csv`** (E0-22): the box actually selected at each time
+  step (grid points nearest to the request), the offset from the requested
+  box, the number of points and whether each edge is the edge of the input
+  data. A box requested beyond the data, which is cut at the data edge
+  without an error, now shows here. Additional file.
+- **`--overwrite`** (DEC-08): reuse a results directory that already holds
+  files; see the change below.
+
 - **`run_status.json`** (DEC-02): every command-line run writes, next to its
   results, the state of the computation and of each requested product
   (`success`, `failed`, `unavailable`, `not_requested`), the cause of each
@@ -26,6 +45,55 @@ All notable changes to this project will be documented in this file.
   changes. `Dz`/`De` are listed apart as not verified.
 
 ### Changed
+
+- **Box plots of the column terms without notches**: `boxplot_terms_*.png`
+  draw conventional boxes. With few time steps the notch interval (median
+  ± 1.57 IQR/√n) reached beyond the quartiles and the outline of the box
+  folded outward. Same data, quartiles, medians, whiskers, outliers, colours,
+  order of the terms, units, axis limits and file names; only the outline of
+  the boxes changes, and the median line spans the whole box. The box plots
+  by level and by time were not notched and are unchanged.
+
+- **One vertical control volume for every time step of the track mode
+  (`-t`)** (DEC-10, option B; behaviour change): a pressure level whose data are
+  incomplete inside the box of any time step is excluded from all time
+  steps. It used to be dropped at that time step only, so consecutive column
+  integrals covered different layers and the finite-difference tendencies
+  and the residuals carried the change of the integration domain (with one
+  level missing at one time step in the ERA5 sample, ∂Kz/∂t changed by about
+  −1000% and +550% at the neighbouring times). Runs without incomplete levels
+  are unchanged. Fewer than two common levels, or an excluded level between
+  the top and the bottom of the levels kept, stop the run with an error (two
+  levels are a numerical minimum, not a guarantee of a representative
+  column). With `--choose` the levels are still decided at each time step,
+  as before; the harmonization is not applied.
+- **Per-level files of the moving framework: every value sits under its own
+  level** (E0-21a, defect fixed): when a level was dropped at one time step,
+  the values of that row were written one column to the left, under the
+  header of the level above (850 hPa under 700 hPa). With `-t` the header
+  lists the levels used; with `--choose` it lists the levels of the input and
+  the cell of a level excluded at that time step is left empty.
+- **Runtime dependencies declared** (P-A1): `cmocean`, `cyclophaser==1.7.3`,
+  `dask`, `lorenz-phase-space` and `shapely` are now in `pyproject.toml`;
+  `pip install` of the package alone used to give a command line that failed
+  with `No module named 'cmocean'`.
+
+- **`-o/--outname` names the directory and every file** (E0-12, DEC-07,
+  behaviour change): `LEC_Results/NAME_<method>/` with
+  `NAME_<method>_results.csv`, `NAME_<method>_trackfile` and `log.NAME`, as
+  the documentation already said. It used to rename only the main CSV of the
+  fixed framework (`NAME.csv`, in the directory named after the input file)
+  and was ignored by the moving framework. Invalid names (empty, `.`, `..`,
+  with `/` or `\`) exit with status 2. Without `--outname` nothing changes.
+- **Earlier results are protected** (DEC-08, behaviour change): a run whose
+  results directory already contains files stops with exit status 2 before
+  writing anything. With `--overwrite` it rewrites its files in place and
+  deletes nothing; files of the earlier run that it does not produce are
+  listed in `run_status.json` (`previous_results`).
+- **Main results are integrals over the retained pressure layer** (E0-19,
+  documentation): the documentation said "entire atmospheric column"; the
+  values have always been integrals from the top to the bottom retained
+  level of the input. No value changes.
 
 - **Exit status 3 for partial output** (DEC-02, behaviour change): when the
   computation is complete but a requested figure could not be generated, the
@@ -102,6 +170,28 @@ All notable changes to this project will be documented in this file.
   figures of earlier versions.
 
 ### Tests
+
+- `tests/test_boxplot_terms.py`: every box of `boxplot_terms_*` is a
+  rectangle between the quartiles, and its median, whiskers, caps and
+  outliers equal those of `matplotlib.cbook.boxplot_stats`, for 5, 2 and 40
+  time steps, outliers, a constant series and the two reference runs; the
+  colours and the order of the terms.
+
+- `tests/test_vertical_harmonization.py` (DEC-10 B, E0-21a): a level missing
+  at some time steps gives, byte for byte, the run of the input without that
+  level; values under their own level; internal gap and fewer than two
+  levels stop the run; boxes of different sizes; `--choose` keeps the levels
+  of each time step and is not harmonized.
+- `tests/test_packaging.py` (P-A1): every imported third-party module is
+  declared; the cyclophaser pin matches `cyclophaser_compat`.
+- `tests/test_invariances.py`: homogeneity of each term in the winds
+  (a = −1, 2), fixed = moving framework for one box, column = factor ×
+  integral of the per-level profile.
+- `tests/test_maps_offline.py` (P-L1): the runs whose maps fail are compared
+  byte for byte with the same case run without figures on the same machine,
+  and with the reference within its registered tolerances; the reference is
+  no longer required to be byte-identical on another platform (it was
+  produced on x86_64). A failed map must not write any file.
 
 - **Offline maps** (DEC-03): the tests that draw maps require
   `CARTOPY_DATA_DIR` to point to a copy of the Natural Earth files listed,
