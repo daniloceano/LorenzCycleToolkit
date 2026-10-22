@@ -38,6 +38,7 @@ def _run(monkeypatch, infile, *flags):
     method = "fixed" if args.fixed else ("track" if args.track else "choose")
     results, figures, levels = setup_results_directory(args, method)
     logger = initialize_logging(results, args)
+    logger.info("Starting LEC analysis")
     logger.info(f"Command line arguments: {args}")
     data = prepare_data(args, "inputs/namelist", logger)
     run_lec_analysis(data, args, results, figures, levels, logger)
