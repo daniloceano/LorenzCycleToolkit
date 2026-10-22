@@ -31,6 +31,7 @@ from ..utils.longitude import canonicalize_box
 from ..utils.output_names import results_stem
 from ..utils.run_metadata import RunMetadata, input_extent
 from ..utils.run_status import RunStatus
+from ..utils.vertical_harmonization import harmonize_levels
 
 
 def lec_fixed(
@@ -119,10 +120,20 @@ def lec_fixed(
         f"🗺️ Bounding box: lon=[{min_lon}, {max_lon}], lat=[{min_lat}, {max_lat}]"
     )
 
+    # The levels are decided before any term is computed, with the rule of
+    # every framework (DEC-10 B, DEC-10-L B); here the box is the same at
+    # every time step.
+    harmonization = harmonize_levels(
+        [(t, data.sel({TimeName: t}), (min_lon, max_lon, min_lat, max_lat))
+         for t in data[TimeName].values],
+        variable_list_df,
+        app_logger,
+        "fixed",
+    )
 
     try:
         box_obj = BoxData(
-            data,
+            harmonization.restrict(data),
             variable_list_df,
             min_lon,
             max_lon,
@@ -135,8 +146,14 @@ def lec_fixed(
     except Exception:
         app_logger.exception("❌ An exception occurred while creating BoxData object")
         raise
+    if box_obj.dropped_levels:
+        raise RuntimeError(
+            f"BoxData dropped {box_obj.dropped_levels} although the vertical "
+            "harmonization found these levels complete at every time step"
+        )
 
     metadata = RunMetadata(args, "fixed", variable_list_df, extent)
+    metadata.record_harmonization(harmonization)
     metadata.record_box(
         box_obj,
         {"west": min_lon, "east": max_lon, "south": min_lat, "north": max_lat},

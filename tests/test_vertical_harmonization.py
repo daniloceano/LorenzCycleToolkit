@@ -1,14 +1,16 @@
 """
-Common vertical control volume of the moving framework (Wave 4: DEC-10 B, E0-21a).
+Common vertical control volume of every framework (Wave 4: DEC-10 B, E0-21a;
+DEC-10-L, option B; fixed, track and --choose).
 
-Expectations from the pre-registration of the wave, written before the
-implementation: a level incomplete inside the box of any time step is
-excluded from every time step, so the run equals, byte for byte, the run of
-the same input without that level (main results with tendencies and
-residuals, per-level files, trackfile, domain selection); the per-level
-files list the levels used and each value sits under its own level; an
-internal gap or fewer than two levels stop the run explicitly. The input
-NetCDF of the repository is never modified: each case writes its own copy.
+Expectations from the pre-registrations, written before the implementation:
+a level incomplete inside the box of any time step is excluded from every
+time step, so the run equals, byte for byte, the run of the same input without
+that level (main results with tendencies and residuals, per-level files,
+trackfile, domain selection); the per-level files list the levels used and
+each value sits under its own level; an internal gap or fewer than two levels
+stop the run explicitly; a level that is not in the input grid is never a gap.
+The input NetCDF of the repository is never modified: each case writes its own
+copy.
 """
 
 import csv
@@ -232,39 +234,171 @@ def test_gap_outside_every_box_changes_nothing(monkeypatch, lectk_workdir):
     assert _harmonization(case)["harmonization"]["excluded_levels_Pa"] == []
 
 
-def test_choose_keeps_the_levels_of_each_time_step(monkeypatch, lectk_workdir):
-    """--choose (DEC-10-C pending): no harmonization; each box is drawn and computed in turn; values under their own level."""
+MODES = {"fixed": "-f", "track": "-t", "choose": "--choose"}
+LABELS = {"fixed": "fixed framework (-f)", "track": "track mode (-t)", "choose": "--choose mode"}
+DOMAIN = {"min_lon": -65.0, "max_lon": -25.0, "min_lat": -45.0, "max_lat": -15.0}
+BOX = {"min_lon": -52.5, "max_lon": -37.5, "min_lat": -30.0, "max_lat": -15.0}
+
+
+def _mode_workdir(lectk_workdir, monkeypatch, mode, boxes=None, events=None):
+    """
+    Working directory for any framework. With --choose, the interactive
+    drawing is replaced by fixed answers: ``boxes`` maps a time to its box
+    (default: the same box at every time); each drawing is appended to ``events``.
+    """
+    workdir = lectk_workdir(namelist="namelist_ERA5", box_limits="box_limits_Reg1", track="track_testdata_ERA5")
+    if mode == "choose":
+        import src.frameworks.lec_moving_framework as moving
+        import src.utils.select_area as select_area
+
+        monkeypatch.setattr(select_area, "initial_domain", lambda zeta, lat, lon: dict(DOMAIN))
+
+        def draw(*args):
+            if events is not None:
+                events.append("draw")
+            time = pd.Timestamp(args[-1]).strftime("%Y-%m-%d %H:%M:%S")
+            return dict((boxes or {}).get(time, BOX))
+
+        monkeypatch.setattr(moving, "draw_box_map", draw)
+    return workdir
+
+
+def _sparse(workdir, name, missing=(), drop=(925.0,)):
+    """Sample on a deliberately sparse grid (925 hPa absent), optionally with omega missing."""
+    data = _sample().drop_sel(level=list(drop))
+    for level, it in missing:
+        data["W"].loc[{"level": level, "time": data.time.values[it]}] = np.nan
+    return _write(data, workdir / name)
+
+
+@pytest.mark.parametrize("mode", MODES)
+@pytest.mark.parametrize("level", [700.0, 1000.0], ids=["top", "bottom"])
+def test_edge_level_missing_equals_input_without_it_in_every_mode(monkeypatch, lectk_workdir, mode, level):
+    """A, B (U-3, U-9): an edge level missing at one time gives, in every mode, the run of the input without it."""
+    workdir = _mode_workdir(lectk_workdir, monkeypatch, mode)
+    case = _run(monkeypatch, _omega_missing(workdir, "case.nc", level, [2]), MODES[mode])
+    reference = _run(monkeypatch, _without_level(workdir, "nolevel.nc", level), MODES[mode])
+    new, ref = _outputs(case), _outputs(reference)
+    assert sorted(new) == sorted(ref)
+    assert len(new) == (25 if mode == "fixed" else 26)
+    assert [name for name in new if new[name] != ref[name]] == []
+
+    used = [p for p in LEVELS if p != level * 100]
+    vertical = _harmonization(case)
+    assert vertical["levels_used_vary_with_time"] is False
+    assert vertical["per_level_file_header_levels_Pa"] == used
+    harmonization = vertical["harmonization"]
+    assert harmonization["mode"] == mode
+    assert harmonization["used_levels_Pa"] == used
+    assert harmonization["excluded_because_incomplete_at"] == [{"level_Pa": level * 100, "times": [TIMES[2]]}]
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_messages_and_metadata_name_the_mode(monkeypatch, lectk_workdir, mode):
+    """U-10: terminal/log say the mode, the input grid, the levels complete at each time, the exclusion and the layer."""
+    workdir = _mode_workdir(lectk_workdir, monkeypatch, mode)
+    case = _run(monkeypatch, _omega_missing(workdir, "case.nc", 700.0, [2]), MODES[mode])
+    log = next(case.glob("log.*")).read_text(encoding="utf-8")
+    label = LABELS[mode]
+    assert f"Vertical levels ({label}): input grid of 4 levels, 70000 Pa, 85000 Pa, 92500 Pa, 100000 Pa." in log
+    assert (f"Vertical levels ({label}) at {TIMES[2]}: complete inside the box 85000 Pa, 92500 Pa, 100000 Pa; "
+            "incomplete 70000 Pa.") in log
+    assert f"Vertical levels ({label}): all 4 levels complete inside the box at the other 4 time step(s)." in log
+    warnings = [line for line in log.splitlines() if " - WARNING - " in line and "Vertical harmonization" in line]
+    assert len(warnings) == 1 and f"({label}, common control volume" in warnings[0]
+    assert f"70000 Pa (incomplete at {TIMES[2]})" in warnings[0]
+    assert (f"Vertical harmonization ({label}): input grid 70000 Pa, 85000 Pa, 92500 Pa, 100000 Pa; excluded "
+            "70000 Pa; used 85000 Pa, 92500 Pa, 100000 Pa (85000 Pa to 100000 Pa) at every time step.") in log
+    harmonization = _harmonization(case)["harmonization"]
+    assert harmonization["mode"] == mode
+    assert harmonization["internal_gap_policy"].startswith("stop (DEC-10-L, option B)")
+    assert harmonization["minimum_levels"] == 2 and harmonization["time_steps"] == 5
+    assert [r["levels_Pa"] for r in harmonization["complete_levels_by_time"]] == [
+        LEVELS[1:] if i == 2 else LEVELS for i in range(5)
+    ]
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_internal_gap_stops_every_mode(monkeypatch, lectk_workdir, mode):
+    """C (U-4, DEC-10-L option B): a level missing between the top and the bottom stops every mode."""
+    workdir = _mode_workdir(lectk_workdir, monkeypatch, mode)
+    infile = _omega_missing(workdir, "case.nc", 850.0, [2])
+    with pytest.raises(VerticalHarmonizationError, match="internal gap") as excinfo:
+        _run(monkeypatch, infile, MODES[mode])
+    message = str(excinfo.value)
+    assert LABELS[mode] in message and "85000 Pa" in message and "DEC-10-L, option B" in message
+    assert TIMES[2] in message
+    results = workdir / "LEC_Results" / f"case_{mode}"
+    assert not list(results.glob("*_results.csv"))
+    assert not list((results / "results_vertical_levels").glob("*.csv"))
+    status = json.loads((results / "run_status.json").read_text(encoding="utf-8"))
+    assert status["status"] != "success"
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_fewer_than_two_levels_stop_every_mode(monkeypatch, lectk_workdir, mode):
+    """E (U-6): when only one level is complete at every time, every mode stops."""
+    workdir = _mode_workdir(lectk_workdir, monkeypatch, mode)
+    data = _sample()
+    for level, it in ((700.0, 1), (850.0, 2), (925.0, 3)):
+        data["W"].loc[{"level": level, "time": data.time.values[it]}] = np.nan
+    infile = _write(data, workdir / "case.nc")
+    with pytest.raises(VerticalHarmonizationError, match="at least 2") as excinfo:
+        _run(monkeypatch, infile, MODES[mode])
+    assert LABELS[mode] in str(excinfo.value) and "100000 Pa" in str(excinfo.value)
+    assert not list((workdir / "LEC_Results" / f"case_{mode}").glob("*_results.csv"))
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_sparse_grid_is_not_a_gap(monkeypatch, lectk_workdir, mode):
+    """D (U-5): a complete grid without 925 hPa is used as it is; an edge level missing on it thins the layer as usual."""
+    workdir = _mode_workdir(lectk_workdir, monkeypatch, mode)
+    sparse = _run(monkeypatch, _sparse(workdir, "sparse.nc"), MODES[mode])
+    harmonization = _harmonization(sparse)["harmonization"]
+    grid = [70000.0, 85000.0, 100000.0]
+    assert harmonization["available_levels_Pa"] == grid and harmonization["used_levels_Pa"] == grid
+    assert harmonization["excluded_levels_Pa"] == []
+    assert [float(v) for v in _rows(sparse / "results_vertical_levels/Kz_level.csv")[0][1:]] == grid
+
+    case = _run(monkeypatch, _sparse(workdir, "case.nc", missing=[(700.0, 2)]), MODES[mode])
+    reference = _run(monkeypatch, _sparse(workdir, "no700.nc", drop=(925.0, 700.0)), MODES[mode])
+    new, ref = _outputs(case), _outputs(reference)
+    assert [name for name in new if new[name] != ref[name]] == []
+    assert _harmonization(case)["harmonization"]["used_levels_Pa"] == grid[1:]
+
+
+def test_choose_draws_every_box_before_computing(monkeypatch, lectk_workdir):
+    """--choose: every box is drawn before any term is computed, so that the levels can be decided for all of them."""
     import src.frameworks.lec_moving_framework as moving
-    import src.utils.select_area as select_area
 
-    workdir = lectk_workdir(namelist="namelist_ERA5")
-    infile = _omega_missing(workdir, "case.nc", 700.0, [2])
     events = []
-    box = {"min_lon": -52.5, "max_lon": -37.5, "min_lat": -30.0, "max_lat": -15.0}
-    monkeypatch.setattr(select_area, "initial_domain",
-                        lambda zeta, lat, lon: {"min_lon": -65.0, "max_lon": -25.0, "min_lat": -45.0, "max_lat": -15.0})
-
-    def draw(*args):
-        events.append("draw")
-        return dict(box)
-
+    workdir = _mode_workdir(lectk_workdir, monkeypatch, "choose", events=events)
     real_box = moving.BoxData
 
     def box_data(*args, **kwargs):
         events.append("box")
         return real_box(*args, **kwargs)
 
-    monkeypatch.setattr(moving, "draw_box_map", draw)
     monkeypatch.setattr(moving, "BoxData", box_data)
-    results = _run(monkeypatch, infile, "--choose")
-    assert events == ["draw", "box"] * 5
-    vertical = _harmonization(results)
-    assert "harmonization" not in vertical
-    assert vertical["levels_used_vary_with_time"] is True
-    assert {r["time"]: r["dropped_levels_Pa"] for r in vertical["by_time"]}[TIMES[2]] == [70000.0]
+    results = _run(monkeypatch, _omega_missing(workdir, "case.nc", 700.0, [2]), "--choose")
+    assert events == ["draw"] * 5 + ["box"] * 5
     rows = _rows(results / "results_vertical_levels/Kz_level.csv")
-    assert [float(v) for v in rows[0][1:]] == LEVELS
-    assert rows[3][0] == TIMES[2] and rows[3][1] == "" and all(rows[3][2:])
+    assert [float(v) for v in rows[0][1:]] == LEVELS[1:]
+    assert all(len(row) == 4 and all(row[1:]) for row in rows[1:])
+
+
+def test_choose_level_incomplete_only_inside_a_larger_box(monkeypatch, lectk_workdir):
+    """U-7 with --choose: the box drawn at each time step decides; a larger box at one step excludes the level from all."""
+    small = {"min_lon": -50.0, "max_lon": -40.0, "min_lat": -30.0, "max_lat": -20.0}
+    large = {"min_lon": -53.0, "max_lon": -37.0, "min_lat": -33.0, "max_lat": -17.0}
+    boxes = {time: (large if i == 3 else small) for i, time in enumerate(TIMES)}
+    workdir = _mode_workdir(lectk_workdir, monkeypatch, "choose", boxes=boxes)
+    case = _run(monkeypatch, _omega_missing(workdir, "case.nc", 700.0, range(5), point=POINT), "--choose")
+    reference = _run(monkeypatch, _without_level(workdir, "no700.nc", 700.0), "--choose")
+    new, ref = _outputs(case), _outputs(reference)
+    assert [name for name in new if new[name] != ref[name]] == []
+    harmonization = _harmonization(case)["harmonization"]
+    assert harmonization["excluded_because_incomplete_at"] == [{"level_Pa": 70000.0, "times": [TIMES[3]]}]
 
 
 def test_align_to_header_puts_each_value_under_its_level(tmp_path):

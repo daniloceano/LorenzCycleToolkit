@@ -1,25 +1,28 @@
 """
-Common vertical control volume of the moving framework (DEC-10, option B).
+Common vertical control volume of every framework (DEC-10, option B; DEC-10-L, option B).
 
-In the moving framework every time step has its own box. A pressure level
-whose fields were incomplete inside the box of one time step used to be
-dropped at that time step only, so consecutive column integrals covered
-different layers and the finite-difference tendencies and the budget
-residuals carried the change of the integration domain. The levels are now
-harmonised once, before any term is computed:
+The fixed framework (-f), the track mode (-t) and the --choose mode decide
+the pressure levels once, before any term is computed, with the same rule:
 
-    L_n = levels whose core fields are finite everywhere in the box of step n
-    L   = intersection of the L_n over all time steps (input order kept)
+    L_n = levels of the input grid whose core fields are finite everywhere
+          in the box of time step n
+    L   = intersection of the L_n over the time steps processed (input order kept)
 
-and every term at every time step is integrated over L. Nothing is
-interpolated and the input data are not modified.
+and every term at every time step is integrated over L. A level whose fields
+were incomplete at one time step used to be dropped at that time step only in
+the moving framework, so consecutive column integrals covered different layers
+and the finite-difference tendencies and the budget residuals carried the
+change of the integration domain. In the fixed framework the box is the same
+at every time step. Nothing is interpolated and the input data are not modified.
 
-Excluding levels at the top or at the bottom of the input layer only makes
-the layer thinner. An excluded level between the top and the bottom of L
-would leave an internal gap: integrating across it needs a methodological
-decision that has not been taken (pending decision DEC-10-L), so the run
-stops. Fewer than two levels cannot be integrated over a layer and also
-stop the run.
+Only levels of the input grid can be excluded: a level that is not in the
+input is never a gap, so a deliberately sparse grid with complete data is used
+as it is. A level that is in the grid but whose data are incomplete (even
+entirely missing) is excluded. Excluding levels at the top or at the bottom of
+the input layer only makes the layer thinner. An excluded level between the
+top and the bottom of L would leave an internal gap: the toolkit does not
+integrate across missing data (DEC-10-L, option B), so the run stops. Fewer
+than two levels cannot be integrated over a layer and also stop the run.
 
 Created by:
     Danilo Couto de Souza
@@ -46,10 +49,23 @@ CORE_FIELDS = (
 MIN_LEVELS = 2
 
 RULE = (
-    "common vertical control volume (DEC-10, option B): a pressure level is used "
-    "only if every core field is finite everywhere inside the box of every time "
-    "step; the same levels are used at every time step and nothing is interpolated"
+    "common vertical control volume (DEC-10, option B), in every framework: a pressure "
+    "level of the input grid is used only if every core field is finite everywhere "
+    "inside the box of every time step processed; the same levels are used at every "
+    "time step and nothing is interpolated"
 )
+
+INTERNAL_GAP_POLICY = (
+    "stop (DEC-10-L, option B): an excluded level between the top and the bottom of the "
+    "levels used stops the run; levels that are not in the input grid are not gaps"
+)
+
+# How the messages and the metadata name each framework.
+MODES = {
+    "fixed": "fixed framework (-f)",
+    "track": "track mode (-t)",
+    "choose": "--choose mode",
+}
 
 
 class VerticalHarmonizationError(ValueError):
@@ -116,11 +132,12 @@ def _pa(levels):
 
 class VerticalHarmonization:
     """
-    Levels used by every time step of a moving-framework run.
+    Levels used by every time step of a run.
 
     Attributes:
+        mode (str): Framework of the run (a key of ``MODES``).
         level_name (str): Name of the vertical coordinate.
-        available_levels (list): Levels of the input data (Pa, input order).
+        available_levels (list): Levels of the input grid (Pa, input order).
         used_levels (list): Levels complete in the box of every time step.
         incomplete_at (dict): For each excluded level, the time steps whose
             box does not have complete data on it.
@@ -128,7 +145,8 @@ class VerticalHarmonization:
         core_fields (list): Namelist rows checked.
     """
 
-    def __init__(self, level_name, available_levels, complete_by_time, core_fields):
+    def __init__(self, mode, level_name, available_levels, complete_by_time, core_fields):
+        self.mode = mode
         self.level_name = level_name
         self.available_levels = list(available_levels)
         self.complete_by_time = list(complete_by_time)
@@ -169,7 +187,11 @@ class VerticalHarmonization:
     def as_metadata(self):
         """Record of the harmonisation for lec_metadata.json."""
         return {
+            "mode": self.mode,
             "rule": RULE,
+            "internal_gap_policy": INTERNAL_GAP_POLICY,
+            "minimum_levels": MIN_LEVELS,
+            "time_steps": len(self.complete_by_time),
             "core_fields": self.core_fields,
             "available_levels_Pa": self.available_levels,
             "used_levels_Pa": self.used_levels,
@@ -191,15 +213,17 @@ class VerticalHarmonization:
         }
 
 
-def harmonize_levels(steps, variable_list_df, app_logger):
+def harmonize_levels(steps, variable_list_df, app_logger, mode):
     """
-    Decide the levels used by every time step of the moving framework.
+    Decide the levels used by every time step of a run, in any framework.
 
     Args:
         steps (list): ``(time, data_at_time, (west, east, south, north))`` for
-            every time step, with the box requested for that step.
+            every time step processed, with the box of that step (in the fixed
+            framework, the same box at every step).
         variable_list_df (pd.DataFrame): Parsed namelist.
         app_logger (logging.Logger): Logger of the run.
+        mode (str): Framework of the run, a key of ``MODES``.
 
     Returns:
         VerticalHarmonization: The levels used and why the others are excluded.
@@ -209,6 +233,7 @@ def harmonize_levels(steps, variable_list_df, app_logger):
             complete at every time step, or if an excluded level lies between
             the top and the bottom of the levels used (internal gap).
     """
+    label = MODES[mode]
     names = variable_list_df["Variable"]
     level_name = names.loc["Vertical Level"]
     lon_name, lat_name = names.loc["Longitude"], names.loc["Latitude"]
@@ -223,8 +248,9 @@ def harmonize_levels(steps, variable_list_df, app_logger):
         complete_by_time.append((time, [p for p, ok in zip(levels, mask) if ok]))
 
     result = VerticalHarmonization(
-        level_name, available, complete_by_time, core_fields(variable_list_df)
+        mode, level_name, available, complete_by_time, core_fields(variable_list_df)
     )
+    _report_levels_by_time(result, label, app_logger)
     excluded = "; ".join(
         f"{p:.0f} Pa (incomplete at {', '.join(_time_label(t) for t in times)})"
         for p, times in result.incomplete_at.items()
@@ -232,10 +258,10 @@ def harmonize_levels(steps, variable_list_df, app_logger):
 
     if len(result.used_levels) < MIN_LEVELS:
         message = (
-            f"Vertical harmonization: only {len(result.used_levels)} pressure level(s) "
-            f"({_pa(result.used_levels) or 'none'}) have complete data inside the box of "
-            f"every time step; at least {MIN_LEVELS} are needed to integrate over a "
-            f"layer. Excluded: {excluded}. No result is computed."
+            f"Vertical harmonization ({label}): only {len(result.used_levels)} pressure "
+            f"level(s) ({_pa(result.used_levels) or 'none'}) have complete data inside the "
+            f"box of every time step; at least {MIN_LEVELS} are needed to integrate over a "
+            f"layer (a numerical minimum). Excluded: {excluded}. No result is computed."
         )
         app_logger.error(f"❌ {message}")
         raise VerticalHarmonizationError(message)
@@ -244,27 +270,47 @@ def harmonize_levels(steps, variable_list_df, app_logger):
     interior = [p for p in result.excluded_levels if top < p < bottom]
     if interior:
         message = (
-            f"Vertical harmonization: excluding {_pa(interior)} would leave an internal "
-            f"gap between {top:.0f} Pa and {bottom:.0f} Pa. Integrating across missing "
-            "layers needs a methodological decision that has not been taken (pending "
-            f"decision DEC-10-L); the run stops and no result is computed. Excluded: "
-            f"{excluded}."
+            f"Vertical harmonization ({label}): excluding {_pa(interior)} would leave an "
+            f"internal gap between {top:.0f} Pa and {bottom:.0f} Pa. The toolkit does not "
+            "integrate across missing data (DEC-10-L, option B): the run stops and no "
+            f"result is computed. Excluded: {excluded}. Levels that are not in the input "
+            "grid are not gaps; these levels are in the grid but their data are incomplete."
         )
         app_logger.error(f"❌ {message}")
         raise VerticalHarmonizationError(message)
 
     if result.excluded_levels:
         app_logger.warning(
-            f"⚠️ Vertical harmonization (common control volume, DEC-10 B): "
+            f"⚠️ Vertical harmonization ({label}, common control volume, DEC-10 B): "
             f"{len(result.excluded_levels)} of {len(available)} pressure levels are "
-            f"excluded from ALL time steps because their data are incomplete inside the "
-            f"box of at least one time step: {excluded}. Every term at every time step "
-            f"is integrated over {len(result.used_levels)} levels, {top:.0f} Pa (top) to "
-            f"{bottom:.0f} Pa (bottom); input layer {min(available):.0f} Pa to "
-            f"{max(available):.0f} Pa."
+            f"excluded from ALL {len(complete_by_time)} time steps because their data are "
+            f"incomplete inside the box of at least one time step: {excluded}. Every term at "
+            f"every time step is integrated over {len(result.used_levels)} levels, "
+            f"{top:.0f} Pa (top) to {bottom:.0f} Pa (bottom): a thinner layer than the input "
+            f"layer, {min(available):.0f} Pa to {max(available):.0f} Pa. Nothing is interpolated."
         )
     app_logger.info(
-        f"📏 Vertical harmonization: available {_pa(available)}; "
-        f"excluded {_pa(result.excluded_levels) or 'none'}; used {_pa(result.used_levels)}."
+        f"📏 Vertical harmonization ({label}): input grid {_pa(available)}; "
+        f"excluded {_pa(result.excluded_levels) or 'none'}; used {_pa(result.used_levels)} "
+        f"({top:.0f} Pa to {bottom:.0f} Pa) at every time step."
     )
     return result
+
+
+def _report_levels_by_time(result, label, app_logger):
+    """Terminal and log: the input grid and the levels complete at each time step."""
+    available, n = result.available_levels, len(result.complete_by_time)
+    app_logger.info(f"📏 Vertical levels ({label}): input grid of {len(available)} levels, {_pa(available)}.")
+    partial = [(t, levels) for t, levels in result.complete_by_time if levels != available]
+    for time, levels in partial:
+        missing = [p for p in available if p not in levels]
+        app_logger.info(
+            f"📏 Vertical levels ({label}) at {_time_label(time)}: complete inside the box "
+            f"{_pa(levels) or 'none'}; incomplete {_pa(missing)}."
+        )
+    others = "the other" if partial else "all"
+    if n - len(partial):
+        app_logger.info(
+            f"📏 Vertical levels ({label}): all {len(available)} levels complete inside the "
+            f"box at {others} {n - len(partial)} time step(s)."
+        )

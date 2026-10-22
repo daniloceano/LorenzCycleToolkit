@@ -663,31 +663,38 @@ def lec_moving(
             data, times, LonIndexer, LatIndexer, TimeName, args, app_logger
         )
 
-    # With a track file the box of every time step is known before any term is
-    # computed, so all time steps share one vertical control volume (DEC-10 B):
-    # a level incomplete inside the box of any time step is excluded from all of
-    # them. With --choose the boxes are drawn one time step at a time and each
-    # step keeps its own levels until that mode has its own decision (DEC-10-C).
-    boxes, harmonization = {}, None
-    if args.track:
-        for t in times:
-            boxes[t] = get_limits(args, t, None, track)
-        harmonization = harmonize_levels(
-            [
-                (t, select_time(data, dTdt, TimeName, t)[0],
-                 (boxes[t]["min_lon"], boxes[t]["max_lon"], boxes[t]["min_lat"], boxes[t]["max_lat"]))
-                for t in times
-            ],
-            variable_list_df,
-            app_logger,
+    # The box of every time step is decided before any term is computed, so
+    # that all time steps share one vertical control volume (DEC-10 B, in every
+    # framework): a level incomplete inside the box of any time step is excluded
+    # from all of them. With --choose every box is drawn first.
+    mode = "track" if args.track else "choose"
+    if args.choose:
+        app_logger.info(
+            f"🖱️ --choose mode: draw the box of each of the {len(times)} time steps; the "
+            "computation starts after the last one, so that the levels can be decided for "
+            "all of them together."
         )
-    header_levels = (
-        harmonization.used_levels if harmonization
-        else [float(i) for i in data[VerticalCoordIndexer].values]
+    boxes = {}
+    for t in times:
+        if args.choose:
+            idata, _ = select_time(data, dTdt, TimeName, t)
+            data850 = fields_at_850(idata, variable_list_df, args, VerticalCoordIndexer, LatIndexer, LonIndexer)
+        else:
+            data850 = None
+        boxes[t] = get_limits(args, t, data850, track if args.track else None)
+    harmonization = harmonize_levels(
+        [
+            (t, select_time(data, dTdt, TimeName, t)[0],
+             (boxes[t]["min_lon"], boxes[t]["max_lon"], boxes[t]["min_lat"], boxes[t]["max_lat"]))
+            for t in times
+        ],
+        variable_list_df,
+        app_logger,
+        mode,
     )
 
     # Create csv files for storing vertical results. As in the fixed framework,
-    # the headers list the levels actually used (the input levels with --choose).
+    # the headers list the levels actually used.
     level_files = []
     for term in [
         "Az",
@@ -714,7 +721,7 @@ def lec_moving(
         "Ck_4",
         "Ck_5",
     ]:
-        columns = [TimeName] + header_levels
+        columns = [TimeName] + harmonization.used_levels
         df = pd.DataFrame(columns=columns)
         file_name = term + "_" + VerticalCoordIndexer + ".csv"
         file_path = os.path.join(results_subdirectory_vertical_levels, file_name)
@@ -739,9 +746,8 @@ def lec_moving(
     terms_dict = create_terms_dict(args)
 
     # What each time step actually used (domain_selection.csv, lec_metadata.json)
-    metadata = RunMetadata(args, "track" if args.track else "choose", variable_list_df, input_extent(data))
-    if harmonization is not None:
-        metadata.record_harmonization(harmonization)
+    metadata = RunMetadata(args, mode, variable_list_df, input_extent(data))
+    metadata.record_harmonization(harmonization)
 
     # Iterating over times
     for t in times:
@@ -758,7 +764,7 @@ def lec_moving(
         lat = data850["lat"]
 
         # Box of the current time (decided before the loop)
-        limits = boxes[t] if args.track else get_limits(args, t, data850, None)
+        limits = boxes[t]
         app_logger.info(
             f"🗺️ Box: center=({limits['central_lat']:.2f}, {limits['central_lon']:.2f}), "
             f"size={limits['length']}°x{limits['width']}°"
@@ -806,7 +812,7 @@ def lec_moving(
         app_logger.info("📦 Creating box object...")
         try:
             box_obj = BoxData(
-                data=(harmonization.restrict(idata) if harmonization else idata).compute(),
+                data=harmonization.restrict(idata).compute(),
                 variable_list_df=variable_list_df,
                 args=args,
                 western_limit=limits["min_lon"],
@@ -815,12 +821,12 @@ def lec_moving(
                 northern_limit=limits["max_lat"],
                 results_subdirectory=results_subdirectory,
                 results_subdirectory_vertical_levels=results_subdirectory_vertical_levels,
-                dTdt=harmonization.restrict(idTdt) if harmonization else idTdt,
+                dTdt=harmonization.restrict(idTdt),
             )
         except Exception as e:
             app_logger.exception(f"❌ Error creating BoxData object: {e}")
             raise
-        if harmonization is not None and box_obj.dropped_levels:
+        if box_obj.dropped_levels:
             raise RuntimeError(
                 f"BoxData dropped {box_obj.dropped_levels} at {t} although the vertical "
                 "harmonization found these levels complete in every box"

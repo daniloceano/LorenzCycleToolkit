@@ -122,8 +122,9 @@ class BoxData:
         volume.
 
         No value is invented and nothing is extrapolated: unusable levels are
-        excluded and reported. In the moving framework the levels are already
-        common to all time steps (vertical_harmonization), so none is dropped here.
+        excluded and reported. Every framework decides the levels common to all
+        time steps before BoxData (vertical_harmonization), so none is dropped
+        here; the check is kept as a safeguard.
         """
         levels = data[self.VerticalCoordIndexer]
         valid = complete_levels(
