@@ -178,6 +178,8 @@ Interactive Domain Selection
 
 The interactive (choose) framework allows you to manually select the analysis domain at each timestep.
 
+The box of every time step is drawn first; the computation starts after the last one, so that the same pressure levels can be used at every time step (see :doc:`results`).
+
 **Prerequisites**
 
 - Prepared NetCDF file (see "Input Data Requirements" above)

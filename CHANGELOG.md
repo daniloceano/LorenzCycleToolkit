@@ -6,8 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- **`vertical.harmonization`** in `lec_metadata.json` (DEC-10 B, track mode
-  `-t`): the levels available, used and excluded, the time steps that
+- **`vertical.harmonization`** in `lec_metadata.json` (DEC-10 B, every
+  framework): the framework, the internal-gap policy, the minimum number of
+  levels, the levels available, used and excluded, the time steps that
   caused each exclusion, the levels complete at each time step and the input
   and effective layers.
 
@@ -54,25 +55,30 @@ All notable changes to this project will be documented in this file.
   the boxes changes, and the median line spans the whole box. The box plots
   by level and by time were not notched and are unchanged.
 
-- **One vertical control volume for every time step of the track mode
-  (`-t`)** (DEC-10, option B; behaviour change): a pressure level whose data are
-  incomplete inside the box of any time step is excluded from all time
-  steps. It used to be dropped at that time step only, so consecutive column
-  integrals covered different layers and the finite-difference tendencies
-  and the residuals carried the change of the integration domain (with one
-  level missing at one time step in the ERA5 sample, ∂Kz/∂t changed by about
-  −1000% and +550% at the neighbouring times). Runs without incomplete levels
-  are unchanged. Fewer than two common levels, or an excluded level between
-  the top and the bottom of the levels kept, stop the run with an error (two
-  levels are a numerical minimum, not a guarantee of a representative
-  column). With `--choose` the levels are still decided at each time step,
-  as before; the harmonization is not applied.
+- **One vertical control volume for every time step, in every framework
+  (`-f`, `-t`, `--choose`)** (DEC-10, option B; DEC-10-L, option B; behaviour
+  change): a pressure level of the input grid whose data are incomplete
+  inside the box of any time step is excluded from all time steps. In the
+  track and `--choose` modes it used to be dropped at that time step only, so
+  consecutive column integrals covered different layers and the
+  finite-difference tendencies and the residuals carried the change of the
+  integration domain (with one level missing at one time step in the ERA5
+  sample, ∂Kz/∂t changed by about −1000% and +550% at the neighbouring
+  times). Runs without incomplete levels are unchanged. Fewer than two common
+  levels, or an excluded level between the top and the bottom of the levels
+  kept, stop the run with an error in every framework (two levels are a
+  numerical minimum, not a guarantee of a representative column); the fixed
+  framework used to integrate across such a gap, and failed with an
+  `IndexError` with fewer than two levels. A level that is not in the input
+  grid is not a gap: sparse grids with complete data are unchanged. With
+  `--choose` the boxes of all time steps are drawn before the computation.
+  The terminal and the log name the framework and show the input grid, the
+  levels complete at each time step, the exclusions and the layer used.
 - **Per-level files of the moving framework: every value sits under its own
   level** (E0-21a, defect fixed): when a level was dropped at one time step,
   the values of that row were written one column to the left, under the
-  header of the level above (850 hPa under 700 hPa). With `-t` the header
-  lists the levels used; with `--choose` it lists the levels of the input and
-  the cell of a level excluded at that time step is left empty.
+  header of the level above (850 hPa under 700 hPa). The header lists the
+  levels used, in every framework.
 - **Runtime dependencies declared** (P-A1): `cmocean`, `cyclophaser==1.7.3`,
   `dask`, `lorenz-phase-space` and `shapely` are now in `pyproject.toml`;
   `pip install` of the package alone used to give a command line that failed
@@ -177,11 +183,13 @@ All notable changes to this project will be documented in this file.
   time steps, outliers, a constant series and the two reference runs; the
   colours and the order of the terms.
 
-- `tests/test_vertical_harmonization.py` (DEC-10 B, E0-21a): a level missing
-  at some time steps gives, byte for byte, the run of the input without that
-  level; values under their own level; internal gap and fewer than two
-  levels stop the run; boxes of different sizes; `--choose` keeps the levels
-  of each time step and is not harmonized.
+- `tests/test_vertical_harmonization.py` (DEC-10 B, E0-21a, DEC-10-L B): in
+  the fixed, track and `--choose` modes, a level missing at the top or at the
+  bottom at one time step gives, byte for byte, the run of the input without
+  that level (tendencies and residuals included); values under their own
+  level; internal gap and fewer than two levels stop the run; a sparse grid
+  is not a gap; the messages and the metadata name the framework; boxes of
+  different sizes; `--choose` draws every box before computing.
 - `tests/test_packaging.py` (P-A1): every imported third-party module is
   declared; the cyclophaser pin matches `cyclophaser_compat`.
 - `tests/test_invariances.py`: homogeneity of each term in the winds
