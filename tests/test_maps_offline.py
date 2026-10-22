@@ -5,12 +5,15 @@ Scenario A - complete copy: every map is generated, Cartopy reads only the
 verified copy and no network access is attempted.
 Scenario B - no Natural Earth data: the maps fail with an explicit cause, the
 download attempt is blocked by the session guard, and the computation is
-preserved: the CSV outputs are byte-identical to the reference.
+preserved: the CSV outputs are byte-identical to those of the same case run
+without figures on the same machine, and equal to the audit reference within
+its registered tolerances (the reference was produced on x86_64).
 The fixture that verifies the copy fails explicitly (never skips) when the
 copy is absent or differs from the manifest.
 """
 
 import hashlib
+import math
 import shutil
 import warnings
 from pathlib import Path
@@ -41,8 +44,12 @@ NO_PERIODS = dict(periods='unavailable', lec_periods='unavailable', lps='unavail
 
 def run_case(monkeypatch, lectk_workdir, case, *extra):
     argv, method, stem, inputs = case
-    argv = [*argv, *extra]
     lectk_workdir(**inputs)
+    return _run(monkeypatch, [*argv, *extra], method)
+
+
+def _run(monkeypatch, argv, method):
+    """Run the toolkit in the current working directory; return the results directory and the download warnings."""
     monkeypatch.setattr('sys.argv', ['lorenzcycletoolkit.py', *argv])
     args = create_arg_parser().parse_args(argv)
     results, figures, levels = setup_results_directory(args, method)
@@ -60,13 +67,41 @@ def sha256(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def assert_csv_outputs_identical_to_reference(results_dir, stem, reference):
-    """The CSV outputs are byte-identical to the reference copies of the audit baseline."""
-    names = [f'{stem}_results.csv'] + (['testdata_ERA5_track_trackfile'] if 'track' in stem else [])
-    names += [f'results_vertical_levels/{p.name}' for p in sorted((reference / 'results_vertical_levels').iterdir())]
+def csv_output_names(results_dir, stem):
+    """Main results, trackfile (moving framework) and every per-level CSV of a run."""
+    results_dir = Path(results_dir)
+    names = [f'{stem}_results.csv']
+    if (results_dir / f'{stem}_trackfile').is_file():
+        names.append(f'{stem}_trackfile')
+    names += [f'results_vertical_levels/{p.name}' for p in sorted((results_dir / 'results_vertical_levels').glob('*.csv'))]
+    return names
+
+
+def assert_csv_outputs_byte_identical(results_dir, stem, other_dir, other_stem):
+    """The CSV outputs of two runs are byte-identical; their file names differ only by the stem."""
+    names = csv_output_names(results_dir, stem)
     assert len(names) in (24, 25)
+    assert [n.replace(stem, other_stem) for n in names] == csv_output_names(other_dir, other_stem)
     for name in names:
-        assert sha256(results_dir / name) == sha256(reference / name), f'{name} differs from the reference'
+        other = Path(other_dir) / name.replace(stem, other_stem)
+        assert sha256(Path(results_dir) / name) == sha256(other), f'{name} differs from {other}'
+
+
+def assert_computation_preserved(monkeypatch, results_dir, case):
+    """
+    The failure of the maps does not touch the computation.
+
+    Byte for byte, the CSV outputs equal those of the same case run without
+    figures on this machine. Value by value, they agree with the audit
+    reference within its registered tolerances: the reference was produced
+    on x86_64, where it is also byte-identical; on another platform
+    (e.g. arm64) the last bits differ (tests/data/reference/PROVENANCE.md).
+    """
+    argv, method, stem, _ = case
+    plain_dir, _ = _run(monkeypatch, [a for a in argv if a != '-p'] + ['-o', 'no_figures'], method)
+    assert_csv_outputs_byte_identical(results_dir, stem, plain_dir, f'no_figures_{method}')
+    reference = oc.REFERENCE_DIR / ('ERA5_fixed' if method == 'fixed' else 'ERA5_track')
+    oc.assert_matches_reference(results_dir, reference, stem, 'level')
 
 
 @pytest.mark.parametrize('case', [FIXED, TRACK], ids=['fixed', 'track'])
@@ -91,9 +126,8 @@ def test_scenario_b_no_cache_maps_fail_computation_preserved(monkeypatch, lectk_
     results_dir, downloads = run_case(monkeypatch, lectk_workdir, case)
     argv, method, stem, _ = case
 
-    # The computation is complete and byte-identical to the reference.
-    reference = oc.REFERENCE_DIR / ('ERA5_fixed' if method == 'fixed' else 'ERA5_track')
-    assert_csv_outputs_identical_to_reference(results_dir, stem, reference)
+    # The computation is complete and unaffected by the failed maps.
+    assert_computation_preserved(monkeypatch, results_dir, case)
 
     # The maps are reported as failed, with the blocked download as the cause.
     overrides = {name: 'failed' for name in MAPS[method]}
@@ -116,6 +150,45 @@ def test_scenario_b_no_cache_maps_fail_computation_preserved(monkeypatch, lectk_
     assert downloads, 'Cartopy did not announce the download it attempted'
     assert [p for p in (tmp_path / 'cartopy_download_dir').rglob('*') if p.is_file()] == []
 
+
+
+def _alter_first_value(path, column, change):
+    """Rewrite one cell of the first data row of a CSV in place; the rest of the file is unchanged."""
+    lines = Path(path).read_text(encoding='utf-8').split('\n')
+    header, cells = lines[0].split(','), lines[1].split(',')
+    j = header.index(column)
+    cells[j] = repr(change(float(cells[j])))
+    lines[1] = ','.join(cells)
+    Path(path).write_text('\n'.join(lines), encoding='utf-8')
+
+
+def _copy_of_reference(tmp_path):
+    reference = oc.REFERENCE_DIR / 'ERA5_fixed'
+    run = tmp_path / 'run'
+    shutil.copytree(reference, run)
+    # positive control: an unaltered copy passes both checks
+    assert_csv_outputs_byte_identical(run, 'testdata_ERA5_fixed', reference, 'testdata_ERA5_fixed')
+    oc.assert_matches_reference(run, reference, 'testdata_ERA5_fixed', 'level')
+    return reference, run
+
+
+def test_preservation_checks_reject_a_value_beyond_the_tolerance(tmp_path):
+    """Negative control: Kz changed by one part in a million fails both checks."""
+    reference, run = _copy_of_reference(tmp_path)
+    _alter_first_value(run / 'testdata_ERA5_fixed_results.csv', 'Kz', lambda x: x * (1 + 1e-6))
+    with pytest.raises(AssertionError, match='differs'):
+        assert_csv_outputs_byte_identical(run, 'testdata_ERA5_fixed', reference, 'testdata_ERA5_fixed')
+    with pytest.raises(AssertionError, match='values differ from the reference'):
+        oc.assert_matches_reference(run, reference, 'testdata_ERA5_fixed', 'level')
+
+
+def test_byte_check_rejects_a_change_in_the_last_bit(tmp_path):
+    """Negative control: one ulp passes the tolerance but not the same-machine byte check."""
+    reference, run = _copy_of_reference(tmp_path)
+    _alter_first_value(run / 'testdata_ERA5_fixed_results.csv', 'Kz', lambda x: math.nextafter(x, math.inf))
+    oc.assert_matches_reference(run, reference, 'testdata_ERA5_fixed', 'level')
+    with pytest.raises(AssertionError, match='differs'):
+        assert_csv_outputs_byte_identical(run, 'testdata_ERA5_fixed', reference, 'testdata_ERA5_fixed')
 
 @pytest.mark.parametrize('case', [FIXED, TRACK], ids=['fixed', 'track'])
 def test_offline_maps_with_complete_cache(monkeypatch, lectk_workdir, naturalearth_reads, network_attempts, case):
@@ -141,8 +214,7 @@ def test_offline_maps_without_cache_never_reach_the_network(monkeypatch, lectk_w
     results_dir, downloads = run_case(monkeypatch, lectk_workdir, case, '--offline-maps')
     argv, method, stem, _ = case
 
-    reference = oc.REFERENCE_DIR / ('ERA5_fixed' if method == 'fixed' else 'ERA5_track')
-    assert_csv_outputs_identical_to_reference(results_dir, stem, reference)
+    assert_computation_preserved(monkeypatch, results_dir, case)
 
     overrides = {name: 'failed' for name in MAPS[method]}
     if method == 'track':
@@ -152,6 +224,7 @@ def test_offline_maps_without_cache_never_reach_the_network(monkeypatch, lectk_w
         if product['name'] in MAPS[method]:
             assert product['error']['type'] == 'NaturalEarthOfflineError', product['error']
             assert '--offline-maps forbids downloading it' in product['reason']
+            assert product['written'] == []
     assert len(network_attempts) == 0
     assert downloads == []
     assert not (tmp_path / 'cartopy_download_dir').exists()
