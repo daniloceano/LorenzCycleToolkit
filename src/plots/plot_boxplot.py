@@ -227,13 +227,15 @@ def plot_boxplot_terms(df, figures_subdirectory, app_logger):
         fig_layout = (8, 8) if len(term_list) == 4 else (6, 8)
         plt.figure(figsize=fig_layout)
 
+        # Conventional boxes, without notches: with few time steps the
+        # notch interval (median +/- 1.57 IQR / sqrt(n)) reaches beyond the
+        # quartiles and the notches fold outward like claws.
         for i, term in enumerate(term_list):
             bplot = plt.boxplot(
                 df[term],
                 positions=[i],
                 vert=True,
                 patch_artist=True,
-                notch=True,
                 tick_labels=[term],
             )
             box_color = utils.COLORS[i % len(utils.COLORS)]
