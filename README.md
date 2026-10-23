@@ -48,25 +48,26 @@ This project uses GitHub Actions and CircleCI for Continuous Integration (CI) an
 - **CI Pipeline with GitHub Actions**: The CI pipeline is triggered on each push and pull request to the repository. It runs the following steps:
   - Sets up the Python environment.
   - Installs dependencies.
-  - Formats code using autopep8.
-  - Sorts imports using isort.
-  - Lints code using flake8.
+  - Builds and installs the package wheel, and checks that the installed package is the checked-out code.
+  - Lints code using flake8 (read only: no tool rewrites the code before the tests).
+  - Provides the Natural Earth data used by the map tests, verified against their sha256.
   - Runs tests using pytest.
 
-- **CI Pipeline with CircleCI**: CircleCI is used to build, test, and publish the package. The pipeline runs the following steps:
+- **CI Pipeline with CircleCI**: CircleCI builds and tests the package on each push. The pipeline runs the following steps:
   - Builds the package.
   - Checks if the wheel file exists.
   - Installs dependencies.
-  - Installs the package.
+  - Installs the package and checks that it is the checked-out code.
+  - Provides the verified Natural Earth data.
   - Runs tests using pytest.
-  - Publishes the package to TestPyPI for the `develop` branch.
-  - Publishes the package to PyPI for the `main` branch.
 
-- **CD Pipeline**: The CD pipeline deploys the documentation to GitHub Pages whenever changes are pushed to the `main` branch.
+- **Publishing**: Nothing is published automatically; pushes and pull requests only build and test. Publishing is a separate, manual step:
+  - TestPyPI (from the `develop` branch) and PyPI (from the `main` branch): a CircleCI pipeline triggered explicitly with the parameter `publish_testpypi` or `publish_pypi`.
+  - Documentation on GitHub Pages: a GitHub Actions workflow run explicitly ("Run workflow").
 
 You can view the CI/CD configuration in the following files:
 - [python-app.yml](.github/workflows/python-app.yml)
-- [deploy-docs.yml](.github/workflows/deploy-docs.yml)
+- [deploy.yml](.github/workflows/deploy.yml) and [gh-pages.yml](.github/workflows/gh-pages.yml)
 - [config.yml](.circleci/config.yml)
 
 
