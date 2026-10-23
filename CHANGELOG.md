@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Warning for the levels above 10 hPa** (DEC-09): the levels with a
+  pressure lower than 1000 Pa, which are discarded when the data are read, as
+  before, are now reported in the terminal and in the log, with the input grid
+  and the grid after the cut; `vertical.top_cut` in `lec_metadata.json`
+  records the same. 10 hPa itself is kept. No warning when nothing is
+  discarded; no change in the computation.
+- **Warning for a box cut at the data edge** (DEC-11): a box requested beyond
+  the input data is still cut at the data edge and the run goes on; the
+  terminal and the log now warn, for each time step concerned and in every
+  framework, with the limits requested, the limits of the fields actually
+  used and the extent of the data; `horizontal.boxes_cut_at_input_edge` in
+  `lec_metadata.json` lists the time steps and edges. No change in the
+  computation.
+
 - **`vertical.harmonization`** in `lec_metadata.json` (DEC-10 B, every
   framework): the framework, the internal-gap policy, the minimum number of
   levels, the levels available, used and excluded, the time steps that
@@ -176,6 +190,13 @@ All notable changes to this project will be documented in this file.
   figures of earlier versions.
 
 ### Tests
+
+- `tests/test_cut_and_clipping_reports.py` (DEC-09, DEC-11): levels above
+  10 hPa are reported and give the run of the input without them; no warning
+  without them; 10 hPa is kept and 9.99 hPa is discarded; the same cut with
+  levels in Pa; a box beyond the data is cut and reported, with the limits
+  used, in the fixed, track and `--choose` modes; a box inside the data is not
+  reported; a cut box computes with the box actually used.
 
 - `tests/test_boxplot_terms.py`: every box of `boxplot_terms_*` is a
   rectangle between the quartiles, and its median, whiskers, caps and
