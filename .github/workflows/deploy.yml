@@ -1,9 +1,9 @@
 name: Deploy to GitHub Pages
 
+# Publishes the documentation to GitHub Pages: run it explicitly (Actions tab,
+# "Run workflow"); pushes and pull requests never publish.
 on:
-  push:
-    branches:
-      - main  # Change this to your default branch
+  workflow_dispatch:
 
 jobs:
   build:

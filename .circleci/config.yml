@@ -149,8 +149,28 @@ jobs:
             . venv/bin/activate
             twine upload -u ${PYPI_USERNAME} -p ${PYPI_PASSWORD} dist/* --verbose --skip-existing
 
+# Publishing runs only when a pipeline is triggered explicitly with one of these
+# parameters set to true (CircleCI: "Trigger Pipeline"); pushes and pull
+# requests never publish.
+parameters:
+  publish_testpypi:
+    type: boolean
+    default: false
+  publish_pypi:
+    type: boolean
+    default: false
+
 workflows:
-  build_test_publish:
+  build_test:
+    when:
+      not:
+        or:
+          - << pipeline.parameters.publish_testpypi >>
+          - << pipeline.parameters.publish_pypi >>
+    jobs:
+      - build_test
+  publish_testpypi:
+    when: << pipeline.parameters.publish_testpypi >>
     jobs:
       - build_test
       - test_pypi_publish:
@@ -160,6 +180,10 @@ workflows:
             branches:
               only:
                 - develop
+  publish_pypi:
+    when: << pipeline.parameters.publish_pypi >>
+    jobs:
+      - build_test
       - pypi_publish:
           requires:
             - build_test
