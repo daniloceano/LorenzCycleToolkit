@@ -47,16 +47,31 @@ jobs:
             pip install $WHL_FILENAME
 
       - run:
+          name: Check that the installed package is the checked-out code (build_test)
+          command: |
+            . venv/bin/activate
+            python ci/check_installed_package.py
+
+      - run:
           name: Install pytest (build_test)
           command: |
             . venv/bin/activate
             pip install pytest
 
+      # The map tests never download: the Natural Earth files of
+      # tests/data/naturalearth_manifest.tsv are fetched here, checked against
+      # their sha256, and given to the tests through CARTOPY_DATA_DIR.
+      - run:
+          name: Provide the verified Natural Earth data (build_test)
+          command: |
+            . venv/bin/activate
+            python ci/fetch_naturalearth.py ~/naturalearth
+
       - run:
           name: Run Tests (build_test)
           command: |
             . venv/bin/activate
-            pytest
+            CARTOPY_DATA_DIR=~/naturalearth pytest -ra
 
       - store_test_results:
           path: test-reports
