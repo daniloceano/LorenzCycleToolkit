@@ -27,6 +27,7 @@ import pandas as pd
 import xarray as xr
 from metpy.units import units
 
+from .run_metadata import record_top_cut
 from .select_area import slice_domain
 from .tools import convert_longitude_range, get_cdsapi_data
 from .validation import validate_track_file, validate_namelist_file
@@ -361,8 +362,10 @@ def process_data(
         .sortby(LatIndexer, ascending=True)
     )
 
+    input_grid = [float(p) for p in data[LevelIndexer].values]
     lowest_level = float(data[LevelIndexer].max())
     data = data.sel({LevelIndexer: slice(1000, lowest_level)})
+    record_top_cut(data, input_grid, LevelIndexer, app_logger)
 
     if args.mpas:
         data = data.drop_dims("standard_height")
