@@ -131,7 +131,7 @@ From the definitions above, the four energy components used in the LEC computati
    K_E &=  \int_{p_t}^{p_b} \frac{[(u)_\lambda^2 + (v)_\lambda^2]_{\lambda \phi}}{2g} dp
    \end{align*}
 
-where :math:`p` is the atmospheric pressure, with subscripts :math:`b` and :math:`t` denoting the lower (base) and upper (top) pressure boundaries of the atmosphere, respectively. :math:`T` represents temperature, :math:`g` is the acceleration due to gravity, and :math:`u` and :math:`v` are the zonal and meridional wind components, respectively. The static stability parameter :math:`\sigma` is defined as:
+where :math:`p` is the atmospheric pressure, with subscripts :math:`b` and :math:`t` denoting the lower (base) and upper (top) pressure boundaries of the atmosphere, respectively. :math:`T` represents temperature, :math:`g` is the acceleration due to gravity, and :math:`u` and :math:`v` are the zonal and meridional wind components, respectively. The per-level files of the toolkit do not all hold the integrand of these integrals: for example, ``Kz_level.csv`` holds :math:`[[u]_\lambda^2 + [v]_\lambda^2]_{\lambda \phi}`, without the factor :math:`1/(2g)`; see :ref:`per-level-units` for the quantity, units and column factor of every file. The static stability parameter :math:`\sigma` is defined as:
 
 .. math::
    \begin{align*}

@@ -2,6 +2,236 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- **`vertical.harmonization`** in `lec_metadata.json` (DEC-10 B, every
+  framework): the framework, the internal-gap policy, the minimum number of
+  levels, the levels available, used and excluded, the time steps that
+  caused each exclusion, the levels complete at each time step and the input
+  and effective layers.
+
+- **`lec_metadata.json`** (E0-17, E0-18, E0-19, DEC-23): every run records the
+  input file and its SHA-256, the namelist, the time axis, the retained
+  pressure layer (levels used, excluded levels, top and bottom pressure), the
+  units of every column of the main results file and, for every per-level
+  file, its units, column relation and layout (`Cz_1`/`Ce_1` of the fixed
+  framework are time-invariant profiles). Additional file; no CSV changes.
+- **`domain_selection.csv`** (E0-22): the box actually selected at each time
+  step (grid points nearest to the request), the offset from the requested
+  box, the number of points and whether each edge is the edge of the input
+  data. A box requested beyond the data, which is cut at the data edge
+  without an error, now shows here. Additional file.
+- **`--overwrite`** (DEC-08): reuse a results directory that already holds
+  files; see the change below.
+
+- **`run_status.json`** (DEC-02): every command-line run writes, next to its
+  results, the state of the computation and of each requested product
+  (`success`, `failed`, `unavailable`, `not_requested`), the cause of each
+  failure and the exit status. It is written atomically, first as `running`.
+  The CSV files are unchanged. Schema version 1, described in the results
+  documentation.
+- **`--offline-maps`**: draw maps from local Natural Earth data only and never
+  download them; a map whose data are missing is reported as failed (partial
+  output). Cartopy's default behaviour is unchanged without the option.
+- **`--allow-partial-plots`** (DEC-02): exit with status 0 when the
+  computation is complete but some requested figures failed; the run is still
+  reported as partial.
+- **`src/utils/output_spec.py`** (E0-14): `VERTICAL_PROFILE_SPEC` records,
+  for each of the 23 per-level CSV files, the quantity written, its units,
+  the column term and the factor in
+  `column = factor * integral(profile dp)`; `SPLIT_TERM_RELATIONS` records how
+  the split terms combine. The computation does not read it; no value
+  changes. `Dz`/`De` are listed apart as not verified.
+
+### Changed
+
+- **Box plots of the column terms without notches**: `boxplot_terms_*.png`
+  draw conventional boxes. With few time steps the notch interval (median
+  ± 1.57 IQR/√n) reached beyond the quartiles and the outline of the box
+  folded outward. Same data, quartiles, medians, whiskers, outliers, colours,
+  order of the terms, units, axis limits and file names; only the outline of
+  the boxes changes, and the median line spans the whole box. The box plots
+  by level and by time were not notched and are unchanged.
+
+- **One vertical control volume for every time step, in every framework
+  (`-f`, `-t`, `--choose`)** (DEC-10, option B; DEC-10-L, option B; behaviour
+  change): a pressure level of the input grid whose data are incomplete
+  inside the box of any time step is excluded from all time steps. In the
+  track and `--choose` modes it used to be dropped at that time step only, so
+  consecutive column integrals covered different layers and the
+  finite-difference tendencies and the residuals carried the change of the
+  integration domain (with one level missing at one time step in the ERA5
+  sample, ∂Kz/∂t changed by about −1000% and +550% at the neighbouring
+  times). Runs without incomplete levels are unchanged. Fewer than two common
+  levels, or an excluded level between the top and the bottom of the levels
+  kept, stop the run with an error in every framework (two levels are a
+  numerical minimum, not a guarantee of a representative column); the fixed
+  framework used to integrate across such a gap, and failed with an
+  `IndexError` with fewer than two levels. A level that is not in the input
+  grid is not a gap: sparse grids with complete data are unchanged. With
+  `--choose` the boxes of all time steps are drawn before the computation.
+  The terminal and the log name the framework and show the input grid, the
+  levels complete at each time step, the exclusions and the layer used.
+- **Per-level files of the moving framework: every value sits under its own
+  level** (E0-21a, defect fixed): when a level was dropped at one time step,
+  the values of that row were written one column to the left, under the
+  header of the level above (850 hPa under 700 hPa). The header lists the
+  levels used, in every framework.
+- **Runtime dependencies declared** (P-A1): `cmocean`, `cyclophaser==1.7.3`,
+  `dask`, `lorenz-phase-space` and `shapely` are now in `pyproject.toml`;
+  `pip install` of the package alone used to give a command line that failed
+  with `No module named 'cmocean'`.
+
+- **`-o/--outname` names the directory and every file** (E0-12, DEC-07,
+  behaviour change): `LEC_Results/NAME_<method>/` with
+  `NAME_<method>_results.csv`, `NAME_<method>_trackfile` and `log.NAME`, as
+  the documentation already said. It used to rename only the main CSV of the
+  fixed framework (`NAME.csv`, in the directory named after the input file)
+  and was ignored by the moving framework. Invalid names (empty, `.`, `..`,
+  with `/` or `\`) exit with status 2. Without `--outname` nothing changes.
+- **Earlier results are protected** (DEC-08, behaviour change): a run whose
+  results directory already contains files stops with exit status 2 before
+  writing anything. With `--overwrite` it rewrites its files in place and
+  deletes nothing; files of the earlier run that it does not produce are
+  listed in `run_status.json` (`previous_results`).
+- **Main results are integrals over the retained pressure layer** (E0-19,
+  documentation): the documentation said "entire atmospheric column"; the
+  values have always been integrals from the top to the bottom retained
+  level of the input. No value changes.
+
+- **Exit status 3 for partial output** (DEC-02, behaviour change): when the
+  computation is complete but a requested figure could not be generated, the
+  command now exits with status 3. It used to exit with status 0 when the
+  error was only logged (fixed framework; cyclophaser in the moving
+  framework) and with status 1 and a traceback when a moving-framework
+  figure raised. Errors of the computation still exit with status 1 and are
+  never reported as partial.
+- **Figure failures are reported, not hidden** (E0-07): a figure counts as
+  generated only if its files were written by the run. "🎉 Analysis
+  complete!" and "🎉 All plots generated successfully!" are written only when
+  every requested product was generated; otherwise the log ends with an
+  "Analysis complete with PARTIAL output" warning naming the figures.
+- **Moving framework: a map failure no longer stops the computation**
+  (E0-05): the map drawn at each time step with `-p` failed the whole run
+  before the CSV was written when Natural Earth data could not be obtained
+  (e.g. offline). The failure is now recorded and the energetics are
+  computed; the figures after the results are each attempted and recorded.
+- **Cyclophaser errors are reported** (E0-06): `plot_periods` logged and
+  hid them; the periods, and the Lorenz cycle diagrams of the periods and the
+  Lorenz Phase Space that need them, are now reported as failed with the
+  cyclophaser error.
+- **Periods unavailable for short series** (E0-06): series with fewer usable
+  time steps than cyclophaser 1.7.3 accepts with the toolkit options (8 for
+  high-resolution data or vorticity from the track file, 3 otherwise) are not
+  passed to cyclophaser; the periods and the products that need them are
+  reported as `unavailable`, which is not a failure (the ERA5 sample with `-p`
+  now exits with status 0). These are technical limits, recorded with a note
+  that the phases are not physically validated. Another cyclophaser version,
+  other options or a time step other than 1, 3 or 6 hours give a
+  `CyclophaserCompatibilityError` instead. The cyclophaser options are
+  unchanged.
+
+- **Log handlers** (E0-09): `initialize_logging` now closes and removes the
+  handlers of a previous run in the same Python process, so each run writes
+  only to its own `log.<input>` file and console lines are no longer repeated.
+  A single command-line run is unaffected.
+- **Running without arguments** now prints the usage and exits with status 2
+  (E0-11). It previously replaced the empty command line with built-in example
+  arguments (`test.nc -t -r -p -v --cdsapi`), which created a results directory,
+  read `inputs/track` and started a CDS API download. Explicit `--cdsapi` runs
+  are unchanged.
+- **Vertical-level figures: units of each term** (E0-15, N-07; figures only,
+  no CSV changes). The boxplots by level, the boxplots by time
+  (`vertical_timeseries_*.png`) and the Hovmöller diagrams labelled every
+  panel with the units of the column values ("Energy (J·m⁻²)",
+  "Conversion (W·m⁻²)", "Generation/Dissipation (W·m⁻²)"). The per-level
+  files hold other quantities, and each panel and colour bar is now labelled
+  with the quantity and units of its own term: J m⁻² Pa⁻¹ (Az, Ae),
+  m² s⁻² (Kz, Ke: ⟨[u]²+[v]²⟩ and ⟨u*²+v*²⟩, twice the kinetic energy per
+  unit mass), W m⁻² Pa⁻¹ (Cz, Ca, Ce, Gz, Ge) and W kg⁻¹ (Ck, g times its
+  value per unit pressure). The plotted values are unchanged. Pressure is
+  shown in hPa on the axis labels and ticks; the files keep Pa. A note under
+  each figure says when panels have different units and that the boxes are
+  unweighted statistics. The Hovmöller figures are wider.
+- **Boxplots by level include the first pressure level** (E0-16): the level
+  of lowest pressure (700 hPa in the samples) was dropped from every
+  `boxplot_vertical_levels_*.png`.
+- **Figures produced by earlier versions**: up to and including 2.0.0, the
+  vertical-level figures carried the units of the column values and the
+  boxplots by level omitted the first level. The plotted values were the
+  per-level values of the CSV files, which are unchanged. Regenerating the
+  figures with `-p` gives the corrected labels; see "Figures Produced by
+  Earlier Versions" in the results documentation.
+
+### Documentation
+
+- **Per-level files** (E0-13, E0-14, E0-18): table of the quantity, units,
+  column term and factor of every per-level file; `Kz_level.csv` and
+  `Ke_level.csv` hold ⟨[u]²+[v]²⟩ and ⟨u*²+v*²⟩ without 1/(2g), `Ck_level.csv`
+  is written without 1/g, and `M` has its own column relation. Units and
+  finite-difference scheme of the tendencies ∂X/∂t (W/m²). Meaning of the
+  boxplots (unweighted statistics) and how to recognise and regenerate
+  figures of earlier versions.
+
+### Tests
+
+- `tests/test_boxplot_terms.py`: every box of `boxplot_terms_*` is a
+  rectangle between the quartiles, and its median, whiskers, caps and
+  outliers equal those of `matplotlib.cbook.boxplot_stats`, for 5, 2 and 40
+  time steps, outliers, a constant series and the two reference runs; the
+  colours and the order of the terms.
+
+- `tests/test_vertical_harmonization.py` (DEC-10 B, E0-21a, DEC-10-L B): in
+  the fixed, track and `--choose` modes, a level missing at the top or at the
+  bottom at one time step gives, byte for byte, the run of the input without
+  that level (tendencies and residuals included); values under their own
+  level; internal gap and fewer than two levels stop the run; a sparse grid
+  is not a gap; the messages and the metadata name the framework; boxes of
+  different sizes; `--choose` draws every box before computing.
+- `tests/test_packaging.py` (P-A1): every imported third-party module is
+  declared; the cyclophaser pin matches `cyclophaser_compat`.
+- `tests/test_invariances.py`: homogeneity of each term in the winds
+  (a = −1, 2), fixed = moving framework for one box, column = factor ×
+  integral of the per-level profile.
+- `tests/test_maps_offline.py` (P-L1): the runs whose maps fail are compared
+  byte for byte with the same case run without figures on the same machine,
+  and with the reference within its registered tolerances; the reference is
+  no longer required to be byte-identical on another platform (it was
+  produced on x86_64). A failed map must not write any file.
+
+- **Offline maps** (DEC-03): the tests that draw maps require
+  `CARTOPY_DATA_DIR` to point to a copy of the Natural Earth files listed,
+  with their sha256, in `tests/data/naturalearth_manifest.tsv`, and fail
+  explicitly otherwise; the shapefiles are not in the repository. A session
+  guard blocks and records every network attempt and fails the run on an
+  unexpected one. New tests cover maps with the complete copy and without
+  any data (results unchanged, maps reported as failed).
+- **Run status and exit status** (DEC-02, E0-05, E0-06, E0-07): unit tests of
+  `run_status.json`; integration tests check the status of every product;
+  injected figure failures, silent plotting functions and errors of the
+  computation; the real command line in a subprocess for exit statuses 0, 3,
+  0 with `--allow-partial-plots`, 1 and 2.
+- **Run logs are checked after the whole session** (E0-09): the suite fails if
+  any run log grows after its test has ended, holds another run, or has lines
+  after "Analysis complete"; a pair of tests also fails if log handlers are
+  inherited from an earlier test.
+- **Integration tests check their outputs** (E0-08): required files, terms,
+  time steps and finite values, and, for the ERA5 fixed and track cases, a
+  cell-by-cell comparison with reference outputs (`tests/data/reference`) under
+  the tolerances registered for the audit baseline. Negative controls in
+  `tests/test_output_checks.py`.
+- **Integration tests no longer touch `inputs/`** (E0-10): each test runs in a
+  private temporary directory with copies of the templates it needs; the
+  session fails if any file under `inputs/` or `samples/` changes.
+- **Per-level convention and vertical-level figures** (E0-13 to E0-16,
+  E0-18, N-07): units of every profile checked with Pint when it is written;
+  profile-to-column factors and split-term combinations on the reference
+  outputs; column relation of `M` against a closed form; labels of every
+  panel, levels drawn and values handed to matplotlib against the CSV files;
+  documentation table against `output_spec`.
+
 ## [2.0.0] - 2026-08-18
 
 Numerical results change in this release. Diagnostics produced with earlier

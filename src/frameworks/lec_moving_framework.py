@@ -29,8 +29,12 @@ from ..analysis.generation_and_dissipation_terms import \
 from ..analysis.mass_continuity import MassContinuity
 from ..utils.box_data import BoxData
 from ..utils.calc_budget_and_residual import calc_budget_diff, calc_residuals
+from ..utils.output_names import results_stem
+from ..utils.run_metadata import RunMetadata, input_extent
+from ..utils.run_status import RunStatus
 from ..utils.select_area import draw_box_map, plot_domain_attributes
 from ..utils.tools import find_extremum_coordinates, initialize_logging
+from ..utils.vertical_harmonization import harmonize_levels
 
 
 def create_terms_dict(args):
@@ -200,6 +204,60 @@ def extract_wind_and_height_components(idata, variable_list_df, args):
         ihgt = (ihgt / g).metpy.convert_units("gpm")
 
     return iu, iv, ihgt
+
+
+def select_time(data, dTdt, TimeName, t):
+    """
+    Select one time step of the data and of the temperature tendency.
+
+    Args:
+        data (xr.Dataset): The data of the run.
+        dTdt (xr.DataArray): Temperature tendency.
+        TimeName (str): Name of the time coordinate.
+        t (pd.Timestamp): Time step.
+
+    Returns:
+        tuple: The data and the temperature tendency at ``t``.
+
+    Raises:
+        KeyError: If ``t`` is not a time of the data.
+    """
+    idata, idTdt = data.sel({TimeName: t}), dTdt.sel({TimeName: t})
+    if idata[TimeName].shape != ():
+        idata, idTdt = data.isel({TimeName: 1}), dTdt.isel({TimeName: 1})
+    return idata, idTdt
+
+
+def fields_at_850(idata, variable_list_df, args, VerticalCoordIndexer, LatIndexer, LonIndexer):
+    """
+    Wind, geopotential height, wind speed and vorticity at 850 hPa for one time step.
+
+    They locate the system and draw the domain maps; the energetics are
+    computed over the levels of the vertical harmonization.
+
+    Returns:
+        dict: ``izeta_850``, ``ihgt_850``, ``iwspd_850``, ``iu_850``,
+        ``iv_850``, ``lat`` and ``lon``.
+    """
+    iu, iv, ihgt = extract_wind_and_height_components(idata, variable_list_df, args)
+    iu_850, iv_850, ihgt_850 = (
+        iu.sel({VerticalCoordIndexer: 85000}),
+        iv.sel({VerticalCoordIndexer: 85000}),
+        ihgt.sel({VerticalCoordIndexer: 85000}),
+    )
+    iwspd_850, izeta_850 = (
+        wind_speed(iu_850, iv_850),
+        vorticity(iu_850, iv_850).metpy.dequantify(),
+    )
+    return {
+        "izeta_850": izeta_850,
+        "ihgt_850": ihgt_850,
+        "iwspd_850": iwspd_850,
+        "iu_850": iu_850,
+        "iv_850": iv_850,
+        "lat": idata[LatIndexer],
+        "lon": idata[LonIndexer],
+    }
 
 
 def get_limits(args, t, data850, track=None):
@@ -541,9 +599,7 @@ def finalize_results(
 
     # Constructing output filename
     method = "track" if args.track else "choose"
-    infile_name = os.path.basename(args.infile).split(".nc")[0]
-    results_filename = "".join(f"{infile_name}_{method}_results")
-    results_file = os.path.join(results_subdirectory, f"{results_filename}.csv")
+    results_file = os.path.join(results_subdirectory, f"{results_stem(args, method)}_results.csv")
 
     # Saving the DataFrame to a CSV file
     df.to_csv(results_file)
@@ -553,8 +609,7 @@ def finalize_results(
     out_track = out_track.rename(
         columns={"datestr": "time", "central_lat": "Lat", "central_lon": "Lon"}
     )
-    out_trackfile_name = "".join(f"{infile_name}_{method}_trackfile")
-    output_trackfile = os.path.join(results_subdirectory, out_trackfile_name)
+    output_trackfile = os.path.join(results_subdirectory, f"{results_stem(args, method)}_trackfile")
     out_track.to_csv(output_trackfile, index=False, sep=";")
     app_logger.info(f"📍 System track saved to {output_trackfile}")
 
@@ -570,6 +625,7 @@ def lec_moving(
     results_subdirectory_vertical_levels: str,
     app_logger: logging.Logger,
     args: argparse.Namespace,
+    run_status: RunStatus = None,
 ):
     """
     Computes the Lorenz Energy Cycle using a moving (semi-lagrangian) framework.
@@ -581,11 +637,14 @@ def lec_moving(
         results_subdirectory (str): Directory for saving results.
         figures_directory (str): Directory for saving figures.
         args (argparse.Namespace): Arguments provided to the script.
+        run_status (RunStatus): Status record of the run (outputs and figures).
 
     Returns:
         None
     """
     app_logger.info("🌀 Computing energetics using moving framework...")
+    if run_status is None:
+        run_status = RunStatus(args, results_subdirectory, app_logger)
 
     # Indexers
     LonIndexer, LatIndexer, TimeName, VerticalCoordIndexer = (
@@ -595,9 +654,48 @@ def lec_moving(
         variable_list_df.loc["Vertical Level"]["Variable"],
     )
 
-    PressureData = data[VerticalCoordIndexer]
+    # Get the time array
+    times = pd.to_datetime(data[TimeName].values)
 
-    # Create csv files for storing vertical results
+    # Get the system track and check for errors
+    if args.track:
+        track = handle_track_file(
+            data, times, LonIndexer, LatIndexer, TimeName, args, app_logger
+        )
+
+    # The box of every time step is decided before any term is computed, so
+    # that all time steps share one vertical control volume (DEC-10 B, in every
+    # framework): a level incomplete inside the box of any time step is excluded
+    # from all of them. With --choose every box is drawn first.
+    mode = "track" if args.track else "choose"
+    if args.choose:
+        app_logger.info(
+            f"🖱️ --choose mode: draw the box of each of the {len(times)} time steps; the "
+            "computation starts after the last one, so that the levels can be decided for "
+            "all of them together."
+        )
+    boxes = {}
+    for t in times:
+        if args.choose:
+            idata, _ = select_time(data, dTdt, TimeName, t)
+            data850 = fields_at_850(idata, variable_list_df, args, VerticalCoordIndexer, LatIndexer, LonIndexer)
+        else:
+            data850 = None
+        boxes[t] = get_limits(args, t, data850, track if args.track else None)
+    harmonization = harmonize_levels(
+        [
+            (t, select_time(data, dTdt, TimeName, t)[0],
+             (boxes[t]["min_lon"], boxes[t]["max_lon"], boxes[t]["min_lat"], boxes[t]["max_lat"]))
+            for t in times
+        ],
+        variable_list_df,
+        app_logger,
+        mode,
+    )
+
+    # Create csv files for storing vertical results. As in the fixed framework,
+    # the headers list the levels actually used.
+    level_files = []
     for term in [
         "Az",
         "Ae",
@@ -623,21 +721,13 @@ def lec_moving(
         "Ck_4",
         "Ck_5",
     ]:
-        columns = [TimeName] + [float(i) for i in PressureData.values]
+        columns = [TimeName] + harmonization.used_levels
         df = pd.DataFrame(columns=columns)
         file_name = term + "_" + VerticalCoordIndexer + ".csv"
         file_path = os.path.join(results_subdirectory_vertical_levels, file_name)
         df.to_csv(file_path, index=None)
+        level_files.append(file_path)
         app_logger.info(f"{file_path} created (but still empty)")
-
-    # Get the time array
-    times = pd.to_datetime(data[TimeName].values)
-
-    # Get the system track and check for errors
-    if args.track:
-        track = handle_track_file(
-            data, times, LonIndexer, LatIndexer, TimeName, args, app_logger
-        )
 
     # Dictionary for saving system position and attributes
     results_keys = [
@@ -655,46 +745,26 @@ def lec_moving(
     # Dictionary for storing results
     terms_dict = create_terms_dict(args)
 
+    # What each time step actually used (domain_selection.csv, lec_metadata.json)
+    metadata = RunMetadata(args, mode, variable_list_df, input_extent(data))
+    metadata.record_harmonization(harmonization)
+
     # Iterating over times
     for t in times:
         app_logger.info(f"⏰ Processing data at time: {t}...")
         try:
-            idata, idTdt = data.sel({TimeName: t}), dTdt.sel({TimeName: t})
-            if idata[TimeName].shape != ():
-                idata, idTdt = data.isel({TimeName: 1}), dTdt.isel({TimeName: 1})
+            idata, idTdt = select_time(data, dTdt, TimeName, t)
         except KeyError as e:
             app_logger.error(f"❌ Time indexing error: {e}")
             continue
 
-        # Wind components and geopotential height
-        iu, iv, ihgt = extract_wind_and_height_components(idata, variable_list_df, args)
+        # Wind, geopotential height, vorticity and wind speed at 850 hPa
+        data850 = fields_at_850(idata, variable_list_df, args, VerticalCoordIndexer, LatIndexer, LonIndexer)
+        izeta_850, ihgt_850, iwspd_850 = data850["izeta_850"], data850["ihgt_850"], data850["iwspd_850"]
+        lat = data850["lat"]
 
-        # Extract 850 hPa data
-        iu_850, iv_850, ihgt_850 = (
-            iu.sel({VerticalCoordIndexer: 85000}),
-            iv.sel({VerticalCoordIndexer: 85000}),
-            ihgt.sel({VerticalCoordIndexer: 85000}),
-        )
-
-        # Compute wind speed and vorticity at 850 hPa
-        iwspd_850, izeta_850 = (
-            wind_speed(iu_850, iv_850),
-            vorticity(iu_850, iv_850).metpy.dequantify(),
-        )
-        lat, lon = idata[LatIndexer], idata[LonIndexer]
-        # data850 = construct_data850(izeta_850, ihgt_850, iwspd_850, lat, lon)
-        data850 = {
-            "izeta_850": izeta_850,
-            "ihgt_850": ihgt_850,
-            "iwspd_850": iwspd_850,
-            "iu_850": iu_850,
-            "iv_850": iv_850,
-            "lat": lat,
-            "lon": lon,
-        }
-
-        # Get box attributes for current time
-        limits = get_limits(args, t, data850, track if args.track else None)
+        # Box of the current time (decided before the loop)
+        limits = boxes[t]
         app_logger.info(
             f"🗺️ Box: center=({limits['central_lat']:.2f}, {limits['central_lon']:.2f}), "
             f"size={limits['length']}°x{limits['width']}°"
@@ -729,15 +799,20 @@ def lec_moving(
             out_track = pd.concat([out_track, new_entry], ignore_index=True)
 
         # Save figure with the domain box, extreme values, vorticity and
-        # geopotential height
+        # geopotential height. Only this call is guarded: a cartographic
+        # failure (e.g. Natural Earth data unavailable offline) is recorded
+        # and the computation of this time step goes on (E0-05).
         if args.plots:
-            plot_domain_attributes(data850, limits, position, figures_directory)
+            run_status.run_product(
+                "domain_maps", plot_domain_attributes, data850, limits, position, figures_directory,
+                expected=[f"Figures/boxes/box_{limits['datestr']}.png"], step=limits["datestr"],
+            )
 
-        # Create box object
+        # Create box object over the levels common to all time steps
         app_logger.info("📦 Creating box object...")
         try:
             box_obj = BoxData(
-                data=idata.compute(),
+                data=harmonization.restrict(idata).compute(),
                 variable_list_df=variable_list_df,
                 args=args,
                 western_limit=limits["min_lon"],
@@ -746,12 +821,24 @@ def lec_moving(
                 northern_limit=limits["max_lat"],
                 results_subdirectory=results_subdirectory,
                 results_subdirectory_vertical_levels=results_subdirectory_vertical_levels,
-                dTdt=idTdt,
+                dTdt=harmonization.restrict(idTdt),
             )
         except Exception as e:
             app_logger.exception(f"❌ Error creating BoxData object: {e}")
             raise
+        if box_obj.dropped_levels:
+            raise RuntimeError(
+                f"BoxData dropped {box_obj.dropped_levels} at {t} although the vertical "
+                "harmonization found these levels complete in every box"
+            )
         app_logger.info("✅ Box object created.")
+        metadata.record_box(
+            box_obj,
+            {"west": limits["min_lon"], "east": limits["max_lon"],
+             "south": limits["min_lat"], "north": limits["max_lat"]},
+            t.strftime("%Y-%m-%d %H:%M:%S"),
+            idata[VerticalCoordIndexer].values,
+        )
 
         # Compute and store various meteorological terms
         terms_dict = compute_and_store_terms(box_obj, terms_dict, app_logger)
@@ -759,9 +846,28 @@ def lec_moving(
         # Log that the processing for this time is done
         app_logger.info("✅ Timestep complete.\n")
 
+    if args.plots:
+        run_status.close_product("domain_maps")
+
     # Finalize and process results
     results_file, df = finalize_results(
         times, terms_dict, args, results_subdirectory, out_track, app_logger
+    )
+    method = "track" if args.track else "choose"
+    track_file = os.path.join(results_subdirectory, f"{results_stem(args, method)}_trackfile")
+    domain_file = metadata.write_domain_selection(results_subdirectory)
+    metadata_file = metadata.write_metadata(
+        results_subdirectory, results_file, level_files, df.columns, df.index.values, trackfile=track_file
+    )
+    app_logger.info(f"🧾 Metadata saved to {metadata_file} and {domain_file}")
+    run_status.record_scientific_outputs(
+        {
+            "results_csv": [results_file],
+            "trackfile": [track_file],
+            "vertical_level_csvs": level_files,
+            "lec_metadata": [metadata_file],
+            "domain_selection": [domain_file],
+        }
     )
 
     if args.cdsapi:
@@ -770,53 +876,161 @@ def lec_moving(
         app_logger.info("✅ Cleanup complete.")
 
     if args.plots:
-        from glob import glob
+        app_logger.info("🎨 Generating plots...")
+        figures_directory = os.path.join(results_subdirectory, "Figures")
+        generate_moving_figures(
+            run_status, args, results_file, track_file, df, out_track, times, lat,
+            track if args.track else None, results_subdirectory, figures_directory, app_logger,
+        )
+        if run_status.figures_ok() and not run_status.unavailable_products():
+            app_logger.info("🎉 All plots generated successfully!")
+        elif run_status.figures_ok():
+            app_logger.info(
+                "🎨 Plots generated; unavailable for these data: "
+                + ", ".join(run_status.unavailable_products())
+                + f" (see {run_status.path})"
+            )
+        else:
+            app_logger.warning(
+                "⚠️ Plots finished with failures: "
+                + ", ".join(run_status.failed_figures())
+                + f" (see {run_status.path})"
+            )
 
+
+def generate_moving_figures(
+    run_status, args, results_file, track_file, df, out_track, times, lat, track,
+    results_subdirectory, figures_directory, app_logger,
+):
+    """
+    Generate the figures of the moving framework after the results are saved.
+
+    Each figure is recorded in run_status.json and counts as generated only if
+    its call returns and writes its expected files. A failure is logged and
+    the remaining figures are still attempted. The Lorenz cycle diagrams of
+    the periods and the Lorenz Phase Space need periods.csv: when the periods
+    were not determined they are reported as failed because of that.
+    """
+    figures = (
+        "track_map", "zeta_hgt_timeseries", "timeseries", "hovmoller", "boxplots",
+        "periods", "lec_cycle", "lec_periods", "lps",
+    )
+    try:
         from ..plots.map_track import map_track
         from ..plots.plot_boxplot import boxplot_terms
         from ..plots.plot_hovmoller import plot_hovmoller
-        from ..plots.plot_LEC import plot_lorenzcycletoolkit
+        from ..plots.plot_LEC import (plot_lorenzcycletoolkit,
+                                      plot_lorenzcycletoolkit_periods)
         from ..plots.plot_LPS import plot_LPS
-        from ..plots.plot_periods import plot_periods
+        from ..plots.plot_periods import cyclophaser_inputs, plot_periods
+        from ..utils.cyclophaser_compat import CyclophaserCompatibilityError
+        from ..utils.cyclophaser_compat import assess as assess_cyclophaser
         from ..plots.timeseries_terms import plot_timeseries
         from ..plots.timeseries_zeta_and_Z import plot_min_zeta_hgt
+        from ..plots.utils import TERM_DETAILS
+        from .lec_fixed_framework import lec_daily_figures
+    except Exception as exc:
+        run_status.fail_products(figures, exc, "plotting modules could not be imported")
+        return
 
-        app_logger.info("🎨 Generating plots...")
-        figures_directory = os.path.join(results_subdirectory, "Figures")
-        track_file = glob(os.path.join(results_subdirectory, "*trackfile"))[0]
+    # Basic diagnostics plots
+    run_status.run_product(
+        "track_map", map_track, results_file, track_file, figures_directory, app_logger,
+        expected=["Figures/track.png"],
+    )
+    run_status.run_product(
+        "zeta_hgt_timeseries", plot_min_zeta_hgt, track_file, figures_directory, app_logger,
+        expected=["Figures/timeseries-min_zeta_hgt.png"],
+    )
+    run_status.run_product(
+        "timeseries", plot_timeseries, results_file, figures_directory, app_logger,
+        expected=[f"Figures/timeseries/timeseires_{k}.png" for k in TERM_DETAILS],
+    )
+    run_status.run_product(
+        "hovmoller", plot_hovmoller, results_file, figures_directory, app_logger,
+        expected=["Figures/hovmollers/hovmoller_energy.png"],
+    )
+    run_status.run_product(
+        "boxplots", boxplot_terms, results_file, results_subdirectory, figures_directory, app_logger,
+        expected=[
+            "Figures/boxplots/boxplot_terms_energy.png",
+            "Figures/boxplots/boxplot_vertical_levels_energy.png",
+            "Figures/boxplots/vertical_timeseries_energy.png",
+        ],
+    )
 
-        # Basic diagnostics plots
-        map_track(results_file, track_file, figures_directory, app_logger)
-        plot_min_zeta_hgt(track_file, figures_directory, app_logger)
-        plot_timeseries(results_file, figures_directory, app_logger)
-        plot_hovmoller(results_file, figures_directory, app_logger)
-        boxplot_terms(results_file, results_subdirectory, figures_directory, app_logger)
-
-        # Determine periods: if vorticity is already processed, don't filter
-        # the series
+    # Determine periods: if vorticity is already processed, don't filter
+    # the series. Before calling cyclophaser, check that the series is long
+    # enough for the tested version and options (E0-06): below the minimum
+    # the periods are unavailable and cyclophaser is not called.
+    periods_file = os.path.join(results_subdirectory, "periods.csv")
+    periods_expected = ["periods.csv", "Figures/Periods/periods.png", "Figures/Periods/periods_steps.png"]
+    try:
         processed_vorticity = (
             True if args.zeta and "min_max_zeta_850" in track.columns else False
         )
-        plot_periods(
-            out_track,
-            times,
-            lat,
-            results_subdirectory,
-            figures_directory,
-            app_logger,
-            processed_vorticity=processed_vorticity,
-        )
+        vorticity_data, branch, options, _ = cyclophaser_inputs(out_track, lat, processed_vorticity)
+        assessment = assess_cyclophaser(vorticity_data, times, branch, options)
+    except CyclophaserCompatibilityError as exc:
+        run_status.fail_products(["periods"], exc, "cyclophaser compatibility check failed")
+    except Exception as exc:
+        run_status.fail_products(["periods"], exc, "cyclophaser inputs could not be prepared")
+    else:
+        if not assessment.applicable:
+            run_status.mark_unavailable("periods", assessment.reason, expected=periods_expected)
+        else:
+            run_status.run_product(
+                "periods", plot_periods, out_track, times, lat, results_subdirectory,
+                figures_directory, app_logger, processed_vorticity=processed_vorticity,
+                expected=periods_expected,
+            )
+            run_status.add_notes("periods", assessment.notes)
 
-        # Use found periods for other plots
-        plot_lorenzcycletoolkit(
-            results_file,
-            figures_directory,
-            os.path.join(results_subdirectory, "periods.csv"),
-            app_logger,
-        )
-        plot_LPS(df, args.infile, results_subdirectory, figures_directory, app_logger)
+    # Daily Lorenz cycle diagrams (do not need the periods)
+    run_status.run_product(
+        "lec_cycle", plot_lorenzcycletoolkit, results_file, figures_directory, app_logger=app_logger,
+        expected=lec_daily_figures(df.index),
+    )
 
-        app_logger.info("🎉 All plots generated successfully!")
+    # Use found periods for other plots
+    dt_hours = int((df.index[1] - df.index[0]).total_seconds() / 3600) if len(df.index) > 1 else None
+    lps_figures = [
+        f"Figures/LPS/LPS_{kind}{zoom}.png"
+        for kind in (f"{dt_hours}h", "periods", "1d") for zoom in ("", "_zoom")
+    ]
+    if not run_status.succeeded("periods"):
+        run_status.dependency_failed("lec_periods", "periods")
+        run_status.dependency_failed("lps", "periods", expected=lps_figures)
+        return
+
+    try:
+        expected_periods = period_figures(periods_file, df.index)
+    except Exception as exc:
+        run_status.fail_products(["lec_periods"], exc, "periods.csv could not be read")
+    else:
+        run_status.run_product(
+            "lec_periods", plot_lorenzcycletoolkit_periods, results_file, figures_directory, periods_file,
+            app_logger, expected=expected_periods,
+        )
+    run_status.run_product(
+        "lps", plot_LPS, df, args.infile, results_subdirectory, figures_directory, app_logger,
+        expected=lps_figures,
+    )
+
+
+def period_figures(periods_file, index):
+    """
+    Lorenz cycle diagrams expected for the periods in periods.csv: one per
+    period that contains at least one time of the results (periods without
+    data are skipped, with a warning, by plot_period_means).
+    """
+    periods = pd.read_csv(periods_file, parse_dates=["start", "end"], index_col=0)
+    times = pd.DatetimeIndex(index)
+    return [
+        f"Figures/LEC/LEC_{name}.png"
+        for name, row in periods.iterrows()
+        if ((times >= row["start"]) & (times <= row["end"])).any()
+    ]
 
 
 if __name__ == "__main__":

@@ -30,6 +30,7 @@ from shapely.geometry.polygon import Polygon
 
 from .input_files import read_box_limits
 from .longitude import canonicalize_box, verify_selected_domain
+from .run_metadata import record_input_extent
 
 nclicks = 2
 
@@ -350,6 +351,10 @@ def slice_domain(NetCDF_data, args, variable_list_df):
         EasternLimit = domain_limits["max_lon"]
         SouthernLimit = domain_limits["min_lat"]
         NorthernLimit = domain_limits["max_lat"]
+
+    # Keep the extent of the data available before the cut, so that the
+    # selected box can be compared with it (domain_selection.csv).
+    record_input_extent(NetCDF_data, LonIndexer, LatIndexer)
 
     NetCDF_data = NetCDF_data.sel(
         **{

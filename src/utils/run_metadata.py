@@ -1,0 +1,433 @@
+"""
+Scientific metadata of one run: ``lec_metadata.json`` and ``domain_selection.csv``.
+
+Both files are additional outputs written next to the results; no existing
+file, column or header changes. They describe what the computation actually
+used, read from the objects of the run (nothing is recomputed and no
+selection is changed here):
+
+``domain_selection.csv``
+    One row per time step (``track``/``choose``) or one row with time
+    ``all`` (``fixed``): the requested box limits (in the longitude
+    convention of the dataset), the coordinates actually selected (first and
+    last longitude and latitude of the extracted fields), the difference
+    between them, the number of points, the extent of the input data and
+    whether each selected edge is the edge of the input data.
+
+``lec_metadata.json``
+    Provenance (version, command, SHA-256 of the input file, namelist), the
+    time axis, the retained pressure layer, the units of every column of the
+    main results file and, for every per-level file, its units, its relation
+    to the column value and its layout.
+
+Created by:
+    Danilo Couto de Souza
+    Universidade de São Paulo (USP)
+    Instituto de Astornomia, Ciências Atmosféricas e Geociências
+    São Paulo - Brazil
+
+Contact:
+    danilo.oceano@gmail.com
+"""
+
+import contextlib
+import csv
+import datetime
+import hashlib
+import json
+import os
+from pathlib import Path
+
+import numpy as np
+
+from ..analysis.energy_contents import EnergyContents
+from ..analysis.mass_continuity import MassContinuity
+from .output_spec import TENDENCY_UNITS, VERTICAL_PROFILE_SPEC
+from .run_status import _version
+from .term_output import TermOutputMixin, header_levels
+
+SCHEMA_VERSION = 1
+METADATA_FILE = "lec_metadata.json"
+DOMAIN_SELECTION_FILE = "domain_selection.csv"
+
+# Attributes set on the dataset by select_area.slice_domain before the domain
+# is cut: the extent of the input data in the dataset's own convention.
+INPUT_EXTENT_ATTRS = {
+    "west": "lectk_input_lon_min",
+    "east": "lectk_input_lon_max",
+    "south": "lectk_input_lat_min",
+    "north": "lectk_input_lat_max",
+}
+
+COLUMN_STATEMENT = (
+    "Column values are integrals over the retained pressure layer "
+    "(p_top_Pa to p_bottom_Pa), not over the entire atmospheric column."
+)
+
+ENERGY_COLUMNS = ("Az", "Ae", "Kz", "Ke")
+MASS_COLUMNS = ("M",)
+FLUX_COLUMNS = (
+    "Cz", "Ca", "Ck", "Ce", "C_overturning",
+    "BAz", "BAe", "BKz", "BKe", "BΦZ", "BΦE",
+    "Gz", "Ge", "Dz", "De", "RGz", "RKz", "RGe", "RKe",
+)
+NOT_VERIFIED_COLUMNS = ("Dz", "De")
+
+DOMAIN_COLUMNS = [
+    "time",
+    "requested_west", "requested_east", "requested_south", "requested_north",
+    "selected_west", "selected_east", "selected_south", "selected_north",
+    "offset_west", "offset_east", "offset_south", "offset_north",
+    "n_lon", "n_lat",
+    "input_west", "input_east", "input_south", "input_north",
+    "west_at_input_edge", "east_at_input_edge", "south_at_input_edge", "north_at_input_edge",
+    "requested_outside_input",
+    "fields_share_selection",
+]
+
+# Fields extracted by BoxData whose horizontal selection is recorded.
+_BOX_FIELDS = ("tair", "u", "v", "omega", "geopt")
+
+
+def _units(text):
+    return text.replace("^", "**")
+
+
+def column_units(column):
+    """
+    Units of a column of the main results file, from the term classes.
+
+    Args:
+        column (str): Column name (e.g. ``"Az"``, ``"∂Kz/∂t (finite diff.)"``).
+
+    Returns:
+        str or None: Pint-style units (``J/m**2``, ``W/m**2``,
+        ``kg/m**2/s``), or None for an unknown column.
+    """
+    if column in ENERGY_COLUMNS:
+        return _units(EnergyContents.OUTPUT_UNITS)
+    if column in MASS_COLUMNS:
+        return _units(MassContinuity.OUTPUT_UNITS)
+    if column in TENDENCY_UNITS:
+        return TENDENCY_UNITS[column]
+    if column in FLUX_COLUMNS:
+        return _units(TermOutputMixin.OUTPUT_UNITS)
+    return None
+
+
+def sha256_file(path, chunk_size=1 << 20):
+    """Return the SHA-256 of a file, read in chunks (constant memory)."""
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(chunk_size), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def record_input_extent(dataset, lon_name, lat_name):
+    """
+    Attach the extent of the input data to the dataset attributes.
+
+    Called before the domain is cut, so that the edges of the selected box can
+    later be compared with the edges of the data actually available.
+
+    Args:
+        dataset (xr.Dataset): The processed input data (before the cut).
+        lon_name (str): Name of the longitude coordinate.
+        lat_name (str): Name of the latitude coordinate.
+
+    Returns:
+        dict: {"west", "east", "south", "north"} in the dataset convention.
+    """
+    lon = np.asarray(dataset[lon_name].values, dtype=float)
+    lat = np.asarray(dataset[lat_name].values, dtype=float)
+    extent = {
+        "west": float(np.nanmin(lon)), "east": float(np.nanmax(lon)),
+        "south": float(np.nanmin(lat)), "north": float(np.nanmax(lat)),
+    }
+    for edge, attr in INPUT_EXTENT_ATTRS.items():
+        dataset.attrs[attr] = extent[edge]
+    return extent
+
+
+def input_extent(dataset):
+    """Return the extent recorded by record_input_extent, or None for each missing edge."""
+    return {edge: dataset.attrs.get(attr) for edge, attr in INPUT_EXTENT_ATTRS.items()}
+
+
+class RunMetadata:
+    """
+    Collects, during the run, what the computation actually used, and writes
+    ``domain_selection.csv`` and ``lec_metadata.json``.
+
+    Args:
+        args (argparse.Namespace): Command-line arguments.
+        method (str): ``fixed``, ``track`` or ``choose``.
+        variable_list_df (pd.DataFrame): Parsed namelist.
+        extent (dict): Extent of the input data (see ``input_extent``).
+    """
+
+    def __init__(self, args, method, variable_list_df, extent):
+        self.args = args
+        self.method = method
+        self.variable_list_df = variable_list_df
+        self.extent = extent
+        self.domain_rows = []
+        self.vertical_rows = []
+        self.input_levels = None
+        self.harmonization = None
+
+    def record_box(self, box_obj, requested, time_label, input_levels):
+        """
+        Record the horizontal selection and the retained levels of one box.
+
+        Args:
+            box_obj (BoxData): The box of this time step (or of the fixed run).
+            requested (dict): Requested limits {"west", "east", "south", "north"}
+                as passed to BoxData.
+            time_label (str): ``"all"`` (fixed) or the time of the step.
+            input_levels (sequence): Pressure levels (Pa) of the data given to BoxData.
+        """
+        lon_name, lat_name = box_obj.LonIndexer, box_obj.LatIndexer
+        coords = []
+        for name in _BOX_FIELDS:
+            field = getattr(box_obj, name, None)
+            if field is None:
+                continue
+            coords.append((
+                tuple(np.asarray(field[lon_name].values, dtype=float)),
+                tuple(np.asarray(field[lat_name].values, dtype=float)),
+            ))
+        lon, lat = (np.asarray(c, dtype=float) for c in coords[0])
+        selected = {
+            "west": float(lon.min()), "east": float(lon.max()),
+            "south": float(lat.min()), "north": float(lat.max()),
+        }
+        row = {"time": time_label}
+        for edge in ("west", "east", "south", "north"):
+            row[f"requested_{edge}"] = float(requested[edge])
+        for edge in ("west", "east", "south", "north"):
+            row[f"selected_{edge}"] = selected[edge]
+        for edge in ("west", "east", "south", "north"):
+            row[f"offset_{edge}"] = selected[edge] - float(requested[edge])
+        row["n_lon"], row["n_lat"] = int(lon.size), int(lat.size)
+        for edge in ("west", "east", "south", "north"):
+            row[f"input_{edge}"] = self.extent.get(edge)
+        for edge in ("west", "east", "south", "north"):
+            value = self.extent.get(edge)
+            row[f"{edge}_at_input_edge"] = None if value is None else bool(selected[edge] == value)
+        outside = []
+        if self.extent.get("west") is not None and requested["west"] < self.extent["west"]:
+            outside.append("west")
+        if self.extent.get("east") is not None and requested["east"] > self.extent["east"]:
+            outside.append("east")
+        if self.extent.get("south") is not None and requested["south"] < self.extent["south"]:
+            outside.append("south")
+        if self.extent.get("north") is not None and requested["north"] > self.extent["north"]:
+            outside.append("north")
+        row["requested_outside_input"] = "+".join(outside) if outside else "none"
+        row["fields_share_selection"] = all(c == coords[0] for c in coords)
+        self.domain_rows.append(row)
+
+        # Dropped = input levels not used, also when the levels were removed
+        # before BoxData (common vertical volume of the moving framework).
+        self.input_levels = [float(p) for p in input_levels]
+        used = [float(p) for p in box_obj.valid_levels]
+        self.vertical_rows.append({
+            "time": time_label,
+            "levels_used_Pa": used,
+            "dropped_levels_Pa": [p for p in self.input_levels if p not in used],
+        })
+
+    def record_harmonization(self, harmonization):
+        """
+        Record the levels common to all time steps of the moving framework.
+
+        Args:
+            harmonization (VerticalHarmonization): Result of ``harmonize_levels``.
+        """
+        self.harmonization = harmonization.as_metadata()
+
+    # ------------------------------------------------------------------ files
+    def write_domain_selection(self, results_directory):
+        """Write ``domain_selection.csv`` and return its path."""
+        path = Path(results_directory) / DOMAIN_SELECTION_FILE
+        with open(path, "w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=DOMAIN_COLUMNS, lineterminator="\n")
+            writer.writeheader()
+            for row in self.domain_rows:
+                writer.writerow({k: _csv_value(v) for k, v in row.items()})
+        return path
+
+    def _vertical(self, level_files):
+        used = [r["levels_used_Pa"] for r in self.vertical_rows]
+        constant = all(u == used[0] for u in used)
+        retained = sorted(set.intersection(*(set(u) for u in used))) if used else []
+        header = header_levels(level_files[0]) if level_files else None
+        vertical = {
+            "coordinate": self.variable_list_df.loc["Vertical Level"]["Variable"],
+            "units": "Pa",
+            "input_levels_Pa": self.input_levels,
+            "levels_used_Pa": used[0] if constant else None,
+            "levels_used_at_every_time_Pa": retained,
+            "levels_used_vary_with_time": not constant,
+            "dropped_levels_Pa": self.vertical_rows[0]["dropped_levels_Pa"] if constant else None,
+            "p_top_Pa": min(used[0]) if constant else None,
+            "p_bottom_Pa": max(used[0]) if constant else None,
+            "per_level_file_header_levels_Pa": header,
+            "column_statement": COLUMN_STATEMENT,
+        }
+        if self.method != "fixed":
+            vertical["by_time"] = self.vertical_rows
+        if self.harmonization is not None:
+            vertical["harmonization"] = self.harmonization
+        return vertical
+
+    def write_metadata(self, results_directory, results_file, level_files, columns, times,
+                       trackfile=None, run_status_file="run_status.json"):
+        """
+        Write ``lec_metadata.json`` atomically and return its path.
+
+        Args:
+            results_directory (str): Directory of the results of this run.
+            results_file (str): Main results CSV.
+            level_files (list): Per-level CSV files, as written.
+            columns (sequence): Columns of the main results file.
+            times (sequence): Times of the main results file.
+            trackfile (str, optional): System track file (moving framework).
+            run_status_file (str): Name of the status file.
+        """
+        results_directory = Path(results_directory)
+        times = np.asarray(times, dtype="datetime64[ns]")
+        steps = sorted({int(s) for s in np.diff(times).astype("timedelta64[s]").astype(int)}) if times.size > 1 else []
+        names = self.variable_list_df
+        namelist = {
+            str(row): {
+                "variable": str(names.loc[row]["Variable"]),
+                "units": None if "Units" not in names.columns else _plain(names.loc[row]["Units"]),
+            }
+            for row in names.index
+        }
+        infile = self.args.infile
+        metadata = {
+            "schema_version": SCHEMA_VERSION,
+            "lectk_version": _version(),
+            "generated_utc": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "command": {
+                "method": self.method,
+                "residuals": bool(getattr(self.args, "residuals", False)),
+                "outname": getattr(self.args, "outname", None),
+                "box_limits": getattr(self.args, "box_limits", None) if self.method == "fixed" else None,
+                "trackfile": getattr(self.args, "trackfile", None) if self.method == "track" else None,
+                "zeta": bool(getattr(self.args, "zeta", False)),
+                "mpas": bool(getattr(self.args, "mpas", False)),
+            },
+            "input": {
+                "file": os.path.basename(infile),
+                "sha256": sha256_file(infile) if os.path.isfile(infile) else None,
+                "size_bytes": os.path.getsize(infile) if os.path.isfile(infile) else None,
+                "namelist": namelist,
+            },
+            "time": {
+                "n": int(times.size),
+                "first": _time(times[0]) if times.size else None,
+                "last": _time(times[-1]) if times.size else None,
+                "distinct_steps_s": steps,
+            },
+            "horizontal": {
+                "domain_selection_file": DOMAIN_SELECTION_FILE,
+                "input_extent": self.extent,
+                "longitude_convention": "requested limits are expressed in the longitude convention of the dataset",
+            },
+            "vertical": self._vertical(level_files),
+            "main_results": {
+                "file": _relative(results_file, results_directory),
+                "time_column_header": "",
+                "time_column_note": "the first column holds the time; its header cell is empty",
+                "columns": [
+                    {"name": c, "units": column_units(c),
+                     **({"verification": "NOT VERIFIED"} if c in NOT_VERIFIED_COLUMNS else {})}
+                    for c in columns
+                ],
+            },
+            "vertical_level_files": [
+                _level_file_entry(p, results_directory, names.loc["Vertical Level"]["Variable"]) for p in level_files
+            ],
+            "trackfile": _relative(trackfile, results_directory) if trackfile else None,
+            "run_status_file": run_status_file,
+        }
+        path = results_directory / METADATA_FILE
+        tmp = path.with_name(f".{METADATA_FILE}.{os.getpid()}.tmp")
+        try:
+            with open(tmp, "w", encoding="utf-8") as handle:
+                json.dump(metadata, handle, indent=2, ensure_ascii=False)
+                handle.write("\n")
+            os.replace(tmp, path)
+        except BaseException:
+            with contextlib.suppress(OSError):
+                tmp.unlink()
+            raise
+        return path
+
+
+def _csv_value(value):
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, float):
+        return repr(value)
+    return value
+
+
+def _plain(value):
+    if value is None or (isinstance(value, float) and np.isnan(value)):
+        return None
+    return str(value)
+
+
+def _time(value):
+    return str(np.datetime_as_string(value, unit="s")).replace("T", " ")
+
+
+def _relative(path, root):
+    try:
+        return Path(path).resolve().relative_to(Path(root).resolve()).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def _layout(path):
+    """
+    Layout of a per-level file, read from the file itself.
+
+    ``time_by_level``: one row per time, one column per level.
+    ``time_invariant_profile``: a row ``level`` with the levels and a row
+    with the term name and its values (Cz_1/Ce_1 in the fixed framework,
+    whose values do not depend on time).
+    """
+    with open(path, newline="", encoding="utf-8") as handle:
+        rows = list(csv.reader(handle))
+    if len(rows) >= 2 and rows[1] and rows[1][0] == "level":
+        return "time_invariant_profile"
+    return "time_by_level"
+
+
+def _level_file_entry(path, root, coordinate):
+    suffix = f"_{coordinate}.csv"
+    name = Path(path).name
+    term = name[: -len(suffix)] if name.endswith(suffix) else Path(path).stem
+    spec = VERTICAL_PROFILE_SPEC.get(term, {})
+    entry = {
+        "file": _relative(path, root),
+        "term": term,
+        "layout": _layout(path),
+        "units": spec.get("units"),
+        "role": spec.get("role"),
+        "column_term": spec.get("column_term"),
+        "column_units": spec.get("column_units"),
+        "column_factor": spec.get("column_factor"),
+    }
+    if "part_of" in spec:
+        entry["part_of"] = spec["part_of"]
+    return entry

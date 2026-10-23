@@ -26,7 +26,53 @@ Contact:
     danilo.oceano@gmail.com
 """
 
+import csv
+import os
+
 from .nan_handling import convert_units, handle_nans
+
+
+def _first_row(path):
+    with open(path, newline="", encoding="utf-8") as handle:
+        return next(csv.reader(handle))
+
+
+def header_levels(path):
+    """Pressure levels (Pa) listed in the header of a per-level CSV."""
+    return [float(v) for v in _first_row(path)[1:]]
+
+
+def align_to_header(frame, path, time_name):
+    """
+    Put each value of a per-level frame under the header column of its own level (E0-21a).
+
+    Args:
+        frame (pd.DataFrame): One column per pressure level (Pa), one row per time.
+        path (str): The per-level CSV the frame is appended to.
+        time_name (str): Name of the time coordinate, the first cell of the
+            header written by the frameworks.
+
+    Returns:
+        pd.DataFrame: The frame with the columns of the file header, in its
+        order; a header level absent from the profile becomes an empty cell.
+        A file without that header (not created yet, or created by appending
+        rows only) is not aligned: the frame is returned as it is. The
+        frameworks always create the files, with their headers, first.
+
+    Raises:
+        ValueError: If the profile has a level that is not in the header, so
+            that writing it would put values under the wrong levels.
+    """
+    if not os.path.exists(path) or _first_row(path)[:1] != [time_name]:
+        return frame
+    header = header_levels(path)
+    unknown = [float(p) for p in frame.columns if float(p) not in header]
+    if unknown:
+        raise ValueError(
+            f"{path}: the profile has level(s) {unknown} that are not in the file "
+            f"header {header}; writing it would put values under the wrong levels"
+        )
+    return frame.reindex(columns=header)
 
 
 class TermOutputMixin:
@@ -95,6 +141,10 @@ class TermOutputMixin:
         """
         Append a vertical profile to ``{variable_name}_{level}.csv``.
 
+        Each value is written under the header column of its own level
+        (``align_to_header``); the time-invariant profiles of the fixed
+        framework carry their own row of levels.
+
         Args:
             function (xr.DataArray): The vertical profile to archive.
             variable_name (str): Term name used for the file name and column.
@@ -102,6 +152,7 @@ class TermOutputMixin:
         Returns:
             None
         """
+        path = f"{self.results_subdirectory_vertical_levels}/{variable_name}_{self.VerticalCoordIndexer}.csv"
         df = function.to_dataframe(name=variable_name)
         df.reset_index(inplace=True)
 
@@ -109,15 +160,13 @@ class TermOutputMixin:
             if self.TimeName not in function.dims:
                 df = df.T
             else:
-                df = df.pivot(index=self.TimeName, columns=self.VerticalCoordIndexer)
+                df = df.pivot(index=self.TimeName, columns=self.VerticalCoordIndexer, values=variable_name)
+                df = align_to_header(df, path, self.TimeName)
         else:
             df.set_index(self.TimeName, inplace=True)
             df.index = df.index.strftime("%Y-%m-%d %H:%M:%S")
             df = df.pivot(columns=self.VerticalCoordIndexer, values=variable_name)
             df.columns.name = None
+            df = align_to_header(df, path, self.TimeName)
 
-        df.to_csv(
-            f"{self.results_subdirectory_vertical_levels}/{variable_name}_{self.VerticalCoordIndexer}.csv",
-            mode="a",
-            header=None,
-        )
+        df.to_csv(path, mode="a", header=None)

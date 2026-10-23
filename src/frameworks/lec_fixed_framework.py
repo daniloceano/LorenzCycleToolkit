@@ -28,6 +28,10 @@ from ..utils.box_data import BoxData
 from ..utils.calc_budget_and_residual import calc_budget_diff, calc_residuals
 from ..utils.input_files import read_box_limits
 from ..utils.longitude import canonicalize_box
+from ..utils.output_names import results_stem
+from ..utils.run_metadata import RunMetadata, input_extent
+from ..utils.run_status import RunStatus
+from ..utils.vertical_harmonization import harmonize_levels
 
 
 def lec_fixed(
@@ -37,6 +41,7 @@ def lec_fixed(
     results_subdirectory_vertical_levels: str,
     app_logger: logging.Logger,
     args: argparse.Namespace,
+    run_status: RunStatus = None,
 ):
     """
     Computes the Lorenz Energy Cycle (LEC) using a fixed framework.
@@ -48,6 +53,7 @@ def lec_fixed(
         results_subdirectory_vertical_levels (str): Directory path to save the vertical level results.
         args (argparse.Namespace): Arguments provided to the script, including configurations
                                    for the LEC computation.
+        run_status (RunStatus): Status record of the run (outputs and figures).
 
     Raises:
         ValueError: If the bounding box limits are invalid.
@@ -58,6 +64,8 @@ def lec_fixed(
         It also triggers plotting scripts if specified in the arguments.
     """
     logging.info("📊 Computing energetics using fixed framework...")
+    if run_status is None:
+        run_status = RunStatus(args, results_subdirectory, app_logger)
 
     box_limits_file, min_lon, max_lon, min_lat, max_lat = read_box_limits(
         args.box_limits, app_logger
@@ -96,6 +104,7 @@ def lec_fixed(
         app_logger.error(f"❌ {exc}")
         raise
 
+    extent = input_extent(data)
     app_logger.debug("💾 Loading data into memory..")
     data = data.compute()
     app_logger.debug("✅ Data loaded into memory.")
@@ -111,10 +120,20 @@ def lec_fixed(
         f"🗺️ Bounding box: lon=[{min_lon}, {max_lon}], lat=[{min_lat}, {max_lat}]"
     )
 
+    # The levels are decided before any term is computed, with the rule of
+    # every framework (DEC-10 B, DEC-10-L B); here the box is the same at
+    # every time step.
+    harmonization = harmonize_levels(
+        [(t, data.sel({TimeName: t}), (min_lon, max_lon, min_lat, max_lat))
+         for t in data[TimeName].values],
+        variable_list_df,
+        app_logger,
+        "fixed",
+    )
 
     try:
         box_obj = BoxData(
-            data,
+            harmonization.restrict(data),
             variable_list_df,
             min_lon,
             max_lon,
@@ -127,6 +146,20 @@ def lec_fixed(
     except Exception:
         app_logger.exception("❌ An exception occurred while creating BoxData object")
         raise
+    if box_obj.dropped_levels:
+        raise RuntimeError(
+            f"BoxData dropped {box_obj.dropped_levels} although the vertical "
+            "harmonization found these levels complete at every time step"
+        )
+
+    metadata = RunMetadata(args, "fixed", variable_list_df, extent)
+    metadata.record_harmonization(harmonization)
+    metadata.record_box(
+        box_obj,
+        {"west": min_lon, "east": max_lon, "south": min_lat, "north": max_lat},
+        "all",
+        data[VerticalCoordIndexer].values,
+    )
 
     # The per-level CSV headers list the levels actually used, which are only
     # known after BoxData has fixed the vertical control volume.
@@ -135,6 +168,7 @@ def lec_fixed(
         f"🧾 Vertical-level CSVs will carry {len(used_levels)} levels: "
         f"{used_levels[0]:.0f} Pa to {used_levels[-1]:.0f} Pa"
     )
+    level_files = []
     for term in [
         "Az", "Ae", "Kz", "Ke", "Ge", "Gz",
         "Cz", "Cz_1", "Cz_2", "Ca", "Ca_1", "Ca_2",
@@ -146,6 +180,7 @@ def lec_fixed(
             results_subdirectory_vertical_levels, f"{term}_{VerticalCoordIndexer}.csv"
         )
         pd.DataFrame(columns=columns).to_csv(output_path, index=None)
+        level_files.append(output_path)
 
     try:
         ec_obj = EnergyContents(box_obj, "fixed", app_logger)
@@ -246,56 +281,75 @@ def lec_fixed(
     df = calc_residuals(df, app_logger)
     app_logger.info("📈 Computed budget and residuals")
 
-    if args.outname:
-        results_filename = args.outname
-    else:
-        infile_name = os.path.basename(args.infile).split(".nc")[0]
-        results_filename = "".join(f"{infile_name}_fixed_results")
-    results_file = Path(results_subdirectory, f"{results_filename}.csv")
+    results_file = Path(results_subdirectory, f"{results_stem(args, 'fixed')}_results.csv")
     df.to_csv(results_file)
     app_logger.info(f"💾 Results saved to {results_file}")
 
-    if args.plots:
-        from ..plots.map_box_limits import plot_box_limits
-        from ..plots.plot_boxplot import boxplot_terms
-        from ..plots.plot_hovmoller import plot_hovmoller
-        from ..plots.plot_LEC import plot_lorenzcycletoolkit
-        from ..plots.timeseries_terms import plot_timeseries
+    domain_file = metadata.write_domain_selection(results_subdirectory)
+    metadata_file = metadata.write_metadata(
+        results_subdirectory, results_file, level_files, df.columns, df.index.values
+    )
+    app_logger.info(f"🧾 Metadata saved to {metadata_file} and {domain_file}")
+    run_status.record_scientific_outputs(
+        {
+            "results_csv": [results_file],
+            "vertical_level_csvs": level_files,
+            "lec_metadata": [metadata_file],
+            "domain_selection": [domain_file],
+        }
+    )
 
+    if args.plots:
         app_logger.info("🎨 Generating plots...")
         figures_directory = os.path.join(results_subdirectory, "Figures")
 
-        # Plot time series
+        # Each figure is recorded in run_status.json: it counts as generated
+        # only if the call returns and writes its files. A failure is logged
+        # and the remaining figures are still attempted (E0-07).
         try:
-            plot_timeseries(results_file, figures_directory, app_logger)
-            app_logger.info("  ✅ Time series plot generated")
-        except Exception as e:
-            app_logger.error(f"  ❌ Error generating time series plot: {e}")
+            from ..plots.map_box_limits import plot_box_limits
+            from ..plots.plot_boxplot import boxplot_terms
+            from ..plots.plot_hovmoller import plot_hovmoller
+            from ..plots.plot_LEC import plot_lorenzcycletoolkit
+            from ..plots.timeseries_terms import plot_timeseries
+            from ..plots.utils import TERM_DETAILS
+        except Exception as exc:
+            run_status.fail_products(
+                ["timeseries", "box_limits_map", "boxplots", "hovmoller", "lec_cycle"],
+                exc, "plotting modules could not be imported",
+            )
+        else:
+            run_status.run_product(
+                "timeseries", plot_timeseries, results_file, figures_directory, app_logger,
+                expected=[f"Figures/timeseries/timeseires_{k}.png" for k in TERM_DETAILS],
+            )
+            run_status.run_product(
+                "box_limits_map", plot_box_limits, box_limits_file, figures_directory, app_logger,
+                expected=["Figures/box_limits.png"],
+            )
+            run_status.run_product(
+                "boxplots", boxplot_terms, results_file, results_subdirectory, figures_directory, app_logger,
+                expected=[
+                    "Figures/boxplots/boxplot_terms_energy.png",
+                    "Figures/boxplots/boxplot_vertical_levels_energy.png",
+                    "Figures/boxplots/vertical_timeseries_energy.png",
+                ],
+            )
+            run_status.run_product(
+                "hovmoller", plot_hovmoller, results_file, figures_directory, app_logger,
+                expected=["Figures/hovmollers/hovmoller_energy.png"],
+            )
+            run_status.run_product(
+                "lec_cycle", plot_lorenzcycletoolkit, results_file, figures_directory, app_logger=app_logger,
+                expected=lec_daily_figures(df.index),
+            )
 
-        # Plot box limits
-        try:
-            plot_box_limits(box_limits_file, figures_directory, app_logger)
-            app_logger.info("  ✅ Box limits plot generated")
-        except Exception as e:
-            app_logger.error(f"  ❌ Error generating box limits plot: {e}")
 
-        # Plot boxplot terms
-        try:
-            boxplot_terms(results_file, results_subdirectory, figures_directory, app_logger)
-            app_logger.info("  ✅ Boxplot terms generated")
-        except Exception as e:
-            app_logger.error(f"  ❌ Error generating boxplot terms: {e}")
-
-        # Plot Hovmöller diagram
-        try:
-            plot_hovmoller(results_file, figures_directory, app_logger)
-            app_logger.info("  ✅ Hovmöller plot generated")
-        except Exception as e:
-            app_logger.error(f"  ❌ Error generating Hovmöller plot: {e}")
-
-        # Plot Lorenz cycle toolkit
-        try:
-            plot_lorenzcycletoolkit(results_file, figures_directory, app_logger=app_logger)
-            app_logger.info("  ✅ Lorenz cycle plot generated")
-        except Exception as e:
-            app_logger.error(f"  ❌ Error generating Lorenz cycle plot: {e}")
+def lec_daily_figures(index):
+    """
+    Files written by plot_lorenzcycletoolkit without periods: the example
+    diagram and one diagram per calendar day spanned by the results.
+    """
+    times = pd.DatetimeIndex(index)
+    days = pd.date_range(times.min().normalize(), times.max().normalize(), freq="1D")
+    return ["Figures/LEC/LEC_example.png"] + [f"Figures/LEC/LEC_{d:%Y-%m-%d}.png" for d in days]

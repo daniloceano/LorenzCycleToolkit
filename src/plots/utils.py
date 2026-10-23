@@ -16,8 +16,11 @@ from glob import glob
 
 import cartopy
 import cartopy.feature as cfeature
+import matplotlib.dates as mdates
 import pandas as pd
 from cartopy.feature import NaturalEarthFeature
+
+from src.utils.output_spec import VERTICAL_PROFILE_SPEC
 
 # Global constants for plotting
 TERM_DETAILS = {
@@ -213,6 +216,61 @@ def get_data_vertical_levels(results_subdirectory):
             print(f"Error reading {file}: {e}")
 
     return data
+
+
+def add_vertical_figure_note(fig, terms, statistic=None):
+    """
+    Add a note under a vertical-level figure stating what its boxes summarise
+    and whether its panels have different units.
+
+    Args:
+        fig (matplotlib.figure.Figure): The figure.
+        terms (list of str): Terms drawn in the figure, one per panel.
+        statistic (str, optional): ``"over_time"`` for boxes of the values at
+            one pressure level over all times, ``"over_levels"`` for boxes of
+            the values at all levels at one time, None for no box.
+
+    Returns:
+        None
+    """
+    lines = []
+    if statistic == "over_time":
+        lines.append(
+            "Each box: values at one pressure level over all times, "
+            "unweighted by the interval between times."
+        )
+    elif statistic == "over_levels":
+        lines.append(
+            "Each box: values at all pressure levels at one time, unweighted by "
+            "layer thickness (not a vertical integral or a mass-weighted mean)."
+        )
+    if len({VERTICAL_PROFILE_SPEC[t]["display_units"] for t in terms}) > 1:
+        lines.append("Panels have different units: see the label of each panel.")
+    if lines:
+        # Place the note under everything already drawn (tick labels included).
+        bottom = fig.get_tightbbox(fig.canvas.get_renderer()).y0 / fig.get_figheight()
+        fig.text(0.5, bottom - 0.02, "\n".join(lines), ha="center", va="top", fontsize=11)
+
+
+def format_time_axis(ax, max_ticks=4, labelsize=12):
+    """
+    Put a small number of readable date ticks on the x axis of a time panel.
+
+    Args:
+        ax (matplotlib.axes.Axes): The panel, with dates on its x axis.
+        max_ticks (int): Largest number of major ticks; four fit one panel
+            of a two-column figure without overlapping labels.
+        labelsize (int): Font size of the tick labels.
+
+    Returns:
+        None
+    """
+    locator = mdates.AutoDateLocator(minticks=2, maxticks=max_ticks)
+    ax.xaxis.set_major_locator(locator)
+    ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+    ax.tick_params(axis="x", labelrotation=0, labelsize=labelsize)
+    for label in ax.get_xticklabels():
+        label.set_horizontalalignment("center")
 
 
 def setup_gridlines(ax):

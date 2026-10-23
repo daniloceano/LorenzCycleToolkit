@@ -23,9 +23,42 @@ from datetime import datetime
 import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
+import numpy as np
 
 import src.plots.utils as utils
-from src.plots.utils import get_data_vertical_levels, read_results
+from src.plots.utils import (add_vertical_figure_note, get_data_vertical_levels,
+                             read_results)
+from src.utils.output_spec import (PRESSURE_AXIS_LABEL, profile_label,
+                                   pressure_tick_label)
+
+
+def box_widths(positions, fraction=0.6, single_width=1.0 / 24.0):
+    """
+    Width of each box on a time axis, from the spacing of its neighbours.
+
+    Each box is drawn by its own call to ``Axes.boxplot`` with one position,
+    so matplotlib's default width (0.15 day) ignores the spacing of the times
+    and overlaps boxes one hour apart. Here each box takes ``fraction`` of the
+    smaller gap to its neighbours, so two boxes never overlap, also when the
+    times are irregular.
+
+    Args:
+        positions (list of float): Box positions in matplotlib date numbers
+            (days), in increasing order.
+        fraction (float): Share of the smaller neighbouring gap given to the
+            box; below 1, so adjacent boxes keep a gap between them.
+        single_width (float): Reference gap (days) when there is one time.
+
+    Returns:
+        list of float: One width (days) per position.
+    """
+    x = np.asarray(positions, dtype=float)
+    if x.size < 2:
+        return [fraction * single_width] * x.size
+    gaps = np.diff(x)
+    left = np.concatenate(([gaps[0]], gaps))
+    right = np.concatenate((gaps, [gaps[-1]]))
+    return list(fraction * np.minimum(left, right))
 
 
 def boxplot_time(dict_vertical, figures_subdirectory, app_logger):
@@ -50,6 +83,14 @@ def boxplot_time(dict_vertical, figures_subdirectory, app_logger):
     dummy_data = dict_vertical[next(iter(all_terms["energy"]), None)]  # Safe access
     t_id = dummy_data.columns[0]  # Time indexer
     times = dummy_data[t_id].index
+    positions = [
+        mdates.date2num(datetime.fromisoformat(t.strftime("%Y-%m-%d %H:%M")))
+        for t in times
+    ]
+    widths = box_widths(positions)
+    # Margin around the first and last boxes, so that the axis spans the
+    # times rather than the default width of a box.
+    margin = max(widths) if widths else 0.0
 
     for term_type, terms in all_terms.items():
         if not terms:
@@ -60,33 +101,29 @@ def boxplot_time(dict_vertical, figures_subdirectory, app_logger):
         fig = plt.figure(figsize=fig_layout)
         n_rows, n_cols = (2, 2) if len(terms) == 4 else (1, 2)
 
-        gs = gridspec.GridSpec(nrows=n_rows, ncols=n_cols, hspace=0.25, wspace=0.3)
+        gs = gridspec.GridSpec(nrows=n_rows, ncols=n_cols, hspace=0.35, wspace=0.45)
 
         for i, term in enumerate(terms):
             ax = fig.add_subplot(gs[i])
-            if i % n_cols == 0:
-                label = f'{term_details[term_type]["label"]} ({term_details[term_type]["unit"]})'
-                ax.set_ylabel(label, fontsize=18)
-            for t in times:
+            # Each panel has the units of its own term: the per-level files
+            # do not share the units of the column values in TERM_DETAILS.
+            ax.set_ylabel(profile_label(term), fontsize=13)
+            for t, time_step, width in zip(times, positions, widths):
                 data = dict_vertical[term].loc[t].values
-                time_step = mdates.date2num(
-                    datetime.fromisoformat(t.strftime("%Y-%m-%d %H:%M"))
+                bplot = ax.boxplot(
+                    data, positions=[time_step], widths=[width], patch_artist=True
                 )
-                bplot = ax.boxplot(data, positions=[time_step], patch_artist=True)
                 bplot["boxes"][-1].set_facecolor(utils.COLORS[i % len(utils.COLORS)])
                 bplot["boxes"][-1].set_alpha(0.85)
                 for median in bplot["medians"]:
                     median.set_color("k")
 
-            locator = mdates.AutoDateLocator(minticks=5, maxticks=12)
-            formatter = mdates.ConciseDateFormatter(locator)
-            ax.xaxis.set_major_locator(locator)
-            ax.xaxis.set_major_formatter(formatter)
-            ax.tick_params(axis="x", labelrotation=20)
-            ax.xaxis.set_tick_params(labelsize=16)
+            ax.set_xlim(min(positions) - margin, max(positions) + margin)
+            utils.format_time_axis(ax)
             ax.yaxis.set_tick_params(labelsize=16)
             ax.set_title(term, fontsize=20)
 
+        add_vertical_figure_note(fig, terms, statistic="over_levels")
         file_name = f"{figures_subdirectory}/vertical_timeseries_{term_type}.png"
         plt.savefig(file_name, bbox_inches="tight")
         (
@@ -117,26 +154,26 @@ def boxplot_vertical(dict_vertical, figures_subdirectory, app_logger):
         fig = plt.figure(figsize=fig_layout)
         n_rows, n_cols = (2, 2) if len(terms) == 4 else (1, 2)
 
-        wspace = 0.3 if term_type != "generation_dissipation" else 0.4
+        wspace = 0.45 if term_type != "generation_dissipation" else 0.5
 
         gs = gridspec.GridSpec(nrows=n_rows, ncols=n_cols, hspace=0.15, wspace=wspace)
 
-        label = (
-            f'{term_details[term_type]["label"]} ({term_details[term_type]["unit"]})'
-        )
         for i, term in enumerate(terms):
             ax = fig.add_subplot(gs[i])
 
-            if i % 2 == 0:
-                ax.set_ylabel(label, fontsize=18)
+            # Each panel has the units of its own term: the per-level files
+            # do not share the units of the column values in TERM_DETAILS.
+            ax.set_ylabel(profile_label(term), fontsize=13)
 
-            # Assuming second column onward are levels
-            levs = dict_vertical[term].columns[1:]
+            # get_data_vertical_levels reads the time column as the index, so
+            # every column is a pressure level (Pa). Only the tick labels are
+            # shown in hPa.
+            levs = dict_vertical[term].columns
             for j, lev in enumerate(levs):
                 bplot = ax.boxplot(
                     dict_vertical[term][lev].values,
                     positions=[j / 3],
-                    tick_labels=[lev],
+                    tick_labels=[pressure_tick_label(lev)],
                     patch_artist=True,
                 )
                 bplot["boxes"][-1].set_facecolor(linecolors[i % len(linecolors)])
@@ -147,10 +184,13 @@ def boxplot_vertical(dict_vertical, figures_subdirectory, app_logger):
             ax.tick_params(axis="x", labelrotation=60)
             if i < len(terms) - 2:  # Assuming last row should have x labels
                 ax.axes.xaxis.set_ticklabels([])
+            else:
+                ax.set_xlabel(PRESSURE_AXIS_LABEL, fontsize=13)
             ax.xaxis.set_tick_params(labelsize=16)
             ax.yaxis.set_tick_params(labelsize=16)
             ax.set_title(term, fontsize=20)
 
+        add_vertical_figure_note(fig, terms, statistic="over_time")
         outfile = f"{figures_subdirectory}/boxplot_vertical_levels_{term_type}.png"
         plt.savefig(outfile, bbox_inches="tight")
         (
@@ -187,13 +227,15 @@ def plot_boxplot_terms(df, figures_subdirectory, app_logger):
         fig_layout = (8, 8) if len(term_list) == 4 else (6, 8)
         plt.figure(figsize=fig_layout)
 
+        # Conventional boxes, without notches: with few time steps the
+        # notch interval (median +/- 1.57 IQR / sqrt(n)) reaches beyond the
+        # quartiles and the notches fold outward like claws.
         for i, term in enumerate(term_list):
             bplot = plt.boxplot(
                 df[term],
                 positions=[i],
                 vert=True,
                 patch_artist=True,
-                notch=True,
                 tick_labels=[term],
             )
             box_color = utils.COLORS[i % len(utils.COLORS)]

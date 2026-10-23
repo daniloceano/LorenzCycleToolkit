@@ -510,6 +510,19 @@ def plot_lorenzcycletoolkit(
         )
 
 
+def plot_lorenzcycletoolkit_periods(
+    results_file, figures_directory, periods_file, app_logger=False
+):
+    """
+    Plot only the Lorenz cycle diagrams of the life-cycle periods: the part of
+    plot_lorenzcycletoolkit that needs periods.csv, so that it can be reported
+    separately from the daily diagrams.
+    """
+    df_results = read_results(results_file)
+    df_results = df_results.rename(columns=lambda x: x.replace(" (finite diff.)", ""))
+    plot_period_means(periods_file, df_results, figures_directory, app_logger=app_logger)
+
+
 if __name__ == "__main__":
     # Test for Reg1-Representative_fixed
     results_file = "samples/Reg1-Representative_NCEP-R2_fixed/Reg1-Representative_NCEP-R2_fixed_results.csv"
