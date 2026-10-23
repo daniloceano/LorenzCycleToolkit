@@ -1,7 +1,5 @@
 # Development workflow
 
-<!-- EDITORIAL PROPOSAL (2026-10-23): this introduction is not part of the approved policy text and awaits the project lead's review. -->
-
 This page records the branch, integration and release policy adopted by the maintainers of LorenzCycleToolkit on 2026-10-23. In
 short:
 
@@ -14,6 +12,9 @@ The contributing guide (`docs/source/contributing.rst`) summarizes what this mea
 
 The policy follows in its approved wording, in Portuguese, without changes. The section "Adoção imediata — PR #26" describes the
 transition of 2026-10-23 and its SHAs are a record of that day.
+
+On 2026-10-23 the migration of PR #26 was completed: the pull request was merged into `develop` in merge commit `911122d`,
+while `main` stayed at `48fe8e2`.
 
 <!-- BEGIN APPROVED POLICY TEXT: verbatim copy of LECTK_politica_branches_2026-10-23.md (sha256 e9f4e6bb9f961d6a4a0ba1ec37dd6b98728837cfea04ac2e0af44ba6823ac0ab). Changes inside these markers need a new approval. -->
 

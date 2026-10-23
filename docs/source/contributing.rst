@@ -1,6 +1,3 @@
-.. EDITORIAL PROPOSAL (2026-10-23), awaiting the project lead's review: steps 2 and 8, the last item of the list before
-   submitting and the section "Branches and releases" follow the branch policy in docs/development_workflow.md.
-
 Contributing
 ============
 

@@ -1,5 +1,3 @@
-<!-- EDITORIAL PROPOSAL (2026-10-23), awaiting the project lead's review: checklist of the branch policy in docs/development_workflow.md. -->
-
 ## Summary
 
 <!-- What this pull request changes and why. -->
