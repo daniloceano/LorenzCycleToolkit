@@ -30,7 +30,7 @@ from ..analysis.mass_continuity import MassContinuity
 from ..utils.box_data import BoxData
 from ..utils.calc_budget_and_residual import calc_budget_diff, calc_residuals
 from ..utils.output_names import results_stem
-from ..utils.run_metadata import RunMetadata, input_extent
+from ..utils.run_metadata import RunMetadata, input_extent, top_cut
 from ..utils.run_status import RunStatus
 from ..utils.select_area import draw_box_map, plot_domain_attributes
 from ..utils.tools import find_extremum_coordinates, initialize_logging
@@ -746,7 +746,7 @@ def lec_moving(
     terms_dict = create_terms_dict(args)
 
     # What each time step actually used (domain_selection.csv, lec_metadata.json)
-    metadata = RunMetadata(args, mode, variable_list_df, input_extent(data))
+    metadata = RunMetadata(args, mode, variable_list_df, input_extent(data), top_cut(data))
     metadata.record_harmonization(harmonization)
 
     # Iterating over times
@@ -838,6 +838,7 @@ def lec_moving(
              "south": limits["min_lat"], "north": limits["max_lat"]},
             t.strftime("%Y-%m-%d %H:%M:%S"),
             idata[VerticalCoordIndexer].values,
+            app_logger,
         )
 
         # Compute and store various meteorological terms

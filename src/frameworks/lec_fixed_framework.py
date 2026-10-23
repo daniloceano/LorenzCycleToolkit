@@ -29,7 +29,7 @@ from ..utils.calc_budget_and_residual import calc_budget_diff, calc_residuals
 from ..utils.input_files import read_box_limits
 from ..utils.longitude import canonicalize_box
 from ..utils.output_names import results_stem
-from ..utils.run_metadata import RunMetadata, input_extent
+from ..utils.run_metadata import RunMetadata, input_extent, top_cut
 from ..utils.run_status import RunStatus
 from ..utils.vertical_harmonization import harmonize_levels
 
@@ -152,13 +152,14 @@ def lec_fixed(
             "harmonization found these levels complete at every time step"
         )
 
-    metadata = RunMetadata(args, "fixed", variable_list_df, extent)
+    metadata = RunMetadata(args, "fixed", variable_list_df, extent, top_cut(data))
     metadata.record_harmonization(harmonization)
     metadata.record_box(
         box_obj,
         {"west": min_lon, "east": max_lon, "south": min_lat, "north": max_lat},
         "all",
         data[VerticalCoordIndexer].values,
+        app_logger,
     )
 
     # The per-level CSV headers list the levels actually used, which are only

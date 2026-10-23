@@ -59,6 +59,24 @@ INPUT_EXTENT_ATTRS = {
     "north": "lectk_input_lat_max",
 }
 
+# Attributes set on the dataset by preprocessing.process_data at the cut of the
+# levels above 10 hPa: the grid before the cut and the levels it discarded (DEC-09).
+TOP_CUT_ATTRS = {
+    "input_grid": "lectk_input_grid_before_top_cut_Pa",
+    "discarded": "lectk_levels_discarded_above_10hPa_Pa",
+}
+TOP_CUT_RULE = (
+    "levels with a pressure lower than 1000 Pa (10 hPa) are discarded when the data are "
+    "read; 1000 Pa itself is kept (DEC-09)"
+)
+
+# How the messages name each framework (as in vertical_harmonization.MODES).
+FRAMEWORK_LABELS = {
+    "fixed": "fixed framework (-f)",
+    "track": "track mode (-t)",
+    "choose": "--choose mode",
+}
+
 COLUMN_STATEMENT = (
     "Column values are integrals over the retained pressure layer "
     "(p_top_Pa to p_bottom_Pa), not over the entire atmospheric column."
@@ -155,6 +173,51 @@ def input_extent(dataset):
     return {edge: dataset.attrs.get(attr) for edge, attr in INPUT_EXTENT_ATTRS.items()}
 
 
+def _pa(levels):
+    return ", ".join(f"{p:.0f} Pa" for p in levels)
+
+
+def record_top_cut(dataset, input_grid, level_name, app_logger=None):
+    """
+    Attach to the dataset, and report, what the cut of the levels above 10 hPa did.
+
+    The cut is made by ``preprocessing.process_data``; the levels kept are read
+    here from the dataset after the cut, so the report is exactly what the cut
+    did. A warning is given only when some level was discarded.
+
+    Args:
+        dataset (xr.Dataset): The data after the cut.
+        input_grid (list): Pressure levels (Pa) of the input, before the cut.
+        level_name (str): Name of the vertical coordinate.
+        app_logger (logging.Logger, optional): Logger of the run.
+
+    Returns:
+        list: The levels discarded (Pa).
+    """
+    kept = [float(p) for p in dataset[level_name].values]
+    discarded = [p for p in input_grid if p not in kept]
+    dataset.attrs[TOP_CUT_ATTRS["input_grid"]] = list(input_grid)
+    dataset.attrs[TOP_CUT_ATTRS["discarded"]] = discarded
+    if discarded and app_logger is not None:
+        app_logger.warning(
+            f"⚠️ Vertical levels above 10 hPa discarded: {len(discarded)} of {len(input_grid)} "
+            f"input levels have a pressure lower than 1000 Pa (10 hPa) and are not used; 1000 Pa "
+            f"itself is kept (DEC-09). Discarded: {_pa(discarded)}. Input grid: {len(input_grid)} "
+            f"levels, {_pa(input_grid)}; grid after preprocessing: {len(kept)} levels, {_pa(kept)}."
+        )
+    return discarded
+
+
+def top_cut(dataset):
+    """Return the record of record_top_cut ({input_grid_Pa, discarded_Pa}), or None if absent."""
+    if TOP_CUT_ATTRS["input_grid"] not in dataset.attrs:
+        return None
+    return {
+        "input_grid_Pa": [float(p) for p in dataset.attrs[TOP_CUT_ATTRS["input_grid"]]],
+        "discarded_Pa": [float(p) for p in dataset.attrs[TOP_CUT_ATTRS["discarded"]]],
+    }
+
+
 class RunMetadata:
     """
     Collects, during the run, what the computation actually used, and writes
@@ -165,21 +228,27 @@ class RunMetadata:
         method (str): ``fixed``, ``track`` or ``choose``.
         variable_list_df (pd.DataFrame): Parsed namelist.
         extent (dict): Extent of the input data (see ``input_extent``).
+        top_cut (dict, optional): What the cut at 10 hPa did (see ``top_cut``).
     """
 
-    def __init__(self, args, method, variable_list_df, extent):
+    def __init__(self, args, method, variable_list_df, extent, top_cut=None):
         self.args = args
         self.method = method
         self.variable_list_df = variable_list_df
         self.extent = extent
+        self.top_cut = top_cut
         self.domain_rows = []
         self.vertical_rows = []
         self.input_levels = None
         self.harmonization = None
 
-    def record_box(self, box_obj, requested, time_label, input_levels):
+    def record_box(self, box_obj, requested, time_label, input_levels, app_logger=None):
         """
         Record the horizontal selection and the retained levels of one box.
+
+        A box requested beyond the input data is cut at the data edge, as
+        before; it is reported with a warning that gives the limits requested
+        and the limits of the fields actually used (DEC-11).
 
         Args:
             box_obj (BoxData): The box of this time step (or of the fixed run).
@@ -187,6 +256,7 @@ class RunMetadata:
                 as passed to BoxData.
             time_label (str): ``"all"`` (fixed) or the time of the step.
             input_levels (sequence): Pressure levels (Pa) of the data given to BoxData.
+            app_logger (logging.Logger, optional): Logger of the run.
         """
         lon_name, lat_name = box_obj.LonIndexer, box_obj.LatIndexer
         coords = []
@@ -228,6 +298,19 @@ class RunMetadata:
         row["requested_outside_input"] = "+".join(outside) if outside else "none"
         row["fields_share_selection"] = all(c == coords[0] for c in coords)
         self.domain_rows.append(row)
+        if outside and app_logger is not None:
+            when = "" if time_label == "all" else f", {time_label}"
+            e = {edge: ("n/a" if v is None else f"{v:g}") for edge, v in self.extent.items()}
+            app_logger.warning(
+                f"⚠️ Domain clipping ({FRAMEWORK_LABELS.get(self.method, self.method)}{when}): the "
+                f"requested box reaches beyond the input data on the {', '.join(outside)} edge(s) and "
+                "is cut at the data edge (DEC-11); the computation goes on with the box actually "
+                f"used. Requested: lon {requested['west']:g} to {requested['east']:g}, lat "
+                f"{requested['south']:g} to {requested['north']:g}; used: lon {selected['west']:g} to "
+                f"{selected['east']:g}, lat {selected['south']:g} to {selected['north']:g} "
+                f"({row['n_lon']} x {row['n_lat']} grid points); input data: lon {e['west']} to "
+                f"{e['east']}, lat {e['south']} to {e['north']}."
+            )
 
         # Dropped = input levels not used, also when the levels were removed
         # before BoxData (common vertical volume of the moving framework).
@@ -281,6 +364,12 @@ class RunMetadata:
             vertical["by_time"] = self.vertical_rows
         if self.harmonization is not None:
             vertical["harmonization"] = self.harmonization
+        if self.top_cut is not None:
+            vertical["top_cut"] = {
+                "rule": TOP_CUT_RULE,
+                "input_grid_before_cut_Pa": self.top_cut["input_grid_Pa"],
+                "discarded_levels_Pa": self.top_cut["discarded_Pa"],
+            }
         return vertical
 
     def write_metadata(self, results_directory, results_file, level_files, columns, times,
@@ -338,6 +427,10 @@ class RunMetadata:
                 "domain_selection_file": DOMAIN_SELECTION_FILE,
                 "input_extent": self.extent,
                 "longitude_convention": "requested limits are expressed in the longitude convention of the dataset",
+                "boxes_cut_at_input_edge": [
+                    {"time": r["time"], "edges": r["requested_outside_input"].split("+")}
+                    for r in self.domain_rows if r["requested_outside_input"] != "none"
+                ],
             },
             "vertical": self._vertical(level_files),
             "main_results": {
