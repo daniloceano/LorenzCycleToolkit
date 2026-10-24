@@ -14,6 +14,8 @@
 | D-010 | Fila A, B condicional, C, D, E, F condicional, backlog | Aprovada 18/10 |
 | D-011 | Branch limpa da `develop` → PR → `develop`; promoção a `main` só por PR e decisão separada | Aprovada 23/10; [política](../development_workflow.md) |
 
+**GOV-RET-01 (24/10):** auditagem de retenção e limpeza como último portão de encerramento operacional; exclusões dependem de plano específico aprovado. [Texto aprovado](retention-policy.md).
+
 **GOV-05 (21/10):** contextualizar respostas. **GOV-06/07 (21/10):** inspeção e aprovação visual/científica/documental, autonomia não implica silêncio como aprovação. **GOV-08 (22/10):** respostas terminam com `## O que você precisa fazer agora`.
 
 **Emenda de autonomia 23/10:** após aprovação de conteúdo e escopo, o agente pode commit, push, PR e merge em `develop` sujeito a diff, CI e proteções; não libera `main`, tags ou publicação. A regra antiga "agente nunca abre PR" é história, não vigente.
