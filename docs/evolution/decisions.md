@@ -14,7 +14,7 @@
 | D-010 | Fila A, B condicional, C, D, E, F condicional, backlog | Aprovada 18/10 |
 | D-011 | Branch limpa da `develop` → PR → `develop`; promoção a `main` só por PR e decisão separada | Aprovada 23/10; [política](../development_workflow.md) |
 
-**GOV-RET-01 (24/10):** auditagem de retenção e limpeza como último portão de encerramento operacional; exclusões dependem de plano específico aprovado. [Texto aprovado](retention-policy.md).
+**GOV-RET-01 Revisão 2 (24/10):** retenção mínima suficiente: descartar o que perdeu função ao encerrar a frente; exceções temporárias justificadas são reavaliadas no fechamento da próxima versão/tag autorizada. A tag é gatilho de avaliação, não autorização de exclusão. O plano de caminhos específicos continua sujeito à aprovação. [Política vigente](retention-policy.md).
 
 **GOV-05 (21/10):** contextualizar respostas. **GOV-06/07 (21/10):** inspeção e aprovação visual/científica/documental, autonomia não implica silêncio como aprovação. **GOV-08 (22/10):** respostas terminam com `## O que você precisa fazer agora`.
 
