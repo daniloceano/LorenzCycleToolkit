@@ -10,4 +10,6 @@ O coordenador organiza decisões, a conversa-filha investiga e o agente executa 
 
 **Repositório público:** não publicar segredos, paths pessoais, datasets não redistribuíveis, logs/arquivos científicos volumosos, PDFs protegidos ou instruções internas integrais do Project. Publicar sínteses e índices saneados. Os **33 hashes** comprovam igualdade dos documentos selecionados, não backup integral. Manter as pastas originais `LECTK_Dev`, `LECTK_Auditoria`, `LECTK_Retomada` até inventário completo, backups independentes, teste de restauração e autorização específica para exclusão.
 
+**GOV-RET-01 (24/10/2026):** a [auditoria de retenção](retention-policy.md) é o último portão operacional de cada frente. Inventário inicialmente somente leitura; qualquer exclusão exige manifesto específico aprovado. Para a Frente A, aplicação retroativa sem reabrir o encerramento científico.
+
 Após merge, conferir SHA final de `develop`, reler o material versionado e registrar a situação real; sem readback não declarar sucesso.
