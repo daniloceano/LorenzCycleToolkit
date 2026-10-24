@@ -4,6 +4,6 @@ A [Frente A](front-A-audit.md) — auditoria/linha de base do LECTK 2.0.0 — fo
 
 A B é condicional a lacunas de referência/regressão **do toolkit**. A C trata de provedores ERA5/requisitos; estados de abertura requerem decisão contextual. D, E e F não são abertas por esta migração; G–K são backlog e hipóteses. [Fila](../queue.md).
 
-Após conclusão técnica de cada frente, aplicar [GOV-RET-01](../retention-policy.md) antes de declarar **RETENÇÃO VALIDADA**. A Frente A receberá auditoria retroativa, sem reabertura da decisão científica.
+Após conclusão técnica de cada frente, aplicar [GOV-RET-01 Revisão 2](../retention-policy.md): descartar os resíduos operacionais comprovadamente dispensáveis e justificar somente a retenção mínima necessária. Reavaliar os retidos no fechamento da próxima versão/tag estável, sem exclusão automática. A Frente A receberá auditoria retroativa, sem reabertura da decisão científica.
 
 Frentes futuras devem preservar escopo, SHA de base, decisões e autores, limites de validação, resultados negativos, diff de integração e desfecho formal.

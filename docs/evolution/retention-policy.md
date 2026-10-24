@@ -1,46 +1,68 @@
-# GOV-RET-01 — Retenção, arquivamento e limpeza no encerramento de frentes
+# GOV-RET-01 — Retenção mínima e descarte no encerramento de frentes
 
-**Estado:** APROVADA pelo responsável em 2026-10-24. **Âmbito:** LorenzCycleToolkit | Evolução. Complementa a [política de desenvolvimento](../development_workflow.md), sem alterá-la.
+**Revisão 2 — aprovada pelo responsável em 2026-10-24.** Substitui prospectivamente a redação inicial da GOV-RET-01, preservando-a no histórico Git. Aplica-se ao LorenzCycleToolkit | Evolução e complementa a [política de desenvolvimento](../development_workflow.md), sem modificá-la.
 
-## 1. Regra central
+## 1. Princípio: retenção mínima, temporária e vinculada à finalidade
 
-Toda frente terá uma **auditoria de retenção e limpeza como último portão de encerramento operacional**, após conclusão técnica, homologação, integração autorizada e documentação verificada. Isso não é autorização automática de apagar arquivos.
+**O descarte é a regra para os artefatos operacionais de frentes encerradas.** O objetivo de encerrar uma frente é preservar **conhecimento, código e evidências suficientes**, não manter indefinidamente seus diretórios de trabalho.
 
-## 2. Classificação obrigatória
+A memória versionada em `docs/evolution/` preserva decisões, achados e limitações; o Git preserva o código e os arquivos efetivamente versionados. **Nenhum deles, sozinho, preserva os bytes de dados, scripts ou resultados científicos exclusivos que não estejam no repositório.** Portanto, exceções à limpeza precisam de razão concreta, dependência identificada e um marco de reavaliação.
 
-| Classe | Tratamento |
-|---|---|
-| **PRESERVAR** | Fontes originais, evidências científicas indispensáveis, dados/entradas de referência, resultados de validação, decisões e arquivos exclusivos; guardar integridade e proveniência |
-| **ARQUIVAR** | Documentos/resultados úteis a auditoria e reprodução, mas dispensáveis no armazenamento ativo; manter cópia recuperável |
-| **EXCLUIR** | Caches, ambientes recriáveis, builds, temporários e duplicatas cuja redundância esteja **comprovada**; executar somente após aprovação de manifesto específico |
-| **INVESTIGAR** | Itens de origem, reconstrução ou relevância incertas; **não excluir** até esclarecer |
+**Não é exigido backup de arquivos comprovadamente descartáveis.** Backup e teste de restauração são necessários para aquilo cuja retenção seja justificada e cuja única cópia seria perdida.
 
-Nunca classificar um diretório inteiro como descartável sem conhecer seu conteúdo, inclusive ocultos e arquivos ignorados pelo Git.
+## 2. Dois marcos de limpeza
 
-## 3. Procedimento
+### Marco A — encerramento de cada frente
 
-1. **Inventário somente leitura:** relacionar caminhos exatos, tamanhos, origem, SHA quando pertinente, dependências, arquivos não versionados/ocultos, links, duplicatas por conteúdo, dados de entrada, resultados e itens necessários a trabalhos ainda ativos. Não modificar originais.
-2. **Preservação verificável:** confirmar armazenamento independente para **PRESERVAR** e **ARQUIVAR**, integridade e capacidade de **restaurar e ler**. Hash ou resumo no Git não substitui os bytes não versionados.
-3. **Manifesto de limpeza:** documentar caminho exato, classe, justificativa, risco, tamanho recuperável, destino de backup e prova de recuperabilidade. Separar espaço potencial de espaço efetivamente liberado.
-4. **Execução autorizada:** **após aprovação expressa do responsável sobre o manifesto de exclusões**, agentes podem remover somente os caminhos autorizados sem solicitar aprovação individual por arquivo. Proibido ampliar escopo, apagar diretórios-pai genericamente, seguir links para fora do escopo, destruir históricos Git, ou apagar arquivos duvidosos. Diante de divergência, **interromper** a exclusão afetada.
-5. **Conferência final:** verificar integridade/acesso dos preservados, registrar cada exclusão, espaço recuperado e pendências, e produzir relatório com data, responsável e evidências.
+Após homologação técnica, integração autorizada, verificação de resultados e consolidação da memória documental:
 
-## 4. Proteções
+1. Auditar os artefatos locais relevantes, inicialmente em modo **somente leitura**.
+2. Identificar o que já está de fato preservado no Git ou em acervo verificável e o que permanece exclusivo.
+3. **Preparar para descarte** caches, temporários, builds, ambientes comprovadamente recriáveis, execuções intermediárias desnecessárias e duplicatas verificadas.
+4. **Reter excepcional e temporariamente** apenas os itens que ainda sejam necessários à reprodução justificável, validação, integração ou continuidade. Registrar **por que**, **até quando/qual evento** e **onde** estão.
+5. Executar apenas as exclusões especificamente aprovadas pelo responsável em manifesto de caminhos.
 
-- **Não eliminar** datasets meteorológicos únicos, entradas de análises, referências numéricas congeladas, scripts irreconstruíveis, experimentos negativos, configurações essenciais e arquivos ligados a artigos sem evidência de dispensabilidade.
-- Idade, volume, origem por agente e aparência de duplicata **não bastam** para exclusão.
-- Incluir na auditoria links simbólicos, hardlinks, `.gitignore`, arquivos ocultos, árvores não versionadas e dependências entre frentes.
-- Não publicar dados privados no GitHub público como suposto backup. Cópias no mesmo volume e meros índices de hash não são backups independentes; testar restauração representativa.
-- Nenhuma autorização implícita para apagar Project Sources, `.git`, refs, worktrees, diretórios científicos ou dados dos computadores.
+### Marco B — fechamento de nova versão estável / tag
 
-## 5. Estados de encerramento
+Depois que uma nova versão tiver sido **deliberadamente homologada, promovida conforme a governança e marcada por tag autorizada**, reavaliar os materiais **retidos de frentes anteriores**.
 
-- **ENCERRADA — RETENÇÃO VALIDADA:** destinos definidos e verificáveis; limpeza autorizada realizada/documentada, **ou** ausência justificada de exclusões possíveis.
-- **CONCLUÍDA TECNICAMENTE — RETENÇÃO PENDENTE:** há material a investigar, backup a criar ou plano de exclusão pendente de autorização. A frente não deve ser declarada com retenção validada.
-- Esta auditoria não substitui homologação, testes, CI ou validação científica independente.
+A criação da versão/tag é um **gatilho de revisão para descarte**, **não** prova automática de que arquivos externos ao Git foram preservados e **não** concede autorização automática de exclusão. Eliminar o que deixou de ser necessário, mediante manifesto aprovado. Permanências além desse marco exigem justificativa renovada e próximo marco de revisão.
 
-## 6. Aplicação retroativa
+A auditoria de Marco B não autoriza, não cria e não publica versão, tag, `main`, PyPI ou Pages: esses atos mantêm aprovações próprias.
 
-A **Frente A permanece formalmente ENCERRADA em 2026-10-23, PASS COM RESSALVAS ACEITAS**. Sua decisão científica não será reaberta. Aplicar auditoria de retenção **retroativa e complementar** aos diretórios históricos `LECTK_Dev`, `LECTK_Auditoria` (Mac) e `LECTK_Retomada` (notebook); a primeira etapa será **somente leitura**, sem exclusões.
+## 3. Classes e critério de decisão
 
-**Aprovar esta política não é aprovar qualquer exclusão específica.** O plano de remoção de arquivos exige decisão separada.
+| Classe | Regra | Necessidade de backup |
+|---|---|---|
+| **DESCARTAR — CANDIDATO** | Operacional, recriável, redundante ou sem finalidade remanescente **demonstrada**; registrar caminho e justificativa | **Não**, quando a dispensabilidade estiver comprovada |
+| **RETER TEMPORARIAMENTE** | Exclusivo e ainda necessário; explicitar dependência, responsável, destino e marco de reavaliação (preferencialmente próxima versão/tag) | **Sim**, quando a perda da cópia impediria a finalidade alegada |
+| **ARQUIVAR EXCEPCIONALMENTE** | Relevância histórica/científica não suprida por memória/Git; retenção mais longa com justificativa | **Sim**, com integridade e restauração verificadas |
+| **INVESTIGAR** | Evidência insuficiente para avaliar exclusividade, reconstrução ou dependência | **Não apagar** até resolver; priorizar investigação |
+
+**Ônus:** justificar cada retenção. **Segurança:** incerteza sobre a função de um arquivo nunca constitui demonstração de dispensabilidade.
+
+## 4. Procedimento verificável
+
+1. **Inventariar em modo somente leitura:** totais, tamanhos, arquivos ocultos e ignorados pelo Git, origens, hashes seletivos, symlinks/hardlinks, dependências entre frentes, entradas e outputs científicos, artefatos de testes negativos, versões locais não publicadas e histórico Git exclusivo. Não tratar uma pasta inteira como descartável sem seu inventário.
+2. **Classificar e justificar:** primeiro separar materiais ainda necessários; depois identificar descartáveis. Para retenções, registrar data/marco de revisão; para descarte, explicar a prova de recriabilidade ou redundância. Conferir se os objetos supostamente presentes no Git estão **efetivamente rastreados no commit/na tag relevante**, e não apenas mencionados na memória.
+3. **Proteger apenas o necessário:** para os artefatos retidos, confirmar cópia independente e integridade/restauração quando cabível; **não copiar lixo operacional por precaução genérica**.
+4. **Apresentar manifesto de exclusão:** caminhos/IDs exatos, quantidade de bytes potenciais, dependências, avaliação de risco, justificativa e evidência de descarte seguro. Marcar itens não decididos como INVESTIGAR, fora da lista autorizável.
+5. **Executar somente após aprovação expressa do manifesto pelo responsável**, sem autorizações arquivo a arquivo, mas **sem ampliar o escopo**. Não usar exclusões destrutivas em Git, não seguir links para fora da raiz autorizada; worktrees, refs e stashes exigem procedimento e autorização próprios.
+6. **Conferir e registrar:** listar o que realmente foi excluído, medir espaço efetivamente recuperado, validar que itens retidos permanecem acessíveis e registrar pendências. Na próxima versão/tag repetir a revisão dos remanescentes.
+
+## 5. Proteções que permanecem
+
+- Achados científicos já documentados **não implicam** que todos os dados subjacentes precisem ser mantidos; avaliar se seus bytes são necessários ou se parâmetros, códigos e resultados versionados bastam para a finalidade aceita.
+- Também **não implicam** que todos os dados externos sejam dispensáveis: entradas únicas, resultados negativos exclusivos, scripts não versionados, refs/stashes/commits só locais e dados de artigos não podem desaparecer sem análise de dependência.
+- Arquivo grande, antigo, gerado por agente ou aparentemente duplicado **não** equivale a arquivo comprovadamente recriável.
+- GitHub público não é destino apropriado para material restrito ou segredo; uma tag não contém arquivos externos que nunca foram commitados.
+- Esta política **não é** autorização de exclusão de Project Sources, diretórios pessoais, dados, worktrees ou histórias Git. Cada limpeza depende de autorização específica para seus caminhos.
+
+## 6. Estados operacionais e aplicação retroativa
+
+- **ENCERRADA — RETENÇÃO VALIDADA:** conhecimento/produto integrados, descartáveis aprovados removidos (ou ausência de descarte justificada), e retenções excepcionais documentadas com finalidade e marco. Registrar o espaço liberado.
+- **CONCLUÍDA TECNICAMENTE — RETENÇÃO PENDENTE:** resta manifesto não aprovado, investigação essencial, preservação excepcional sem destino ou verificação incompleta. A parte científica pode estar encerrada sem que o portão operacional esteja finalizado.
+
+A Frente A **permanece formalmente encerrada em 2026-10-23, PASS COM RESSALVAS ACEITAS**; não reabrir seu julgamento científico. Aplicar este procedimento **retroativamente** a `LECTK_Retomada` (notebook) e `LECTK_Dev`/`LECTK_Auditoria` (Mac). O inventário do notebook relatou aproximadamente 45,92 GiB de candidatos; esse volume é **potencial**, ainda não é exclusão autorizada nem espaço confirmado como recuperável. As faixas envolvendo worktrees, refs e experimentos exclusivos exigem triagem específica. A falta de acesso ao Mac não impede a análise das faixas comprovadamente independentes do notebook.
+
+**Em qualquer marco, aprovação desta regra ≠ aprovação de exclusão específica.**
