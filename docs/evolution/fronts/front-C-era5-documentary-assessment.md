@@ -1,6 +1,6 @@
 # Frente C — avaliação documental de fontes ERA5 e requisitos do LECTK
 
-**Data da investigação:** 2026-10-25. **Base do código inspecionado:** `develop` `e1ce2bdaefa9bff86e6443bbcc03f66f0e12f9d1`. **Natureza:** investigação documental, sem novas execuções numéricas nem integração de provedores. **Estado deste documento:** proposta para revisão e homologação; não é termo de encerramento, benchmark executado ou aprovação de arquitetura.
+**Data da investigação:** 2026-10-25. **Base do código inspecionado:** `develop` `e1ce2bdaefa9bff86e6443bbcc03f66f0e12f9d1`. **Natureza:** investigação documental, sem novas execuções numéricas nem integração de provedores. **Estado deste documento:** **HOMOLOGADO — PASS DOCUMENTAL, Frente C encerrada em 25/10/2026**, após revisão aprovada, PR #36 integrado em `develop` (`abaab7add04c21c694a4aa90da38c7d1465e5add`) e releitura de três arquivos com hashes coincidentes. Não representa benchmark executado nem aprovação de arquitetura.
 
 ## 1. Objetivo, universo e critério de aceitação
 
@@ -82,6 +82,12 @@ As **49 referências numéricas ERA5** em `tests/data/reference/` preservam regr
 
 ## 6. Estado, riscos e portões para homologação
 
-**Avaliação técnica documental:** condições do PASS DOCUMENTAL atendíveis pelas evidências compiladas, sujeitas à revisão do texto. **Integração/fechamento:** pendente de pré-visualização e aprovação documental, PR restrito, inspeção de diff, CI/checagens efetivas e releitura do `develop` pós-merge. Não rotular a Frente C como encerrada antes desses portões. Não iniciar D automaticamente.
+**Avaliação técnica documental:** **PASS DOCUMENTAL** nos critérios pré-declarados, com limites explícitos. **Homologação e integração verificadas em 25/10/2026:** o responsável aprovou o conteúdo e a integração documental; o PR [#36](https://github.com/daniloceano/LorenzCycleToolkit/pull/36) alterou somente este relatório e dois índices; GitHub Actions (push e PR) e CircleCI terminaram com sucesso; `develop` passou ao merge commit `abaab7add04c21c694a4aa90da38c7d1465e5add`; os três arquivos integrados foram relidos e seus blobs coincidiram com os textos aprovados. **Conclusão administrativa: Frente C encerrada por PASS DOCUMENTAL**, não por execução de comparações de provedores. A Frente D não foi aberta automaticamente.
 
 **Riscos remanescentes:** documentação de produto pode mudar; versões de bibliotecas e acesso/quotas devem ser verificadas antes de chamadas reais; a classificação de produto isolado não cobre arquiteturas combinadas; diferenças de níveis/tempo/grade afetam interpretação científica e não foram mensuradas aqui. No fechamento revisar retenção mínima de artefatos operacionais, sem exclusões automáticas.
+
+## 7. Retenção e transferência
+
+Não houve coleta remota de ERA5, acesso ao servidor de ciclones ou geração de dados científicos nesta frente. Este relatório, as fontes citadas, a fila, o histórico do PR #36 e os hashes do repositório são as evidências permanentes; não há artefato operacional exclusivo identificado para retenção nesta atuação documental. Nenhuma exclusão ou limpeza de arquivos locais/remotos foi autorizada ou realizada. Aplicar a revisão de retenção aos eventuais materiais de agentes ou ambientes externos quando inventariados, sem presumir que os arquivos do servidor foram preservados pelo Git.
+
+**Transferência à conversa-mãe:** apresentar o handoff automático com resultado, SHA de `develop`, PR #36, ressalvas, backlog K e fila; a mãe deve reler o registro integrado e não abrir D sem decisão contextual expressa.
