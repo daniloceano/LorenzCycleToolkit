@@ -9,6 +9,7 @@
 - [Decisões vigentes e superadas](decisions.md)
 - [Aprendizados, falhas e limites](learnings.md)
 - [Governança e inspeções](governance.md)
+- [Protocolo de rigor científico e verificação computacional](scientific-quality-protocol.md)
 - [Frentes](fronts/README.md)
 - [Evidências e hashes](evidence/README.md)
 

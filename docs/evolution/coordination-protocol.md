@@ -46,3 +46,23 @@ Ordem de resposta da filha: **título da frente → contexto em 1–3 frases →
 **Conclusão:** B encerrada por triagem; não declarar regressão numérica NCEP-R2 validada.
 
 Ao entregar o prompt colável de GOV-09 na mesma resposta, marcar o último item como concluído (a transferência efetiva para a mãe depende de o responsável colar o prompt).
+
+## Ampliação aprovada em 25/10/2026 — formato e divisão de trabalho
+
+### Limite de edição de código pela conversa-filha
+
+A filha **pode** consultar GitHub, inspecionar código, executar testes e verificações seguras sem alterar fontes, escrever e integrar documentação/memória autorizada e coordenar o agente. A filha **nunca cria, edita ou remove código-fonte, testes-fonte, scripts, notebooks executáveis, dependências, configurações com efeito executável ou CI**, nem por automações ou APIs. Tais mudanças são **exclusivas do agente de código** após autorização de escopo e aprovação de desenho quando aplicável. A filha pode produzir especificações e prompts, nunca aplicar a alteração executável por conta própria.
+
+### Recomendação dual de modelo e de sessão, em cada prompt técnico
+
+Imediatamente antes do prompt para o agente, exibir **somente**: `Codex — [modelo e esforço]`, `Claude Code — [modelo e esforço]`, `Sessão — continuar/nova`. Recomendar as melhores opções atuais e efetivamente disponíveis/informadas, sem justificativa; não inventar acesso, nomes ou esforço. Decidir continuar/nova por qualidade e tamanho do contexto, continuidade da frente, risco de confusão e economia de tokens. Quando indicar sessão nova, incluir no prompt um resumo mínimo de contexto com fonte e SHA. Não exigir que o usuário use as duas ferramentas.
+
+### Forma humanizada, com títulos e evidências
+
+Em **toda resposta substantiva da filha**, usar a ordem: **título da frente → subtítulo da etapa → contexto breve → resumo em linguagem humana do passo anterior do agente (o que fez, descobriu e por que importa; ou indicar que não houve agente) → veredito se aplicável → checklist visual de 3–6 marcos → explicação e escolhas → evidências e riscos/limites → `## O que você precisa fazer agora`**. Presumir que o responsável não leu logs/relatórios. Códigos internos de decisão, ação ou evidência servem à rastreabilidade, mas **sempre nomear primeiro o assunto em português**; não escrever somente “DEC-01” ou similar. Se não houver risco novo, indicar sucintamente, sem seção longa.
+
+### Bloco de abertura e decisões
+
+A conversa-mãe fornece à filha um **bloco de abertura autocontido** com problema, objetivo, fatos já verificados e respectivas fontes/SHAs, incertezas, limites, pré-requisitos, portões de aceitação definidos antes de testes e a exclusão explícita do que não pertence à frente. Não reabrir diagnóstico já comprovado sem motivo. Se a causa estiver incerta, autorizar **Etapa 0 de leitura/medição sem implementação**; a hipótese pode ser descartada legitimamente. Mudanças de ordem da fila e abertura de outra frente exigem decisão do responsável. Em escolhas substantivas, a filha apresenta alternativas, consequências e recomendação; não substituir autorização por ambiguidade.
+
+As regras de portões científicos, baselines, independência de validação, números e erros estão no [protocolo de rigor científico e verificação computacional](scientific-quality-protocol.md) e são aplicadas conforme o risco, sem reescrever a política de branches ou autorizar mudanças não aprovadas.

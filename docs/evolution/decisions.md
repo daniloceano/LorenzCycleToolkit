@@ -16,6 +16,10 @@
 
 **GOV-09 (25/10):** entrega automática, pela filha, de prompt pronto para a mãe ao fechar frente, após verificação de integração, com ressalvas e fila. **GOV-10 (25/10):** checklist visual breve e atualizado em toda resposta de filha, logo após o contexto. [Texto vinculante](coordination-protocol.md).
 
+**Ajustes do modelo mãe–filha–agente (25/10/2026, aprovados):** reservar **todas as mudanças de código e componentes executáveis ao agente**; permitir à filha inspeção, testes existentes e documentação/memória autorizada. Antes de cada prompt técnico, oferecer uma recomendação Codex e uma Claude Code, mais orientação continuar/nova sessão. Respostas da filha com título/subtítulo, resumo humanizado do agente, checklist e evidências/limites; citar o conteúdo das decisões antes de IDs. Padronizar bloco de abertura, Etapa 0 condicional e opções com consequências. [Coordenação](coordination-protocol.md).
+
+**Qualidade científica e de evidências (25/10/2026, aprovada):** critérios de aceitação antes de medir, baselines, controles de falha quando pertinentes, independência proporcional ao risco, números rastreáveis, registro de hipóteses refutadas e erros. [Protocolo técnico](scientific-quality-protocol.md).
+
 **GOV-RET-01 Revisão 2 (24/10):** retenção mínima suficiente: descartar o que perdeu função ao encerrar a frente; exceções temporárias justificadas são reavaliadas no fechamento da próxima versão/tag autorizada. A tag é gatilho de avaliação, não autorização de exclusão. O plano de caminhos específicos continua sujeito à aprovação. [Política vigente](retention-policy.md).
 
 **GOV-05 (21/10):** contextualizar respostas. **GOV-06/07 (21/10):** inspeção e aprovação visual/científica/documental, autonomia não implica silêncio como aprovação. **GOV-08 (22/10):** respostas terminam com `## O que você precisa fazer agora`.
