@@ -4,7 +4,7 @@ A [Frente A](front-A-audit.md) — auditoria/linha de base do LECTK 2.0.0 — fo
 
 A [Frente B](front-B-closure.md) foi **encerrada por triagem em 24/10/2026**, sem produção de novas referências; a lacuna NCEP-R2 foi mantida explicitamente como pendência, a reavaliar antes de benchmarks D.
 
-A **Frente C foi aberta por autorização contextual** para investigação documental das fontes ERA5 e recebeu autorização específica de 25/10/2026 para preparação e integração documental, sujeita aos portões de revisão/PR/CI. [Avaliação documental proposta](front-C-era5-documentary-assessment.md). **Não encerrada até homologação e releitura pós-merge**; não houve execução de benchmarks, nem implementação de provedores.
+A **Frente C foi encerrada em 25/10/2026 com PASS DOCUMENTAL**, após aprovação do conteúdo, [PR #36](https://github.com/daniloceano/LorenzCycleToolkit/pull/36) integrado em `develop` (`abaab7add04c21c694a4aa90da38c7d1465e5add`), CI verde e releitura pós-merge. [Avaliação, critérios, ressalvas e encerramento](front-C-era5-documentary-assessment.md). Não houve benchmarks nem implementação de provedores; a Frente D permanece não aberta.
 
 D, E e F não foram abertas por este registro; G–K são backlog e hipóteses. [Fila](../queue.md).
 
