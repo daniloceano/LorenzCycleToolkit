@@ -22,6 +22,8 @@
 
 **Exceção pontual expressa de 24/10:** para a migração inicial dos registros `docs/evolution/`, o responsável dispensou inspeção humana individual e autorizou merge direto em `develop` **se verificações passarem**. Continuam obrigatórios saneamento de privacidade, consistência, inspeção automática, CI, escopo exato e pós-merge. A dispensa **não** vale para outros documentos, imagens, código, equações, dados privados, `main` ou exclusões. [Registro](evidence/records/2026-10-24-exception.md).
 
+**Frente B (24/10):** o responsável encerrou a triagem de necessidade sem exigir execução de novas referências. As 49 referências ERA5 versionadas permanecem limitadas aos seus cenários; NCEP-R2 não tem referência numérica aprovada e continua pendente. Reavaliar essa necessidade antes dos benchmarks D; não bloquear a investigação documental da Frente C. [Termo de encerramento B](fronts/front-B-closure.md).
+
 **Frente A:** encerramento formal em 23/10 como **PASS COM RESSALVAS ACEITAS**, referência retrospectiva aos dez critérios §20.B; aceita R1 de `mtime` interno `.git` por autofetch. Preservar diagnóstico original 19/10 e achado novo de Onda 4. [Termo](fronts/front-A-closure.md).
 
 **Cronologia Git:** PR #25 `main` `48fe8e2`; #26–28 `develop`, culminando em `81cc000` (estado 23/10). Textos antigos dizendo “PR #28 aberto” representam uma data anterior ao merge. Sem nova tag ou publicação.
