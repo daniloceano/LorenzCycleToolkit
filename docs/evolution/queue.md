@@ -6,7 +6,7 @@ A ordem inicial aprovada foi **A → B condicional → C → D → E → F condi
 |---|---|---|
 | A | Auditoria e linha de base científico-computacional | **ENCERRADA 23/10: PASS COM RESSALVAS ACEITAS**; [termo](fronts/front-A-closure.md) |
 | B | Lacunas de dados de referência/regressão **do próprio LECTK** | **ENCERRADA 24/10 — triagem concluída; execução de novas referências dispensada por ora**; NCEP-R2 permanece pendente. [Termo](fronts/front-B-closure.md) |
-| C | Levantamento de provedores ERA5 e requisitos científicos | **EM INVESTIGAÇÃO DOCUMENTAL, autorizada pelo responsável**; proposta de registro e integração documental de 25/10, ainda sujeita a revisão e portões. [Avaliação proposta](fronts/front-C-era5-documentary-assessment.md). **Não declarada encerrada.** |
+| C | Levantamento de provedores ERA5 e requisitos científicos | **ENCERRADA EM 25/10/2026 — PASS DOCUMENTAL**, aprovação de conteúdo e PR #36 integrados; CI verde e readback no SHA `abaab7add`. [Avaliação homologada e registro de encerramento](fronts/front-C-era5-documentary-assessment.md). Sem benchmarks nem integração de provedores. |
 | D | Benchmarks controlados | Não aberta; exige protocolo e dependências |
 | E | Decisão de arquitetura de provedores | Não aberta; depende de D |
 | F | Piloto de provedor | Condicional, não aberto |
