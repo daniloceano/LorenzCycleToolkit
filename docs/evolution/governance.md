@@ -12,4 +12,6 @@ O coordenador organiza decisões, a conversa-filha investiga e o agente executa 
 
 **GOV-RET-01 Revisão 2 (24/10/2026):** adota [retenção mínima e descarte como padrão](retention-policy.md), com duas revisões: ao fechar cada frente e ao fechar uma nova versão/tag estável. Apenas artefatos necessários permanecem temporariamente, com finalidade e marco de descarte; arquivos comprovadamente descartáveis não exigem backup. Exclusões concretas exigem manifesto específico aprovado. A Frente A recebe aplicação retroativa sem reabertura científica.
 
+**GOV-09/GOV-10 (25/10/2026):** em toda resposta de conversa-filha, apresentar [checklist visual curto da frente](coordination-protocol.md) após o contexto. Ao fechar a frente, entregar **automaticamente um prompt colável para a conversa-mãe**, com resultado verificado, evidências, pendências e encaminhamento da fila. A filha não publica diretamente em outras conversas; o responsável faz a transferência. Mais detalhes em [GOV-09/GOV-10](coordination-protocol.md).
+
 Após merge, conferir SHA final de `develop`, reler o material versionado e registrar a situação real; sem readback não declarar sucesso.
