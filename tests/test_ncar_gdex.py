@@ -300,6 +300,7 @@ def test_dates_not_yet_published_fail_on_the_first_request(tmp_path):
     with pytest.raises(g.NcarRequestError, match="not be published yet"):
         _retrieve(tmp_path, fake, workers=1)
     assert len(fake.calls) == 1 and "2018081000" in fake.calls[0][0]
+    assert not (tmp_path / "out.nc.parts").exists()
 
 
 def test_limits_are_checked_before_any_request(tmp_path, monkeypatch):
@@ -309,6 +310,13 @@ def test_limits_are_checked_before_any_request(tmp_path, monkeypatch):
     monkeypatch.setattr(shutil, "disk_usage", lambda path: shutil._ntuple_diskusage(10, 9, 1))
     with pytest.raises(g.NcarRetrievalError, match="not enough free disk space"):
         _retrieve(tmp_path, fake)
+    assert fake.calls == []
+
+
+def test_a_missing_output_directory_is_reported(tmp_path):
+    fake = FakeGdex()
+    with pytest.raises(g.NcarRetrievalError, match="does not exist"):
+        _retrieve(tmp_path, fake, name="missing/out.nc")
     assert fake.calls == []
 
 

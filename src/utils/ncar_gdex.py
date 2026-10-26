@@ -58,6 +58,7 @@ Contact:
 """
 
 import argparse
+import contextlib
 import datetime
 import hashlib
 import http.client
@@ -185,6 +186,11 @@ class _Retryable(Exception):
 
 class _Cancelled(Exception):
     """The retrieval was stopped while a response was being received."""
+
+
+def _describe(error):
+    """Text of a failed attempt for the user (no internal class names)."""
+    return str(error) if isinstance(error, _Retryable) else f"{type(error).__name__}: {error}"
 
 
 # --------------------------------------------------------------------- plan
@@ -800,13 +806,11 @@ def _fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel,
                 os.remove(part)
             if attempt == attempts:
                 raise NcarTransferError(
-                    f"{request.key}: failed {attempts} times; last error: {type(error).__name__}: {error}. "
-                    f"URL: {request.url}"
+                    f"{request.key}: failed {attempts} times; last error: {_describe(error)}. URL: {request.url}"
                 ) from error
             delay = min(MAX_WAIT, max(backoff * 3 ** (attempt - 1), getattr(error, "retry_after", None) or 0.0))
             logger.warning(
-                f"⚠️ {request.key}: {type(error).__name__}: {error}; "
-                f"retrying in {delay:.0f} s (attempt {attempt + 1}/{attempts})"
+                f"⚠️ {request.key}: {_describe(error)}; retrying in {delay:.0f} s (attempt {attempt + 1}/{attempts})"
             )
             _wait(delay, cancel)
             continue
@@ -1081,6 +1085,8 @@ def retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=
             f"or raise the limit (python -m src.utils.ncar_gdex ... --max-gib)."
         )
     directory = os.path.dirname(os.path.abspath(path))
+    if not os.path.isdir(directory):
+        raise NcarRetrievalError(f"the directory of {path} does not exist")
     parts_dir = f"{path}.parts"
     free = shutil.disk_usage(directory).free
     needed = estimate + plan.output_bytes
@@ -1131,7 +1137,11 @@ def retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=
         real = [error for error in errors if not isinstance(error, _Cancelled)]
         error = real[0] if real else NcarRetrievalError("retrieval stopped before every response was received")
         logger.error(f"❌ NCAR GDEX retrieval failed: {error}")
-        logger.error(f"   {len(results)} verified response(s) kept in {parts_dir}; running again resumes from them.")
+        if results:
+            logger.error(f"   {len(results)} verified response(s) kept in {parts_dir}; running again resumes from them.")
+        else:
+            with contextlib.suppress(OSError):
+                os.rmdir(parts_dir)
         if isinstance(error, NcarRetrievalError):
             raise error
         raise NcarRetrievalError(f"{type(error).__name__}: {error}") from error
