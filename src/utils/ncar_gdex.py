@@ -1075,6 +1075,8 @@ def retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=
     max_total_bytes = DEFAULT_MAX_TOTAL_BYTES if max_total_bytes is None else max_total_bytes
     if not 1 <= int(workers) <= MAX_WORKERS:
         raise ValueError(f"workers must be between 1 and {MAX_WORKERS}, not {workers}")
+    if int(attempts) < 1:
+        raise ValueError(f"attempts must be at least 1, not {attempts}")
     if os.path.exists(path):
         raise NcarRetrievalError(f"{path} already exists; it is never overwritten")
     estimate = plan.estimated_bytes
@@ -1305,34 +1307,34 @@ def main(argv=None):
     logging.basicConfig(level=logging.DEBUG if args.verbosity else logging.INFO,
                         format="%(asctime)s - %(levelname)s - %(message)s")
     logger = logging.getLogger("lorenzcycletoolkit.ncar_gdex")
-    track = _read_track(args.trackfile, logger)
-    namelist = resolve_input_file(args.namelist)
-    names = output_names(namelist)
-    plan = plan_retrieval(area_from_track(track), daily_hours(track.index, args.time_resolution))
-    if args.dry_run:
-        print(f"area N{plan.north:g} W{plan.west:g} S{plan.south:g} E{plan.east:g}: "
-              f"{len(plan.latitudes)} x {len(plan.longitudes)} points, {len(plan.times)} times, "
-              f"{len(PRESSURE_LEVELS_HPA)} levels")
-        print(f"{len(plan.requests)} requests, about {plan.estimated_bytes / 1024 ** 2:.1f} MiB to transfer, "
-              f"{plan.output_bytes / 1024 ** 2:.1f} MiB of values; names from {namelist}: {names}")
-        for request in plan.requests:
-            print(request.url)
-        return 0
-    if os.path.exists(args.outfile):
-        check_existing(args.outfile, plan, names)
-        logger.info(f"✅ {args.outfile} already exists and matches its provenance record.")
-        return 0
-    request_info = {
-        "rule": "area, levels and hours of the CDS API route (get_cdsapi_data) for the track",
-        "time_resolution_hours": args.time_resolution,
-        "trackfile": args.trackfile,
-        "trackfile_sha256": _sha256(args.trackfile),
-    }
     try:
+        track = _read_track(args.trackfile, logger)
+        namelist = resolve_input_file(args.namelist)
+        names = output_names(namelist)
+        plan = plan_retrieval(area_from_track(track), daily_hours(track.index, args.time_resolution))
+        if args.dry_run:
+            print(f"area N{plan.north:g} W{plan.west:g} S{plan.south:g} E{plan.east:g}: "
+                  f"{len(plan.latitudes)} x {len(plan.longitudes)} points, {len(plan.times)} times, "
+                  f"{len(PRESSURE_LEVELS_HPA)} levels")
+            print(f"{len(plan.requests)} requests, about {plan.estimated_bytes / 1024 ** 2:.1f} MiB to transfer, "
+                  f"{plan.output_bytes / 1024 ** 2:.1f} MiB of values; names from {namelist}: {names}")
+            for request in plan.requests:
+                print(request.url)
+            return 0
+        if os.path.exists(args.outfile):
+            check_existing(args.outfile, plan, names)
+            logger.info(f"✅ {args.outfile} already exists and matches its provenance record.")
+            return 0
+        request_info = {
+            "rule": "area, levels and hours of the CDS API route (get_cdsapi_data) for the track",
+            "time_resolution_hours": args.time_resolution,
+            "trackfile": args.trackfile,
+            "trackfile_sha256": _sha256(args.trackfile),
+        }
         retrieve(plan, args.outfile, names, logger=logger, workers=args.workers, compress=not args.no_compress,
                  float64=args.float64, keep_parts=args.keep_parts, max_total_bytes=int(args.max_gib * 1024 ** 3),
                  request_info=request_info, namelist=namelist)
-    except NcarRetrievalError as error:
+    except (NcarRetrievalError, ValueError, FileNotFoundError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
     return 0

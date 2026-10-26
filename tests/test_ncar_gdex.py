@@ -455,3 +455,14 @@ def test_dry_run_lists_the_requests_without_retrieving(tmp_path, monkeypatch, ca
     assert code == 0
     assert len([line for line in lines if line.startswith("https://")]) == 5
     assert not (tmp_path / "out.nc").exists()
+
+
+def test_standalone_command_reports_errors_without_a_traceback(tmp_path, capsys):
+    track = tmp_path / "track"
+    track.write_text(TRACK)
+    out = tmp_path / "out.nc"
+    out.write_bytes(b"not provenance-checked")
+    code = g.main([str(out), "--trackfile", str(track), "--namelist", str(REPO_ROOT / "inputs" / "namelist_ERA5")])
+    assert code == 1
+    assert "no provenance record" in capsys.readouterr().err
+    assert out.read_bytes() == b"not provenance-checked"
