@@ -74,7 +74,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from concurrent.futures import FIRST_EXCEPTION, ThreadPoolExecutor, wait
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 
 import netCDF4
@@ -769,8 +769,21 @@ def fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel, 
         PieceResult: The verified response.
 
     Raises:
-        NcarRequestError, NcarTransferError, NcarContentError.
+        NcarRequestError, NcarTransferError, NcarContentError; _Cancelled if
+        the retrieval was stopped (no request is made after a failure).
     """
+    if cancel.is_set():
+        raise _Cancelled()
+    try:
+        return _fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel, logger)
+    except _Cancelled:
+        raise
+    except BaseException:
+        cancel.set()
+        raise
+
+
+def _fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel, logger):
     stored = _stored_piece(request, parts_dir)
     if stored is not None:
         logger.debug(f"♻️ {request.key}: verified response kept from an earlier attempt")
@@ -1088,36 +1101,40 @@ def retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=
     started = time.monotonic()
     cancel = threading.Event()
     results = {}
+    # The last day goes first: a period that ends after the dates GDEX has
+    # published fails on the first request instead of after the other days.
+    ordered = sorted(plan.requests, key=lambda request: request.day != days[-1])
     executor = ThreadPoolExecutor(max_workers=int(workers), thread_name_prefix="ncar-gdex")
+    futures = []
     try:
-        futures = {executor.submit(fetch_piece, request, parts_dir, opener, timeout, attempts, backoff,
-                                   cancel, logger): request for request in plan.requests}
-        pending = set(futures)
-        while pending:
-            done, pending = wait(pending, return_when=FIRST_EXCEPTION)
-            for future in done:
-                error = future.exception()
-                if error is not None:
-                    cancel.set()
-                    for other in pending:
-                        other.cancel()
-                    raise error
-                piece = future.result()
-                results[piece.request.key] = piece
-                note = "kept from an earlier attempt" if piece.reused else f"{piece.elapsed:.1f} s"
-                logger.info(f"  ⬇️ [{len(results)}/{len(plan.requests)}] {piece.request.key}: "
-                            f"{piece.size / 1024 ** 2:.2f} MiB ({note})")
-    except _Cancelled:
-        raise NcarRetrievalError(f"retrieval stopped; verified responses kept in {parts_dir}")
-    except BaseException as error:
+        futures = [executor.submit(fetch_piece, request, parts_dir, opener, timeout, attempts, backoff,
+                                   cancel, logger) for request in ordered]
+        for future in as_completed(futures):
+            if future.exception() is not None:
+                cancel.set()
+                break
+            piece = future.result()
+            results[piece.request.key] = piece
+            note = "kept from an earlier attempt" if piece.reused else f"{piece.elapsed:.1f} s"
+            logger.info(f"  ⬇️ [{len(results)}/{len(plan.requests)}] {piece.request.key}: "
+                        f"{piece.size / 1024 ** 2:.2f} MiB ({note})")
+    except BaseException:
         cancel.set()
         executor.shutdown(wait=True, cancel_futures=True)
-        if isinstance(error, NcarRetrievalError):
-            logger.error(f"❌ NCAR GDEX retrieval failed: {error}")
-            logger.error(f"   {len(results)} verified response(s) kept in {parts_dir}; running again resumes from them.")
+        logger.error(f"❌ NCAR GDEX retrieval interrupted; {len(results)} verified response(s) kept in {parts_dir}")
         raise
-    finally:
-        executor.shutdown(wait=True, cancel_futures=True)
+    executor.shutdown(wait=True, cancel_futures=True)
+    finished = [f for f in futures if f.done() and not f.cancelled()]
+    results.update({f.result().request.key: f.result() for f in finished if f.exception() is None})
+    errors = [f.exception() for f in finished if f.exception() is not None]
+    if errors or len(results) != len(plan.requests):
+        real = [error for error in errors if not isinstance(error, _Cancelled)]
+        error = real[0] if real else NcarRetrievalError("retrieval stopped before every response was received")
+        logger.error(f"❌ NCAR GDEX retrieval failed: {error}")
+        logger.error(f"   {len(results)} verified response(s) kept in {parts_dir}; running again resumes from them.")
+        if isinstance(error, NcarRetrievalError):
+            raise error
+        raise NcarRetrievalError(f"{type(error).__name__}: {error}") from error
     transfer = time.monotonic() - started
 
     pieces = [results[r.key] for r in plan.requests]

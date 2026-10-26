@@ -295,10 +295,11 @@ def test_wrong_answers_stop_at_once(fault, error, text, tmp_path):
     assert not (tmp_path / "out.nc").exists()
 
 
-def test_dates_not_yet_published(tmp_path):
+def test_dates_not_yet_published_fail_on_the_first_request(tmp_path):
     fake = FakeGdex(last_day=datetime.date(2018, 8, 9))
     with pytest.raises(g.NcarRequestError, match="not be published yet"):
         _retrieve(tmp_path, fake, workers=1)
+    assert len(fake.calls) == 1 and "2018081000" in fake.calls[0][0]
 
 
 def test_limits_are_checked_before_any_request(tmp_path, monkeypatch):
@@ -328,12 +329,12 @@ def test_an_interrupted_retrieval_resumes_from_the_verified_responses(tmp_path):
     damaged = parts / stored[0]
     damaged.write_bytes(damaged.read_bytes()[:-10] + b"0123456789")
 
+    assert "V_20180810_0.nc" not in stored and len(stored) >= 1
     fake = FakeGdex()
     plan, path, record = _retrieve(tmp_path, fake, workers=1)
-    fetched = sorted(urllib.parse.parse_qs(urllib.parse.urlsplit(u).query)["var"][0] + u.split(".")[-2][-11:-3]
-                     for u, _, _ in fake.calls)
-    assert len(fake.calls) == 2, fetched
-    assert record["totals"]["reused_responses"] == len(plan.requests) - 2
+    # only the responses not kept, plus the damaged one, are requested again
+    assert len(fake.calls) == len(plan.requests) - len(stored) + 1
+    assert record["totals"]["reused_responses"] == len(stored) - 1
     with xr.open_dataset(path) as ds:
         for field in "TZWUV":
             assert np.array_equal(ds[field].values, _expected(plan, field))
