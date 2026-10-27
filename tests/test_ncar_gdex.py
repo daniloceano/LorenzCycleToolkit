@@ -14,6 +14,7 @@ import email.utils
 import io
 import json
 import logging
+import math
 import os
 import random
 import shutil
@@ -33,7 +34,7 @@ import xarray as xr
 
 import lorenzcycletoolkit
 from src.utils import ncar_gdex as g
-from tests.ncss_emulator import FakeGdex, FakeWire, field_values
+from tests.ncss_emulator import FakeClock, FakeGdex, FakeWire, field_values
 
 try:
     import fcntl
@@ -615,6 +616,40 @@ def test_the_counting_socket_counts_and_limits_every_read():
     assert free.lectk_received.bytes == len(data) == wire.sent[1] > 51
     free.close()
     assert free.lectk_received.window == wire.window and free._sock.closed
+
+
+class _AdapterTime:
+    """The adapter's ``time`` module, with a simulated monotonic clock."""
+
+    def __init__(self, clock):
+        self.monotonic = clock.monotonic
+
+    def __getattr__(self, name):
+        return getattr(time, name)
+
+
+@pytest.mark.parametrize("mode", ["trickle", "trickle:chunked:1000"])
+def test_the_time_limit_of_an_attempt_holds_inside_one_slow_read(mode, tmp_path, monkeypatch):
+    # Each socket read returns 64 bytes and takes 1 s of a simulated clock: no read comes near the timeout
+    # without data, but the attempt passes its time limit long before the answer ends. One read of the
+    # HTTP library gathers many socket reads, so the limit must hold inside it, not only between reads.
+    clock = FakeClock()
+    monkeypatch.setattr(g, "time", _AdapterTime(clock))
+    wire = FakeWire(mode=lambda key, n: mode if n == 1 else "length", clock=clock, trickle=(64, 1.0))
+    request = _first_wire_request()
+    timeout = 10.0
+    allowed = timeout + request.max_bytes / g.MIN_TRANSFER_RATE
+    budget = g.ByteBudget(10 ** 9)
+    plan, path, record = _wire_retrieve(tmp_path, monkeypatch, wire, budget=budget, attempts=2, timeout=timeout)
+    slow, retried = [a for a in budget.attempts if a["key"] == request.key]
+    assert slow["result"].startswith("response too slow") and retried["result"] == "ok" and path.exists()
+    # stopped when the time was over (at most one socket read later), far from the end of the answer
+    assert slow["seconds"] <= allowed + 1.0
+    assert slow["received_bytes"] == wire.sent[0] <= 64 * (math.ceil(allowed) + 1) < wire.sizes[0] // 4
+    # each wait of the socket was bounded by what was left of the attempt, so a silent server cannot hold it either
+    assert wire.sockets[0].timeouts and max(wire.sockets[0].timeouts) <= allowed
+    # the abandoned answer is charged what arrived plus the receive buffer
+    assert slow["charged_bytes"] == slow["received_bytes"] + wire.window
 
 
 # ---------------------------------------------------------- one at a time

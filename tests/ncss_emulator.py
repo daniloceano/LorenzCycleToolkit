@@ -20,7 +20,8 @@ headers, body, optionally chunked) through fake sockets, so that the
 toolkit's own opener, which counts the bytes its connections receive, runs
 end to end without a network. It also sends what a misbehaving server could:
 tiny chunks with long extensions, endless bodies, oversized headers, answers
-that stop half-way.
+that stop half-way, answers that trickle (with :class:`FakeClock`, a simulated
+clock, so that slowness is tested without waiting).
 """
 
 import datetime
@@ -303,6 +304,19 @@ class FakeGdex:
 REASONS = {200: "OK", 403: "Forbidden", 404: "Not Found", 400: "Bad Request", 503: "Service Unavailable"}
 
 
+class FakeClock:
+    """Simulated monotonic clock: it moves only when told to (see the "trickle" answers of FakeWire)."""
+
+    def __init__(self, start=1000.0):
+        self.now = start
+
+    def monotonic(self):
+        return self.now
+
+    def advance(self, seconds):
+        self.now += seconds
+
+
 class WireSocket:
     """Fake socket of :class:`FakeWire`: collects the request written to it and answers with raw HTTP bytes."""
 
@@ -310,15 +324,17 @@ class WireSocket:
         self.wire = wire
         self.request = b""
         self.blocks = None
+        self.mode = None
         self.pending = b""
         self.sent = 0
         self.closed = False
+        self.timeouts = []
 
     def setsockopt(self, *args):
         pass
 
     def settimeout(self, value):
-        pass
+        self.timeouts.append(value)
 
     def gettimeout(self):
         return None
@@ -331,7 +347,7 @@ class WireSocket:
 
     def _next(self):
         if self.blocks is None:
-            self.blocks = self.wire.answer(self.request)
+            self.blocks, self.mode = self.wire.answer(self.request)
         while not self.pending:
             block = next(self.blocks, None)
             if block is None:
@@ -345,6 +361,10 @@ class WireSocket:
         if not self._next():
             return 0
         n = min(size, len(self.pending))
+        if self.mode.startswith("trickle"):
+            # a slow server: each read returns a few bytes, well within any timeout without data
+            n = min(n, self.wire.trickle[0])
+            self.wire.clock.advance(self.wire.trickle[1])
         view[:n] = self.pending[:n]
         self.pending = self.pending[n:]
         self.sent += n
@@ -372,23 +392,33 @@ class FakeWire:
             "chunked:<size>", "extensions" (one-byte chunks with 4000-byte
             chunk extensions), "endless" (chunked, never ends), "headers"
             (150 headers of 4 kB), "stall" (stops after half the body: the next
-            read times out), "http503".
+            read times out), "http503", "trickle" or "trickle:<mode>" (the
+            answer of "length" or <mode>, each read returning ``trickle[0]``
+            bytes and moving ``clock`` on by ``trickle[1]`` seconds).
         window (int): Receive buffer reported by the sockets (SO_RCVBUF).
+        clock (FakeClock): Clock moved by the "trickle" answers.
+        trickle (tuple): (bytes per read, seconds per read) of "trickle" answers.
     """
 
-    def __init__(self, gdex=None, mode=None, window=65536):
+    def __init__(self, gdex=None, mode=None, window=65536, clock=None, trickle=(64, 1.0)):
         self.gdex = gdex or FakeGdex()
         self.mode = mode or (lambda key, n: "length")
         self.window = window
+        self.clock = clock or FakeClock()
+        self.trickle = trickle
         self.lock = threading.Lock()
         self.sent = []      # bytes sent on each connection
         self.modes = []     # mode of each answer
+        self.sizes = []     # bytes of each complete answer (None if it never ends)
+        self.sockets = []
         self.counts = {}
 
     def __call__(self, address, timeout=None, source_address=None):
+        sock = WireSocket(self)
         with self.lock:
             self.sent.append(0)
-        return WireSocket(self)
+            self.sockets.append(sock)
+        return sock
 
     def answer(self, request):
         head = request.split(b"\r\n\r\n", 1)[0].decode("latin-1").split("\r\n")
@@ -403,18 +433,24 @@ class FakeWire:
             mode = self.mode(key, self.counts[key])
             self.modes.append(mode)
         status, headers, body, _ = self.gdex.respond(url)
+        framing = mode.split(":", 1)[1] if mode.startswith("trickle:") else ("length" if mode == "trickle" else mode)
         if mode == "http503":
             status, body = 503, b"<html><body>Service Unavailable" + b" " * 3000 + b"</body></html>"
             headers = {"Content-Type": "text/html", "Content-Length": len(body), "Retry-After": "0"}
         lines = [f"HTTP/1.1 {status} {REASONS.get(status, 'Status')}"]
-        with_length = mode in ("length", "stall", "headers", "http503")
+        with_length = framing in ("length", "stall", "headers", "http503")
         lines += [f"{k}: {v}" for k, v in headers.items() if k != "Content-Length" or with_length]
-        if mode.startswith("chunked") or mode in ("extensions", "endless"):
+        if framing.startswith("chunked") or framing in ("extensions", "endless"):
             lines.append("Transfer-Encoding: chunked")
-        if mode == "headers":
+        if framing == "headers":
             lines += [f"X-Padding-{i}: {'p' * 4000}" for i in range(150)]
         lines.append("Connection: close")
-        return self._blocks(("\r\n".join(lines) + "\r\n\r\n").encode("latin-1"), body, mode)
+        head = ("\r\n".join(lines) + "\r\n\r\n").encode("latin-1")
+        blocks = list(self._blocks(head, body, framing)) if framing in ("length", "http503") or \
+            framing.startswith("chunked") else None
+        with self.lock:
+            self.sizes.append(sum(len(b) for b in blocks) if blocks is not None else None)
+        return (iter(blocks) if blocks is not None else self._blocks(head, body, framing)), mode
 
     @staticmethod
     def _blocks(head, body, mode):

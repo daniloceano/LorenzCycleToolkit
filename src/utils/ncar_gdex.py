@@ -20,7 +20,8 @@ d633000, DOI 10.5065/BH6N-5N20) through its THREDDS NetCDF Subset Service
 ``--time-resolution``: the five fields, the 37 pressure levels, the track
 extent with a 15-degree buffer rounded outwards to whole degrees, and the same
 hours of each day. NCSS cuts the area on the server and answers on the same
-connection, without a queue or an account. GDEX keeps one file per field and
+connection: there is no account and no CDS job queue, although the service
+takes some time to prepare each response and may be slow or unavailable. GDEX keeps one file per field and
 day, so each request is one field for one day (two requests when the area
 crosses the Greenwich meridian, where the 0-359.75 longitudes of the GDEX grid
 wrap).
@@ -41,11 +42,12 @@ interrupted retrieval resumes from the verified responses already received;
 the provenance record says when, and by which commit of the toolkit, each
 response was received.
 
-The bytes received are counted on the connection as the requests are made
-(status lines, headers, chunk framing and bodies, failed attempts and retries
-included; see :class:`ByteBudget`): a request is not made when its largest
-possible response would take the total past the limit, and no connection ever
-receives more than its request may hold.
+The bytes read from each connection are counted as the requests are made
+(status lines, headers, chunk framing and bodies, after TLS; failed attempts
+and retries included; see :class:`ByteBudget`): a request is not made when its
+largest possible response would take the total past the limit, no connection
+ever reads more than its request may hold, and no attempt lasts longer than
+its time limit, even while bytes keep arriving slowly.
 
 One retrieval at a time writes a file: a second retrieval of the same file
 (for instance two runs started together) stops at once instead of writing
@@ -574,12 +576,15 @@ class ByteBudget:
     not made if the bytes already received plus the reservations would pass
     the limit; a response without Content-Length reserves its chunk framing
     too before its body is read. The connections of :func:`default_opener`
-    count every byte they receive and never receive more than the
-    reservation (one byte more detects a longer answer): an attempt is
-    charged those bytes, plus, when its response was abandoned before its
-    end, the receive buffer of the connection (the most the network may still
-    have delivered). The total can then pass the limit only by that last
-    amount; it is reported, and no further request is made. With another
+    count every byte they read after TLS (status line, headers, chunk
+    framing, body) and never read more than the reservation (one byte more
+    detects a longer answer): an attempt is charged those bytes, plus, when
+    its response was abandoned before its end, the size of the connection's
+    receive buffer, an upper bound of what may have arrived without being
+    read (those bytes are not observed). The total can then pass the limit
+    only by that last amount; it is reported, and no further request is made.
+    Not observed and not counted: TLS handshakes and record overhead, a
+    proxy's answer to CONNECT, and TCP/IP headers. With another
     opener (one that cannot count), a complete response with a Content-Length
     is charged its status line, headers and body, any other attempt its whole
     reservation, and a response without Content-Length is refused. One budget
@@ -643,37 +648,76 @@ class _RefuseRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class _ResponseTooLarge(Exception):
-    """A connection received more bytes than its request may hold."""
+    """A connection read more bytes than its request may hold."""
 
     def __init__(self, received):
-        super().__init__(f"more than {received.limit} bytes received")
+        super().__init__(f"more than {received.limit} bytes read")
         self.received = received
 
 
 class _Received:
     """
-    Bytes received on the connection of one attempt (status line, headers,
+    Bytes read from the connection of one attempt (status line, headers,
     chunk framing and body, as they come out of TLS). No more than ``limit``
-    bytes, plus one to detect a longer answer, are ever received. ``window``
-    is the receive buffer of the connection when it closed: the most the
-    network may still have delivered for a response abandoned before its end.
+    bytes, plus one to detect a longer answer, are ever read, and no read
+    goes on past ``deadline`` (a time.monotonic() value). ``window`` is the
+    size of the connection's receive buffer when it closed: an upper bound,
+    not a measure, of what may have arrived without being read for a
+    response abandoned before its end.
     """
 
-    def __init__(self, limit):
+    def __init__(self, limit, deadline=None):
         self.limit = limit
+        self.deadline = deadline
         self.bytes = 0
         self.window = None
 
 
+class _TooSlow(_Retryable):
+    """An attempt ran out of time while its connection was still reading."""
+
+    def __init__(self, received):
+        super().__init__(f"response too slow: the attempt ran out of time after {received.bytes} bytes")
+        self.received = received
+
+
 class _CountingSocket:
-    """Socket that counts and limits the bytes it receives, with the closing behaviour of socket.socket."""
+    """
+    Socket that counts and limits the bytes read from it and the time spent
+    reading, with the closing behaviour of socket.socket.
+    """
 
     def __init__(self, sock, received):
         self._sock = sock
         self.lectk_received = received
+        self._idle = sock.gettimeout()
         self._io_refs = 0
         self._closed = False
         self._released = False
+
+    def _arm(self):
+        """
+        Raise _TooSlow once the attempt is out of time; otherwise let the next
+        read wait no longer than what is left of it (nor than the timeout
+        without data). Returns the deadline, or None.
+        """
+        deadline = self.lectk_received.deadline
+        if deadline is None:
+            return None
+        left = deadline - time.monotonic()
+        if left <= 0:
+            raise _TooSlow(self.lectk_received)
+        self._sock.settimeout(left if self._idle is None else min(self._idle, left))
+        return deadline
+
+    def _read(self, method, *args):
+        deadline = self._arm()
+        try:
+            return method(*args)
+        except TimeoutError:
+            if deadline is not None and time.monotonic() >= deadline:
+                raise _TooSlow(self.lectk_received) from None
+            raise
 
     def _room(self, size):
         received = self.lectk_received
@@ -693,12 +737,12 @@ class _CountingSocket:
     def recv_into(self, buffer, nbytes=0, flags=0):
         view = memoryview(buffer).cast("B")
         size = self._room(nbytes or len(view))
-        n = self._sock.recv_into(view[:size], size, flags)
+        n = self._read(self._sock.recv_into, view[:size], size, flags)
         self._count(n)
         return n
 
     def recv(self, bufsize, flags=0):
-        data = self._sock.recv(self._room(bufsize), flags)
+        data = self._read(self._sock.recv, self._room(bufsize), flags)
         self._count(len(data))
         return data
 
@@ -742,47 +786,53 @@ class _CountedResponse(http.client.HTTPResponse):
 class _CountedHTTPConnection(http.client.HTTPConnection):
     response_class = _CountedResponse
 
-    def __init__(self, *args, lectk_limit=None, **kwargs):
+    def __init__(self, *args, lectk_limit=None, lectk_deadline=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._lectk_limit = lectk_limit
+        self._lectk_deadline = lectk_deadline
 
     def connect(self):
         self._create_connection = _open_socket
         super().connect()
-        self.sock = _CountingSocket(self.sock, _Received(self._lectk_limit))
+        self.sock = _CountingSocket(self.sock, _Received(self._lectk_limit, self._lectk_deadline))
 
 
 class _CountedHTTPSConnection(http.client.HTTPSConnection):
     response_class = _CountedResponse
 
-    def __init__(self, *args, lectk_limit=None, **kwargs):
+    def __init__(self, *args, lectk_limit=None, lectk_deadline=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._lectk_limit = lectk_limit
+        self._lectk_deadline = lectk_deadline
 
     def connect(self):
         self._create_connection = _open_socket
         super().connect()
-        self.sock = _CountingSocket(self.sock, _Received(self._lectk_limit))
+        self.sock = _CountingSocket(self.sock, _Received(self._lectk_limit, self._lectk_deadline))
+
+
+def _connection(connection_class, req):
+    return functools.partial(connection_class, lectk_limit=getattr(req, "lectk_limit", None),
+                             lectk_deadline=getattr(req, "lectk_deadline", None))
 
 
 class _CountingHTTPHandler(urllib.request.HTTPHandler):
     def http_open(self, req):
-        return self.do_open(functools.partial(_CountedHTTPConnection, lectk_limit=getattr(req, "lectk_limit", None)),
-                            req)
+        return self.do_open(_connection(_CountedHTTPConnection, req), req)
 
 
 class _CountingHTTPSHandler(urllib.request.HTTPSHandler):
     def https_open(self, req):
-        return self.do_open(functools.partial(_CountedHTTPSConnection, lectk_limit=getattr(req, "lectk_limit", None)),
-                            req, context=self._context)
+        return self.do_open(_connection(_CountedHTTPSConnection, req), req, context=self._context)
 
 
 def default_opener():
     """
-    URL opener that counts the bytes each connection receives, never
-    receives more than the request's ``lectk_limit`` attribute (plus one
-    byte), and does not follow redirects (a redirect is reported, not
-    followed).
+    URL opener that counts the bytes read from each connection (after TLS),
+    never reads more than the request's ``lectk_limit`` attribute (plus one
+    byte) nor past its ``lectk_deadline`` (a time.monotonic() value), and does
+    not follow redirects (a redirect is reported, not followed). Connecting
+    (TCP and TLS handshake) is bounded by the timeout of each operation only.
     """
     return urllib.request.build_opener(_RefuseRedirect, _CountingHTTPHandler(), _CountingHTTPSHandler()).open
 
@@ -922,12 +972,16 @@ def _download(request, part, timeout, opener, cancel, meter, budget=None):
     (``_extra_reserved``, made in ``budget`` for the chunk framing of a
     response without Content-Length). At most ``request.max_bytes`` bytes of
     status line, headers and body are read, in at most ``timeout`` seconds
-    plus the time the largest response takes at MIN_TRANSFER_RATE.
+    plus the time the largest response takes at MIN_TRANSFER_RATE: with the
+    toolkit's opener the limit holds inside each read; with another opener
+    it is checked between reads.
     """
     message = urllib.request.Request(request.url, headers={"User-Agent": USER_AGENT})
     message.lectk_limit = request.max_bytes
     started = time.monotonic()
     deadline = started + timeout + request.max_bytes / MIN_TRANSFER_RATE
+    # the toolkit's connections stop reading at the deadline, also inside one read of the HTTP library
+    message.lectk_deadline = deadline
     try:
         response = opener(message, timeout=timeout)
     except urllib.error.HTTPError as error:
@@ -943,6 +997,9 @@ def _download(request, part, timeout, opener, cancel, meter, budget=None):
         meter["_received"] = error.received
         raise NcarContentError(f"{request.key}: the response headers alone pass the {request.max_bytes} "
                                f"bytes this request can hold") from None
+    except _TooSlow as error:
+        meter["_received"] = error.received
+        raise
     meter["seconds_to_headers"] = round(time.monotonic() - started, 3)
     received = getattr(response, "lectk_received", None)
     meter["_received"] = received
