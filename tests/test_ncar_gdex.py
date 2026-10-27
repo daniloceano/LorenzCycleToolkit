@@ -546,7 +546,7 @@ def test_a_misbehaving_answer_stops_at_the_reservation_and_is_charged_what_arriv
         _wire_retrieve(tmp_path, monkeypatch, wire, budget=budget)
     request = _first_wire_request()
     (attempt,) = budget.attempts
-    # the connection never received more than the reservation (+1 byte); nothing is retried
+    # the connection never read more than the reservation (+1 byte); nothing is retried
     assert attempt["received_bytes"] == wire.sent[0] <= _limit(request, chunked=mode != "headers") + 1
     assert len(wire.sent) == 1
     # the answer was abandoned: what the network may still have delivered is charged too
