@@ -41,9 +41,15 @@ interrupted retrieval resumes from the verified responses already received;
 the provenance record says when, and by which commit of the toolkit, each
 response was received.
 
-The bytes received are counted as the requests are made, failed attempts and
-retries included (see :class:`ByteBudget`): a request is not made when its
-largest possible response would take the total past the limit.
+The bytes received are counted on the connection as the requests are made
+(status lines, headers, chunk framing and bodies, failed attempts and retries
+included; see :class:`ByteBudget`): a request is not made when its largest
+possible response would take the total past the limit, and no connection ever
+receives more than its request may hold.
+
+One retrieval at a time writes a file: a second retrieval of the same file
+(for instance two runs started together) stops at once instead of writing
+the same responses beside the first (see :func:`_exclusive`).
 
 GDEX publishes ERA5 some months after the CDS: dates that are not available
 yet stop the retrieval with a message that suggests ``--cdsapi``.
@@ -76,6 +82,7 @@ import math
 import os
 import platform
 import shutil
+import socket
 import ssl
 import subprocess
 import sys
@@ -135,6 +142,13 @@ MAX_WAIT = 300.0
 MIN_TRANSFER_RATE = 25_000
 DEFAULT_MAX_TOTAL_BYTES = 8 * 1024 ** 3
 RETRY_STATUS = {429, 500, 502, 503, 504}
+# A response without Content-Length is chunked: its framing (a size line per
+# chunk) is reserved on top of the response, 1/64 of it (chunks of 512 bytes
+# or more fit).
+FRAMING_SHARE = 64
+# What the network may still deliver after a response is abandoned, when the
+# receive buffer of the connection cannot be read.
+WINDOW_ALLOWANCE = 4 * 1024 ** 2
 # The netCDF-C library is not thread-safe: responses are checked one at a time.
 _NETCDF_LOCK = threading.Lock()
 NETWORK_ERRORS = (urllib.error.URLError, TimeoutError, ConnectionError, ssl.SSLError,
@@ -558,15 +572,18 @@ class ByteBudget:
     Before each attempt the most its response may hold (status line, headers
     and body: :attr:`PieceRequest.max_bytes`) is reserved, and the attempt is
     not made if the bytes already received plus the reservations would pass
-    the limit. A complete response with a Content-Length is then charged the
-    bytes of its status line, headers and body; any other attempt (an error
-    answer, a cut, refused or unreadable response, a retry, a response
-    without Content-Length whose chunk framing is not visible) is charged its
-    whole reservation. The total therefore never understates the bytes read
-    from the responses, except the chunk framing of a response without
-    Content-Length (a few bytes per chunk), which the HTTP library does not
-    expose; GDEX NCSS sends a Content-Length. One budget may serve several
-    retrievals.
+    the limit; a response without Content-Length reserves its chunk framing
+    too before its body is read. The connections of :func:`default_opener`
+    count every byte they receive and never receive more than the
+    reservation (one byte more detects a longer answer): an attempt is
+    charged those bytes, plus, when its response was abandoned before its
+    end, the receive buffer of the connection (the most the network may still
+    have delivered). The total can then pass the limit only by that last
+    amount; it is reported, and no further request is made. With another
+    opener (one that cannot count), a complete response with a Content-Length
+    is charged its status line, headers and body, any other attempt its whole
+    reservation, and a response without Content-Length is refused. One budget
+    may serve several retrievals.
 
     Args:
         limit (int): Largest number of bytes received.
@@ -580,24 +597,44 @@ class ByteBudget:
         self.attempts = []
         self._lock = threading.Lock()
 
-    def reserve(self, request):
-        """Reserve the largest response of ``request``, or raise NcarTransferError."""
+    def reserve(self, request, amount=None, what=None):
+        """
+        Reserve ``amount`` bytes (default: the largest response of ``request``,
+        before it is requested), or raise NcarTransferError. ``what`` names an
+        extra reservation made after the request (its response is then not
+        read).
+        """
+        amount = request.max_bytes if amount is None else int(amount)
         with self._lock:
-            if self.used + self.reserved + request.max_bytes > self.limit:
+            if self.used + self.reserved + amount > self.limit:
                 pending = f", {self.reserved} reserved by requests in progress" if self.reserved else ""
+                if what is None:
+                    raise NcarTransferError(
+                        f"{request.key}: not requested, because its response may hold up to {amount} "
+                        f"bytes and {self.used} of the {self.limit} bytes allowed were already received{pending}"
+                    )
                 raise NcarTransferError(
-                    f"{request.key}: not requested, because its response may hold up to {request.max_bytes} "
-                    f"bytes and {self.used} of the {self.limit} bytes allowed were already received{pending}"
+                    f"{request.key}: response not read, because {what} may need {amount} more bytes and "
+                    f"{self.used} of the {self.limit} bytes allowed were already received{pending}"
                 )
-            self.reserved += request.max_bytes
+            self.reserved += amount
+        return amount
 
-    def settle(self, request, charged, record):
-        """Release the reservation of an attempt and charge ``charged`` bytes."""
+    def settle(self, request, charged, record, reserved=None):
+        """
+        Release the reservation of an attempt (``reserved`` bytes, default the
+        largest response) and charge ``charged`` bytes.
+
+        Returns:
+            int: Bytes by which the total now passes the limit (0 if it does not).
+        """
+        reserved = request.max_bytes if reserved is None else reserved
         with self._lock:
-            self.reserved -= request.max_bytes
+            self.reserved -= reserved
             self.used += charged
-            self.attempts.append(dict(record, key=request.key, url=request.url, charged_bytes=charged,
-                                      total_bytes=self.used))
+            self.attempts.append(dict(record, key=request.key, url=request.url, reserved_bytes=reserved,
+                                      charged_bytes=charged, total_bytes=self.used))
+            return max(0, self.used - self.limit)
 
 
 class _RefuseRedirect(urllib.request.HTTPRedirectHandler):
@@ -605,9 +642,210 @@ class _RefuseRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+class _ResponseTooLarge(Exception):
+    """A connection received more bytes than its request may hold."""
+
+    def __init__(self, received):
+        super().__init__(f"more than {received.limit} bytes received")
+        self.received = received
+
+
+class _Received:
+    """
+    Bytes received on the connection of one attempt (status line, headers,
+    chunk framing and body, as they come out of TLS). No more than ``limit``
+    bytes, plus one to detect a longer answer, are ever received. ``window``
+    is the receive buffer of the connection when it closed: the most the
+    network may still have delivered for a response abandoned before its end.
+    """
+
+    def __init__(self, limit):
+        self.limit = limit
+        self.bytes = 0
+        self.window = None
+
+
+class _CountingSocket:
+    """Socket that counts and limits the bytes it receives, with the closing behaviour of socket.socket."""
+
+    def __init__(self, sock, received):
+        self._sock = sock
+        self.lectk_received = received
+        self._io_refs = 0
+        self._closed = False
+        self._released = False
+
+    def _room(self, size):
+        received = self.lectk_received
+        if received.limit is None:
+            return size
+        room = received.limit + 1 - received.bytes
+        if room <= 0:
+            raise _ResponseTooLarge(received)
+        return min(size, room)
+
+    def _count(self, n):
+        received = self.lectk_received
+        received.bytes += n
+        if received.limit is not None and received.bytes > received.limit:
+            raise _ResponseTooLarge(received)
+
+    def recv_into(self, buffer, nbytes=0, flags=0):
+        view = memoryview(buffer).cast("B")
+        size = self._room(nbytes or len(view))
+        n = self._sock.recv_into(view[:size], size, flags)
+        self._count(n)
+        return n
+
+    def recv(self, bufsize, flags=0):
+        data = self._sock.recv(self._room(bufsize), flags)
+        self._count(len(data))
+        return data
+
+    def makefile(self, mode="r", buffering=None, *, encoding=None, errors=None, newline=None):
+        return socket.socket.makefile(self, mode, buffering, encoding=encoding, errors=errors, newline=newline)
+
+    def _release(self):
+        if self._released:
+            return
+        self._released = True
+        with contextlib.suppress(OSError, AttributeError, ValueError):
+            self.lectk_received.window = int(self._sock.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF))
+        self._sock.close()
+
+    def _decref_socketios(self):
+        if self._io_refs > 0:
+            self._io_refs -= 1
+        if self._closed and self._io_refs <= 0:
+            self._release()
+
+    def close(self):
+        self._closed = True
+        if self._io_refs <= 0:
+            self._release()
+
+    def __getattr__(self, name):
+        return getattr(self._sock, name)
+
+
+def _open_socket(address, timeout, source_address=None):
+    """TCP connection of the toolkit's opener."""
+    return socket.create_connection(address, timeout, source_address)
+
+
+class _CountedResponse(http.client.HTTPResponse):
+    def __init__(self, sock, *args, **kwargs):
+        super().__init__(sock, *args, **kwargs)
+        self.lectk_received = getattr(sock, "lectk_received", None)
+
+
+class _CountedHTTPConnection(http.client.HTTPConnection):
+    response_class = _CountedResponse
+
+    def __init__(self, *args, lectk_limit=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._lectk_limit = lectk_limit
+
+    def connect(self):
+        self._create_connection = _open_socket
+        super().connect()
+        self.sock = _CountingSocket(self.sock, _Received(self._lectk_limit))
+
+
+class _CountedHTTPSConnection(http.client.HTTPSConnection):
+    response_class = _CountedResponse
+
+    def __init__(self, *args, lectk_limit=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._lectk_limit = lectk_limit
+
+    def connect(self):
+        self._create_connection = _open_socket
+        super().connect()
+        self.sock = _CountingSocket(self.sock, _Received(self._lectk_limit))
+
+
+class _CountingHTTPHandler(urllib.request.HTTPHandler):
+    def http_open(self, req):
+        return self.do_open(functools.partial(_CountedHTTPConnection, lectk_limit=getattr(req, "lectk_limit", None)),
+                            req)
+
+
+class _CountingHTTPSHandler(urllib.request.HTTPSHandler):
+    def https_open(self, req):
+        return self.do_open(functools.partial(_CountedHTTPSConnection, lectk_limit=getattr(req, "lectk_limit", None)),
+                            req, context=self._context)
+
+
 def default_opener():
-    """URL opener that does not follow redirects (a redirect is reported, not followed)."""
-    return urllib.request.build_opener(_RefuseRedirect).open
+    """
+    URL opener that counts the bytes each connection receives, never
+    receives more than the request's ``lectk_limit`` attribute (plus one
+    byte), and does not follow redirects (a redirect is reported, not
+    followed).
+    """
+    return urllib.request.build_opener(_RefuseRedirect, _CountingHTTPHandler(), _CountingHTTPSHandler()).open
+
+
+@contextlib.contextmanager
+def _exclusive(path):
+    """
+    Hold ``<path>.lock`` while ``path`` is retrieved.
+
+    A second retrieval of the same file (output and parts directory) stops at
+    once with an explanation instead of writing beside the first. The lock is
+    an flock(2) on the lock file: the system releases it if the process dies,
+    so a lock file left by a crash does not block the next run. The lock file
+    is removed when the retrieval ends. Where flock is not available, the lock
+    is the exclusive creation of the lock file (a crash leaves it behind, and
+    the message says how to remove it).
+
+    Raises:
+        NcarRetrievalError: If the directory of ``path`` does not exist or
+            another retrieval holds the lock.
+    """
+    directory = os.path.dirname(os.path.abspath(path))
+    if not os.path.isdir(directory):
+        raise NcarRetrievalError(f"the directory of {path} does not exist")
+    lock_path = f"{path}.lock"
+    try:
+        import fcntl
+    except ImportError:
+        fcntl = None
+    while True:
+        if fcntl is None:
+            try:
+                handle = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_RDWR, 0o644)
+            except FileExistsError:
+                raise NcarRetrievalError(
+                    f"another retrieval is writing {path} ({lock_path} exists); wait for it to end, or remove "
+                    f"{lock_path} if no retrieval is running") from None
+            break
+        handle = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+        try:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            holder = os.read(handle, 200).decode("utf-8", "replace").strip()
+            os.close(handle)
+            raise NcarRetrievalError(
+                f"another retrieval is writing {path}{f' (process {holder})' if holder else ''}; wait for it to "
+                f"end, then run again: the file it writes will be reused") from None
+        # a retrieval that just ended removes the lock file: lock the file that is there now
+        try:
+            same = os.path.samestat(os.fstat(handle), os.stat(lock_path))
+        except FileNotFoundError:
+            same = False
+        if same:
+            break
+        os.close(handle)
+    try:
+        os.ftruncate(handle, 0)
+        os.write(handle, f"{os.getpid()} on {platform.node()}".encode())
+        yield
+    finally:
+        with contextlib.suppress(OSError):
+            os.remove(lock_path)
+        os.close(handle)
 
 
 def _sha256(path):
@@ -668,27 +906,46 @@ def _header_bytes(response):
         len(f"{key}: {value}\r\n".encode("latin-1", "replace")) for key, value in response.headers.items())
 
 
-def _download(request, part, timeout, opener, cancel, meter):
+def _framing_allowance(request):
+    """Bytes reserved for the chunk framing of a response without Content-Length."""
+    return max(HEADER_ALLOWANCE, request.max_bytes // FRAMING_SHARE)
+
+
+def _download(request, part, timeout, opener, cancel, meter, budget=None):
     """
     One attempt: stream the response to ``part`` and return (sha256, size, http).
 
-    ``meter`` receives the bytes read so far (``header_bytes``, ``body_bytes``)
-    and the seconds until the headers arrived; at most ``request.max_bytes``
-    bytes of status line, headers and body are read, in at most ``timeout``
-    seconds plus the time the largest response takes at MIN_TRANSFER_RATE.
+    ``meter`` receives the bytes read so far (``header_bytes``, ``body_bytes``),
+    the seconds until the headers arrived, whether the response was read to
+    its end (``complete``), the bytes counted by the connection
+    (``_received``, see :class:`_Received`) and any extra reservation
+    (``_extra_reserved``, made in ``budget`` for the chunk framing of a
+    response without Content-Length). At most ``request.max_bytes`` bytes of
+    status line, headers and body are read, in at most ``timeout`` seconds
+    plus the time the largest response takes at MIN_TRANSFER_RATE.
     """
     message = urllib.request.Request(request.url, headers={"User-Agent": USER_AGENT})
+    message.lectk_limit = request.max_bytes
     started = time.monotonic()
     deadline = started + timeout + request.max_bytes / MIN_TRANSFER_RATE
     try:
         response = opener(message, timeout=timeout)
     except urllib.error.HTTPError as error:
+        meter["_received"] = getattr(getattr(error, "fp", None), "lectk_received", None)
         body = _error_text(error)
+        with contextlib.suppress(Exception):
+            error.close()
         if error.code in RETRY_STATUS:
             raise _Retryable(f"HTTP {error.code} {error.reason}: {body or 'no message'}",
                              _retry_after(error.headers))
         raise NcarRequestError(_refusal(error.code, error.reason, body, request.url))
+    except _ResponseTooLarge as error:
+        meter["_received"] = error.received
+        raise NcarContentError(f"{request.key}: the response headers alone pass the {request.max_bytes} "
+                               f"bytes this request can hold") from None
     meter["seconds_to_headers"] = round(time.monotonic() - started, 3)
+    received = getattr(response, "lectk_received", None)
+    meter["_received"] = received
     digest, size = hashlib.sha256(), 0
     with response:
         headers = response.headers
@@ -710,26 +967,45 @@ def _download(request, part, timeout, opener, cancel, meter):
                 f"{request.key}: the service announced {expected} bytes, more than the "
                 f"{limit} bytes this request can hold"
             )
+        if expected is None:
+            # chunked: the framing (not visible in the body) must be counted, and reserved first
+            if received is None or received.limit is None:
+                raise NcarContentError(
+                    f"{request.key}: the service sent no Content-Length, and the bytes of this response "
+                    f"cannot be counted with this opener"
+                )
+            extra = _framing_allowance(request)
+            if budget is not None:
+                budget.reserve(request, extra, what="its chunk framing (the service sent no Content-Length)")
+                meter["_extra_reserved"] = extra
+            received.limit += extra
         with open(part, "wb") as handle:
-            while True:
-                if cancel.is_set():
-                    raise _Cancelled()
-                if time.monotonic() > deadline:
-                    raise _Retryable(f"response too slow: {size} bytes in {time.monotonic() - started:.0f} s")
-                block = response.read(min(1 << 20, limit + 1 - size))
-                if not block:
-                    break
-                size += len(block)
-                meter["body_bytes"] = size
-                if size > limit:
-                    raise NcarContentError(
-                        f"{request.key}: response larger than the {limit} bytes this request can hold"
-                    )
-                digest.update(block)
-                try:
-                    handle.write(block)
-                except OSError as error:
-                    raise NcarRetrievalError(f"cannot write {part}: {error}") from error
+            try:
+                while True:
+                    if cancel.is_set():
+                        raise _Cancelled()
+                    if time.monotonic() > deadline:
+                        raise _Retryable(f"response too slow: {size} bytes in {time.monotonic() - started:.0f} s")
+                    block = response.read(min(1 << 20, limit + 1 - size))
+                    if not block:
+                        break
+                    size += len(block)
+                    meter["body_bytes"] = size
+                    if size > limit:
+                        raise NcarContentError(
+                            f"{request.key}: response larger than the {limit} bytes this request can hold"
+                        )
+                    digest.update(block)
+                    try:
+                        handle.write(block)
+                    except OSError as error:
+                        raise NcarRetrievalError(f"cannot write {part}: {error}") from error
+            except _ResponseTooLarge as error:
+                raise NcarContentError(
+                    f"{request.key}: response larger than the {error.received.limit} bytes this request can hold "
+                    f"(status line, headers{', chunk framing' if expected is None else ''} and body)"
+                ) from None
+        meter["complete"] = expected is None or size == expected
         if expected is not None and size != expected:
             raise _Retryable(f"incomplete response: {size} of {expected} bytes")
         if not content_type.startswith("application/x-netcdf"):
@@ -908,17 +1184,33 @@ def _fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel,
         started_utc = datetime.datetime.now(datetime.timezone.utc)
         started = time.monotonic()
         meter = {}
-        charged, failure = request.max_bytes, None
+        failure = None
         try:
-            sha256, size, http = _download(request, part, timeout, opener, cancel, meter)
-            if http["content_length"] is not None:
-                charged = http["header_bytes"] + size
+            sha256, size, http = _download(request, part, timeout, opener, cancel, meter, budget)
             check_piece(part, request)
         except BaseException as error:
             failure = error
-        budget.settle(request, charged, dict(
+        received = meter.pop("_received", None)
+        reserved = request.max_bytes + meter.pop("_extra_reserved", 0)
+        if received is not None:
+            # counted on the connection; an abandoned response may still have been arriving
+            charged = meter["received_bytes"] = received.bytes
+            if not meter.get("complete"):
+                window = WINDOW_ALLOWANCE if received.window is None else received.window
+                meter["receive_window_bytes"] = window
+                charged += window
+        elif failure is None and http["content_length"] is not None:
+            charged = http["header_bytes"] + size
+        else:
+            charged = request.max_bytes
+        over = budget.settle(request, charged, dict(
             meter, attempt=attempt, started_utc=_iso(started_utc), seconds=round(time.monotonic() - started, 3),
-            result="ok" if failure is None else _describe(failure)))
+            result="ok" if failure is None else _describe(failure)), reserved=reserved)
+        if over:
+            logger.warning(
+                f"⚠️ {request.key}: counting what the network may still have delivered after an interrupted "
+                f"response, the bytes received pass the limit by {over}; no further request is made"
+            )
         try:
             if failure is not None:
                 raise failure
@@ -1175,6 +1467,8 @@ def retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=
     """
     Retrieve every request of a plan and write the verified file ``path``.
 
+    Only one retrieval of a file runs at a time (see :func:`_exclusive`).
+
     Args:
         plan (RetrievalPlan): Requests to make.
         path (str): Output NetCDF file; must not exist.
@@ -1209,6 +1503,17 @@ def retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=
         NcarRetrievalError: If the file could not be produced; the verified
             responses stay in ``<path>.parts/`` for the next attempt.
     """
+    with _exclusive(path):
+        return _retrieve(plan, path, names, logger=logger, workers=workers, opener=opener, timeout=timeout,
+                         attempts=attempts, backoff=backoff, compress=compress, float64=float64,
+                         keep_parts=keep_parts, max_total_bytes=max_total_bytes, request_info=request_info,
+                         namelist=namelist, budget=budget)
+
+
+def _retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=None, attempts=None,
+              backoff=None, compress=True, float64=False, keep_parts=False, max_total_bytes=None,
+              request_info=None, namelist=None, budget=None):
+    """:func:`retrieve`, with the lock of ``path`` already held."""
     logger = logger or logging.getLogger("lorenzcycletoolkit")
     opener = opener or default_opener()
     workers = DEFAULT_WORKERS if workers is None else workers
@@ -1411,25 +1716,30 @@ def get_ncar_data(args, track, app_logger, namelist="inputs/namelist", **options
     except ValueError as error:
         app_logger.error(f"❌ NCAR GDEX request cannot be made: {error}")
         raise
-    if os.path.exists(args.infile):
-        try:
-            check_existing(args.infile, plan, names, float64=options.get("float64", False))
-        except NcarReuseError as error:
-            app_logger.error(f"❌ {error}")
-            raise
-        app_logger.info(f"✅ NCAR GDEX data already exists and matches its provenance record, "
-                        f"skipping download: {args.infile}")
-        return args.infile
-    trackfile = getattr(args, "trackfile", None)
-    request_info = {
-        "rule": "area, levels and hours of the CDS API route (get_cdsapi_data) for the track",
-        "time_resolution_hours": int(args.time_resolution),
-        "track_extent": {"min_lat": float(track["Lat"].min()), "max_lat": float(track["Lat"].max()),
-                         "min_lon": float(track["Lon"].min()), "max_lon": float(track["Lon"].max())},
-        "trackfile": trackfile,
-        "trackfile_sha256": _sha256(trackfile) if trackfile and os.path.isfile(trackfile) else None,
-    }
-    retrieve(plan, args.infile, names, logger=app_logger, request_info=request_info, namelist=namelist, **options)
+    if not os.path.exists(args.infile):
+        # runs that only read an existing file never take the lock; a run that retrieves holds it, and
+        # checks again once it has it, in case another run has just written the file
+        with _exclusive(args.infile):
+            if not os.path.exists(args.infile):
+                trackfile = getattr(args, "trackfile", None)
+                request_info = {
+                    "rule": "area, levels and hours of the CDS API route (get_cdsapi_data) for the track",
+                    "time_resolution_hours": int(args.time_resolution),
+                    "track_extent": {"min_lat": float(track["Lat"].min()), "max_lat": float(track["Lat"].max()),
+                                     "min_lon": float(track["Lon"].min()), "max_lon": float(track["Lon"].max())},
+                    "trackfile": trackfile,
+                    "trackfile_sha256": _sha256(trackfile) if trackfile and os.path.isfile(trackfile) else None,
+                }
+                _retrieve(plan, args.infile, names, logger=app_logger, request_info=request_info,
+                          namelist=namelist, **options)
+                return args.infile
+    try:
+        check_existing(args.infile, plan, names, float64=options.get("float64", False))
+    except NcarReuseError as error:
+        app_logger.error(f"❌ {error}")
+        raise
+    app_logger.info(f"✅ NCAR GDEX data already exists and matches its provenance record, "
+                    f"skipping download: {args.infile}")
     return args.infile
 
 

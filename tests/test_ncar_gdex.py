@@ -7,6 +7,7 @@ cleanly: the session guard blocks that attempt and the test expects it.
 """
 
 import argparse
+import contextlib
 import datetime
 import email.message
 import email.utils
@@ -16,7 +17,9 @@ import logging
 import os
 import random
 import shutil
+import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -30,7 +33,12 @@ import xarray as xr
 
 import lorenzcycletoolkit
 from src.utils import ncar_gdex as g
-from tests.ncss_emulator import FakeGdex, field_values
+from tests.ncss_emulator import FakeGdex, FakeWire, field_values
+
+try:
+    import fcntl
+except ImportError:  # Windows
+    fcntl = None
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LOGGER = logging.getLogger("test_ncar_gdex")
@@ -323,9 +331,12 @@ def test_retry_after_as_an_http_date():
     assert g._retry_after(email.message.Message()) is None and g._retry_after(None) is None
 
 
-def test_missing_content_length_is_accepted_when_the_file_is_complete(tmp_path):
-    _, path, _ = _retrieve(tmp_path, FakeGdex(faults={"Z_20180810": ["no-length"]}))
-    assert path.exists()
+def test_a_response_without_length_is_refused_when_its_bytes_cannot_be_counted(tmp_path):
+    # an opener that does not count what its connections receive cannot see the chunk framing
+    fake = FakeGdex(faults={"Z_20180810": ["no-length"] * 4})
+    with pytest.raises(g.NcarContentError, match="no Content-Length.*cannot be counted"):
+        _retrieve(tmp_path, fake, workers=1)
+    assert sum(1 for _, fault, _ in fake.calls if fault == "no-length") == 1
 
 
 def test_persistent_failure_stops_without_a_file_and_keeps_the_verified_responses(tmp_path):
@@ -415,22 +426,17 @@ def test_the_default_limit_counts_retries(tmp_path):
     assert len(fake.calls) == 3
 
 
-@pytest.mark.parametrize("fault", ["timeout", "refused", "http503", "reset", "read-timeout", "truncate", "garbage",
-                                   "no-length"])
+@pytest.mark.parametrize("fault", ["timeout", "refused", "http503", "reset", "read-timeout", "truncate", "garbage"])
 def test_each_kind_of_attempt_is_charged_as_announced(fault, tmp_path):
-    # a failed attempt, or one whose length is not announced, is charged its whole reservation; a complete
-    # response with a Content-Length is charged its status line, headers and body
+    # with an opener that cannot count (see the FakeWire tests for the toolkit's own), a failed attempt is
+    # charged its whole reservation and a complete response its status line, headers and body
     reservation = _reservation(days=TWO_DAYS[:1])
     budget = g.ByteBudget(10 ** 9)
     fake = FakeGdex(faults={"T_20180809": [fault]})
     plan, path, record = _retrieve(tmp_path, fake, days=TWO_DAYS[:1], workers=1, budget=budget)
     assert path.exists() and budget.reserved == 0
     assert budget.used == sum(a["charged_bytes"] for a in budget.attempts) == record["totals"]["received_bytes_counted"]
-    attempts = [a for a in budget.attempts if a["key"] == "T_20180809_0"]
-    if fault == "no-length":
-        assert [a["result"] for a in attempts] == ["ok"] and attempts[0]["charged_bytes"] == reservation
-        return
-    failed, retried = attempts
+    failed, retried = [a for a in budget.attempts if a["key"] == "T_20180809_0"]
     assert failed["result"] != "ok" and failed["charged_bytes"] == reservation
     assert failed.get("header_bytes", 0) + failed.get("body_bytes", 0) <= reservation
     assert retried["result"] == "ok" and retried["charged_bytes"] == retried["header_bytes"] + retried["body_bytes"]
@@ -478,28 +484,256 @@ def test_requests_in_progress_reserve_their_bytes(tmp_path):
     assert len(fake.calls) <= 2 and budget.used <= budget.limit and budget.reserved == 0
 
 
-def test_a_body_without_length_is_read_only_up_to_the_reservation(tmp_path):
-    fake = FakeGdex()
-    read = []
+# ------------------------------------------------- bytes counted on the wire
+WIRE_BASE = "http://gdex.test/thredds/ncss/grid/files/d633000/e5.oper.an.pl"
 
-    def opener(request, timeout=None):
-        response = fake.opener(request, timeout)
-        body = response.getvalue() + b"\0" * 3 * len(response.getvalue())
-        headers = {k: v for k, v in response.headers.items() if k != "Content-Length"}
-        endless = type(response)(body, headers)
-        original = endless.read
-        endless.read = lambda size=-1: read.append(size) or original(size)
-        return endless
 
+def _wire_retrieve(tmp_path, monkeypatch, wire, days=TWO_DAYS[:1], name="out.nc", **options):
+    """Retrieval through the toolkit's own opener, whose connections are FakeWire sockets."""
+    monkeypatch.setattr(g, "_open_socket", wire)
+    plan = g.plan_retrieval(SMALL, days, base_url=WIRE_BASE)
+    path = tmp_path / name
+    record = g.retrieve(plan, str(path), _names(), logger=LOGGER, workers=1, **options)
+    return plan, path, record
+
+
+def _first_wire_request():
+    return g.plan_retrieval(SMALL, TWO_DAYS[:1], base_url=WIRE_BASE).requests[0]
+
+
+def _limit(request, chunked=False):
+    """Most bytes a connection may receive for a request (one more detects a longer answer)."""
+    return request.max_bytes + (g._framing_allowance(request) if chunked else 0)
+
+
+def test_the_toolkit_opener_counts_every_byte_its_connections_receive(tmp_path, monkeypatch):
+    wire = FakeWire()
     budget = g.ByteBudget(10 ** 9)
-    plan = g.plan_retrieval(SMALL, TWO_DAYS)
-    with pytest.raises(g.NcarContentError, match="larger than"):
-        g.retrieve(plan, str(tmp_path / "out.nc"), _names(), logger=LOGGER, opener=opener, workers=1,
-                   budget=budget)
-    attempt = budget.attempts[0]
-    assert all(size > 0 for size in read)
-    assert attempt["header_bytes"] + attempt["body_bytes"] == plan.requests[0].max_bytes
-    assert attempt["charged_bytes"] == plan.requests[0].max_bytes and len(budget.attempts) == 1
+    plan, path, record = _wire_retrieve(tmp_path, monkeypatch, wire, budget=budget)
+    assert path.exists() and len(wire.sent) == len(plan.requests)
+    assert [a["received_bytes"] for a in budget.attempts] == wire.sent
+    assert all(a["charged_bytes"] == a["received_bytes"] == a["header_bytes"] + a["body_bytes"]
+               for a in budget.attempts)
+    assert budget.used == sum(wire.sent) == record["totals"]["received_bytes_counted"] and budget.reserved == 0
+    with xr.open_dataset(path) as ds:
+        assert np.array_equal(ds["T"].values, _expected(plan, "T"))
+
+
+def test_a_chunked_response_is_counted_with_its_framing(tmp_path, monkeypatch):
+    wire = FakeWire(mode=lambda key, n: "chunked:1000" if key == "T_20180809" else "length")
+    budget = g.ByteBudget(10 ** 9)
+    plan, path, record = _wire_retrieve(tmp_path, monkeypatch, wire, budget=budget)
+    chunked = next(a for a in budget.attempts if a["key"] == "T_20180809_0")
+    framing = chunked["received_bytes"] - chunked["header_bytes"] - chunked["body_bytes"]
+    assert chunked["result"] == "ok" and framing > 0 and chunked["charged_bytes"] == chunked["received_bytes"]
+    assert chunked["reserved_bytes"] == _limit(plan.requests[0], chunked=True)
+    assert budget.used == sum(wire.sent) and budget.reserved == 0
+    with xr.open_dataset(path) as ds:
+        assert np.array_equal(ds["T"].values, _expected(plan, "T"))
+
+
+@pytest.mark.parametrize("mode, text", [
+    ("extensions", "chunk framing and body"),   # one-byte chunks with 4000-byte extensions: framing explodes
+    ("endless", "larger than"),                 # chunked body that never ends
+    ("headers", "headers alone"),               # 600 kB of headers
+])
+def test_a_misbehaving_answer_stops_at_the_reservation_and_is_charged_what_arrived(mode, text, tmp_path,
+                                                                                   monkeypatch):
+    wire = FakeWire(mode=lambda key, n: mode)
+    budget = g.ByteBudget(10 ** 9)
+    with pytest.raises(g.NcarContentError, match=text):
+        _wire_retrieve(tmp_path, monkeypatch, wire, budget=budget)
+    request = _first_wire_request()
+    (attempt,) = budget.attempts
+    # the connection never received more than the reservation (+1 byte); nothing is retried
+    assert attempt["received_bytes"] == wire.sent[0] <= _limit(request, chunked=mode != "headers") + 1
+    assert len(wire.sent) == 1
+    # the answer was abandoned: what the network may still have delivered is charged too
+    assert attempt["receive_window_bytes"] == wire.window
+    assert attempt["charged_bytes"] == attempt["received_bytes"] + wire.window == budget.used
+
+
+def test_an_interrupted_answer_is_charged_its_receive_window(tmp_path, monkeypatch):
+    wire = FakeWire(mode=lambda key, n: "stall" if n == 1 else "length", window=12345)
+    budget = g.ByteBudget(10 ** 9)
+    plan, path, record = _wire_retrieve(tmp_path, monkeypatch, wire, budget=budget, attempts=2)
+    failed, retried = [a for a in budget.attempts if a["key"] == "T_20180809_0"]
+    assert "timed out" in failed["result"] and failed["received_bytes"] == wire.sent[0]
+    assert failed["charged_bytes"] == failed["received_bytes"] + 12345
+    assert retried["result"] == "ok" and "receive_window_bytes" not in retried
+    assert budget.used == sum(wire.sent) + 12345 * sum(1 for m in wire.modes if m == "stall")
+
+
+def test_a_counted_error_answer_is_charged_what_arrived(tmp_path, monkeypatch):
+    wire = FakeWire(mode=lambda key, n: "http503" if n == 1 else "length")
+    budget = g.ByteBudget(10 ** 9)
+    _wire_retrieve(tmp_path, monkeypatch, wire, budget=budget, attempts=2)
+    failed = budget.attempts[0]
+    assert failed["result"].startswith("HTTP 503") and failed["received_bytes"] == wire.sent[0] > 3000
+    assert failed["charged_bytes"] == failed["received_bytes"] + wire.window
+
+
+def test_bytes_past_the_limit_are_announced_and_stop_the_retrieval(tmp_path, monkeypatch, caplog):
+    # the receive window of an interrupted answer may take the total past the limit: said, never silent
+    request = _first_wire_request()
+    wire = FakeWire(mode=lambda key, n: "stall", window=10 * request.max_bytes)
+    budget = g.ByteBudget(request.max_bytes + 1000)
+    with caplog.at_level(logging.WARNING, logger=LOGGER.name), pytest.raises(g.NcarTransferError, match="not requested"):
+        _wire_retrieve(tmp_path, monkeypatch, wire, budget=budget, attempts=3)
+    assert len(wire.sent) == 1 and budget.used > budget.limit
+    assert f"pass the limit by {budget.used - budget.limit}" in caplog.text
+
+
+def test_no_room_for_the_chunk_framing_stops_before_the_body(tmp_path, monkeypatch):
+    request = _first_wire_request()
+    wire = FakeWire(mode=lambda key, n: "chunked:8192")
+    budget = g.ByteBudget(request.max_bytes)
+    with pytest.raises(g.NcarTransferError, match="response not read, because its chunk framing"):
+        _wire_retrieve(tmp_path, monkeypatch, wire, budget=budget)
+    (attempt,) = budget.attempts
+    assert len(wire.sent) == 1 and attempt["received_bytes"] == wire.sent[0] < request.max_bytes
+    assert attempt["reserved_bytes"] == request.max_bytes and budget.reserved == 0
+
+
+# ---------------------------------------------------------- one at a time
+needs_flock = pytest.mark.skipif(fcntl is None, reason="flock is not available")
+
+
+@needs_flock
+def test_a_second_retrieval_of_the_same_file_stops_at_once(tmp_path):
+    lock = tmp_path / "out.nc.lock"
+    handle = os.open(lock, os.O_CREAT | os.O_RDWR)
+    fcntl.flock(handle, fcntl.LOCK_EX)
+    os.write(handle, b"4242 on elsewhere")
+    fake = FakeGdex()
+    try:
+        with pytest.raises(g.NcarRetrievalError, match="another retrieval is writing .*process 4242 on elsewhere"):
+            _retrieve(tmp_path, fake)
+    finally:
+        os.close(handle)
+    assert fake.calls == [] and not (tmp_path / "out.nc.parts").exists() and lock.exists()
+
+
+@needs_flock
+def test_the_lock_of_a_process_that_died_does_not_block(tmp_path):
+    lock = tmp_path / "out.nc.lock"
+    code = ("import fcntl, os, sys, time; h = os.open(sys.argv[1], os.O_CREAT | os.O_RDWR); "
+            "fcntl.flock(h, fcntl.LOCK_EX); print('locked', flush=True); time.sleep(60)")
+    child = subprocess.Popen([sys.executable, "-c", code, str(lock)], stdout=subprocess.PIPE, text=True)
+    try:
+        assert child.stdout.readline().strip() == "locked"
+        with pytest.raises(g.NcarRetrievalError, match="another retrieval is writing"):
+            _retrieve(tmp_path, FakeGdex())
+    finally:
+        child.kill()
+        child.wait()
+        child.stdout.close()
+    # the system released the lock of the dead process; its lock file is reused, then removed
+    assert lock.exists()
+    plan, path, _ = _retrieve(tmp_path, FakeGdex())
+    assert path.exists() and not lock.exists()
+
+
+def test_two_retrievals_started_together_write_one_file(tmp_path):
+    fake = FakeGdex(delay=lambda n: 0.2)
+    start, outcomes = threading.Barrier(2), []
+
+    def run(index):
+        start.wait()
+        time.sleep(0.05 * index)
+        try:
+            _retrieve(tmp_path, fake, days=TWO_DAYS[:1], workers=1)
+            outcomes.append("ok")
+        except g.NcarRetrievalError as error:
+            outcomes.append(str(error))
+
+    threads = [threading.Thread(target=run, args=(i,)) for i in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert sorted(outcomes)[-1] == "ok" and "another retrieval is writing" in sorted(outcomes)[0]
+    assert len(fake.calls) == 5 and not (tmp_path / "out.nc.lock").exists()
+
+
+def test_the_lock_is_released_when_a_retrieval_fails(tmp_path):
+    with pytest.raises(g.NcarTransferError):
+        _retrieve(tmp_path, FakeGdex(faults={"V_20180810": ["http500"] * 4}), workers=1)
+    assert not (tmp_path / "out.nc.lock").exists()
+    plan, path, record = _retrieve(tmp_path, FakeGdex(), workers=1)
+    assert path.exists() and record["totals"]["reused_responses"] >= 1
+
+
+@needs_flock
+def test_a_lock_file_replaced_while_locking_is_locked_again(tmp_path, monkeypatch):
+    # a retrieval that ends removes its lock file; one that locked the old file must lock the new one
+    real, calls = fcntl.flock, []
+    lock = tmp_path / "out.nc.lock"
+
+    def flock(handle, operation):
+        real(handle, operation)
+        calls.append(operation)
+        if len(calls) == 1:
+            lock.unlink()
+            lock.write_text("")
+
+    monkeypatch.setattr(fcntl, "flock", flock)
+    plan, path, _ = _retrieve(tmp_path, FakeGdex())
+    assert path.exists() and len(calls) == 2 and not lock.exists()
+
+
+def _track_and_args(tmp_path, name="case.nc"):
+    trackfile = tmp_path / "track"
+    trackfile.write_text(TRACK)
+    track = g._read_track(str(trackfile), LOGGER)
+    args = argparse.Namespace(infile=str(tmp_path / name), trackfile=str(trackfile), time_resolution=6)
+    return track, args
+
+
+@needs_flock
+def test_runs_that_read_an_existing_file_do_not_need_the_lock(tmp_path, monkeypatch):
+    track, args = _track_and_args(tmp_path)
+    namelist = str(REPO_ROOT / "inputs" / "namelist_ERA5")
+    fake = FakeGdex()
+    assert g.get_ncar_data(args, track, LOGGER, namelist=namelist, opener=fake.opener) == args.infile
+    handle = os.open(f"{args.infile}.lock", os.O_CREAT | os.O_RDWR)
+    fcntl.flock(handle, fcntl.LOCK_EX)
+    monkeypatch.setattr(g, "default_opener", lambda: pytest.fail("no request to reuse a file"))
+    try:
+        # reading the existing file works while another run holds the lock ...
+        assert g.get_ncar_data(args, track, LOGGER, namelist=namelist) == args.infile
+        # ... retrieving a missing file does not
+        other = argparse.Namespace(**dict(vars(args), infile=str(tmp_path / "other.nc")))
+        handle_other = os.open(f"{other.infile}.lock", os.O_CREAT | os.O_RDWR)
+        fcntl.flock(handle_other, fcntl.LOCK_EX)
+        with pytest.raises(g.NcarRetrievalError, match="another retrieval is writing"):
+            g.get_ncar_data(other, track, LOGGER, namelist=namelist)
+        os.close(handle_other)
+    finally:
+        os.close(handle)
+
+
+def test_a_file_written_by_another_run_while_waiting_for_the_lock_is_reused(tmp_path, monkeypatch):
+    track, args = _track_and_args(tmp_path)
+    namelist = str(REPO_ROOT / "inputs" / "namelist_ERA5")
+    ready = tmp_path / "ready"
+    ready.mkdir()
+    done, _ = _track_and_args(ready)
+    g.get_ncar_data(argparse.Namespace(**dict(vars(args), infile=str(ready / "case.nc"))), done, LOGGER,
+                    namelist=namelist, opener=FakeGdex().opener)
+    real = g._exclusive
+
+    @contextlib.contextmanager
+    def other_run_ends_first(path):
+        # the other run moves its verified file in just before this run gets the lock
+        for suffix in ("", ".provenance.json"):
+            shutil.copy(ready / f"case.nc{suffix}", f"{path}{suffix}")
+        with real(path):
+            yield
+
+    monkeypatch.setattr(g, "_exclusive", other_run_ends_first)
+    monkeypatch.setattr(g, "default_opener", lambda: pytest.fail("no request: the file of the other run is reused"))
+    assert g.get_ncar_data(args, track, LOGGER, namelist=namelist) == args.infile
 
 
 def test_a_missing_output_directory_is_reported(tmp_path):

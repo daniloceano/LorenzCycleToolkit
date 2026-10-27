@@ -14,6 +14,13 @@ Faults can be scripted per field and day (HTTP errors, timeouts, connection
 resets, truncated or oversized bodies, web pages, wrong grids, missing
 values). The opener is called in-process, so the network guard of the test
 suite is not involved.
+
+``FakeWire`` serves the same answers as raw HTTP bytes (status line,
+headers, body, optionally chunked) through fake sockets, so that the
+toolkit's own opener, which counts the bytes its connections receive, runs
+end to end without a network. It also sends what a misbehaving server could:
+tiny chunks with long extensions, endless bodies, oversized headers, answers
+that stop half-way.
 """
 
 import datetime
@@ -290,3 +297,145 @@ class FakeGdex:
             headers = {k: v for k, v in headers.items() if k != "Content-Length"}
             return FakeResponse(body, headers)
         return FakeResponse(body, headers)
+
+
+# --------------------------------------------------------------- raw HTTP
+REASONS = {200: "OK", 403: "Forbidden", 404: "Not Found", 400: "Bad Request", 503: "Service Unavailable"}
+
+
+class WireSocket:
+    """Fake socket of :class:`FakeWire`: collects the request written to it and answers with raw HTTP bytes."""
+
+    def __init__(self, wire):
+        self.wire = wire
+        self.request = b""
+        self.blocks = None
+        self.pending = b""
+        self.sent = 0
+        self.closed = False
+
+    def setsockopt(self, *args):
+        pass
+
+    def settimeout(self, value):
+        pass
+
+    def gettimeout(self):
+        return None
+
+    def getsockopt(self, level, option, *args):
+        return self.wire.window
+
+    def sendall(self, data):
+        self.request += bytes(data)
+
+    def _next(self):
+        if self.blocks is None:
+            self.blocks = self.wire.answer(self.request)
+        while not self.pending:
+            block = next(self.blocks, None)
+            if block is None:
+                return False
+            self.pending = block
+        return True
+
+    def recv_into(self, buffer, nbytes=0, flags=0):
+        view = memoryview(buffer).cast("B")
+        size = nbytes or len(view)
+        if not self._next():
+            return 0
+        n = min(size, len(self.pending))
+        view[:n] = self.pending[:n]
+        self.pending = self.pending[n:]
+        self.sent += n
+        with self.wire.lock:
+            self.wire.sent[-1] += n
+        return n
+
+    def recv(self, bufsize, flags=0):
+        buffer = bytearray(bufsize)
+        return bytes(buffer[:self.recv_into(buffer)])
+
+    def close(self):
+        self.closed = True
+
+
+class FakeWire:
+    """
+    Socket factory (``callable(address, timeout, source_address)``) whose
+    sockets answer NCSS requests like :class:`FakeGdex`, as raw HTTP bytes.
+
+    Args:
+        gdex (FakeGdex): Source of the answers (status, headers, body).
+        mode (callable): ``mode(key, n)`` -> how to send the n-th answer for
+            "<field>_<YYYYMMDD>": "length" (Content-Length, the default),
+            "chunked:<size>", "extensions" (one-byte chunks with 4000-byte
+            chunk extensions), "endless" (chunked, never ends), "headers"
+            (150 headers of 4 kB), "stall" (stops after half the body: the next
+            read times out), "http503".
+        window (int): Receive buffer reported by the sockets (SO_RCVBUF).
+    """
+
+    def __init__(self, gdex=None, mode=None, window=65536):
+        self.gdex = gdex or FakeGdex()
+        self.mode = mode or (lambda key, n: "length")
+        self.window = window
+        self.lock = threading.Lock()
+        self.sent = []      # bytes sent on each connection
+        self.modes = []     # mode of each answer
+        self.counts = {}
+
+    def __call__(self, address, timeout=None, source_address=None):
+        with self.lock:
+            self.sent.append(0)
+        return WireSocket(self)
+
+    def answer(self, request):
+        head = request.split(b"\r\n\r\n", 1)[0].decode("latin-1").split("\r\n")
+        target = head[0].split(" ")[1]
+        host = next(line.split(":", 1)[1].strip() for line in head[1:] if line.lower().startswith("host:"))
+        url = target if target.startswith("http") else f"http://{host}{target}"
+        query = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(url).query))
+        match = PATH.search(urllib.parse.urlsplit(url).path)
+        key = f"{query.get('var')}_{match['day']}" if match else url
+        with self.lock:
+            self.counts[key] = self.counts.get(key, 0) + 1
+            mode = self.mode(key, self.counts[key])
+            self.modes.append(mode)
+        status, headers, body, _ = self.gdex.respond(url)
+        if mode == "http503":
+            status, body = 503, b"<html><body>Service Unavailable" + b" " * 3000 + b"</body></html>"
+            headers = {"Content-Type": "text/html", "Content-Length": len(body), "Retry-After": "0"}
+        lines = [f"HTTP/1.1 {status} {REASONS.get(status, 'Status')}"]
+        with_length = mode in ("length", "stall", "headers", "http503")
+        lines += [f"{k}: {v}" for k, v in headers.items() if k != "Content-Length" or with_length]
+        if mode.startswith("chunked") or mode in ("extensions", "endless"):
+            lines.append("Transfer-Encoding: chunked")
+        if mode == "headers":
+            lines += [f"X-Padding-{i}: {'p' * 4000}" for i in range(150)]
+        lines.append("Connection: close")
+        return self._blocks(("\r\n".join(lines) + "\r\n\r\n").encode("latin-1"), body, mode)
+
+    @staticmethod
+    def _blocks(head, body, mode):
+        yield head
+        if mode in ("length", "headers", "http503"):
+            yield body
+        elif mode == "stall":
+            yield body[:len(body) // 2]
+            raise TimeoutError("timed out (emulated stall)")
+        elif mode.startswith("chunked"):
+            size = int(mode.split(":")[1])
+            for start in range(0, len(body), size):
+                chunk = body[start:start + size]
+                yield f"{len(chunk):x}\r\n".encode() + chunk + b"\r\n"
+            yield b"0\r\n\r\n"
+        elif mode == "extensions":
+            extension = b";x=" + b"e" * 4000
+            for start in range(len(body)):
+                yield b"1" + extension + b"\r\n" + body[start:start + 1] + b"\r\n"
+            yield b"0\r\n\r\n"
+        elif mode == "endless":
+            chunk = body[:8192]
+            while True:
+                yield f"{len(chunk):x}\r\n".encode() + chunk + b"\r\n"
