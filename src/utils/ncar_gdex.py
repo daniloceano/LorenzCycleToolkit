@@ -39,6 +39,10 @@ the program stops and says why.
 Responses are kept in ``<file>.parts/`` until the file is complete, so an
 interrupted retrieval resumes from the verified responses already received.
 
+The bytes received are counted as the requests are made, failed attempts and
+retries included (see :class:`ByteBudget`): a request is not made when its
+largest possible response would take the total past the limit.
+
 GDEX publishes ERA5 some months after the CDS: dates that are not available
 yet stop the retrieval with a message that suggests ``--cdsapi``.
 
@@ -538,6 +542,52 @@ class PieceResult:
     reused: bool
 
 
+class ByteBudget:
+    """
+    Limit on the bytes received from the service, counted while requesting.
+
+    Before each attempt the most its response may hold (status line, headers
+    and body: :attr:`PieceRequest.max_bytes`) is reserved, and the attempt is
+    not made if the bytes already received plus the reservations would pass
+    the limit. A complete response with a Content-Length is then charged the
+    bytes of its status line, headers and body; any other attempt (an error
+    answer, a cut, refused or unreadable response, a retry, a response
+    without Content-Length whose chunk framing is not visible) is charged its
+    whole reservation. The total therefore never understates the bytes read
+    from the responses. One budget may serve several retrievals.
+
+    Args:
+        limit (int): Largest number of bytes received.
+        used (int): Bytes already received (by an earlier retrieval).
+    """
+
+    def __init__(self, limit, used=0):
+        self.limit = int(limit)
+        self.used = int(used)
+        self.reserved = 0
+        self.attempts = []
+        self._lock = threading.Lock()
+
+    def reserve(self, request):
+        """Reserve the largest response of ``request``, or raise NcarTransferError."""
+        with self._lock:
+            if self.used + self.reserved + request.max_bytes > self.limit:
+                pending = f", {self.reserved} reserved by requests in progress" if self.reserved else ""
+                raise NcarTransferError(
+                    f"{request.key}: not requested, because its response may hold up to {request.max_bytes} "
+                    f"bytes and {self.used} of the {self.limit} bytes allowed were already received{pending}"
+                )
+            self.reserved += request.max_bytes
+
+    def settle(self, request, charged, record):
+        """Release the reservation of an attempt and charge ``charged`` bytes."""
+        with self._lock:
+            self.reserved -= request.max_bytes
+            self.used += charged
+            self.attempts.append(dict(record, key=request.key, url=request.url, charged_bytes=charged,
+                                      total_bytes=self.used))
+
+
 class _RefuseRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
@@ -585,9 +635,23 @@ def _refusal(code, reason, body, url):
     return f"the service refused the request (HTTP {code} {reason}): {body or 'no message'}. URL: {url}"
 
 
-def _download(request, part, timeout, opener, cancel):
-    """One attempt: stream the response to ``part`` and return (sha256, size, http)."""
+def _header_bytes(response):
+    """Bytes of the status line and headers of a response, as sent (one space after each colon)."""
+    status = f"HTTP/1.1 {getattr(response, 'status', '')} {getattr(response, 'reason', '')}\r\n"
+    return len(status.encode("latin-1", "replace")) + 2 + sum(
+        len(f"{key}: {value}\r\n".encode("latin-1", "replace")) for key, value in response.headers.items())
+
+
+def _download(request, part, timeout, opener, cancel, meter):
+    """
+    One attempt: stream the response to ``part`` and return (sha256, size, http).
+
+    ``meter`` receives the bytes read so far (``header_bytes``, ``body_bytes``)
+    and the seconds until the headers arrived; at most ``request.max_bytes``
+    bytes of status line, headers and body are read.
+    """
     message = urllib.request.Request(request.url, headers={"User-Agent": USER_AGENT})
+    started = time.monotonic()
     try:
         response = opener(message, timeout=timeout)
     except urllib.error.HTTPError as error:
@@ -596,31 +660,40 @@ def _download(request, part, timeout, opener, cancel):
             raise _Retryable(f"HTTP {error.code} {error.reason}: {body or 'no message'}",
                              _retry_after(error.headers))
         raise NcarRequestError(_refusal(error.code, error.reason, body, request.url))
+    meter["seconds_to_headers"] = round(time.monotonic() - started, 3)
     digest, size = hashlib.sha256(), 0
     with response:
         headers = response.headers
+        meter["header_bytes"] = _header_bytes(response)
+        meter["body_bytes"] = 0
+        # status line + headers + body never pass the reservation (one byte more detects a longer body)
+        limit = request.max_bytes - meter["header_bytes"] - 1
+        if limit < 0:
+            raise NcarContentError(f"{request.key}: the response headers alone pass the {request.max_bytes} "
+                                   f"bytes this request can hold")
         content_type = headers.get("Content-Type") or ""
         length = headers.get("Content-Length")
         try:
             expected = int(length) if length is not None else None
         except ValueError:
             expected = None
-        if expected is not None and expected > request.max_bytes:
+        if expected is not None and expected > limit:
             raise NcarContentError(
                 f"{request.key}: the service announced {expected} bytes, more than the "
-                f"{request.max_bytes} bytes this request can hold"
+                f"{limit} bytes this request can hold"
             )
         with open(part, "wb") as handle:
             while True:
                 if cancel.is_set():
                     raise _Cancelled()
-                block = response.read(1 << 20)
+                block = response.read(min(1 << 20, limit + 1 - size))
                 if not block:
                     break
                 size += len(block)
-                if size > request.max_bytes:
+                meter["body_bytes"] = size
+                if size > limit:
                     raise NcarContentError(
-                        f"{request.key}: response larger than the {request.max_bytes} bytes this request can hold"
+                        f"{request.key}: response larger than the {limit} bytes this request can hold"
                     )
                 digest.update(block)
                 try:
@@ -641,6 +714,7 @@ def _download(request, part, timeout, opener, cancel):
             "status": status,
             "content_type": content_type,
             "content_length": expected,
+            "header_bytes": meter["header_bytes"],
             "date": headers.get("Date"),
             "content_disposition": headers.get("Content-Disposition"),
         }
@@ -763,13 +837,14 @@ def _wait(seconds, cancel):
         raise _Cancelled()
 
 
-def fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel, logger):
+def fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel, logger, budget):
     """
     Obtain one verified response, from the parts directory or from NCSS.
 
     Retries network failures, incomplete responses and HTTP 429/5xx with
     increasing waits (or the server's Retry-After); a refused request (other
-    4xx) or a response that is not the requested data stops at once.
+    4xx) or a response that is not the requested data stops at once. Every
+    attempt is first reserved in ``budget`` (:class:`ByteBudget`).
 
     Returns:
         PieceResult: The verified response.
@@ -781,7 +856,7 @@ def fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel, 
     if cancel.is_set():
         raise _Cancelled()
     try:
-        return _fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel, logger)
+        return _fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel, logger, budget)
     except _Cancelled:
         raise
     except BaseException:
@@ -789,7 +864,7 @@ def fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel, 
         raise
 
 
-def _fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel, logger):
+def _fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel, logger, budget):
     stored = _stored_piece(request, parts_dir)
     if stored is not None:
         logger.debug(f"♻️ {request.key}: verified response kept from an earlier attempt")
@@ -797,10 +872,24 @@ def _fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel,
     path = os.path.join(parts_dir, f"{request.key}.nc")
     part = f"{path}.part"
     for attempt in range(1, attempts + 1):
+        budget.reserve(request)
+        started_utc = datetime.datetime.now(datetime.timezone.utc)
         started = time.monotonic()
+        meter = {}
+        charged, failure = request.max_bytes, None
         try:
-            sha256, size, http = _download(request, part, timeout, opener, cancel)
+            sha256, size, http = _download(request, part, timeout, opener, cancel, meter)
+            if http["content_length"] is not None:
+                charged = http["header_bytes"] + size
             check_piece(part, request)
+        except BaseException as error:
+            failure = error
+        budget.settle(request, charged, dict(
+            meter, attempt=attempt, started_utc=_iso(started_utc), seconds=round(time.monotonic() - started, 3),
+            result="ok" if failure is None else _describe(failure)))
+        try:
+            if failure is not None:
+                raise failure
         except (_Retryable, *NETWORK_ERRORS) as error:
             if os.path.exists(part):
                 os.remove(part)
@@ -1033,7 +1122,7 @@ def check_existing(path, plan, names):
 # ---------------------------------------------------------------- retrieve
 def retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=None, attempts=None,
              backoff=None, compress=True, float64=False, keep_parts=False, max_total_bytes=None,
-             request_info=None, namelist=None):
+             request_info=None, namelist=None, budget=None):
     """
     Retrieve every request of a plan and write the verified file ``path``.
 
@@ -1055,9 +1144,14 @@ def retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=
         float64 (bool): See :func:`write_output`.
         keep_parts (bool): Keep the responses after the file is written.
         max_total_bytes (int): Largest retrieval accepted, in bytes
-            (default DEFAULT_MAX_TOTAL_BYTES).
+            (default DEFAULT_MAX_TOTAL_BYTES): the estimate is checked
+            before starting, and the bytes received (failed attempts and
+            retries included) can never pass it.
         request_info (dict): How the request was derived, for the record.
         namelist (str): Namelist the names came from, for the record.
+        budget (ByteBudget): Limit on the bytes received, shared with
+            other retrievals; replaces the count from ``max_total_bytes``
+            (whose estimate check still applies).
 
     Returns:
         dict: The provenance record (also written next to the file).
@@ -1073,6 +1167,7 @@ def retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=
     attempts = DEFAULT_ATTEMPTS if attempts is None else attempts
     backoff = DEFAULT_BACKOFF if backoff is None else backoff
     max_total_bytes = DEFAULT_MAX_TOTAL_BYTES if max_total_bytes is None else max_total_bytes
+    budget = ByteBudget(max_total_bytes) if budget is None else budget
     if not 1 <= int(workers) <= MAX_WORKERS:
         raise ValueError(f"workers must be between 1 and {MAX_WORKERS}, not {workers}")
     if int(attempts) < 1:
@@ -1107,6 +1202,7 @@ def retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=
     )
     started_utc = datetime.datetime.now(datetime.timezone.utc)
     started = time.monotonic()
+    used_before, attempts_before = budget.used, len(budget.attempts)
     cancel = threading.Event()
     results = {}
     # The last day goes first: a period that ends after the dates GDEX has
@@ -1116,7 +1212,7 @@ def retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=
     futures = []
     try:
         futures = [executor.submit(fetch_piece, request, parts_dir, opener, timeout, attempts, backoff,
-                                   cancel, logger) for request in ordered]
+                                   cancel, logger, budget) for request in ordered]
         for future in as_completed(futures):
             if future.exception() is not None:
                 cancel.set()
@@ -1206,7 +1302,10 @@ def retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=
             "reused_responses": len(pieces) - len(downloaded),
             "downloaded_bytes": sum(p.size for p in downloaded),
             "retries": sum(max(0, p.attempts - 1) for p in downloaded),
+            "received_bytes_counted": budget.used - used_before,
+            "received_bytes_limit": budget.limit,
         },
+        "attempts": budget.attempts[attempts_before:],
     }
     _write_json(f"{provenance_path(path)}.tmp", record)
     os.replace(part_path, path)
@@ -1295,7 +1394,7 @@ def main(argv=None):
     parser.add_argument("--workers", type=int, default=DEFAULT_WORKERS,
                         help=f"Requests in flight at the same time, 1 to {MAX_WORKERS} (default: {DEFAULT_WORKERS}).")
     parser.add_argument("--max-gib", type=float, default=DEFAULT_MAX_TOTAL_BYTES / 1024 ** 3,
-                        help="Largest transfer accepted, in GiB (default: %(default)g).")
+                        help="Largest number of bytes received (retries included), in GiB (default: %(default)g).")
     parser.add_argument("--no-compress", action="store_true", help="Write NetCDF-3 instead of compressed NetCDF-4.")
     parser.add_argument("--float64", action="store_true",
                         help="Store the float32 values as float64 (exact); the toolkit then computes in float64.")

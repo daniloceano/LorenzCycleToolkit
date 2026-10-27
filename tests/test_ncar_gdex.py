@@ -211,7 +211,10 @@ def test_retrieval_copies_the_values_and_records_provenance(tmp_path):
     assert saved["output"]["sha256"] == g._sha256(str(path))
     assert [r["url"] for r in saved["responses"]] == [r.url for r in plan.requests]
     assert saved["totals"] == {"requests": 10, "downloaded_responses": 10, "reused_responses": 0,
-                               "downloaded_bytes": sum(r["bytes"] for r in saved["responses"]), "retries": 0}
+                               "downloaded_bytes": sum(r["bytes"] for r in saved["responses"]), "retries": 0,
+                               "received_bytes_counted": sum(r["bytes"] + r["http"]["header_bytes"]
+                                                             for r in saved["responses"]),
+                               "received_bytes_limit": g.DEFAULT_MAX_TOTAL_BYTES}
 
 
 def test_retrieval_across_greenwich(tmp_path):
@@ -311,6 +314,102 @@ def test_limits_are_checked_before_any_request(tmp_path, monkeypatch):
     with pytest.raises(g.NcarRetrievalError, match="not enough free disk space"):
         _retrieve(tmp_path, fake)
     assert fake.calls == []
+
+
+def _reservation(area=SMALL, days=TWO_DAYS):
+    sizes = {r.max_bytes for r in g.plan_retrieval(area, days).requests}
+    assert len(sizes) == 1
+    return sizes.pop()
+
+
+def test_received_bytes_are_counted_and_recorded(tmp_path):
+    fake = FakeGdex()
+    budget = g.ByteBudget(10 ** 9)
+    plan, path, record = _retrieve(tmp_path, fake, budget=budget)
+    responses = {r["key"]: r for r in record["responses"]}
+    expected = sum(r["bytes"] + r["http"]["header_bytes"] for r in responses.values())
+    assert budget.used == expected == record["totals"]["received_bytes_counted"]
+    assert budget.reserved == 0 and len(record["attempts"]) == len(plan.requests)
+    for attempt in record["attempts"]:
+        assert attempt["result"] == "ok" and attempt["charged_bytes"] < plan.requests[0].max_bytes
+        assert attempt["body_bytes"] == responses[attempt["key"]]["bytes"]
+
+
+def test_failed_attempts_count_against_the_byte_limit(tmp_path):
+    reservation = _reservation()
+    fake = FakeGdex(faults={"T_20180810": ["http503"] * 4})
+    budget = g.ByteBudget(2 * reservation)
+    with pytest.raises(g.NcarTransferError, match="not requested"):
+        _retrieve(tmp_path, fake, workers=1, budget=budget)
+    # two failed attempts are charged their whole reservation; the third is not made
+    assert len(fake.calls) == 2 and budget.used == 2 * reservation and budget.reserved == 0
+    assert [a["result"].startswith("HTTP 503") for a in budget.attempts] == [True, True]
+
+
+def test_the_default_limit_counts_retries(tmp_path):
+    reservation = _reservation()
+    fake = FakeGdex(faults={"T_20180809": ["truncate"] * 4})
+    with pytest.raises(g.NcarTransferError, match="not requested"):
+        _retrieve(tmp_path, fake, days=TWO_DAYS[:1], workers=1, max_total_bytes=3 * reservation, attempts=4)
+    assert len(fake.calls) == 3
+
+
+def test_a_retrieval_stops_before_a_request_the_limit_cannot_hold_and_resumes(tmp_path):
+    # a limit of one reservation lets exactly one request through
+    budget = g.ByteBudget(_reservation())
+    with pytest.raises(g.NcarTransferError, match="not requested"):
+        _retrieve(tmp_path, FakeGdex(), workers=1, budget=budget)
+    assert len(budget.attempts) == 1 and budget.used <= budget.limit
+    assert len(list((tmp_path / "out.nc.parts").glob("*.nc"))) == 1
+    # a larger limit that keeps the bytes already received resumes from the kept response
+    budget = g.ByteBudget(10 ** 9, used=budget.used)
+    fake = FakeGdex()
+    plan, path, record = _retrieve(tmp_path, fake, workers=1, budget=budget)
+    assert len(fake.calls) == len(plan.requests) - 1 and record["totals"]["reused_responses"] == 1
+    with xr.open_dataset(path) as ds:
+        assert np.array_equal(ds["T"].values, _expected(plan, "T"))
+
+
+def test_one_limit_serves_several_retrievals(tmp_path):
+    budget = g.ByteBudget(10 ** 9)
+    _retrieve(tmp_path, FakeGdex(), budget=budget)
+    budget.limit = budget.used + _reservation() - 1
+    fake = FakeGdex()
+    with pytest.raises(g.NcarTransferError, match="not requested"):
+        _retrieve(tmp_path, fake, name="again.nc", budget=budget)
+    assert fake.calls == [] and not (tmp_path / "again.nc.parts").exists()
+
+
+def test_requests_in_progress_reserve_their_bytes(tmp_path):
+    budget = g.ByteBudget(2 * _reservation())
+    fake = FakeGdex(delay=lambda n: 0.3)
+    with pytest.raises(g.NcarTransferError, match="not requested"):
+        _retrieve(tmp_path, fake, workers=4, budget=budget)
+    assert len(fake.calls) <= 2 and budget.used <= budget.limit and budget.reserved == 0
+
+
+def test_a_body_without_length_is_read_only_up_to_the_reservation(tmp_path):
+    fake = FakeGdex()
+    read = []
+
+    def opener(request, timeout=None):
+        response = fake.opener(request, timeout)
+        body = response.getvalue() + b"\0" * 3 * len(response.getvalue())
+        headers = {k: v for k, v in response.headers.items() if k != "Content-Length"}
+        endless = type(response)(body, headers)
+        original = endless.read
+        endless.read = lambda size=-1: read.append(size) or original(size)
+        return endless
+
+    budget = g.ByteBudget(10 ** 9)
+    plan = g.plan_retrieval(SMALL, TWO_DAYS)
+    with pytest.raises(g.NcarContentError, match="larger than"):
+        g.retrieve(plan, str(tmp_path / "out.nc"), _names(), logger=LOGGER, opener=opener, workers=1,
+                   budget=budget)
+    attempt = budget.attempts[0]
+    assert all(size > 0 for size in read)
+    assert attempt["header_bytes"] + attempt["body_bytes"] == plan.requests[0].max_bytes
+    assert attempt["charged_bytes"] == plan.requests[0].max_bytes and len(budget.attempts) == 1
 
 
 def test_a_missing_output_directory_is_reported(tmp_path):
