@@ -37,7 +37,9 @@ its provenance record matches its SHA-256 and covers the request; otherwise
 the program stops and says why.
 
 Responses are kept in ``<file>.parts/`` until the file is complete, so an
-interrupted retrieval resumes from the verified responses already received.
+interrupted retrieval resumes from the verified responses already received;
+the provenance record says when, and by which commit of the toolkit, each
+response was received.
 
 The bytes received are counted as the requests are made, failed attempts and
 retries included (see :class:`ByteBudget`): a request is not made when its
@@ -65,6 +67,7 @@ import argparse
 import contextlib
 import datetime
 import email.utils
+import functools
 import hashlib
 import http.client
 import json
@@ -544,6 +547,8 @@ class PieceResult:
     elapsed: float
     http: dict
     reused: bool
+    received_utc: str = None
+    lectk_commit: str = None
 
 
 class ByteBudget:
@@ -854,7 +859,8 @@ def _stored_piece(request, parts_dir):
         check_piece(path, request)
     except (OSError, ValueError, NcarContentError, _Retryable):
         return None
-    return PieceResult(request, path, record["sha256"], record["bytes"], 0, 0.0, record.get("http", {}), True)
+    return PieceResult(request, path, record["sha256"], record["bytes"], 0, 0.0, record.get("http", {}), True,
+                       record.get("received_utc"), record.get("lectk_commit"))
 
 
 def _wait(seconds, cancel):
@@ -942,8 +948,10 @@ def _fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel,
             raise
         elapsed = time.monotonic() - started
         os.replace(part, path)
-        _write_json(f"{path}.json", {"url": request.url, "sha256": sha256, "bytes": size, "http": http})
-        return PieceResult(request, path, sha256, size, attempt, elapsed, http, False)
+        received = _iso(started_utc)
+        _write_json(f"{path}.json", {"url": request.url, "sha256": sha256, "bytes": size, "http": http,
+                                     "received_utc": received, "lectk_commit": _lectk_commit()})
+        return PieceResult(request, path, sha256, size, attempt, elapsed, http, False, received, _lectk_commit())
     raise AssertionError("unreachable")
 
 
@@ -1065,6 +1073,7 @@ def check_output(path, plan, names):
 
 
 # -------------------------------------------------------------- provenance
+@functools.lru_cache(maxsize=1)
 def _lectk_commit():
     directory = os.path.dirname(os.path.abspath(__file__))
     try:
@@ -1323,7 +1332,8 @@ def retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=
         }),
         "responses": [
             {"key": p.request.key, "url": p.request.url, "bytes": p.size, "sha256": p.sha256,
-             "attempts": p.attempts, "seconds": round(p.elapsed, 3), "reused": p.reused, "http": p.http}
+             "attempts": p.attempts, "seconds": round(p.elapsed, 3), "reused": p.reused,
+             "received_utc": p.received_utc, "lectk_commit": p.lectk_commit, "http": p.http}
             for p in pieces
         ],
         "output": {

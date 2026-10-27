@@ -538,6 +538,20 @@ def test_an_interrupted_retrieval_resumes_from_the_verified_responses(tmp_path):
     assert not parts.exists()
 
 
+def test_reused_responses_keep_when_and_by_which_code_they_were_received(tmp_path):
+    with pytest.raises(g.NcarTransferError):
+        _retrieve(tmp_path, FakeGdex(faults={"V_20180810": ["http503"] * 4}), workers=1)
+    kept = {p.name[:-8]: json.loads(p.read_text()) for p in (tmp_path / "out.nc.parts").glob("*.nc.json")}
+    assert kept and all(r["received_utc"] and "lectk_commit" in r for r in kept.values())
+    plan, path, record = _retrieve(tmp_path, FakeGdex(), workers=1)
+    for response in record["responses"]:
+        if response["reused"]:
+            assert response["received_utc"] == kept[response["key"]]["received_utc"]
+        else:
+            assert response["received_utc"] >= max(r["received_utc"] for r in kept.values())
+        assert response["lectk_commit"] == g._lectk_commit()
+
+
 # -------------------------------------------------------------------- reuse
 def test_existing_file_is_reused_only_when_verified(tmp_path):
     plan, path, _ = _retrieve(tmp_path, FakeGdex())
