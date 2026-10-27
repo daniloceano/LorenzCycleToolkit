@@ -664,6 +664,23 @@ def test_dry_run_lists_the_requests_without_retrieving(tmp_path, monkeypatch, ca
     assert not (tmp_path / "out.nc").exists()
 
 
+def test_standalone_command_retrieves_then_reuses_and_keeps_the_numeric_type(tmp_path, monkeypatch, capsys):
+    track = tmp_path / "track"
+    track.write_text(TRACK)
+    fake = FakeGdex()
+    monkeypatch.setattr(g, "default_opener", lambda: fake.opener)
+    out = tmp_path / "out.nc"
+    command = [str(out), "--trackfile", str(track), "--time-resolution", "6",
+               "--namelist", str(REPO_ROOT / "inputs" / "namelist_ERA5"), "--float64"]
+    assert g.main(command) == 0 and len(fake.calls) == 5
+    record = json.loads(Path(f"{out}.provenance.json").read_text())
+    assert record["output"]["dtype"] == "float64" and record["request"]["trackfile_sha256"] == g._sha256(str(track))
+    # the same command reuses the file without a request; the other numeric type is refused
+    assert g.main(command) == 0 and len(fake.calls) == 5
+    assert g.main(command[:-1]) == 1 and len(fake.calls) == 5
+    assert "holds the values as float64, but this run asks for float32" in capsys.readouterr().err
+
+
 def test_standalone_command_reports_errors_without_a_traceback(tmp_path, capsys):
     track = tmp_path / "track"
     track.write_text(TRACK)
