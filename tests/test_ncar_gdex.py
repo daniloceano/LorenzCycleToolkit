@@ -595,6 +595,28 @@ def test_no_room_for_the_chunk_framing_stops_before_the_body(tmp_path, monkeypat
     assert attempt["reserved_bytes"] == request.max_bytes and budget.reserved == 0
 
 
+def test_the_counting_socket_counts_and_limits_every_read():
+    wire = FakeWire()
+    raw = wire(("gdex.test", 80))
+    raw.sendall(b"GET /missing HTTP/1.1\r\nHost: gdex.test\r\n\r\n")
+    counted = g._CountingSocket(raw, g._Received(50))
+    assert len(counted.recv(30)) == 30
+    # the next read is cut to what the limit leaves (+1 byte), and that byte is detected
+    with pytest.raises(g._ResponseTooLarge):
+        counted.recv(1000)
+    assert counted.lectk_received.bytes == 51 == wire.sent[0]
+    with pytest.raises(g._ResponseTooLarge):
+        counted.recv(1000)
+    assert wire.sent[0] == 51
+    # without a limit, every read is counted
+    free = g._CountingSocket(wire(("gdex.test", 80)), g._Received(None))
+    free._sock.sendall(b"GET /missing HTTP/1.1\r\nHost: gdex.test\r\n\r\n")
+    data = free.recv(10 ** 6)
+    assert free.lectk_received.bytes == len(data) == wire.sent[1] > 51
+    free.close()
+    assert free.lectk_received.window == wire.window and free._sock.closed
+
+
 # ---------------------------------------------------------- one at a time
 needs_flock = pytest.mark.skipif(fcntl is None, reason="flock is not available")
 
@@ -665,8 +687,9 @@ def test_the_lock_is_released_when_a_retrieval_fails(tmp_path):
 
 
 @needs_flock
-def test_a_lock_file_replaced_while_locking_is_locked_again(tmp_path, monkeypatch):
-    # a retrieval that ends removes its lock file; one that locked the old file must lock the new one
+@pytest.mark.parametrize("recreated", [True, False])
+def test_a_lock_file_replaced_while_locking_is_locked_again(recreated, tmp_path, monkeypatch):
+    # a retrieval that ends removes its lock file; one that locked the old file must lock the one there now
     real, calls = fcntl.flock, []
     lock = tmp_path / "out.nc.lock"
 
@@ -675,11 +698,25 @@ def test_a_lock_file_replaced_while_locking_is_locked_again(tmp_path, monkeypatc
         calls.append(operation)
         if len(calls) == 1:
             lock.unlink()
-            lock.write_text("")
+            if recreated:
+                lock.write_text("")
 
     monkeypatch.setattr(fcntl, "flock", flock)
     plan, path, _ = _retrieve(tmp_path, FakeGdex())
     assert path.exists() and len(calls) == 2 and not lock.exists()
+
+
+def test_without_flock_the_lock_is_the_exclusive_creation_of_the_lock_file(tmp_path, monkeypatch):
+    monkeypatch.setitem(sys.modules, "fcntl", None)  # as on Windows
+    lock = tmp_path / "out.nc.lock"
+    plan, path, _ = _retrieve(tmp_path, FakeGdex(), days=TWO_DAYS[:1])
+    assert path.exists() and not lock.exists()
+    # a lock file left behind (by a crash, or a retrieval in progress) stops the next retrieval and says how to go on
+    lock.write_text("")
+    fake = FakeGdex()
+    with pytest.raises(g.NcarRetrievalError, match="remove .*out.nc.lock if no retrieval is running"):
+        _retrieve(tmp_path, fake, name="out.nc")
+    assert fake.calls == [] and lock.exists()
 
 
 def _track_and_args(tmp_path, name="case.nc"):
