@@ -354,6 +354,28 @@ def test_the_default_limit_counts_retries(tmp_path):
     assert len(fake.calls) == 3
 
 
+@pytest.mark.parametrize("fault", ["timeout", "refused", "http503", "reset", "read-timeout", "truncate", "garbage",
+                                   "no-length"])
+def test_each_kind_of_attempt_is_charged_as_announced(fault, tmp_path):
+    # a failed attempt, or one whose length is not announced, is charged its whole reservation; a complete
+    # response with a Content-Length is charged its status line, headers and body
+    reservation = _reservation(days=TWO_DAYS[:1])
+    budget = g.ByteBudget(10 ** 9)
+    fake = FakeGdex(faults={"T_20180809": [fault]})
+    plan, path, record = _retrieve(tmp_path, fake, days=TWO_DAYS[:1], workers=1, budget=budget)
+    assert path.exists() and budget.reserved == 0
+    assert budget.used == sum(a["charged_bytes"] for a in budget.attempts) == record["totals"]["received_bytes_counted"]
+    attempts = [a for a in budget.attempts if a["key"] == "T_20180809_0"]
+    if fault == "no-length":
+        assert [a["result"] for a in attempts] == ["ok"] and attempts[0]["charged_bytes"] == reservation
+        return
+    failed, retried = attempts
+    assert failed["result"] != "ok" and failed["charged_bytes"] == reservation
+    assert failed.get("header_bytes", 0) + failed.get("body_bytes", 0) <= reservation
+    assert retried["result"] == "ok" and retried["charged_bytes"] == retried["header_bytes"] + retried["body_bytes"]
+    assert retried["charged_bytes"] < reservation and len(fake.calls) == len(plan.requests) + 1
+
+
 def test_a_retrieval_stops_before_a_request_the_limit_cannot_hold_and_resumes(tmp_path):
     # a limit of one reservation lets exactly one request through
     budget = g.ByteBudget(_reservation())
