@@ -64,6 +64,7 @@ Contact:
 import argparse
 import contextlib
 import datetime
+import email.utils
 import hashlib
 import http.client
 import json
@@ -126,6 +127,9 @@ DEFAULT_TIMEOUT = 300.0
 DEFAULT_ATTEMPTS = 4
 DEFAULT_BACKOFF = 10.0
 MAX_WAIT = 300.0
+# Slowest transfer accepted: an attempt fails (and may be retried) when it
+# lasts longer than its timeout plus its largest response at this rate.
+MIN_TRANSFER_RATE = 25_000
 DEFAULT_MAX_TOTAL_BYTES = 8 * 1024 ** 3
 RETRY_STATUS = {429, 500, 502, 503, 504}
 # The netCDF-C library is not thread-safe: responses are checked one at a time.
@@ -554,7 +558,10 @@ class ByteBudget:
     answer, a cut, refused or unreadable response, a retry, a response
     without Content-Length whose chunk framing is not visible) is charged its
     whole reservation. The total therefore never understates the bytes read
-    from the responses. One budget may serve several retrievals.
+    from the responses, except the chunk framing of a response without
+    Content-Length (a few bytes per chunk), which the HTTP library does not
+    expose; GDEX NCSS sends a Content-Length. One budget may serve several
+    retrievals.
 
     Args:
         limit (int): Largest number of bytes received.
@@ -615,10 +622,24 @@ def _error_text(error):
 
 
 def _retry_after(headers):
+    """Seconds the service asks to wait before the next attempt (Retry-After: seconds or HTTP date), or None."""
     try:
-        return max(0.0, float(headers.get("Retry-After")))
-    except (TypeError, ValueError, AttributeError):
+        value = headers.get("Retry-After")
+    except AttributeError:
         return None
+    if value is None:
+        return None
+    try:
+        return max(0.0, float(value))
+    except (TypeError, ValueError):
+        pass
+    try:
+        moment = email.utils.parsedate_to_datetime(value)
+    except (TypeError, ValueError, IndexError):
+        return None
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=datetime.timezone.utc)
+    return max(0.0, (moment - datetime.datetime.now(datetime.timezone.utc)).total_seconds())
 
 
 def _refusal(code, reason, body, url):
@@ -648,10 +669,12 @@ def _download(request, part, timeout, opener, cancel, meter):
 
     ``meter`` receives the bytes read so far (``header_bytes``, ``body_bytes``)
     and the seconds until the headers arrived; at most ``request.max_bytes``
-    bytes of status line, headers and body are read.
+    bytes of status line, headers and body are read, in at most ``timeout``
+    seconds plus the time the largest response takes at MIN_TRANSFER_RATE.
     """
     message = urllib.request.Request(request.url, headers={"User-Agent": USER_AGENT})
     started = time.monotonic()
+    deadline = started + timeout + request.max_bytes / MIN_TRANSFER_RATE
     try:
         response = opener(message, timeout=timeout)
     except urllib.error.HTTPError as error:
@@ -686,6 +709,8 @@ def _download(request, part, timeout, opener, cancel, meter):
             while True:
                 if cancel.is_set():
                     raise _Cancelled()
+                if time.monotonic() > deadline:
+                    raise _Retryable(f"response too slow: {size} bytes in {time.monotonic() - started:.0f} s")
                 block = response.read(min(1 << 20, limit + 1 - size))
                 if not block:
                     break
@@ -841,8 +866,9 @@ def fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel, 
     """
     Obtain one verified response, from the parts directory or from NCSS.
 
-    Retries network failures, incomplete responses and HTTP 429/5xx with
-    increasing waits (or the server's Retry-After); a refused request (other
+    Retries network failures, incomplete or too slow responses and HTTP
+    429/5xx with increasing waits (or the server's Retry-After, up to
+    MAX_WAIT; a longer one stops the retrieval); a refused request (other
     4xx) or a response that is not the requested data stops at once. Every
     attempt is first reserved in ``budget`` (:class:`ByteBudget`).
 
@@ -897,7 +923,14 @@ def _fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel,
                 raise NcarTransferError(
                     f"{request.key}: failed {attempts} times; last error: {_describe(error)}. URL: {request.url}"
                 ) from error
-            delay = min(MAX_WAIT, max(backoff * 3 ** (attempt - 1), getattr(error, "retry_after", None) or 0.0))
+            asked = getattr(error, "retry_after", None) or 0.0
+            if asked > MAX_WAIT:
+                raise NcarTransferError(
+                    f"{request.key}: the service asked to wait {asked:.0f} s before trying again, longer than "
+                    f"the {MAX_WAIT:.0f} s this program waits; run again later (the verified responses are kept). "
+                    f"URL: {request.url}"
+                ) from error
+            delay = min(MAX_WAIT, max(backoff * 3 ** (attempt - 1), asked))
             logger.warning(
                 f"⚠️ {request.key}: {_describe(error)}; retrying in {delay:.0f} s (attempt {attempt + 1}/{attempts})"
             )
@@ -1068,14 +1101,14 @@ def provenance_path(path):
     return f"{path}.provenance.json"
 
 
-def check_existing(path, plan, names):
+def check_existing(path, plan, names, float64=False):
     """
     Decide whether an existing file can be reused for a plan.
 
     The file is reused only if its provenance record exists, names this
     module's source, matches the file's SHA-256, was written with the same
-    variable names and covers every time, level, latitude and longitude of the
-    plan.
+    variable names and numeric type (``float64``) and covers every time,
+    level, latitude and longitude of the plan.
 
     Returns:
         dict: The provenance record.
@@ -1104,6 +1137,13 @@ def check_existing(path, plan, names):
         raise NcarReuseError(
             f"{path} was written with the names {output.get('names')}, but the namelist of this run "
             f"gives {names}. {advice}"
+        )
+    stored = output.get("dtype") or ("float64" if "stored as float64" in str(output.get("values", "")) else "float32")
+    wanted = "float64" if float64 else "float32"
+    if stored != wanted:
+        raise NcarReuseError(
+            f"{path} holds the values as {stored}, but this run asks for {wanted}; the toolkit computes in the "
+            f"type of its input, so the results would differ slightly from those of a {wanted} file. {advice}"
         )
     missing = []
     if not {_iso(t) for t in plan.times} <= set(output.get("times_utc", [])):
@@ -1208,6 +1248,19 @@ def retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=
     # The last day goes first: a period that ends after the dates GDEX has
     # published fails on the first request instead of after the other days.
     ordered = sorted(plan.requests, key=lambda request: request.day != days[-1])
+    pending = [r for r in ordered if not (os.path.isfile(os.path.join(parts_dir, f"{r.key}.nc"))
+                                          and os.path.isfile(os.path.join(parts_dir, f"{r.key}.nc.json")))]
+    room, fit = budget.limit - budget.used - budget.reserved, 0
+    for request in pending:
+        if request.max_bytes > room:
+            break
+        room -= request.max_bytes
+        fit += 1
+    if fit < len(pending):
+        logger.warning(
+            f"⚠️ the byte limit leaves room for {fit} of the {len(pending)} request(s) still to make: the retrieval "
+            f"will stop after them and keep the verified responses, so that a later run resumes from them"
+        )
     executor = ThreadPoolExecutor(max_workers=int(workers), thread_name_prefix="ncar-gdex")
     futures = []
     try:
@@ -1280,6 +1333,7 @@ def retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=
             "format": "NETCDF4 (zlib level 1, shuffle)" if compress else "NETCDF3_64BIT_OFFSET",
             "values": ("float32 values of the responses stored as float64 (exact conversion)" if float64
                        else "float32 copied unchanged from the responses"),
+            "dtype": "float64" if float64 else "float32",
             "names": names,
             "namelist": namelist,
             "namelist_sha256": _sha256(namelist) if namelist and os.path.isfile(namelist) else None,
@@ -1349,7 +1403,7 @@ def get_ncar_data(args, track, app_logger, namelist="inputs/namelist", **options
         raise
     if os.path.exists(args.infile):
         try:
-            check_existing(args.infile, plan, names)
+            check_existing(args.infile, plan, names, float64=options.get("float64", False))
         except NcarReuseError as error:
             app_logger.error(f"❌ {error}")
             raise
@@ -1421,7 +1475,7 @@ def main(argv=None):
                 print(request.url)
             return 0
         if os.path.exists(args.outfile):
-            check_existing(args.outfile, plan, names)
+            check_existing(args.outfile, plan, names, float64=args.float64)
             logger.info(f"✅ {args.outfile} already exists and matches its provenance record.")
             return 0
         request_info = {

@@ -8,12 +8,17 @@ cleanly: the session guard blocks that attempt and the test expects it.
 
 import argparse
 import datetime
+import email.message
+import email.utils
+import io
 import json
 import logging
 import os
 import random
 import shutil
 import sys
+import time
+import urllib.error
 import urllib.parse
 from pathlib import Path
 from unittest.mock import patch
@@ -262,6 +267,62 @@ def test_transient_failures_are_retried(fault, tmp_path):
     assert response["attempts"] == 2 and record["totals"]["retries"] == 1
 
 
+def test_a_too_slow_response_is_retried(tmp_path, monkeypatch):
+    # an attempt may last its timeout plus the largest response at MIN_TRANSFER_RATE; this one trickles
+    monkeypatch.setattr(g, "MIN_TRANSFER_RATE", 1e15)
+    fake = FakeGdex()
+    slow = []
+
+    def opener(request, timeout=None):
+        response = fake.opener(request, timeout)
+        if "var=T" in request.full_url and "20180809" in request.full_url and not slow:
+            slow.append(request.full_url)
+            original = response.read
+            response.read = lambda size=-1: time.sleep(0.02) or original(min(size, 64))
+        return response
+
+    plan = g.plan_retrieval(SMALL, TWO_DAYS)
+    record = g.retrieve(plan, str(tmp_path / "out.nc"), _names(), logger=LOGGER, opener=opener, workers=1,
+                        timeout=0.1)
+    response = next(r for r in record["responses"] if r["key"] == "T_20180809_0")
+    assert response["attempts"] == 2 and slow
+    assert any(a["result"].startswith("response too slow") for a in record["attempts"])
+
+
+def test_retry_after_longer_than_the_wait_stops_without_retrying(tmp_path):
+    fake = FakeGdex()
+    calls = []
+
+    def opener(request, timeout=None):
+        calls.append(request.full_url)
+        headers = email.message.Message()
+        headers["Retry-After"] = str(int(g.MAX_WAIT) + 300)
+        raise urllib.error.HTTPError(request.full_url, 503, "busy", headers, io.BytesIO(b"busy"))
+
+    with pytest.raises(g.NcarTransferError, match="asked to wait 600 s"):
+        g.retrieve(g.plan_retrieval(SMALL, TWO_DAYS), str(tmp_path / "out.nc"), _names(), logger=LOGGER,
+                   opener=opener, workers=1)
+    assert len(calls) == 1 and fake.calls == []
+
+
+@pytest.mark.parametrize("value, low, high", [("120", 120, 120), ("0", 0, 0), ("soon", None, None)])
+def test_retry_after_in_seconds(value, low, high):
+    headers = email.message.Message()
+    headers["Retry-After"] = value
+    wait = g._retry_after(headers)
+    assert (wait is None) if low is None else low <= wait <= high
+
+
+def test_retry_after_as_an_http_date():
+    headers = email.message.Message()
+    later = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=120)
+    headers["Retry-After"] = email.utils.format_datetime(later, usegmt=True)
+    assert 110 <= g._retry_after(headers) <= 121
+    headers.replace_header("Retry-After", "Wed, 21 Oct 2015 07:28:00 GMT")
+    assert g._retry_after(headers) == 0.0
+    assert g._retry_after(email.message.Message()) is None and g._retry_after(None) is None
+
+
 def test_missing_content_length_is_accepted_when_the_file_is_complete(tmp_path):
     _, path, _ = _retrieve(tmp_path, FakeGdex(faults={"Z_20180810": ["no-length"]}))
     assert path.exists()
@@ -374,6 +435,13 @@ def test_each_kind_of_attempt_is_charged_as_announced(fault, tmp_path):
     assert failed.get("header_bytes", 0) + failed.get("body_bytes", 0) <= reservation
     assert retried["result"] == "ok" and retried["charged_bytes"] == retried["header_bytes"] + retried["body_bytes"]
     assert retried["charged_bytes"] < reservation and len(fake.calls) == len(plan.requests) + 1
+
+
+def test_a_limit_that_cannot_hold_every_request_is_announced(tmp_path, caplog):
+    budget = g.ByteBudget(2 * _reservation())
+    with caplog.at_level(logging.WARNING, logger=LOGGER.name), pytest.raises(g.NcarTransferError, match="not requested"):
+        _retrieve(tmp_path, FakeGdex(), workers=1, budget=budget)
+    assert "leaves room for 2 of the 10 request(s)" in caplog.text
 
 
 def test_a_retrieval_stops_before_a_request_the_limit_cannot_hold_and_resumes(tmp_path):
@@ -494,6 +562,24 @@ def test_existing_file_is_reused_only_when_verified(tmp_path):
     os.remove(f"{path}.provenance.json")
     with pytest.raises(g.NcarReuseError, match="no provenance record"):
         g.check_existing(str(path), plan, names)
+
+
+@pytest.mark.parametrize("written, asked", [(True, False), (False, True)])
+def test_a_file_of_another_numeric_type_is_not_reused(written, asked, tmp_path):
+    # the toolkit computes in the type of its input: a float64 file gives slightly different results
+    plan, path, _ = _retrieve(tmp_path, FakeGdex(), float64=written)
+    names = _names()
+    assert g.check_existing(str(path), plan, names, float64=written)
+    with pytest.raises(g.NcarReuseError, match="float64" if written else "float32, but this run asks for float64"):
+        g.check_existing(str(path), plan, names, float64=asked)
+    # records written before the dtype field are read from their description of the values
+    record_path = f"{path}.provenance.json"
+    record = json.loads(Path(record_path).read_text())
+    del record["output"]["dtype"]
+    Path(record_path).write_text(json.dumps(record))
+    assert g.check_existing(str(path), plan, names, float64=written)
+    with pytest.raises(g.NcarReuseError):
+        g.check_existing(str(path), plan, names, float64=asked)
 
 
 # ---------------------------------------------------------- command line
