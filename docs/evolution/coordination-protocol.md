@@ -66,3 +66,83 @@ Em **toda resposta substantiva da filha**, usar a ordem: **título da frente →
 A conversa-mãe fornece à filha um **bloco de abertura autocontido** com problema, objetivo, fatos já verificados e respectivas fontes/SHAs, incertezas, limites, pré-requisitos, portões de aceitação definidos antes de testes e a exclusão explícita do que não pertence à frente. Não reabrir diagnóstico já comprovado sem motivo. Se a causa estiver incerta, autorizar **Etapa 0 de leitura/medição sem implementação**; a hipótese pode ser descartada legitimamente. Mudanças de ordem da fila e abertura de outra frente exigem decisão do responsável. Em escolhas substantivas, a filha apresenta alternativas, consequências e recomendação; não substituir autorização por ambiguidade.
 
 As regras de portões científicos, baselines, independência de validação, números e erros estão no [protocolo de rigor científico e verificação computacional](scientific-quality-protocol.md) e são aplicadas conforme o risco, sem reescrever a política de branches ou autorizar mudanças não aprovadas.
+
+## Checkout único, artefatos externos e revisão antes do commit (27–28/10/2026)
+
+**Origem:** preferência expressa do responsável em 27/10/2026 (proposta v3 de checkout único e emenda de revisão
+pré-commit). Redação submetida à revisão do responsável antes do commit, em 28/10/2026. Vale para todas as frentes
+futuras e para qualquer trabalho ainda não commitado, seja qual for o agente de código. Não altera retroativamente o
+histórico (ver o [registro da Frente D](evidence/records/2026-10-27-front-D-precommit.md)).
+
+### Checkout único por padrão
+
+O agente trabalha numa branch do checkout já usado pelo responsável e aberto no VS Code. Não cria worktree, clone ou
+checkout adicional por conveniência.
+
+- **Antes de mudar de branch:** verificar o estado Git e possíveis conflitos.
+- **Se a branch estiver ocupada noutro worktree, ou houver alterações pendentes incompatíveis:** parar e pedir
+  decisão, sem `stash`, `reset`, `clean`, cópia ou troca automática de branch.
+- **Exceções:** worktree, commit temporário ou outro atalho só com autorização expressa e anterior, que nomeie a
+  necessidade técnica, o escopo e o plano de retorno. Isso é compatível com a
+  [política de desenvolvimento](../development_workflow.md), que admite worktree isolado quando houver modificações
+  pendentes noutra árvore.
+
+### Dois espaços com finalidades distintas
+
+1. **Repositório Git, na branch de trabalho:** só o que se destina ao produto ou à memória:
+   - código-fonte e testes versionáveis;
+   - configuração e CI, quando autorizadas;
+   - exemplos e dados auxiliares mínimos e redistribuíveis;
+   - documentação do usuário aprovada (`docs/source/`);
+   - sínteses permanentes curadas (`docs/evolution/`).
+2. **Área de trabalho externa ao Git:** tudo o que é de investigação, preservando proveniência e hashes:
+   - downloads e respostas brutas, NetCDF intermediários;
+   - experimentos e harnesses descartáveis, logs extensos;
+   - ambientes, builds e temporários;
+   - pré-registros e selos, relatórios completos de investigação, patches de apoio;
+   - capturas, prévias PDF/HTML e figuras antes × depois, inventários.
+
+   Estar fora do Git **não** significa reter indefinidamente: aplica-se a [GOV-RET-01](retention-policy.md).
+
+**Triagem antes de integrar.** Cada item gerado recebe uma classe explícita:
+
+- **produto versionável:** vai ao Git após revisão visual, aprovação de conteúdo e autorização de commit;
+- **memória permanente curada:** decisões, escopo, critérios, resumo de evidências inclusive negativas, ressalvas,
+  SHA e proveniência; vai a `docs/evolution/` sem logs integrais, dados brutos, caminhos pessoais ou segredos;
+- **evidência temporária externa:** fica fora do Git até o portão de retenção;
+- **descartável recriável:** identificado em inventário, sem exclusão por iniciativa própria.
+
+Um hash ou um caminho na máquina não é, sozinho, backup.
+
+### Fluxo com portão antes de `git add` e `git commit`
+
+1. **Preflight:** checkout único, branch, base e estado Git; delimitar tarefas e destinos das saídas.
+2. **Trabalho:** investigar e testar. As evidências vão para a área externa. As mudanças propostas ao produto ficam
+   na branch **sem staging e sem commit**, e os arquivos novos ficam visíveis como *untracked*: não escondê-los com
+   `.gitignore`.
+3. **Apresentação:** mostrar ao responsável:
+   - `git status --short`, o resumo por arquivo e o diff não commitado no VS Code;
+   - os testes, com fontes e hashes;
+   - para documentação, interfaces e figuras, a renderização visual e, quando houver base, o **antes × depois**,
+     com a prévia mantida fora do repositório.
+
+   A aprovação técnica do código não substitui a aprovação visual/documental.
+4. **Portão:** **aguardar autorização expressa antes de `git add` ou `git commit`.** Aprovar escopo ou execução
+   autônoma não autoriza commit. Push, PR, merge, `main`, tag, release, publicação e exclusões têm portões próprios.
+5. **Integração:** incluir no repositório **somente os arquivos aprovados** (produto e memória curada), nunca a
+   pasta inteira do experimento.
+6. **Retenção:** reavaliar a área externa no encerramento da frente e após versão/tag estável, com manifesto
+   aprovado antes de exclusões concretas.
+
+**Ausência do responsável.** O agente pode experimentar, corrigir e testar, preservando checkpoints não destrutivos
+fora do Git. Ao chegar ao ponto de commit sem aprovação, não faz commit: deixa as mudanças intactas e visíveis.
+
+**Frase obrigatória nos prompts técnicos ao agente:**
+
+> Trabalhe na branch do checkout já existente, sem criar worktree ou clone adicional. Não faça commits nem stage
+> antes de eu examinar no VS Code as alterações não commitadas e autorizar o commit explicitamente. Guarde
+> downloads, resultados de experimento, logs completos e prévias visuais fora do repositório, com proveniência, e
+> proponha ao Git apenas o produto versionável e a memória curada. Se o checkout estiver bloqueado ou em conflito,
+> pare e peça instrução.
+
+Mostrar prévia visual de documentação e figuras também é dever explícito do agente.
