@@ -4,9 +4,11 @@ A [Frente A](front-A-audit.md) — auditoria/linha de base do LECTK 2.0.0 — fo
 
 A [Frente B](front-B-closure.md) foi **encerrada por triagem em 24/10/2026**, sem produção de novas referências; a lacuna NCEP-R2 foi mantida explicitamente como pendência, a reavaliar antes de benchmarks D.
 
-A **Frente C foi encerrada em 25/10/2026 com PASS DOCUMENTAL**, após aprovação do conteúdo, [PR #36](https://github.com/daniloceano/LorenzCycleToolkit/pull/36) integrado em `develop` (`abaab7add04c21c694a4aa90da38c7d1465e5add`), CI verde e releitura pós-merge. [Avaliação, critérios, ressalvas e encerramento](front-C-era5-documentary-assessment.md). Não houve benchmarks nem implementação de provedores; a Frente D permanece não aberta.
+A **Frente C foi encerrada em 25/10/2026 com PASS DOCUMENTAL**, após aprovação do conteúdo, [PR #36](https://github.com/daniloceano/LorenzCycleToolkit/pull/36) integrado em `develop` (`abaab7add04c21c694a4aa90da38c7d1465e5add`), CI verde e releitura pós-merge. [Avaliação, critérios, ressalvas e encerramento](front-C-era5-documentary-assessment.md). Não houve benchmarks nem implementação de provedores; naquela data, a Frente D ainda não havia sido aberta.
 
-D, E e F não foram abertas por este registro; G–K são backlog e hipóteses. [Fila](../queue.md).
+A **Frente D** foi executada de 26 a 28/10/2026 como avaliação de rotas alternativas de aquisição ERA5. O adaptador NCAR GDEX foi integrado em `develop` como funcionalidade **experimental** ([PR #38](https://github.com/daniloceano/LorenzCycleToolkit/pull/38), merge `dec13fe6dcacc2e2cd7f5720160ea40d40e75403`). A comparação de tempo com o CDS **não foi realizada**: a P2-B0 foi bloqueada antes de qualquer submissão, um resultado negativo registrado. Encerramento formal e retenção estão pendentes de decisão do responsável; a Frente E não foi aberta. [Registro da Frente D](front-D-era5-ncar.md).
+
+A **Frente E** (decisão de arquitetura de provedores) permanece **não aberta** e a **Frente F** (piloto de provedor), **condicional**; G–K são backlog e hipóteses. [Fila](../queue.md).
 
 Após conclusão técnica de cada frente, aplicar [GOV-RET-01 Revisão 2](../retention-policy.md): descartar os resíduos operacionais comprovadamente dispensáveis e justificar somente a retenção mínima necessária. Reavaliar os retidos no fechamento da próxima versão/tag estável, sem exclusão automática. A Frente A receberá auditoria retroativa, sem reabertura da decisão científica.
 
