@@ -69,6 +69,12 @@ As regras de portões científicos, baselines, independência de validação, n�
 
 ## Checkout único, artefatos externos e revisão antes do commit (27–28/10/2026)
 
+> **Sucedida em parte em 28/10/2026.** O portão de autorização antes de `git add`/`git commit` (passo 4 do fluxo
+> abaixo), a frase obrigatória e a exigência de manifesto aprovado caminho a caminho para descartáveis foram
+> substituídos prospectivamente pela [autonomia de ponta a ponta dentro do escopo aprovado](#autonomia-de-ponta-a-ponta-dentro-do-escopo-aprovado-28102026).
+> Continuam valendo o checkout único, a separação entre Git e área externa e a triagem dos artefatos. O texto abaixo
+> fica preservado como registro histórico.
+
 **Origem:** preferência expressa do responsável em 27/10/2026 (proposta v3 de checkout único e emenda de revisão
 pré-commit). Redação submetida à revisão do responsável antes do commit, em 28/10/2026. Vale para todas as frentes
 futuras e para qualquer trabalho ainda não commitado, seja qual for o agente de código. Não altera retroativamente o
@@ -146,3 +152,30 @@ fora do Git. Ao chegar ao ponto de commit sem aprovação, não faz commit: deix
 > pare e peça instrução.
 
 Mostrar prévia visual de documentação e figuras também é dever explícito do agente.
+
+## Autonomia de ponta a ponta dentro do escopo aprovado (28/10/2026)
+
+**Origem:** decisão expressa do responsável em 28/10/2026. Sucede prospectivamente o portão antes de
+`git add`/`git commit` de 27–28/10, sem reescrever o histórico nem a ocorrência registrada da Frente D.
+
+1. **Autorização inicial da frente.** Delimita objetivos, mudanças permitidas, critérios científicos pré-declarados
+   e categorias de artefatos (produto versionável, memória curada, evidência externa, descartável recriável).
+2. **Execução dentro do escopo.** O agente pode desenvolver, testar, revisar, fazer staging, commit e push, abrir PR
+   e executar **merge normal em `develop`**, desde que os checks obrigatórios (GitHub Actions e CircleCI) estejam
+   verdes e as proteções da branch satisfeitas, sem bypass.
+3. **Retenção no encerramento.** A retenção é auditada automaticamente. Caches, builds, temporários e duplicatas
+   **comprovadamente** descartáveis podem ser eliminados como parte do encerramento, sob a autorização geral da
+   frente, com manifesto verificável (caminhos exatos e hashes) e registro durável da execução
+   ([GOV-RET-01, §7](retention-policy.md)).
+4. **O que nunca é apagado automaticamente:** materiais exclusivos, resultados científicos ainda necessários e itens
+   de função incerta (classe INVESTIGAR).
+5. **Sem portões repetidos.** Não se exige supervisão, inspeção visual individual nem aprovações repetidas para
+   passos cobertos pela autorização inicial. Relatórios, diffs e prévias continuam sendo produzidos e ficam
+   inspecionáveis, sem se tornarem bloqueios.
+6. **Quando parar e consultar:** alteração substancial de escopo, risco científico novo, conflito relevante, falha
+   de segurança ou possível perda de evidência não descartável.
+7. **Continuam exigindo autorização específica:** `main`, tags, releases, publicações (PyPI, TestPyPI, Pages),
+   force-push e alterações destrutivas fora da frente. Worktrees, branches e stashes de outras frentes também.
+
+O responsável pode revisar o trabalho a qualquer momento; a revisão posterior não invalida a autonomia. A regra de
+releitura após o merge (SHA final de `develop` e conteúdo versionado) permanece.

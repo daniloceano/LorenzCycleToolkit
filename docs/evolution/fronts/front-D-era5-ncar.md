@@ -5,7 +5,8 @@
 `dec13fe6dcacc2e2cd7f5720160ea40d40e75403`, 28/10/2026). **Comparação de tempo com o CDS: não realizada**
 (P2-B0 bloqueada antes de qualquer submissão).
 
-Encerramento formal da frente e retenção dos artefatos externos: **pendentes de decisão do responsável**. O estado
+Encerramento formal da frente: **pendente de decisão do responsável**. Retenção: limpeza parcial executada em 28/10
+(ver "Limpeza de 28/10"); G2, G5, itens a investigar e o resto de G6 continuam pendentes. O estado
 operacional proposto é CONCLUÍDA TECNICAMENTE — RETENÇÃO PENDENTE.
 
 ## Objeto
@@ -135,11 +136,33 @@ Os hashes provam a identidade dos documentos, não backup integral dos dados.
 Os 13 primeiros commits da branch precederam a revisão visual do responsável. A ocorrência está no
 [registro de 27/10](../evidence/records/2026-10-27-front-D-precommit.md); o histórico foi preservado.
 
+## Limpeza de 28/10 (GOV-RET-01, Marco A)
+
+Executada com autorização expressa do responsável para os grupos G1, G3, G4 e G6. Submanifesto de 838 caminhos
+(sha256 `b1ebb93e29ee8740176b9b5074fda17cbe91666910ab9e39c747bf420214789a`), executor com conferência de conteúdo
+imediatamente antes de cada exclusão, remoção sem seguir links e registro durável (executor sha256
+`2094a759f84e0661353a7152becba5c81debb32a43e92dbcba74ef0442c74c5e`).
+
+| Grupo | Conteúdo | Resultado |
+|---|---|---|
+| G1 | temporários de pytest e sandbox | 35/35 caminhos, 49 956 arquivos removidos |
+| G3 | builds de wheel e venvs recriáveis | 20/20 caminhos, 6 287 arquivos removidos |
+| G4 | arquivos das cópias do LECTK idênticos ao blob do commit de origem | 782/782 caminhos, 4 904 arquivos removidos |
+| G6 | exportações da revisão visual de 27/10 | **falha de permissão**: subpastas exportadas como somente leitura; 5 de 16 arquivos removidos, 11 permanecem |
+
+- **Resultado:** PARCIAL (837/838), código de saída 3. A falha não foi contornada; a pasta G6 restante é recriável com
+  `git show` de commits integrados e não contém evidência.
+- **Espaço:** estimativa de 10,98 GiB para os três grupos concluídos; o espaço livre medido no volume subiu cerca de
+  11,0 GiB (medida global do disco, sujeita a outras atividades).
+- **Preservados e conferidos:** G2 e G5 intactos; dados P2-A, P2-B0, P3-L e E1; produtos C0 e E-R9; `LEC_Results` e
+  `inputs/namelist` das cópias; logs; ambiente de trabalho; os quatro `SHA256SUMS` das evidências sem divergência;
+  worktrees, branches e stash.
+
 ## Pendências para decisão
 
 1. Encerramento formal da frente, ou manutenção como frente aberta até a comparação com o CDS.
-2. Manifesto de retenção, a partir do inventário externo de 28/10: há candidatos a descarte, como temporários de
-   testes e builds, e itens a investigar.
+2. Retenção remanescente: G2 (cópias de worktree), G5 (rodadas superadas do protótipo), os itens a investigar e o
+   resto de G6 (ver "Limpeza de 28/10").
 3. Se e como destravar a P2-B0.
 4. Remoção do worktree e da branch local já integrados, conforme a regra de checkout único (autorização própria).
 5. A Frente E (decisão de arquitetura de provedores) **não foi aberta** por este registro.

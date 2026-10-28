@@ -66,3 +66,19 @@ A auditoria de Marco B não autoriza, não cria e não publica versão, tag, `ma
 A Frente A **permanece formalmente encerrada em 2026-10-23, PASS COM RESSALVAS ACEITAS**; não reabrir seu julgamento científico. Aplicar este procedimento **retroativamente** a `LECTK_Retomada` (notebook) e `LECTK_Dev`/`LECTK_Auditoria` (Mac). O inventário do notebook relatou aproximadamente 45,92 GiB de candidatos; esse volume é **potencial**, ainda não é exclusão autorizada nem espaço confirmado como recuperável. As faixas envolvendo worktrees, refs e experimentos exclusivos exigem triagem específica. A falta de acesso ao Mac não impede a análise das faixas comprovadamente independentes do notebook.
 
 **Em qualquer marco, aprovação desta regra ≠ aprovação de exclusão específica.**
+
+## 7. Emenda de 28/10/2026 — descarte sob a autorização geral da frente
+
+Decisão do responsável que altera prospectivamente o passo 5 do Marco A e o passo 5 do §4, sem mudar as classes do §3.
+
+- **Descartáveis comprovados** (caches, builds, ambientes recriáveis, temporários de testes, duplicatas verificadas
+  byte a byte) podem ser eliminados no encerramento da frente **sob a autorização geral da frente**, sem aprovação
+  caminho a caminho, desde que haja:
+  - manifesto verificável, com caminhos exatos, contagens, bytes e hash de conteúdo, fixado por sha256;
+  - conferência imediatamente antes de cada exclusão, sem seguir links e sem ampliar o escopo;
+  - registro durável da execução, com espaço estimado e recuperado.
+- **Não entram nesse descarte automático:** RETER TEMPORARIAMENTE, ARQUIVAR, INVESTIGAR, materiais exclusivos,
+  resultados científicos ainda necessários, worktrees, branches, stashes e qualquer item fora da frente.
+- Falha de validação ou de execução interrompe a limpeza e é registrada; não se contorna a falha nem se apaga à mão.
+
+O Marco B (versão/tag) segue o mesmo regime para retidos que tenham se tornado descartáveis comprovados.
