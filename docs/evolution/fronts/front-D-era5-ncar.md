@@ -5,9 +5,10 @@
 `dec13fe6dcacc2e2cd7f5720160ea40d40e75403`, 28/10/2026). **Comparação de tempo com o CDS: não realizada**
 (P2-B0 bloqueada antes de qualquer submissão).
 
-Encerramento formal da frente: **pendente de decisão do responsável**. Retenção: limpeza parcial executada em 28/10
-(ver "Limpeza de 28/10"); G2, G5, itens a investigar e o resto de G6 continuam pendentes. O estado
-operacional proposto é CONCLUÍDA TECNICAMENTE — RETENÇÃO PENDENTE.
+**Encerramento formal (28/10/2026): PASS COM RESSALVAS ACEITAS.** Estado operacional: **ENCERRADA — RETENÇÃO
+VALIDADA**, com limpeza parcial e retenções temporárias documentadas até a próxima versão/tag estável (ver
+"Encerramento formal" e "Retenção remanescente"). Os benchmarks controlados previstos para D **não** foram
+concluídos.
 
 ## Objeto
 
@@ -70,7 +71,7 @@ um piloto, uma tentativa de comparação com o CDS e um adaptador opcional; **n�
 | **Validação técnica do adaptador** | **Demonstrada no escopo testado:** requisição igual à do `--cdsapi`, verificação das respostas, integridade e proveniência, limites de bytes e de tempo, retomada, trava e reuso. Suíte e CI verdes. A operação ao vivo foi validada num único caso e numa única rede. | P3, P3-L, P3-L2, ajustes, PR #38 |
 | **Equivalência direta com o CDS** | **Não demonstrada.** Os valores NCAR foram comparados só com outra cópia NCAR (P2-A), nunca com NetCDF do CDS. O tempo também não foi comparado (P2-B0 bloqueada). | P2-B0 |
 | **Validação física independente** | **Não demonstrada.** Igualdade bit a bit, regressões e CI verificam computação e reprodução, não a física dos resultados. | [Visão geral](../overview.md) |
-| **Conclusão técnica × encerramento** | **Conclusão técnica:** produto integrado em `develop` com CI verde. **Encerramento formal da frente:** pendente de decisão. **Encerramento operacional (retenção, GOV-RET-01):** pendente de manifesto aprovado. | Este registro |
+| **Conclusão técnica × encerramento** | **Conclusão técnica:** produto integrado em `develop` com CI verde. **Encerramento formal:** PASS COM RESSALVAS ACEITAS em 28/10/2026. **Encerramento operacional (GOV-RET-01):** retenção validada, com limpeza parcial e retenções temporárias até a próxima versão/tag. Benchmarks e comparação com o CDS **não** fazem parte do que foi concluído. | Este registro |
 
 ## Resultado negativo: comparação com o CDS (P2-B0)
 
@@ -151,18 +152,56 @@ imediatamente antes de cada exclusão, remoção sem seguir links e registro dur
 | G6 | exportações da revisão visual de 27/10 | **falha de permissão**: subpastas exportadas como somente leitura; 5 de 16 arquivos removidos, 11 permanecem |
 
 - **Resultado:** PARCIAL (837/838), código de saída 3. A falha não foi contornada; a pasta G6 restante é recriável com
-  `git show` de commits integrados e não contém evidência.
+  `git show` de commits integrados e não contém evidência. Por decisão do responsável, a exclusão não foi repetida,
+  as permissões não foram alteradas e não se gerou novo manifesto para recuperar cerca de 0,2 MiB: o resto de G6
+  fica como **resíduo operacional recriável**, a reavaliar na próxima manutenção de retenção. O registro durável da
+  execução e os hashes foram preservados.
 - **Espaço:** estimativa de 10,98 GiB para os três grupos concluídos; o espaço livre medido no volume subiu cerca de
   11,0 GiB (medida global do disco, sujeita a outras atividades).
 - **Preservados e conferidos:** G2 e G5 intactos; dados P2-A, P2-B0, P3-L e E1; produtos C0 e E-R9; `LEC_Results` e
   `inputs/namelist` das cópias; logs; ambiente de trabalho; os quatro `SHA256SUMS` das evidências sem divergência;
   worktrees, branches e stash.
 
-## Pendências para decisão
+## Retenção remanescente (GOV-RET-01)
 
-1. Encerramento formal da frente, ou manutenção como frente aberta até a comparação com o CDS.
-2. Retenção remanescente: G2 (cópias de worktree), G5 (rodadas superadas do protótipo), os itens a investigar e o
-   resto de G6 (ver "Limpeza de 28/10").
-3. Se e como destravar a P2-B0.
-4. Remoção do worktree e da branch local já integrados, conforme a regra de checkout único (autorização própria).
-5. A Frente E (decisão de arquitetura de provedores) **não foi aberta** por este registro.
+Inspeção somente leitura de 28/10, com hash de conteúdo de cada conjunto registrado num inventário externo de
+integridade. Marco de reavaliação de todos os itens: **próxima versão/tag estável** (Marco B).
+
+| Conjunto | Tamanho | Classe | Finalidade, dependência e recriabilidade | Cópia independente |
+|---|---:|---|---|---|
+| G2 — 13 cópias de worktree idênticas a commits integrados | ≈ 0,59 GiB | DESCARTAR — CANDIDATO (próxima manutenção) | código igual, arquivo a arquivo, a commits em `develop`; resultados nos logs retidos | não exigida |
+| G2 — 9 cópias com estados intermediários não commitados (versões de `ncar_gdex.py` e testes antes de correções, controle negativo, scripts de cobertura) | ≈ 0,42 GiB | RETER TEMPORARIAMENTE | únicos registros desses estados de código; os resultados estão nos logs retidos; não se apagam automaticamente | não exigida: os estados finais estão integrados e os resultados registrados |
+| G5 — rodadas superadas do protótipo P3 | 0,79 GiB | RETER TEMPORARIAMENTE | superadas pelas rodadas `final2` (referência), mas **não idênticas** a elas arquivo a arquivo; reprocessáveis a partir das respostas P2-A | não exigida |
+| P3-L — partes brutas da validação ao vivo | 56,4 MiB | RETER TEMPORARIAMENTE; DESCARTAR — CANDIDATO no Marco B | as 12 partes são idênticas byte a byte às partes da P3-L2; mantidas para que o manifesto da P3-L continue completo | a cópia da P3-L2 já existe |
+| P3-L2 — `E1_P3L2_float64.nc` e `E1_13_P3L2.nc` | 58 MiB | RETER TEMPORARIAMENTE | análises citadas no manifesto da P3-L2; recriáveis a partir do E1 | não exigida |
+| P2-A e E1 da P3-L2 — respostas brutas NCAR | ≈ 0,25 GiB | RETER TEMPORARIAMENTE | base das igualdades bit a bit; uma nova obtenção do serviço público reproduziu os mesmos bytes (P3-L 6/6, P3-L2 15/15), e os hashes estão nos relatórios | não exigida: recriabilidade demonstrada |
+| Resto de G6 | 0,2 MiB | resíduo operacional recriável | exportação por `git show` de commits integrados | não exigida |
+
+Nenhum item INVESTIGAR bloqueia o encerramento: a suspeita de duplicação P3-L × P3-L2 foi resolvida (duplicata
+confirmada), e os NetCDF de análise foram classificados.
+
+## Encerramento formal (28/10/2026) — PASS COM RESSALVAS ACEITAS
+
+**O que se conclui:** o adaptador NCAR GDEX está integrado em `develop` como funcionalidade **experimental** e foi
+testado no escopo descrito acima: suíte, emulador, controles negativos, validação ao vivo de um caso, reprodução
+bit a bit dos CSV do LECTK no caso E1 e CI verde.
+
+**Ressalvas aceitas:**
+
+1. Os **benchmarks controlados** originalmente previstos para D (D-010) **não foram concluídos**.
+2. A **comparação direta NCAR × CDS não foi realizada** (P2-B0 bloqueada): não há equivalência demonstrada com o
+   NetCDF do CDS.
+3. **Nenhuma superioridade de velocidade** foi demonstrada; não há recomendação baseada em desempenho.
+4. **Nenhuma validação física independente.**
+5. Permanecem as diferenças de precisão (float32 × float64, até 2,7×10⁻⁷ da escala), a defasagem de cobertura
+   temporal do GDEX, a validação ao vivo de um único caso e uma única rede, e as limitações de contagem de bytes e
+   de prazo descritas em "Limitações".
+6. Limpeza de retenção parcial (G6) e retenções temporárias até a próxima versão/tag.
+
+## Pendências após o encerramento
+
+- Comparação NCAR × CDS e benchmarks controlados: exigem nova frente ou decisão do responsável, com forma segura de
+  cancelamento de jobs e uma janela sem outra campanha na conta.
+- Reavaliação das retenções no Marco B (próxima versão/tag estável).
+- Remoção do worktree e dos branches local e remoto da Frente D: procedimento próprio, não executado.
+- A Frente E (decisão de arquitetura de provedores) **não foi aberta**.
