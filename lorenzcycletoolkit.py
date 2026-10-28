@@ -134,6 +134,16 @@ def create_arg_parser():
         help="Temporal resolution in hours for CDS API data download (default: 3). Use 3, 6, or 12 to avoid cost limits.",
     )
     parser.add_argument(
+        "--ncar",
+        action="store_true",
+        help=(
+            "Download the ERA5 data from the NCAR GDEX copy of ERA5 (dataset d633000, no account) instead of "
+            "the CDS API when the input file does not exist (experimental). Same area, 37 pressure levels and "
+            "hours as --cdsapi (track file and --time-resolution). A provenance record is written next to the "
+            "file, and the file is reused only if it matches that record."
+        ),
+    )
+    parser.add_argument(
         "--trackfile",
         type=str,
         default="inputs/track",
@@ -273,6 +283,9 @@ def main():
     # usage and exits with status 2; nothing is downloaded or written.
     parser = create_arg_parser()
     args = parser.parse_args()
+
+    if args.cdsapi and args.ncar:
+        parser.error("--cdsapi and --ncar are alternative data sources; use one of them")
 
     # Set method
     if args.fixed:

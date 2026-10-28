@@ -27,19 +27,22 @@ import pandas as pd
 import xarray as xr
 from metpy.units import units
 
+from .ncar_gdex import get_ncar_data
 from .run_metadata import record_top_cut
 from .select_area import slice_domain
 from .tools import convert_longitude_range, get_cdsapi_data
 from .validation import validate_track_file, validate_namelist_file
 
 
-def get_data(args: argparse.Namespace, app_logger: logging.Logger) -> xr.Dataset:
+def get_data(args: argparse.Namespace, app_logger: logging.Logger, varlist: str = None) -> xr.Dataset:
     """
     Opens a NetCDF file and extracts variables specified in a CSV file.
 
     Args:
         args (argparse.Namespace): Command-line arguments.
         app_logger (logging.Logger): Logger for the application.
+        varlist (str): Namelist of the run; with --ncar the downloaded file
+            uses its variable names (default: inputs/namelist).
 
     Returns:
         xr.Dataset: Dataset containing extracted variables.
@@ -68,6 +71,18 @@ def get_data(args: argparse.Namespace, app_logger: logging.Logger) -> xr.Dataset
             app_logger.debug(f"✅ CDS API data ready: {infile}")
         else:
             app_logger.info("✅ CDS API data already exists, skipping download.")
+    elif getattr(args, "ncar", False):
+        # Same track reading as the CDS API route; an existing file is reused
+        # only if its provenance record verifies it
+        delimiter, _ = validate_track_file(args.trackfile, app_logger)
+        track = pd.read_csv(
+            args.trackfile,
+            delimiter=delimiter,
+            index_col="time",
+            parse_dates=["time"],
+            date_format="%Y-%m-%d-%H%M"
+        )
+        infile = get_ncar_data(args, track, app_logger, namelist=varlist or "inputs/namelist")
 
     app_logger.debug("📂 Opening input data... ")
     try:
@@ -265,8 +280,8 @@ def process_data(
                 f"Track final timestamp ({track.index[-1]}) is later than data final timestamp ({data[TimeIndexer][-1].values}). "
                 f"Please adjust the track file or re-download the data."
             )
-        # If using CDS API, resample track to data time step
-        if args.cdsapi:
+        # If using CDS API (or NCAR GDEX, same request), resample track to data time step
+        if args.cdsapi or getattr(args, "ncar", False):
             time_delta = int(
                 (data[TimeIndexer][1] - data[TimeIndexer][0]) / np.timedelta64(1, "h")
             )
@@ -398,7 +413,7 @@ def prepare_data(
     variable_list_df = validate_namelist_file(varlist, app_logger)
 
     # Load data
-    data = get_data(args, app_logger)
+    data = get_data(args, app_logger, varlist)
 
     # Import validation functions for coordinate and variable checks
     from .validation import validate_variable_match, validate_required_coordinates
