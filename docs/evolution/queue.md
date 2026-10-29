@@ -16,6 +16,12 @@ A ordem inicial aprovada foi **A → B condicional → C → D → E → F condi
 | J | CI, empacotamento, CLI e docs | Backlog, não manutenção genérica autorizada |
 | K | Sensibilidade/convergência versus níveis verticais | Hipótese, **não medida**; backlog separado da elegibilidade documental C |
 
+## Investigação complementar fora da ordem principal
+
+| Investigação | Objeto | Estado/documento |
+|---|---|---|
+| **D-Bench (complementar, paralela)** | Dez casos de benchmark controlado CDS × NCAR: tempos até arquivo utilizável, preparação, LEC, recursos, falhas e hipótese de latência sob carga | **EM PREPARAÇÃO — ETAPA 0 (29/10/2026)**; pré-verificação documental e desenho proposto, **sem downloads/jobs ou piloto liberados**, dependente de cancelamento seletivo CDS seguro, conta livre, limites e pré-registro selado. [Plano e portões](fronts/front-D-bench-cds-ncar.md). **Não reabre D, não depende de conclusão antes de E e não altera a fila principal.** |
+
 A proposta de adendo do lote 15 listou **BL-01 a BL-11**, com IDs expressamente **provisórios e não aprovados**. Abrange validação real independente, NCEP-R2, Dz/De, mensagens de domínio inválido, empacotamento, versão, promoções de branch, releases/Pages, documentação, proteção de tags e governança. Não promover esses IDs à fila oficial.
 
 O encerramento A não validou fisicamente o toolkit. ERA5 37 níveis/3 h, NCEP-R2 e comparação física independente permanecem não demonstrados. **B foi encerrada por triagem, não por produção de referência NCEP-R2.** Antes de desenhar benchmarks D, reavaliar se a referência numérica NCEP-R2 será necessária; manter a pendência explícita enquanto não houver protocolo e evidência. **A investigação documental C não exige estudo de sensibilidade a níveis (K) nem abre D automaticamente.**
