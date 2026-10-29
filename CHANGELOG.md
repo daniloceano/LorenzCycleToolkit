@@ -11,7 +11,8 @@ All notable changes to this project will be documented in this file.
   LEC and total wall-clock durations, measured with a monotonic clock and
   without overlap, the data provider and whether the input file was
   downloaded, reused or local; the `--ncar` transfer and assembly times are
-  copied from the provenance record only when this run wrote it. Unmeasured
+  copied from the provenance record only when this run retrieved the file
+  itself (handed over by the retrieval, never inferred from timestamps). Unmeasured
   phases are `null`. The same line is printed before the closing message.
   No change in the computation, the CSV files or `lec_metadata.json`.
 

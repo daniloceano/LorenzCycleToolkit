@@ -1746,7 +1746,7 @@ def _retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout
     return record
 
 
-def get_ncar_data(args, track, app_logger, namelist="inputs/namelist", **options):
+def get_ncar_data(args, track, app_logger, namelist="inputs/namelist", on_retrieved=None, **options):
     """
     Retrieve the ERA5 data of a track from NCAR GDEX into ``args.infile``.
 
@@ -1761,6 +1761,9 @@ def get_ncar_data(args, track, app_logger, namelist="inputs/namelist", **options
             datetime index.
         app_logger (logging.Logger): Logger for the application.
         namelist (str): Namelist of the run; the output names come from it.
+        on_retrieved (callable): Called with the provenance record only when
+            this call retrieved and wrote the file itself (never when an
+            existing file is reused); used for timing, it changes nothing else.
         **options: Passed to :func:`retrieve`.
 
     Returns:
@@ -1787,8 +1790,10 @@ def get_ncar_data(args, track, app_logger, namelist="inputs/namelist", **options
                     "trackfile": trackfile,
                     "trackfile_sha256": _sha256(trackfile) if trackfile and os.path.isfile(trackfile) else None,
                 }
-                _retrieve(plan, args.infile, names, logger=app_logger, request_info=request_info,
-                          namelist=namelist, **options)
+                record = _retrieve(plan, args.infile, names, logger=app_logger, request_info=request_info,
+                                   namelist=namelist, **options)
+                if on_retrieved is not None:
+                    on_retrieved(record)
                 return args.infile
     try:
         check_existing(args.infile, plan, names, float64=options.get("float64", False))

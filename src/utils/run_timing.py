@@ -22,24 +22,19 @@ is estimated.
 
 ``input_data`` says where the input file came from: ``downloaded`` (written
 by this run), ``reused`` (an existing file accepted without downloading) or
-``local`` (a file given without --cdsapi/--ncar). With --ncar the transfer
-and assembly times of the provenance record are copied only when this run
-wrote that record; they are sub-intervals of the acquisition, not extra time.
+``local`` (a file given without --cdsapi/--ncar). With --ncar, ``downloaded``
+and the transfer/assembly times of the provenance record come only from the
+record handed over by get_ncar_data's own retrieval in this process (no
+timestamp comparison); a file written meanwhile by another run is ``reused``,
+and a failed call leaves ``null``. These times are sub-intervals of the
+acquisition, not extra time.
 """
 
 import contextlib
-import datetime
-import json
-import os
 import time
 
 CLOCK = "time.perf_counter (monotonic)"
 PHASES = ("acquisition", "preparation", "lec")
-
-
-def utc_now():
-    """Current UTC time, truncated to the second like the NCAR provenance record."""
-    return datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
 
 
 class RunTiming:
@@ -77,31 +72,17 @@ class RunTiming:
         self.provider = provider
         self.input_data = input_data
 
-    def record_ncar(self, path, retrieval_started_utc):
+    def record_ncar_download(self, record):
         """
-        Record the --ncar origin of ``path`` from its provenance record: the file
-        was downloaded by this run only if the record was started at or after
-        ``retrieval_started_utc`` (another run may have written it meanwhile).
-        Its transfer/assembly times are kept only in that case.
+        Record a --ncar file retrieved and written by this run. Called by
+        get_ncar_data only from its own retrieval, with the provenance record
+        it has just written, so the transfer/assembly times are this run's.
+        A file written meanwhile by another run is verified, not retrieved,
+        and never reaches this method.
         """
-        record = None
-        with contextlib.suppress(OSError, ValueError):
-            with open(f"{path}.provenance.json", encoding="utf-8") as handle:
-                record = json.load(handle)
-        timing = (record or {}).get("timing") or {}
-        try:
-            started = datetime.datetime.strptime(timing["started_utc"], "%Y-%m-%dT%H:%M:%SZ")
-            started = started.replace(tzinfo=datetime.timezone.utc)
-        except (KeyError, TypeError, ValueError):
-            started = None
-        if started is None:
-            self.set_source("ncar", None)  # origin not verifiable: not guessed
-            return
-        if started < retrieval_started_utc:
-            self.set_source("ncar", "reused")
-            return
         self.set_source("ncar", "downloaded")
-        totals = record.get("totals") or {}
+        timing = (record or {}).get("timing") or {}
+        totals = (record or {}).get("totals") or {}
         self.ncar = {
             "transfer_seconds": timing.get("transfer_seconds"),
             "assembly_seconds": timing.get("assembly_seconds"),
@@ -109,7 +90,6 @@ class RunTiming:
             "downloaded_responses": totals.get("downloaded_responses"),
             "reused_responses": totals.get("reused_responses"),
             "downloaded_bytes": totals.get("downloaded_bytes"),
-            "source": os.path.basename(f"{path}.provenance.json"),
         }
 
     def stop(self):

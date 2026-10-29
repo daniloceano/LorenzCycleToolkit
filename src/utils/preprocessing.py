@@ -29,7 +29,7 @@ from metpy.units import units
 
 from .ncar_gdex import get_ncar_data
 from .run_metadata import record_top_cut
-from .run_timing import RunTiming, utc_now
+from .run_timing import RunTiming
 from .select_area import slice_domain
 from .tools import convert_longitude_range, get_cdsapi_data
 from .validation import validate_track_file, validate_namelist_file
@@ -93,12 +93,12 @@ def get_data(args: argparse.Namespace, app_logger: logging.Logger, varlist: str 
             parse_dates=["time"],
             date_format="%Y-%m-%d-%H%M"
         )
-        existed, retrieval_started_utc = os.path.exists(infile), utc_now()
-        timing.set_source("ncar", "reused" if existed else None)
+        timing.set_source("ncar", None)  # set once the call has returned
         with timing.phase("acquisition"):
-            infile = get_ncar_data(args, track, app_logger, namelist=varlist or "inputs/namelist")
-        if not existed:
-            timing.record_ncar(infile, retrieval_started_utc)
+            infile = get_ncar_data(args, track, app_logger, namelist=varlist or "inputs/namelist",
+                                   on_retrieved=timing.record_ncar_download)
+        if timing.input_data is None:
+            timing.set_source("ncar", "reused")  # returned without retrieving: an existing file was verified
 
     app_logger.debug("📂 Opening input data... ")
     try:
