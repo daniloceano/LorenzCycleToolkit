@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Run timing in `run_status.json`** (D-Bench instrumentation): a new
+  `timing` key records the acquisition (`--cdsapi`/`--ncar`), preparation,
+  LEC and total wall-clock durations, measured with a monotonic clock and
+  without overlap, the data provider and whether the input file was
+  downloaded, reused or local; the `--ncar` transfer and assembly times are
+  copied from the provenance record only when this run retrieved the file
+  itself (handed over by the retrieval, never inferred from timestamps). Unmeasured
+  phases are `null`. The same line is printed before the closing message.
+  No change in the computation, the CSV files or `lec_metadata.json`.
+
 - **Warning for the levels above 10 hPa** (DEC-09): the levels with a
   pressure lower than 1000 Pa, which are discarded when the data are read, as
   before, are now reported in the terminal and in the log, with the input grid
