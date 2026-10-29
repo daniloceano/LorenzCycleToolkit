@@ -20,7 +20,7 @@ A ordem inicial aprovada foi **A → B condicional → C → D → E → F condi
 
 | Investigação | Objeto | Estado/documento |
 |---|---|---|
-| **D-Bench (complementar, paralela)** | Dez casos de benchmark controlado CDS × NCAR: tempos até arquivo utilizável, preparação, LEC, recursos, falhas e hipótese de latência sob carga | **EM PREPARAÇÃO — ETAPA 0 (29/10/2026)**; pré-verificação documental e desenho proposto, **sem downloads/jobs ou piloto liberados**, dependente de cancelamento seletivo CDS seguro, conta livre, limites e pré-registro selado. [Plano e portões](fronts/front-D-bench-cds-ncar.md). **Não reabre D, não depende de conclusão antes de E e não altera a fila principal.** |
+| **D-Bench (complementar, paralela)** | Dez trajetórias reais fornecidas (1979–1980, 438 posições/3 h, modo móvel `--track`) em benchmark CDS × NCAR: aquisição, preparação, LEC, recursos, falhas e latência sob carga | **EM PREPARAÇÃO — ETAPA 0 (29/10/2026)**; pré-verificação documental e desenho proposto, **sem downloads/jobs ou piloto liberados**, dependente de cancelamento seletivo CDS seguro, conta livre, **orçamento ampliado** e pré-registro selado. Os dez casos sintéticos iniciais foram **substituídos** pelos dez arquivos de trajetória do responsável. [Plano e portões](fronts/front-D-bench-cds-ncar.md). **Não reabre D, não depende de conclusão antes de E e não altera a fila principal.** |
 
 A proposta de adendo do lote 15 listou **BL-01 a BL-11**, com IDs expressamente **provisórios e não aprovados**. Abrange validação real independente, NCEP-R2, Dz/De, mensagens de domínio inválido, empacotamento, versão, promoções de branch, releases/Pages, documentação, proteção de tags e governança. Não promover esses IDs à fila oficial.
 
