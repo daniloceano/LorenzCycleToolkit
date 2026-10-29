@@ -35,6 +35,8 @@ import os
 import sys
 from pathlib import Path
 
+from .run_timing import RunTiming
+
 SCHEMA_VERSION = 1
 
 EXIT_SUCCESS = 0
@@ -117,9 +119,11 @@ class RunStatus:
             this run, {relative path: (mtime_ns, size, inode)}, given by the
             command line when ``--overwrite`` lets it reuse a directory. They
             are never deleted; those this run does not rewrite are reported.
+        timing (RunTiming): Phase durations of the run, reported under
+            ``timing`` (a new record started now if not given).
     """
 
-    def __init__(self, args, results_directory, app_logger=None, argv=None, previous_files=None):
+    def __init__(self, args, results_directory, app_logger=None, argv=None, previous_files=None, timing=None):
         self.results_directory = Path(results_directory)
         self.path = self.results_directory / STATUS_FILE
         self.logger = app_logger
@@ -145,6 +149,8 @@ class RunStatus:
         self.log_file = None
         self.overwrite = bool(getattr(args, "overwrite", False))
         self.previous_files = previous_files
+        self.timing = RunTiming() if timing is None else timing
+        self.timing.plots_requested = self.plots_requested
         if app_logger is not None:
             for handler in app_logger.handlers:
                 filename = getattr(handler, "baseFilename", None)
@@ -373,6 +379,7 @@ class RunStatus:
     def record_exception(self, exc):
         """Record an exception that ends the run (the caller re-raises it)."""
         self.finished = _now()
+        self.timing.stop()
         self.run_error = _error(exc)
         if not isinstance(exc, Exception):
             self.interrupted = True
@@ -396,6 +403,7 @@ class RunStatus:
             pending = [n for n, p in self.products.items() if p["required"] and p["status"] != "success"]
             raise RuntimeError("required scientific outputs were not recorded: " + ", ".join(pending))
         self.finished = _now()
+        self.timing.stop()
         for product in self.products.values():
             if product["status"] == "pending":
                 product["status"] = "failed"
@@ -413,6 +421,7 @@ class RunStatus:
                 self.write()
             except Exception as write_error:
                 self._log("error", f"❌ Could not write {self.path}: {write_error}")
+            self._log("info", self.timing.summary())
             raise
 
     def previous_results(self):
@@ -457,6 +466,7 @@ class RunStatus:
             "summary": summary,
             "log_file": self.log_file,
             "previous_results": self.previous_results(),
+            "timing": self.timing.to_dict(),
             "products": products,
         }
 

@@ -29,12 +29,14 @@ from metpy.units import units
 
 from .ncar_gdex import get_ncar_data
 from .run_metadata import record_top_cut
+from .run_timing import RunTiming, utc_now
 from .select_area import slice_domain
 from .tools import convert_longitude_range, get_cdsapi_data
 from .validation import validate_track_file, validate_namelist_file
 
 
-def get_data(args: argparse.Namespace, app_logger: logging.Logger, varlist: str = None) -> xr.Dataset:
+def get_data(args: argparse.Namespace, app_logger: logging.Logger, varlist: str = None,
+             timing=None) -> xr.Dataset:
     """
     Opens a NetCDF file and extracts variables specified in a CSV file.
 
@@ -43,6 +45,9 @@ def get_data(args: argparse.Namespace, app_logger: logging.Logger, varlist: str 
         app_logger (logging.Logger): Logger for the application.
         varlist (str): Namelist of the run; with --ncar the downloaded file
             uses its variable names (default: inputs/namelist).
+        timing (RunTiming): If given, receives the acquisition time (the
+            call to get_cdsapi_data or get_ncar_data) and the origin of the
+            input file. Timing only: the data are not changed.
 
     Returns:
         xr.Dataset: Dataset containing extracted variables.
@@ -52,8 +57,11 @@ def get_data(args: argparse.Namespace, app_logger: logging.Logger, varlist: str 
         Exception: For other errors occurring during file opening.
     """
     infile = args.infile
+    timing = RunTiming() if timing is None else timing
+    timing.set_source("local", "local")
 
     if args.cdsapi:
+        timing.set_source("cds", "reused")
         if not os.path.exists(infile):
             app_logger.debug(
                 "🌐 CDS API data not found. Attempting to retrieve data from CDS API..."
@@ -67,7 +75,10 @@ def get_data(args: argparse.Namespace, app_logger: logging.Logger, varlist: str 
                 parse_dates=["time"],
                 date_format="%Y-%m-%d-%H%M"
             )
-            infile = get_cdsapi_data(args, track, app_logger)
+            timing.set_source("cds", None)  # "downloaded" only once the call succeeds
+            with timing.phase("acquisition"):
+                infile = get_cdsapi_data(args, track, app_logger)
+            timing.set_source("cds", "downloaded")
             app_logger.debug(f"✅ CDS API data ready: {infile}")
         else:
             app_logger.info("✅ CDS API data already exists, skipping download.")
@@ -82,7 +93,12 @@ def get_data(args: argparse.Namespace, app_logger: logging.Logger, varlist: str 
             parse_dates=["time"],
             date_format="%Y-%m-%d-%H%M"
         )
-        infile = get_ncar_data(args, track, app_logger, namelist=varlist or "inputs/namelist")
+        existed, retrieval_started_utc = os.path.exists(infile), utc_now()
+        timing.set_source("ncar", "reused" if existed else None)
+        with timing.phase("acquisition"):
+            infile = get_ncar_data(args, track, app_logger, namelist=varlist or "inputs/namelist")
+        if not existed:
+            timing.record_ncar(infile, retrieval_started_utc)
 
     app_logger.debug("📂 Opening input data... ")
     try:
@@ -390,7 +406,7 @@ def process_data(
 
 
 def prepare_data(
-    args, varlist: str = "inputs/namelist", app_logger: logging.Logger = None
+    args, varlist: str = "inputs/namelist", app_logger: logging.Logger = None, timing=None
 ) -> xr.Dataset:
     """
     Prepare the data for further analysis.
@@ -399,6 +415,8 @@ def prepare_data(
         args (object): The arguments for the function.
         varlist (str): The file path to the variable list file (namelist).
         app_logger (logging.Logger): The logger for the application.
+        timing (RunTiming): If given, receives the acquisition time and the
+            origin of the input file (see :func:`get_data`).
 
     Returns:
         xr.Dataset: The prepared dataset for analysis.
@@ -413,7 +431,7 @@ def prepare_data(
     variable_list_df = validate_namelist_file(varlist, app_logger)
 
     # Load data
-    data = get_data(args, app_logger, varlist)
+    data = get_data(args, app_logger, varlist, timing=timing)
 
     # Import validation functions for coordinate and variable checks
     from .validation import validate_variable_match, validate_required_coordinates

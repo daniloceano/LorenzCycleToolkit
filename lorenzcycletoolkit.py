@@ -43,6 +43,7 @@ from src.utils.offline_maps import offline_maps
 from src.utils.output_names import results_directory, validate_outname
 from src.utils.preprocessing import prepare_data
 from src.utils.run_status import EXIT_PARTIAL, RunStatus, snapshot_directory
+from src.utils.run_timing import RunTiming
 from src.utils.tools import initialize_logging
 
 # Suppress specific RuntimeWarning from xarray
@@ -226,31 +227,35 @@ def run_lec_analysis(data, args, results_subdirectory, figures_directory, result
     with run_status.guard(), offline_maps(getattr(args, "offline_maps", False)):
         variable_list_df = pd.read_csv(resolve_input_file("inputs/namelist"), sep=";", index_col=0, header=0)
 
-        if args.fixed:
-            framework = "Fixed"
-            lec_fixed(data, variable_list_df, results_subdirectory, results_subdirectory_vertical_levels, app_logger, args,
-                      run_status=run_status)
+        # Timing of the framework only (the namelist read above is preparation)
+        with run_status.timing.phase("lec"):
+            if args.fixed:
+                framework = "Fixed"
+                lec_fixed(data, variable_list_df, results_subdirectory, results_subdirectory_vertical_levels, app_logger,
+                          args, run_status=run_status)
 
-        if args.track or args.choose:
-            framework = "Moving"
-            dTdt = data[variable_list_df.loc["Air Temperature"]["Variable"]].differentiate(
-                variable_list_df.loc["Time"]["Variable"], datetime_unit="s"
-            ) * units("K/s")
+            if args.track or args.choose:
+                framework = "Moving"
+                dTdt = data[variable_list_df.loc["Air Temperature"]["Variable"]].differentiate(
+                    variable_list_df.loc["Time"]["Variable"], datetime_unit="s"
+                ) * units("K/s")
 
-            lec_moving(
-                data,
-                variable_list_df,
-                dTdt,
-                results_subdirectory,
-                figures_directory,
-                results_subdirectory_vertical_levels,
-                app_logger,
-                args,
-                run_status=run_status,
-            )
+                lec_moving(
+                    data,
+                    variable_list_df,
+                    dTdt,
+                    results_subdirectory,
+                    figures_directory,
+                    results_subdirectory_vertical_levels,
+                    app_logger,
+                    args,
+                    run_status=run_status,
+                )
 
         run_status.finish()
 
+    # timing first: the closing message stays the last line of the log
+    app_logger.info(run_status.timing.summary())
     message = run_status.final_message(framework, time.time() - start_time)
     if run_status.status == "success":
         app_logger.info(message)
@@ -281,6 +286,7 @@ def main():
 
     # Parse command line arguments. With no arguments argparse prints the
     # usage and exits with status 2; nothing is downloaded or written.
+    timing = RunTiming()  # monotonic start of the whole command (total_seconds)
     parser = create_arg_parser()
     args = parser.parse_args()
 
@@ -324,7 +330,7 @@ def main():
     # Status of the run, written before any computation so that an
     # interrupted run never leaves a complete-looking status behind
     run_status = RunStatus(args, results_subdirectory, app_logger,
-                           previous_files=previous_files if args.overwrite else None)
+                           previous_files=previous_files if args.overwrite else None, timing=timing)
     if previous_files:
         app_logger.warning(
             f"⚠️ --overwrite: reusing {results_subdirectory}, which already holds "
@@ -334,8 +340,8 @@ def main():
     run_status.write()
 
     # Prepare data
-    with run_status.guard():
-        data = prepare_data(args, resolve_input_file("inputs/namelist"), app_logger)
+    with run_status.guard(), timing.phase("preparation"):
+        data = prepare_data(args, resolve_input_file("inputs/namelist"), app_logger, timing=timing)
 
     # Run LEC analysis
     run_lec_analysis(data, args, results_subdirectory, figures_directory, results_subdirectory_vertical_levels, app_logger,
