@@ -19,6 +19,7 @@ Welcome to the LorenzCycleToolkit documentation! This toolkit is designed to cal
    examples_and_tutorials
    cdsapi_example
    ncar_gdex_example
+   remote_data_acquisition
    results
    troubleshooting
    file_naming_convention

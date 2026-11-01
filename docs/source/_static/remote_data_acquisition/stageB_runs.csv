@@ -1,0 +1,31 @@
+case,cds_reference,method,position_in_block,class,total_to_validated_s,remote_wait_s,transfer_s,acquisition_s,validation_s,received_gib,received_over_V,V_gib,http_requests,retries,peak_rss_gib,fields_within_tolerance,lec_vs_cds
+19790535,yes,Get a Subset,2,cold,335,127,108,,67,0.87,1.25,0.7,28,0,0.43,yes,equivalent
+19790535,yes,kerchunk,3,cold,1018,,742,951,67,6.28,9.02,0.7,110,0,0.72,yes,equivalent
+19790535,yes,NCSS,1,cold,1460,,,1390,70,0.7,1.0,0.7,40,11,0.55,yes,equivalent
+19800296,yes,Get a Subset,3,"incomplete (dedup guard, nothing submitted)",,,,,,,,0.5,1,0,0.22,,
+19800296,yes,kerchunk,1,cold,866,,653,820,46,5.52,11.14,0.5,95,0,0.7,yes,equivalent
+19800296,yes,NCSS,2,cold,652,,,603,49,0.5,1.0,0.5,15,1,0.48,yes,equivalent
+19791008,yes,Get a Subset,2,cold,532,306,126,,57,1.15,1.22,0.94,25,0,0.46,yes,not equivalent (max 1.24 x tolerance)
+19791008,yes,kerchunk,1,cold,875,,618,814,61,5.5,5.84,0.94,95,0,0.71,yes,not equivalent (max 1.24 x tolerance)
+19791008,yes,NCSS,3,cold,1587,,,1528,60,0.94,1.0,0.94,30,7,0.7,yes,not equivalent (max 1.24 x tolerance)
+19790205,yes,Get a Subset,1,cold,2269,347,753,,918,8.3,1.24,6.67,60,0,0.55,yes,equivalent
+19790205,yes,kerchunk,2,cold,4418,,2290,3038,1380,19.71,2.95,6.67,340,0,0.7,yes,equivalent
+19790205,yes,NCSS,3,cold,5609,,,4693,916,6.68,1.0,6.67,90,0,3.21,yes,equivalent
+19800256,yes,Get a Subset,3,cold,716,168,260,,208,2.45,1.26,1.94,39,0,0.52,yes,not equivalent (max 3.48 x tolerance)
+19800256,yes,kerchunk,2,cold,1903,,1329,1692,211,11.36,5.85,1.94,195,0,0.71,yes,not equivalent (max 3.48 x tolerance)
+19800256,yes,NCSS,1,failed,,,,1401,,,,1.94,,,0.2,,
+19800318,no,Get a Subset,1,cold,934,261,504,,27,4.78,1.3,3.66,62,0,0.44,yes,no CDS reference
+19800318,no,kerchunk,3,cold,3264,,2402,3233,31,20.78,5.67,3.66,355,0,0.71,yes,no CDS reference
+19800318,no,NCSS,2,failed,,,,3319,,,,3.66,,,0.24,,
+19790166,yes,Get a Subset,2,cold,1410,220,459,,585,4.71,1.25,3.78,56,0,0.53,yes,not equivalent (max 5.18 x tolerance)
+19790166,yes,kerchunk,3,cold,3392,,2071,2811,580,16.92,4.48,3.78,295,0,0.72,yes,not equivalent (max 5.18 x tolerance)
+19790166,yes,NCSS,1,not_run,,,,,,,,3.78,,,,,
+19791150,yes,Get a Subset,3,cold,1059,250,294,,417,2.46,1.26,1.95,47,0,0.48,yes,not equivalent (max 6.66 x tolerance)
+19791150,yes,kerchunk,1,cold,3082,,2291,2794,287,15.47,7.92,1.95,275,0,0.74,yes,not equivalent (max 6.66 x tolerance)
+19791150,yes,NCSS,2,not_run,,,,,,,,1.95,,,,,
+19790585,yes,Get a Subset,2,cold,684,197,242,,165,2.5,1.23,2.04,35,0,0.58,yes,equivalent
+19790585,yes,kerchunk,1,cold,1572,,1051,1398,174,8.18,4.02,2.04,145,0,0.74,yes,equivalent
+19790585,yes,NCSS,3,not_run,,,,,,,,2.04,,,,,
+19790644,yes,Get a Subset,1,cold,1641,256,432,,765,4.39,1.26,3.48,52,0,0.52,yes,not equivalent (max 3.40 x tolerance)
+19790644,yes,kerchunk,2,cold,2976,,1906,2466,511,16.13,4.63,3.48,285,0,0.73,yes,not equivalent (max 3.40 x tolerance)
+19790644,yes,NCSS,3,not_run,,,,,,,,3.48,,,,,
