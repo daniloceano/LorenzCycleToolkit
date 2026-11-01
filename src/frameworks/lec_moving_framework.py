@@ -871,11 +871,6 @@ def lec_moving(
         }
     )
 
-    if args.cdsapi:
-        app_logger.info("🗑️ Cleaning up CDS API temporary files...")
-        os.remove(args.infile)
-        app_logger.info("✅ Cleanup complete.")
-
     if args.plots:
         app_logger.info("🎨 Generating plots...")
         figures_directory = os.path.join(results_subdirectory, "Figures")

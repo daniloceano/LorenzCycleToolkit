@@ -81,6 +81,12 @@ def get_data(args: argparse.Namespace, app_logger: logging.Logger, varlist: str 
             timing.set_source("cds", "downloaded")
             app_logger.debug(f"✅ CDS API data ready: {infile}")
         else:
+            if getattr(args, "cds_max_seconds", None) is not None:
+                from .cds_guard import CdsGuardError
+                raise CdsGuardError(
+                    f"guarded CDS mode makes a new acquisition, but {infile} already exists; it is not reused. "
+                    f"Use a new destination."
+                )
             app_logger.info("✅ CDS API data already exists, skipping download.")
     elif getattr(args, "ncar", False):
         # Same track reading as the CDS API route; an existing file is reused

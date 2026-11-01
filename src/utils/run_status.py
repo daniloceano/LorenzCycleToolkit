@@ -150,6 +150,7 @@ class RunStatus:
         self.overwrite = bool(getattr(args, "overwrite", False))
         self.previous_files = previous_files
         self.timing = RunTiming() if timing is None else timing
+        self.input_cleanup = None  # set by src.utils.input_cleanup after a complete run
         self.timing.plots_requested = self.plots_requested
         if app_logger is not None:
             for handler in app_logger.handlers:
@@ -467,6 +468,7 @@ class RunStatus:
             "log_file": self.log_file,
             "previous_results": self.previous_results(),
             "timing": self.timing.to_dict(),
+            "input_cleanup": self.input_cleanup,
             "products": products,
         }
 

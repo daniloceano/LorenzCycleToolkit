@@ -1229,6 +1229,22 @@ def fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel, 
         raise
 
 
+def _fetch_from_source(source, request, parts_dir, cancel, logger, budget):
+    """:func:`fetch_piece` for an access method of :mod:`src.utils.gdex_sources`."""
+    if cancel.is_set():
+        raise _Cancelled()
+    try:
+        stored = _stored_piece(request, parts_dir)
+        if stored is not None:
+            return stored
+        return source.fetch(request, parts_dir, budget, logger, cancel)
+    except _Cancelled:
+        raise
+    except BaseException:
+        cancel.set()
+        raise
+
+
 def _fetch_piece(request, parts_dir, opener, timeout, attempts, backoff, cancel, logger, budget):
     stored = _stored_piece(request, parts_dir)
     if stored is not None:
@@ -1311,7 +1327,7 @@ def _copy_attributes(source, target, skip=("_FillValue",)):
             target.setncattr(attribute, source.getncattr(attribute))
 
 
-def write_output(plan, pieces, path, names, compress=True, float64=False):
+def write_output(plan, pieces, path, names, compress=True, float64=False, origin="NCSS responses"):
     """
     Write the verified responses into one NetCDF file, values unchanged.
 
@@ -1329,6 +1345,7 @@ def write_output(plan, pieces, path, names, compress=True, float64=False):
             and float64 copies of the same values differ by about 1e-7
             (relative), and the regression references of the test suite were
             computed from float64 input.
+        origin (str): What the pieces are, for the file's history.
     """
     by_key = {piece.request.key: piece for piece in pieces}
     if set(by_key) != {request.key for request in plan.requests}:
@@ -1347,7 +1364,7 @@ def write_output(plan, pieces, path, names, compress=True, float64=False):
             ),
             "history": (
                 f"{datetime.datetime.now(datetime.timezone.utc):%Y-%m-%dT%H:%M:%SZ}: "
-                f"{len(pieces)} NCSS responses copied unchanged by LorenzCycleToolkit src/utils/ncar_gdex.py"
+                f"{len(pieces)} {origin} copied unchanged by LorenzCycleToolkit src/utils/ncar_gdex.py"
             ),
             "lectk_provenance": f"{os.path.basename(path).removesuffix('.part')}.provenance.json",
         })
@@ -1520,7 +1537,7 @@ def check_existing(path, plan, names, float64=False):
 # ---------------------------------------------------------------- retrieve
 def retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=None, attempts=None,
              backoff=None, compress=True, float64=False, keep_parts=False, max_total_bytes=None,
-             request_info=None, namelist=None, budget=None):
+             request_info=None, namelist=None, budget=None, source=None):
     """
     Retrieve every request of a plan and write the verified file ``path``.
 
@@ -1552,6 +1569,11 @@ def retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=
         budget (ByteBudget): Limit on the bytes received, shared with
             other retrievals; replaces the count from ``max_total_bytes``
             (whose estimate check still applies).
+        source: Access method other than NCSS (experimental), from
+            :mod:`src.utils.gdex_sources` (``KerchunkSource`` or
+            ``SubsetSource``): it fills the parts directory with the same
+            verified pieces, one request at a time, and everything else
+            (resumption, checks, assembly, provenance) is unchanged.
 
     Returns:
         dict: The provenance record (also written next to the file).
@@ -1564,12 +1586,12 @@ def retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=
         return _retrieve(plan, path, names, logger=logger, workers=workers, opener=opener, timeout=timeout,
                          attempts=attempts, backoff=backoff, compress=compress, float64=float64,
                          keep_parts=keep_parts, max_total_bytes=max_total_bytes, request_info=request_info,
-                         namelist=namelist, budget=budget)
+                         namelist=namelist, budget=budget, source=source)
 
 
 def _retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout=None, attempts=None,
               backoff=None, compress=True, float64=False, keep_parts=False, max_total_bytes=None,
-              request_info=None, namelist=None, budget=None):
+              request_info=None, namelist=None, budget=None, source=None):
     """:func:`retrieve`, with the lock of ``path`` already held."""
     logger = logger or logging.getLogger("lorenzcycletoolkit")
     opener = opener or default_opener()
@@ -1585,7 +1607,9 @@ def _retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout
         raise ValueError(f"attempts must be at least 1, not {attempts}")
     if os.path.exists(path):
         raise NcarRetrievalError(f"{path} already exists; it is never overwritten")
-    estimate = plan.estimated_bytes
+    if source is not None:
+        workers = 1
+    estimate = plan.estimated_bytes if source is None else source.estimated_bytes(plan)
     if estimate > max_total_bytes:
         raise NcarRetrievalError(
             f"the retrieval would transfer about {estimate / 1024 ** 3:.2f} GiB, more than the limit of "
@@ -1597,7 +1621,7 @@ def _retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout
         raise NcarRetrievalError(f"the directory of {path} does not exist")
     parts_dir = f"{path}.parts"
     free = shutil.disk_usage(directory).free
-    needed = estimate + plan.output_bytes
+    needed = (estimate if source is None else source.disk_bytes(plan, estimate)) + plan.output_bytes
     if free < needed:
         raise NcarRetrievalError(
             f"not enough free disk space in {directory}: about {needed / 1024 ** 3:.2f} GiB needed "
@@ -1605,8 +1629,9 @@ def _retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout
         )
     os.makedirs(parts_dir, exist_ok=True)
     days = sorted({r.day for r in plan.requests})
+    method = "" if source is None else f" ({source.name}, experimental)"
     logger.info(
-        f"📥 NCAR GDEX: {len(plan.requests)} request(s) for {len(days)} day(s) "
+        f"📥 NCAR GDEX{method}: {len(plan.requests)} request(s) for {len(days)} day(s) "
         f"({days[0]} to {days[-1]}), {len(plan.times)} time(s), {len(PRESSURE_LEVELS_HPA)} levels, "
         f"area N{plan.north:g} W{plan.west:g} S{plan.south:g} E{plan.east:g} "
         f"({len(plan.latitudes)}x{len(plan.longitudes)} points), about {estimate / 1024 ** 2:.1f} MiB"
@@ -1627,7 +1652,7 @@ def _retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout
             break
         room -= request.max_bytes
         fit += 1
-    if fit < len(pending):
+    if fit < len(pending) and source is None:   # an access method's transfers are not NCSS responses
         logger.warning(
             f"⚠️ the byte limit leaves room for {fit} of the {len(pending)} request(s) still to make: the retrieval "
             f"will stop after them and keep the verified responses, so that a later run resumes from them"
@@ -1635,8 +1660,13 @@ def _retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout
     executor = ThreadPoolExecutor(max_workers=int(workers), thread_name_prefix="ncar-gdex")
     futures = []
     try:
-        futures = [executor.submit(fetch_piece, request, parts_dir, opener, timeout, attempts, backoff,
-                                   cancel, logger, budget) for request in ordered]
+        if source is None:
+            futures = [executor.submit(fetch_piece, request, parts_dir, opener, timeout, attempts, backoff,
+                                       cancel, logger, budget) for request in ordered]
+        else:
+            source.prepare(plan, parts_dir, budget, logger, cancel)
+            futures = [executor.submit(_fetch_from_source, source, request, parts_dir, cancel, logger, budget)
+                       for request in plan.requests]
         for future in as_completed(futures):
             if future.exception() is not None:
                 cancel.set()
@@ -1673,7 +1703,8 @@ def _retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout
     part_path = f"{path}.part"
     assembly_started = time.monotonic()
     try:
-        write_output(plan, pieces, part_path, names, compress=compress, float64=float64)
+        write_output(plan, pieces, part_path, names, compress=compress, float64=float64,
+                     origin="NCSS responses" if source is None else f"pieces read by {source.name}")
         check_output(part_path, plan, names)
     except BaseException:
         if os.path.exists(part_path):
@@ -1684,7 +1715,8 @@ def _retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout
     downloaded = [p for p in pieces if not p.reused]
     record = {
         "schema": PROVENANCE_SCHEMA,
-        "source": dict(SOURCE, base_url=plan.base_url),
+        "source": (dict(SOURCE, base_url=plan.base_url) if source is None
+                   else dict(SOURCE, service=source.service, base_url=None)),
         "request": dict(request_info or {}, **{
             "area": {"north": plan.north, "west": plan.west, "south": plan.south, "east": plan.east},
             "times_utc": [_iso(t) for t in plan.times],
@@ -1733,9 +1765,17 @@ def _retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout
         },
         "attempts": budget.attempts[attempts_before:],
     }
+    if source is not None:
+        record["method"] = source.describe()
     _write_json(f"{provenance_path(path)}.tmp", record)
     os.replace(part_path, path)
     os.replace(f"{provenance_path(path)}.tmp", provenance_path(path))
+    if source is not None:
+        # after the file and its record are in place (Get a Subset: purge of a request created here)
+        extra = source.finish(record, logger)
+        if extra:
+            record["method"].update(extra)
+            _write_json(provenance_path(path), record)
     if not keep_parts:
         shutil.rmtree(parts_dir, ignore_errors=True)
     logger.info(
@@ -1836,6 +1876,14 @@ def main(argv=None):
                         help="Store the float32 values as float64 (exact); the toolkit then computes in float64.")
     parser.add_argument("--keep-parts", action="store_true", help="Keep the responses after writing the file.")
     parser.add_argument("--dry-run", action="store_true", help="Show the requests and sizes; retrieve nothing.")
+    parser.add_argument("--method", choices=("ncss", "kerchunk", "subset"), default="ncss",
+                        help=("Access method (default: ncss). kerchunk and subset are experimental: see "
+                              "src/utils/gdex_sources.py."))
+    parser.add_argument("--kerchunk-refs", default=None,
+                        help="With --method kerchunk: directory of the GDEX kerchunk reference files (JSON).")
+    parser.add_argument("--gdex-purge", action="store_true",
+                        help=("With --method subset: purge the GDEX request after the file is written, only if "
+                              "this retrieval created it. Token: GDEX_API_TOKEN or ~/.gdex_api_token."))
     parser.add_argument("-v", "--verbosity", action="store_true", help="Debug messages.")
     args = parser.parse_args(argv)
 
@@ -1847,6 +1895,17 @@ def main(argv=None):
         namelist = resolve_input_file(args.namelist)
         names = output_names(namelist)
         plan = plan_retrieval(area_from_track(track), daily_hours(track.index, args.time_resolution))
+        source = None
+        if args.method == "kerchunk":
+            from .gdex_sources import KerchunkSource
+            source = KerchunkSource(args.kerchunk_refs)
+        elif args.method == "subset":
+            from .gdex_sources import SubsetSource
+            source = SubsetSource(purge=args.gdex_purge)
+        if args.dry_run and source is not None:
+            print(f"{args.method}: {len(plan.requests)} pieces, {len(plan.times)} times, about "
+                  f"{source.estimated_bytes(plan) / 1024 ** 2:.1f} MiB to transfer")
+            return 0
         if args.dry_run:
             print(f"area N{plan.north:g} W{plan.west:g} S{plan.south:g} E{plan.east:g}: "
                   f"{len(plan.latitudes)} x {len(plan.longitudes)} points, {len(plan.times)} times, "
@@ -1868,7 +1927,7 @@ def main(argv=None):
         }
         retrieve(plan, args.outfile, names, logger=logger, workers=args.workers, compress=not args.no_compress,
                  float64=args.float64, keep_parts=args.keep_parts, max_total_bytes=int(args.max_gib * 1024 ** 3),
-                 request_info=request_info, namelist=namelist)
+                 request_info=request_info, namelist=namelist, source=source)
     except (NcarRetrievalError, ValueError, FileNotFoundError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
