@@ -177,6 +177,8 @@ integridade. Marco de reavaliação de todos os itens: **próxima versão/tag es
 | P2-A e E1 da P3-L2 — respostas brutas NCAR | ≈ 0,25 GiB | RETER TEMPORARIAMENTE | base das igualdades bit a bit; uma nova obtenção do serviço público reproduziu os mesmos bytes (P3-L 6/6, P3-L2 15/15), e os hashes estão nos relatórios | não exigida: recriabilidade demonstrada |
 | Resto de G6 | 0,2 MiB | resíduo operacional recriável | exportação por `git show` de commits integrados | não exigida |
 
+**Atualização 01/11/2026:** a manutenção de retenção da D-Bench não alcançou estes itens, que ficam no ambiente original da Frente D, sem acesso a partir do servidor da D-Bench; continuam pendentes como descritos acima ([registro](../evidence/records/2026-11-01-dbench-retention-cleanup.md)).
+
 Nenhum item INVESTIGAR bloqueia o encerramento: a suspeita de duplicação P3-L × P3-L2 foi resolvida (duplicata
 confirmada), e os NetCDF de análise foram classificados.
 

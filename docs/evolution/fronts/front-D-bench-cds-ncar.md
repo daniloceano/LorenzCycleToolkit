@@ -2,7 +2,7 @@
 
 **Abertura:** 29/10/2026. **Estado:** EM PREPARAÇÃO — ETAPA 0. Sem aquisições, jobs ou medição de desempenho autorizados até os portões operacionais. **Base documental:** `develop` em `2e2156b159afe5657d1ac509367f0551b3599eeb`.
 
-**Encerramento (01/11/2026):** ENCERRADA sem PASS da campanha pré-registrada; ver [registro de encerramento](../evidence/records/2026-11-01-dbench-closure.md). O texto abaixo preserva o plano como aprovado em 29/10.
+**Encerramento (01/11/2026):** ENCERRADA sem PASS da campanha pré-registrada; ver [registro de encerramento](../evidence/records/2026-11-01-dbench-closure.md). O texto abaixo preserva o plano como aprovado em 29/10. **Retenção (01/11/2026):** ENCERRADA — RETENÇÃO VALIDADA; ver [limpeza GOV-RET-01](../evidence/records/2026-11-01-dbench-retention-cleanup.md).
 
 
 ## Posição na fila e evidência prévia
