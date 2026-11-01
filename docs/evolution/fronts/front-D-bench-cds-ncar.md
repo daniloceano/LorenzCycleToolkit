@@ -2,6 +2,9 @@
 
 **Abertura:** 29/10/2026. **Estado:** EM PREPARAÇÃO — ETAPA 0. Sem aquisições, jobs ou medição de desempenho autorizados até os portões operacionais. **Base documental:** `develop` em `2e2156b159afe5657d1ac509367f0551b3599eeb`.
 
+**Encerramento (01/11/2026):** ENCERRADA sem PASS da campanha pré-registrada; ver [registro de encerramento](../evidence/records/2026-11-01-dbench-closure.md). O texto abaixo preserva o plano como aprovado em 29/10.
+
+
 ## Posição na fila e evidência prévia
 
 D-Bench complementa a Frente D, **ENCERRADA em 28/10/2026 com PASS COM RESSALVAS ACEITAS**; não a reabre. A Frente E continua sendo a próxima da fila principal, não iniciada e **sem depender de resultados ainda inexistentes desta comparação**. A Frente K de sensibilidade vertical e a pendência NCEP-R2 continuam separadas.
