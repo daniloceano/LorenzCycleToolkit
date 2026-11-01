@@ -54,5 +54,5 @@ A razão abaixo é **máxima diferença energética / tolerância oficial da col
 ## Preservação, cronologia e referências
 
 - Evidências completas, arquivos híbridos, scripts diagnósticos, resultados e hashes foram relatados pelo agente como preservados **fora do Git**, na área privada de diagnóstico pós-encerramento, com `MANIFEST.sha256` (112 entradas) e `RELATORIO.md`. A acessibilidade atual desses bytes é responsabilidade do ambiente de investigação; este registro não substitui a retenção externa.
-- Permanecem preservados `dbench_private/`, `LEC_Results/` e os registros históricos de [pré-registro](2026-10-29-dbench-preregistration.md), [Etapa B](../../../../source/remote_data_acquisition.rst) e [encerramento de 01/11](2026-11-01-dbench-closure.md).
+- Permanecem preservados `dbench_private/`, `LEC_Results/` e os registros históricos de [pré-registro](2026-10-29-dbench-preregistration.md), [Etapa B](../../../source/remote_data_acquisition.rst) e [encerramento de 01/11](2026-11-01-dbench-closure.md).
 - O presente documento é um **adendo posterior**, aprovado cientificamente pelo responsável, não uma edição retroativa dos resultados da campanha. Não altera a fila principal, `main`, tags, releases ou publicações.
