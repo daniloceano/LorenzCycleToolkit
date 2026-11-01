@@ -4,7 +4,38 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **Input NetCDF files are no longer deleted after a run.** The moving
+  framework deleted the `--cdsapi` input file at the end of every `--track`
+  run, even when the file already existed and was only reused. Input files
+  are now always kept, whatever their origin; `run_status.json` records the
+  decision under `input_cleanup`. No change in the computation.
+
 ### Added
+
+- **`--delete-downloaded-input`**: with `--cdsapi` or `--ncar`, delete the
+  input file after the run only if this run downloaded it, the run ended
+  with status `success` and the file is unchanged since the download.
+  Local, pre-existing, reused and failed-run files are always kept.
+- **Guarded CDS mode** (opt-in, `--cds-max-seconds` with `--cds-ledger`;
+  `src/utils/cds_guard.py`): global monotonic deadline per case, few HTTP
+  retries, one active submission per ledger and per CDS account on the host, a private ledger written before
+  each submission with the job id when known, a stop policy that blocks new
+  submissions after failures, deadlines or interruptions until an explicit
+  `resolve --confirm-no-pending`, an explicit credential (never `~/.cdsapirc`),
+  no reuse of an existing destination, and an optional best-effort delete of
+  the job just submitted, only while it is accepted or running
+  (`--cds-delete-on-stop`), whose outcome is recorded, never assumed. The normal `--cdsapi` route is unchanged.
+- **Experimental NCAR GDEX access methods** (`python -m src.utils.ncar_gdex
+  --method kerchunk|subset`; `src/utils/gdex_sources.py`): `kerchunk` reads
+  the original GDEX NetCDF-4 files by HTTPS byte ranges located with local
+  kerchunk reference files (`--kerchunk-refs`); `subset` uses the GDEX
+  "Get a Subset" request API (personal token), reuses a completed identical
+  request instead of resubmitting, and purges only a request it created, on
+  request (`--gdex-purge`). Both fill the same verified pieces as NCSS, so
+  checks, resumption, assembly and provenance are unchanged; the method is
+  recorded in the provenance file. The default remains `ncss`.
 
 - **Run timing in `run_status.json`** (D-Bench instrumentation): a new
   `timing` key records the acquisition (`--cdsapi`/`--ncar`), preparation,

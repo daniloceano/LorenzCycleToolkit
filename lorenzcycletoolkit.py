@@ -38,6 +38,7 @@ from metpy.units import units
 
 from src.frameworks.lec_fixed_framework import lec_fixed
 from src.frameworks.lec_moving_framework import lec_moving
+from src.utils.input_cleanup import cleanup_input, downloaded_input
 from src.utils.input_files import resolve_input_file
 from src.utils.offline_maps import offline_maps
 from src.utils.output_names import results_directory, validate_outname
@@ -129,6 +130,14 @@ def create_arg_parser():
         help="Use CDS API for downloading data (experimental).",
     )
     parser.add_argument(
+        "--delete-downloaded-input",
+        action="store_true",
+        help=(
+            "With --cdsapi or --ncar: delete the input NetCDF file after the run, only if this run downloaded it, "
+            "the run succeeded and the file is unchanged. Without this flag no input file is ever deleted."
+        ),
+    )
+    parser.add_argument(
         "--time-resolution",
         type=int,
         default=3,
@@ -144,6 +153,26 @@ def create_arg_parser():
             "file, and the file is reused only if it matches that record."
         ),
     )
+    guard = parser.add_argument_group(
+        "guarded CDS mode (opt-in, for controlled runs such as D-Bench; see src/utils/cds_guard.py)")
+    guard.add_argument(
+        "--cds-max-seconds", type=float, default=None,
+        help=("With --cdsapi: global deadline in seconds of the acquisition (queue, transfers and file assembly); "
+              "enables the guarded mode, which also needs --cds-ledger, an explicit credential (CDSAPI_URL and "
+              "CDSAPI_KEY, or CDSAPI_RC) and a new destination file. Stopping the client never cancels a remote request."),
+    )
+    guard.add_argument("--cds-ledger", type=str, default=None,
+                       help="Private ledger (JSON lines, mode 600) written before each CDS submission.")
+    guard.add_argument("--cds-retries", type=int, default=None,
+                       help="HTTP tries of the CDS client in guarded mode (default 3).")
+    guard.add_argument("--cds-timeout", type=float, default=None,
+                       help="Network timeout in seconds of the CDS client in guarded mode (default 120).")
+    guard.add_argument("--cds-case-id", type=str, default=None,
+                       help="Case identifier in the ledger (default: the input file name).")
+    guard.add_argument("--cds-delete-on-stop", action="store_true", default=None,
+                       help=("After a deadline or an interruption, send a best-effort delete of the job just "
+                             "submitted (that job only) and record whether the API confirmed it; new submissions "
+                             "stay blocked either way."))
     parser.add_argument(
         "--trackfile",
         type=str,
@@ -200,7 +229,8 @@ def setup_results_directory(args, method):
     return results_subdirectory, figures_directory, results_subdirectory_vertical_levels
 
 
-def run_lec_analysis(data, args, results_subdirectory, figures_directory, results_subdirectory_vertical_levels, app_logger, run_status=None):
+def run_lec_analysis(data, args, results_subdirectory, figures_directory, results_subdirectory_vertical_levels, app_logger, run_status=None,
+                     downloaded=None):
     """
     Runs the LEc analysis on the given data using the specified method and arguments.
 
@@ -210,6 +240,9 @@ def run_lec_analysis(data, args, results_subdirectory, figures_directory, result
         args (dict): Additional arguments for the analysis.
         run_status (RunStatus): Status record of the run; a new one is
             created (and written to run_status.json) if not given.
+        downloaded (tuple): Fingerprint of the input file when this run
+            downloaded it (see src.utils.input_cleanup), else None; only
+            such a file can be deleted, with --delete-downloaded-input.
 
     Returns:
         RunStatus: The status of the run, also written to run_status.json.
@@ -254,6 +287,8 @@ def run_lec_analysis(data, args, results_subdirectory, figures_directory, result
 
         run_status.finish()
 
+    # input files are kept unless --delete-downloaded-input allows deleting a file this run downloaded
+    cleanup_input(args, run_status, downloaded, data=data, logger=app_logger)
     # timing first: the closing message stays the last line of the log
     app_logger.info(run_status.timing.summary())
     message = run_status.final_message(framework, time.time() - start_time)
@@ -292,6 +327,20 @@ def main():
 
     if args.cdsapi and args.ncar:
         parser.error("--cdsapi and --ncar are alternative data sources; use one of them")
+    if args.delete_downloaded_input and not (args.cdsapi or args.ncar):
+        parser.error("--delete-downloaded-input needs --cdsapi or --ncar (local input files are never deleted)")
+    guard_options = [name for name in ("cds_ledger", "cds_retries", "cds_timeout", "cds_case_id", "cds_delete_on_stop")
+                     if getattr(args, name) is not None]
+    if args.cds_max_seconds is not None or guard_options:
+        if not args.cdsapi:
+            parser.error("the guarded CDS options (--cds-*) need --cdsapi")
+        if args.cds_max_seconds is None:
+            parser.error("--cds-ledger, --cds-retries, --cds-timeout, --cds-case-id and --cds-delete-on-stop "
+                         "need --cds-max-seconds")
+        if args.cds_max_seconds <= 0 or not args.cds_ledger:
+            parser.error("--cds-max-seconds must be positive and needs --cds-ledger")
+        if args.cds_retries is not None and args.cds_retries < 1:
+            parser.error("--cds-retries must be at least 1")
 
     # Set method
     if args.fixed:
@@ -340,12 +389,13 @@ def main():
     run_status.write()
 
     # Prepare data
+    existed_before = os.path.exists(args.infile)
     with run_status.guard(), timing.phase("preparation"):
         data = prepare_data(args, resolve_input_file("inputs/namelist"), app_logger, timing=timing)
 
     # Run LEC analysis
     run_lec_analysis(data, args, results_subdirectory, figures_directory, results_subdirectory_vertical_levels, app_logger,
-                     run_status=run_status)
+                     run_status=run_status, downloaded=downloaded_input(args, existed_before, timing))
 
     return run_status.exit_code
 

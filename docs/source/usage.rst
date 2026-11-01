@@ -359,12 +359,27 @@ For a track file covering January 1-3, 2020:
 - Download times depend on data volume and CDS server load (typically several minutes)
 - A 15° buffer is automatically applied to ensure adequate spatial coverage
 - If the file already exists, the download is skipped and the existing file is used
+- **Input files are kept.** No input NetCDF file is deleted after a run, whether it was given by you, reused or downloaded by the run (earlier versions deleted the ``--cdsapi`` file at the end of every ``--track`` run, even a reused one). To delete a file that the run itself downloaded, add ``--delete-downloaded-input``: the file is deleted only if it did not exist before the run, the run ended with status ``success`` and the file is unchanged since the download. ``run_status.json`` records the decision under ``input_cleanup``. The same applies to ``--ncar`` (its provenance record is kept).
 
 **Troubleshooting**
 
 - **Authentication errors**: Verify your ``.cdsapirc`` file is correctly formatted and contains valid credentials
 - **Slow downloads**: CDS API can be slow during peak hours; use the ``-v`` flag for detailed progress logging
 - **File size**: ERA5 files can be large (>1 GB); ensure adequate disk space
+
+**Guarded CDS mode (controlled runs)**
+
+For controlled runs such as benchmarks, ``--cds-max-seconds`` turns on an opt-in guarded mode of ``--cdsapi``. Without it nothing changes. In guarded mode:
+
+- one global deadline per case, measured with a monotonic clock from the start of the acquisition through the queue, the transfers and the assembly; nothing is submitted after it, and the wait for a queued request stops at it (the case is censored, never a success);
+- few HTTP retries (``--cds-retries``, default 3) and a bounded network timeout (``--cds-timeout``, default 120 s); a request is never resubmitted;
+- one active CDS submission at a time per ledger and per CDS account on this host (a lock per credential in ``LECTK_CDS_LOCK_DIR`` or ``~/.cache/lectk``, named after a truncated hash of the credential; other hosts are not covered);
+- a private ledger (``--cds-ledger``, JSON lines, mode 600, keep it outside Git) gets an entry before each submission and the job id as soon as the CDS gives it; after a failure, a deadline or an interruption it blocks every later submission until you have checked the account for pending requests and run ``python -m src.utils.cds_guard resolve LEDGER --confirm-no-pending --note "..."`` (a human attestation: it does not query the CDS, and it is refused while an acquisition holds the ledger lock);
+- an explicit credential is required (``CDSAPI_URL`` and ``CDSAPI_KEY``, or ``CDSAPI_RC`` naming a file of mode 600): ``~/.cdsapirc`` is not used;
+- the destination file must not exist: an existing file is never reused;
+- ``--cds-delete-on-stop`` also sends, after a deadline or an interruption, a best-effort delete of the job just submitted (that job only, never an id from the ledger or a listing), only while it is ``accepted`` or ``running`` (a completed job and its results are never deleted), reads its status again and records whether the CDS confirmed it.
+
+Stopping the client does not cancel a remote request: it may remain queued or running and use the account's quota. A delete that the CDS does not confirm, or a killed process, leaves its state unknown; check the account before submitting again.
 
 Flags
 =====
@@ -382,6 +397,8 @@ Flags
 - `-v`, `--verbosity`: Enable debug logging for detailed output.
 - `--cdsapi`: Automatically download ERA5 data from CDS API based on track file (experimental).
 - `--time-resolution`: Temporal resolution in hours for CDS API downloads (default: 3). Recommended values: 3, 6, or 12 hours to avoid exceeding API cost limits.
+- `--delete-downloaded-input`: With ``--cdsapi`` or ``--ncar``, delete the input NetCDF file after the run, only if this run downloaded it, the run succeeded and the file is unchanged. Without it no input file is ever deleted.
+- `--cds-max-seconds`, `--cds-ledger`, `--cds-retries`, `--cds-timeout`, `--cds-case-id`, `--cds-delete-on-stop`: guarded CDS mode for controlled runs (see *Guarded CDS mode* above).
 - `--trackfile`: Specify a custom track file path (default: ``inputs/track``).
 - `--box_limits`: Specify a custom box limits file path (default: ``inputs/box_limits``).
 

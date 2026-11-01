@@ -238,9 +238,21 @@ def get_cdsapi_data(
         app_logger.info(f"  📅 Day {i}: {date.date()}")
     
     daily_files = []
-    client = cdsapi.Client(timeout=600, retry_max=500)
-    
+    # Opt-in limits of controlled runs (--cds-max-seconds); None otherwise
+    from .cds_guard import CdsGuard, CdsGuardError, check_client, check_credentials
+    guard = CdsGuard.from_args(args)
+    if guard is None:
+        client = cdsapi.Client(timeout=600, retry_max=500)
+
     try:
+        if guard is not None:
+            check_credentials()
+            client = cdsapi.Client(**guard.client_options())
+            check_client(client)
+            guard.acquire()
+            app_logger.info(f"🛡️ Guarded CDS mode: deadline {guard.max_seconds:g} s, {guard.retries} HTTP tries, "
+                            f"one submission at a time, ledger entry before each submission")
+
         for i, date in enumerate(dates, 1):
             year = date.strftime('%Y')
             month = date.strftime('%m')
@@ -315,11 +327,14 @@ def get_cdsapi_data(
             
             # Download data for this day
             try:
-                client.retrieve(
-                    "reanalysis-era5-pressure-levels",
-                    request,
-                    temp_file,
-                )
+                if guard is None:
+                    client.retrieve(
+                        "reanalysis-era5-pressure-levels",
+                        request,
+                        temp_file,
+                    )
+                else:
+                    guard.retrieve(client, request, temp_file, day=f"{year}-{month}-{day}")
                 
                 # Verify file was created
                 if not os.path.exists(temp_file):
@@ -346,6 +361,9 @@ def get_cdsapi_data(
                 
             except FileNotFoundError:
                 raise  # Re-raise the FileNotFoundError we just created
+            except CdsGuardError as e:
+                app_logger.error(f"❌ Guarded CDS mode stopped the case on {year}-{month}-{day}: {e}")
+                raise
             except KeyError as e:
                 app_logger.error(f"❌ CDS API authentication or configuration error!")
                 app_logger.error("\n" + "="*70)
@@ -404,6 +422,8 @@ def get_cdsapi_data(
         combined_ds = xr.concat(datasets, dim='valid_time')
         
         # Save concatenated dataset
+        if guard is not None:
+            guard.check_time("before writing the output file")
         app_logger.info(f"💾 Saving final dataset to: {args.infile}")
         combined_ds.to_netcdf(args.infile)
         combined_ds.close()
@@ -443,6 +463,8 @@ def get_cdsapi_data(
         app_logger.info("=" * 60)
         
     finally:
+        if guard is not None:
+            guard.release()
         # Clean up temporary files and directory
         app_logger.debug("🧹 Cleaning up temporary files...")
         for temp_file in daily_files:
