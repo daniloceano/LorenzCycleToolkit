@@ -8,7 +8,9 @@ A **Frente C foi encerrada em 25/10/2026 com PASS DOCUMENTAL**, após aprovaçã
 
 A **Frente D** foi executada de 26 a 28/10/2026 como avaliação de rotas alternativas de aquisição ERA5. O adaptador NCAR GDEX foi integrado em `develop` como funcionalidade **experimental** ([PR #38](https://github.com/daniloceano/LorenzCycleToolkit/pull/38), merge `dec13fe6dcacc2e2cd7f5720160ea40d40e75403`). A comparação de tempo com o CDS **não foi realizada**: a P2-B0 foi bloqueada antes de qualquer submissão, um resultado negativo registrado. **Encerrada formalmente em 28/10/2026: PASS COM RESSALVAS ACEITAS**, com retenção validada (limpeza parcial e retenções temporárias até a próxima versão/tag). Benchmarks controlados e comparação NCAR × CDS não concluídos; sem superioridade de velocidade nem validação física demonstradas. A Frente E não foi aberta. [Registro da Frente D](front-D-era5-ncar.md).
 
-A **Frente E** (decisão de arquitetura de provedores) permanece **não aberta** e a **Frente F** (piloto de provedor), **condicional**; G–K são backlog e hipóteses. [Fila](../queue.md).
+A **Frente E** (decisão de arquitetura de aquisição ERA5) foi **aberta em 01/11/2026 com decisão arquitetural aprovada** pelo responsável: evolução mínima com contrato científico explícito do NetCDF de entrada (A+), `--ncar` como origem com NCSS por padrão e seletor único `--ncar-method` apenas especificado para implementação futura; `infile` local e CDS preservados. **Sem implementação de código.** Está em integração/encerramento: integração documental e retenção GOV-RET-01 ainda sem comprovação. [Decisão e contrato](front-E-era5-provider-architecture.md).
+
+A **Frente F** (piloto de provedor) continua **condicional e não aberta**; G–K são backlog e hipóteses. [Fila](../queue.md).
 
 Após conclusão técnica de cada frente, aplicar [GOV-RET-01 Revisão 2](../retention-policy.md): descartar os resíduos operacionais comprovadamente dispensáveis e justificar somente a retenção mínima necessária. Reavaliar os retidos no fechamento da próxima versão/tag estável, sem exclusão automática. A Frente A receberá auditoria retroativa, sem reabertura da decisão científica.
 
