@@ -32,7 +32,47 @@ from .run_metadata import record_top_cut
 from .run_timing import RunTiming
 from .select_area import slice_domain
 from .tools import convert_longitude_range, get_cdsapi_data
+from .track_alignment import (TrackAlignmentError, align_track_times, planned_request_times,
+                              record_alignment, warn_adapted)
 from .validation import validate_track_file, validate_namelist_file
+
+
+def check_planned_times(track, args, source, app_logger):
+    """
+    Before a ``--cdsapi``/``--ncar`` download, check the track against the times the request will retrieve.
+
+    The requested hours are known before the download (``--time-resolution``), so a track that they
+    cannot serve is refused here instead of after the transfer. This does not replace the check
+    against the times of the file received (:func:`process_data`).
+
+    Args:
+        track (pd.DataFrame): Track with a datetime index.
+        args (argparse.Namespace): Command-line arguments (``time_resolution``).
+        source (str): Name of the data source in the messages.
+        app_logger (logging.Logger): Logger for the application.
+
+    Raises:
+        TrackAlignmentError: If the requested times cannot serve the track.
+    """
+    planned = planned_request_times(track.index, args.time_resolution)
+    label = f"the {source} request (--time-resolution {args.time_resolution})"
+    try:
+        alignment = align_track_times(track.index, planned, label)
+        missing = alignment.selected[~alignment.selected.isin(planned)]
+        if len(missing):
+            raise TrackAlignmentError(
+                f"{len(missing)} track time(s) are not among the times of {label}, first {missing[0]}: "
+                f"the request would not retrieve them. Use a --time-resolution whose times fall on the track times."
+            )
+    except TrackAlignmentError as error:
+        app_logger.error(f"❌ {source} request not made: {error}")
+        raise
+    if alignment.adapted:
+        app_logger.info(
+            f"⏱️ {source} request every {alignment.data_step_h:g} h for a track every {alignment.track_step_h:g} h: "
+            f"after the download the track will be aligned with the data times ({len(alignment.selected)} of "
+            f"{alignment.n_original} positions, checked against the file received)."
+        )
 
 
 def get_data(args: argparse.Namespace, app_logger: logging.Logger, varlist: str = None,
@@ -75,6 +115,7 @@ def get_data(args: argparse.Namespace, app_logger: logging.Logger, varlist: str 
                 parse_dates=["time"],
                 date_format="%Y-%m-%d-%H%M"
             )
+            check_planned_times(track, args, "CDS API", app_logger)
             timing.set_source("cds", None)  # "downloaded" only once the call succeeds
             with timing.phase("acquisition"):
                 infile = get_cdsapi_data(args, track, app_logger)
@@ -99,6 +140,8 @@ def get_data(args: argparse.Namespace, app_logger: logging.Logger, varlist: str 
             parse_dates=["time"],
             date_format="%Y-%m-%d-%H%M"
         )
+        if not os.path.exists(infile):
+            check_planned_times(track, args, "NCAR GDEX", app_logger)
         timing.set_source("ncar", None)  # set once the call has returned
         with timing.phase("acquisition"):
             infile = get_ncar_data(args, track, app_logger, namelist=varlist or "inputs/namelist",
@@ -219,49 +262,32 @@ def process_data(
             date_format="%Y-%m-%d-%H%M"
         )
         TimeIndexer = variable_list_df.loc["Time"]["Variable"]
-        # Check input data and track time steps
-        data_time_delta = int(
-            (data[TimeIndexer][1] - data[TimeIndexer][0]) / np.timedelta64(1, "h")
-        )
-        track_time_delta = int(
-            (track.index[1] - track.index[0]) / np.timedelta64(1, "h")
-        )
-        
+        data_times = pd.DatetimeIndex(data[TimeIndexer].values)
+
         # Log timestep information
-        app_logger.debug(f"📊 Data time resolution: {data_time_delta} hour(s)")
-        app_logger.debug(f"📊 Track time resolution: {track_time_delta} hour(s)")
+        app_logger.debug(f"📊 Data time steps: {sorted(set(np.diff(data_times.values) / np.timedelta64(1, 'h')))} hour(s)")
+        app_logger.debug(f"📊 Track time steps: {sorted(set(np.diff(track.index.values) / np.timedelta64(1, 'h')))} hour(s)")
         app_logger.debug(f"📅 Data time range: {data[TimeIndexer][0].values} to {data[TimeIndexer][-1].values}")
         app_logger.debug(f"📍 Track time range: {track.index[0]} to {track.index[-1]}")
-        
-        # If data dt is higher than track dt, raise error (can't select timesteps that don't exist in data)
-        if data_time_delta > track_time_delta:
-            app_logger.error("❌ Data time step is higher than track time step!")
+
+        # Align the track with the data times: when the data are sampled less
+        # often than the track (e.g. 6-hourly data, 3-hourly track), keep the
+        # original track positions at the data times (track_alignment rules)
+        try:
+            alignment = align_track_times(track.index, data_times, "the meteorological data")
+        except TrackAlignmentError as error:
+            app_logger.error("❌ Track times cannot be aligned with the data times!")
             app_logger.error("\n" + "="*70)
             app_logger.error("⏱️  TIME RESOLUTION MISMATCH")
             app_logger.error("="*70)
-            app_logger.error(f"Data time resolution:  {data_time_delta} hour(s)")
-            app_logger.error(f"Track time resolution: {track_time_delta} hour(s)")
-            app_logger.error("")
-            app_logger.error("📅 Data timestamps:")
-            app_logger.error(f"   First: {data[TimeIndexer][0].values}")
-            app_logger.error(f"   Last:  {data[TimeIndexer][-1].values}")
-            app_logger.error("")
-            app_logger.error("📍 Track timestamps:")
-            app_logger.error(f"   First: {track.index[0]}")
-            app_logger.error(f"   Last:  {track.index[-1]}")
-            app_logger.error("")
-            app_logger.error("⚠️  Problem: The track requests timesteps that don't exist in the data.")
-            app_logger.error(f"   Track needs data every {track_time_delta} hour(s), but data only has timesteps every {data_time_delta} hour(s).")
-            app_logger.error("")
-            app_logger.error("💡 Solutions:")
-            app_logger.error(f"   1. Resample the track file to match or exceed the data time step ({data_time_delta}h)")
-            app_logger.error(f"   2. Re-download data with higher temporal resolution (≤{track_time_delta}h)")
+            app_logger.error(str(error))
+            app_logger.error(f"   Data:  {data_times[0]} to {data_times[-1]} ({len(data_times)} times)")
+            app_logger.error(f"   Track: {track.index[0]} to {track.index[-1]} ({len(track)} positions)")
             app_logger.error("="*70 + "\n")
-            raise ValueError(
-                f"Data time step ({data_time_delta}h) is higher than track time step ({track_time_delta}h). "
-                f"Cannot select track timesteps that don't exist in data. "
-                f"Please resample the track or re-download data with higher temporal resolution."
-            )
+            raise
+        if alignment.adapted:
+            track = track.loc[alignment.selected]
+            warn_adapted(alignment, app_logger)
         # Check data and track initial and final timestamps
         if track.index[0] < data[TimeIndexer][0].values:
             app_logger.error("❌ Track initial timestamp is earlier than data initial timestamp!")
@@ -302,13 +328,16 @@ def process_data(
                 f"Track final timestamp ({track.index[-1]}) is later than data final timestamp ({data[TimeIndexer][-1].values}). "
                 f"Please adjust the track file or re-download the data."
             )
-        # If using CDS API (or NCAR GDEX, same request), resample track to data time step
-        if args.cdsapi or getattr(args, "ncar", False):
-            time_delta = int(
-                (data[TimeIndexer][1] - data[TimeIndexer][0]) / np.timedelta64(1, "h")
+        missing = track.index[~track.index.isin(data_times)]
+        if len(missing):
+            app_logger.error(f"❌ {len(missing)} track time(s) are missing from the data: "
+                             f"{', '.join(str(t) for t in missing[:6])}{' ...' if len(missing) > 6 else ''}")
+            raise ValueError(
+                f"{len(missing)} track time(s) are not in the data (first: {missing[0]}). Missing data times "
+                f"are not filled: adjust the track file or provide data with these times."
             )
-            track = track[track.index.hour % time_delta == 0]
         data = data.sel({TimeIndexer: track.index.values})
+        record_alignment(data, alignment, track_file)
         app_logger.debug("✅ Track dates selection complete.")
     if (
         data[variable_list_df.loc["Longitude"]["Variable"]].min() < -180

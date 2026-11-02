@@ -101,6 +101,6 @@ With your configuration files ready, you can:
 
 - See :doc:`usage` for command-line options and framework selection
 - Follow :doc:`examples_and_tutorials` for complete workflows with sample data
-- Check :doc:`cdsapi_example` if you need to automatically download ERA5 data
+- Check :doc:`remote_data_acquisition` if you need to download ERA5 data automatically
 - Review :doc:`results` to understand the output structure
 

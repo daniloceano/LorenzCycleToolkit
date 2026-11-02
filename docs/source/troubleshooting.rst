@@ -1,260 +1,81 @@
 Troubleshooting and FAQ
 =======================
 
-This page addresses common issues and frequently asked questions when using the LorenzCycleToolkit.
+This page is the single place for solutions to common problems with the LorenzCycleToolkit. Each section is
+organised by symptom; the last sections answer frequent questions and explain how to report a problem.
 
-Track File Issues
------------------
+.. contents:: On this page
+   :local:
+   :depth: 2
 
-Track file has more timesteps than input data
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _ts-installation:
 
-**Problem**: Your track file extends beyond the temporal coverage of your NetCDF data file.
+1. Installation and Configuration
+---------------------------------
 
-**Example**:
+``ModuleNotFoundError`` when running the toolkit
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. code-block:: text
+**Cause**: the environment with the toolkit's dependencies is not active.
 
-   Track file: 2020-01-01 00:00 to 2020-01-10 23:00
-   Input data:  2020-01-01 00:00 to 2020-01-08 18:00
+**Solution**: activate the environment created during :doc:`installation` (for example
+``conda activate lorenz``) and run the command again from the repository root.
 
-**Error message**:
-
-.. code-block:: text
-
-   ❌ Track final timestamp (2020-01-10 23:00:00) is later than data final timestamp 
-   (2020-01-08 18:00:00). Please adjust the track file or re-download the data.
-
-**Solutions**:
-
-1. **Trim your track file** to match the data coverage:
-
-   .. code-block:: python
-   
-      import pandas as pd
-      
-      # Load track file
-      track = pd.read_csv('inputs/track', sep=';', parse_dates=['time'], index_col='time')
-      
-      # Trim to match data period
-      track_trimmed = track['2020-01-01':'2020-01-08 18:00']
-      
-      # Save trimmed track
-      track_trimmed.to_csv('inputs/track_trimmed', sep=';')
-
-2. **Download additional data** to cover the full track period (if using CDS API):
-
-   .. code-block:: bash
-   
-      python lorenzcycletoolkit.py extended_data.nc -t -r --cdsapi --trackfile inputs/track
-
-3. **Use a pre-downloaded file** that covers the full period
-
-Track file has fewer timesteps than input data
+"No such file or directory: 'inputs/namelist'"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Problem**: Your track file covers a shorter period than your input data.
+**Problem**: You didn't create the namelist file.
 
-**Example**:
+**Solution**: When ``inputs/namelist`` is absent the toolkit uses ``inputs/namelist.default``; this message
+means neither exists in the directory you run from. Run from the repository root, or copy one of the presets:
 
-.. code-block:: text
+.. code-block:: bash
 
-   Track file: 2020-01-03 00:00 to 2020-01-05 18:00
-   Input data:  2020-01-01 00:00 to 2020-01-10 23:00
-
-**Behavior**: This is **perfectly fine**! The toolkit will automatically use only the timesteps from the input data that match the track file period.
-
-**What happens**:
-
-.. code-block:: python
-
-   # The toolkit automatically does this:
-   data = data.sel(time=track.index.values)
-
-Your analysis will run from 2020-01-03 00:00 to 2020-01-05 18:00, using only the relevant portion of the input data.
-
-**Use case**: This is useful when you have a large dataset but only want to analyze a specific event or time period.
-
-Track file has timesteps not present in data
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Problem**: Some track timesteps don't match any data timesteps (e.g., track has 1-hour intervals but data has 3-hour intervals).
-
-**Example**:
-
-.. code-block:: text
-
-   Track timesteps: 00:00, 01:00, 02:00, 03:00, 04:00, ...
-   Data timesteps:  00:00, 03:00, 06:00, 09:00, ...
-
-**Error message**:
-
-.. code-block:: text
-
-   KeyError: 'Some timesteps from track not found in data'
-
-**Solutions**:
-
-1. **Resample your track file** to match data temporal resolution:
-
-   .. code-block:: python
+   # For ERA5 data
+   cp inputs/namelist_ERA5-cdsapi inputs/namelist
    
-      import pandas as pd
-      
-      # Load track
-      track = pd.read_csv('inputs/track', sep=';', parse_dates=['time'], index_col='time')
-      
-      # Resample to 3-hour intervals (matching data)
-      track_resampled = track.resample('3H').first()  # or .interpolate() for interpolation
-      
-      # Remove any NaN rows
-      track_resampled = track_resampled.dropna()
-      
-      # Save resampled track
-      track_resampled.to_csv('inputs/track_resampled', sep=';')
+   # For NCEP Reanalysis 2
+   cp inputs/namelist_NCEP-R2 inputs/namelist
+   
+   # For NCEP Reanalysis 1
+   cp inputs/namelist_NCEP-R1 inputs/namelist
 
-2. **If using CDS API**, the toolkit automatically handles this by resampling the track:
+**See also**: :doc:`configuration` for detailed instructions.
+
+"No such file or directory: 'inputs/box_limits'" (fixed framework)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Problem**: Using ``-f`` flag but haven't created box_limits file.
+
+**Solution**: Create the file with your domain bounds:
+
+.. code-block:: bash
+
+   cat > inputs/box_limits << EOF
+   min_lon;-60
+   max_lon;-30
+   min_lat;-45
+   max_lat;-20
+   EOF
+
+"No such file or directory: 'inputs/track'" (moving framework)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Problem**: Using ``-t`` flag but haven't specified a track file.
+
+**Solution**: Either:
+
+1. **Create a track file** at ``inputs/track``
+2. **Use the --trackfile flag** to specify a different path:
 
    .. code-block:: bash
    
-      # The toolkit will resample your track to match --time-resolution
-      python lorenzcycletoolkit.py data.nc -t -r --cdsapi --time-resolution 3 --trackfile inputs/track
+      python lorenzcycletoolkit.py data.nc -r -t --trackfile path/to/your/track.csv
 
-Track temporal resolution differs from data
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _ts-input-data:
 
-**Problem**: Track has higher temporal resolution than the data (e.g., 1-hour track vs 6-hour data).
-
-**Behavior**: The toolkit checks this and raises an error if track resolution is higher than data resolution.
-
-**Error message**:
-
-.. code-block:: text
-
-   ❌ Track time step is higher than data time step. Please resample the track 
-   to match the data time step.
-
-**Why this matters**: You cannot analyze a system every hour if your atmospheric data is only available every 6 hours.
-
-**Solution**: Resample your track file to match or exceed the data temporal resolution:
-
-.. code-block:: python
-
-   import pandas as pd
-   
-   track = pd.read_csv('inputs/track', sep=';', parse_dates=['time'], index_col='time')
-   
-   # If data is 6-hourly, resample track to 6-hourly
-   track_6h = track.resample('6H').first()  # Takes the first value in each 6h window
-   # OR use interpolation if you want intermediate positions
-   track_6h = track.resample('6H').interpolate()
-   
-   track_6h = track_6h.dropna()
-   track_6h.to_csv('inputs/track_6h', sep=';')
-
-Units and Variable Specifications
-----------------------------------
-
-Do variables need to match units specified in namelist?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Short answer**: No, but the namelist must specify the **actual units in your file**.
-
-**How it works**:
-
-1. The namelist tells the toolkit what units are **currently** in your NetCDF file
-2. The toolkit reads the data with those units
-3. The toolkit **automatically converts** everything to SI units internally using MetPy
-
-**Example**:
-
-If your ERA5 file has temperature in Kelvin:
-
-.. code-block:: text
-
-   ;standard_name;Variable;Units
-   Air Temperature;air_temperature;t;K
-
-The toolkit will:
-
-- Read temperature as Kelvin
-- Keep it in Kelvin for calculations (Kelvin is already SI)
-
-If your file had temperature in Celsius (unusual):
-
-.. code-block:: text
-
-   ;standard_name;Variable;Units
-   Air Temperature;air_temperature;t;degC
-
-The toolkit would:
-
-- Read temperature as Celsius
-- Convert to Kelvin internally
-- Perform all calculations in SI units
-
-**Important**: The "Units" column in the namelist should match what's **actually in your file**, not what you want. The toolkit handles conversions automatically.
-
-Pressure levels must be in Pa or hPa?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Answer**: Either is fine! The toolkit automatically converts to Pascals (Pa) internally.
-
-**Example from the code**:
-
-.. code-block:: python
-
-   # The toolkit does this automatically:
-   levels_Pa = (data[LevelIndexer] * units(str(data[LevelIndexer].units))).metpy.convert_units("Pa")
-
-Your file can have:
-
-- ``pressure_level`` in hPa: [1000, 925, 850, 700, 500, ...]
-- ``pressure_level`` in Pa: [100000, 92500, 85000, 70000, 50000, ...]
-
-Both will work correctly. Just make sure the units attribute in your NetCDF file is set correctly.
-
-Why does my analysis fail with "units" error?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Problem**: Error mentioning units or unit conversion.
-
-**Common causes**:
-
-1. **Missing units attribute in NetCDF file**:
-
-   .. code-block:: python
-   
-      import xarray as xr
-      
-      # Check if variables have units
-      ds = xr.open_dataset('your_file.nc')
-      print(ds['t'].attrs)  # Should show 'units': 'K'
-      print(ds['pressure_level'].attrs)  # Should show 'units': 'hPa' or 'Pa'
-
-   **Solution**: Add units to your NetCDF file:
-
-   .. code-block:: python
-   
-      ds['t'].attrs['units'] = 'K'
-      ds['pressure_level'].attrs['units'] = 'hPa'
-      ds.to_netcdf('your_file_fixed.nc')
-
-2. **Non-standard unit names**: Use standard CF conventions:
-
-   - Temperature: ``K`` or ``degC`` (not ``Kelvin`` or ``celsius``)
-   - Pressure: ``Pa`` or ``hPa`` (not ``mb`` or ``millibars``)
-   - Winds: ``m/s`` or ``m s-1`` (not ``m/sec``)
-
-3. **Geopotential vs Geopotential Height**:
-
-   - Geopotential: units should be ``m**2 s**-2`` or ``m2 s-2``
-   - Geopotential Height: units should be ``m``
-   
-   The toolkit handles both, but you must specify correctly in your namelist.
-
-Data Format and Loading Issues
--------------------------------
+2. Input Data and Tracks
+------------------------
 
 "Could not open file" error
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -350,178 +171,259 @@ Followed by a detailed list of available coordinates and variables in your datas
       # For NCEP-R2 data
       cp inputs/namelist_NCEP-R2 inputs/namelist
 
-Memory and Performance Issues
-------------------------------
-
-"MemoryError" or system becomes unresponsive
+Why does my analysis fail with "units" error?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Problem**: Your dataset is too large for available RAM.
+**Problem**: Error mentioning units or unit conversion.
 
-**Immediate solutions**:
+**Common causes**:
 
-1. **Reduce spatial domain**: Pre-process your data to a smaller region:
+1. **Missing units attribute in NetCDF file**:
 
    .. code-block:: python
    
       import xarray as xr
       
-      ds = xr.open_dataset('large_file.nc')
-      
-      # Subset to smaller region
-      ds_subset = ds.sel(
-          latitude=slice(-50, -10),
-          longitude=slice(-70, -30)
-      )
-      
-      ds_subset.to_netcdf('smaller_file.nc')
+      # Check if variables have units
+      ds = xr.open_dataset('your_file.nc')
+      print(ds['t'].attrs)  # Should show 'units': 'K'
+      print(ds['pressure_level'].attrs)  # Should show 'units': 'hPa' or 'Pa'
 
-2. **Reduce temporal coverage**: Analyze shorter periods:
+   **Solution**: Add units to your NetCDF file:
 
    .. code-block:: python
    
-      ds_subset = ds.sel(time=slice('2020-01-01', '2020-01-07'))
+      ds['t'].attrs['units'] = 'K'
+      ds['pressure_level'].attrs['units'] = 'hPa'
+      ds.to_netcdf('your_file_fixed.nc')
 
-3. **Reduce vertical levels**: Keep only tropospheric levels:
+2. **Non-standard unit names**: Use standard CF conventions:
 
-   .. code-block:: python
+   - Temperature: ``K`` or ``degC`` (not ``Kelvin`` or ``celsius``)
+   - Pressure: ``Pa`` or ``hPa`` (not ``mb`` or ``millibars``)
+   - Winds: ``m/s`` or ``m s-1`` (not ``m/sec``)
+
+3. **Geopotential vs Geopotential Height**:
+
+   - Geopotential: units should be ``m**2 s**-2`` or ``m2 s-2``
+   - Geopotential Height: units should be ``m``
    
-      ds_subset = ds.sel(level=slice(1000, 100))  # 1000 to 100 hPa
+   The toolkit handles both, but you must specify correctly in your namelist.
 
-4. **Increase temporal resolution**: Use 6-hour instead of 3-hour data:
+Track file extends beyond the data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   .. code-block:: python
-   
-      ds_subset = ds.sel(time=ds.time.dt.hour.isin([0, 6, 12, 18]))
+**Problem**: the first track time is earlier than the first data time, or the last track time is later than the
+last data time.
 
-5. **Remove unnecessary variables**:
+**Error message** (example):
 
-   .. code-block:: python
-   
-      # Keep only required variables
-      required_vars = ['t', 'u', 'v', 'w', 'z', 'latitude', 'longitude', 'level', 'time']
-      ds_subset = ds[required_vars]
+.. code-block:: text
 
-**See also**: :doc:`usage` section on "System Requirements and Performance"
+   ❌ Track final timestamp is later than data final timestamp!
+   Track final timestamp (2020-01-10 23:00:00) is later than data final timestamp (2020-01-08 18:00:00).
+   Please adjust the track file or re-download the data.
 
-Analysis takes too long
-~~~~~~~~~~~~~~~~~~~~~~~~
+**Solutions**: provide data that cover the whole track (with ``--cdsapi`` or ``--ncar``, use a new output file
+name: an existing file is not extended), or shorten the track file yourself and keep a record of what you changed.
 
-**Problem**: Processing is slower than expected.
+Track file covers a shorter period than the data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Optimization tips**:
+**Behavior**: this is expected. Only the data times of the track period are used; the rest of the file is ignored.
 
-1. **Use appropriate temporal resolution**: 6-hour data processes faster than 1-hour
-2. **Reduce domain size**: Analyze only the region of interest
-3. **Disable plots for initial runs**: Remove ``-p`` flag during testing
-4. **Use fixed framework instead of interactive**: ``-f`` is much faster than ``-c``
-5. **Check your data preprocessing**: Pre-subset data before running the toolkit
+Track times missing from the data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Configuration Issues
---------------------
+**Problem**: some track times are not data times, and the data are **not** simply sampled less often than the track
+(for example a gap in the data, or a track at 01, 04, 07 UTC with data at 00, 03, 06 UTC).
 
-"No such file or directory: 'inputs/namelist'"
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+**Behavior**: the run stops with an error that names the missing times and says whether they lie before, after or
+inside the data period. Missing data times are never filled and the track is never interpolated.
 
-**Problem**: You didn't create the namelist file.
+**Solutions**: provide data with these times, or adjust the track file yourself (and keep a record of what you
+changed).
 
-**Solution**: Copy one of the presets:
+.. _ts-track-alignment:
 
-.. code-block:: bash
+Track sampled more often than the data (automatic alignment)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   # For ERA5 data
-   cp inputs/namelist_ERA5-cdsapi inputs/namelist
-   
-   # For NCEP Reanalysis 2
-   cp inputs/namelist_NCEP-R2 inputs/namelist
-   
-   # For NCEP Reanalysis 1
-   cp inputs/namelist_NCEP-R1 inputs/namelist
+**Problem**: The track is sampled more often than the data, for example a 3-hourly track with 6-hourly ERA5
+data (``--cdsapi`` or ``--ncar`` with ``--time-resolution 6``, or a local file).
 
-**See also**: :doc:`configuration` for detailed instructions.
+**Behavior**: The toolkit keeps the track positions at the data times, with their original coordinates, and
+leaves the other positions out. It is a selection by exact time, not an interpolation, and the track file is
+not modified. The same rule applies to local files, ``--cdsapi`` and ``--ncar``. A warning is written once to
+the terminal and to the run log, with the counts of the run:
 
-"No such file or directory: 'inputs/box_limits'" (fixed framework)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. code-block:: text
 
-**Problem**: Using ``-f`` flag but haven't created box_limits file.
+   ⚠️  WARNING — Temporal resolution mismatch
+   Original track interval:        3 h
+   Meteorological data interval:   6 h
+   Action: track timestamps aligned with meteorological data.
 
-**Solution**: Create the file with your domain bounds:
+   Original positions: 55
+   Selected positions: 27 (1979-12-29T06:00:00 to 1980-01-04T18:00:00)
+   Excluded positions: 28 (first 1979-12-29T03:00:00, last 1980-01-04T21:00:00)
 
-.. code-block:: bash
+   No spatial interpolation was performed.
+   Original track file was not modified.
 
-   cat > inputs/box_limits << EOF
-   min_lon;-60
-   max_lon;-30
-   min_lat;-45
-   max_lat;-20
-   EOF
+``lec_metadata.json`` records the alignment under ``track_time_alignment``: ``adapted``, ``rule``, the track, data
+and selected intervals, the counts of original, selected and excluded positions, the selected times, and
+``spatial_interpolation: false`` and ``trackfile_modified: false``. The moving framework's track output
+(``<name>_track_trackfile``) holds only the positions used. With ``--cdsapi`` and ``--ncar`` the track is also checked against the requested hours **before**
+the download, so a track that the request cannot serve is refused before any transfer, with the message
+"request not made" and the reason.
 
-"No such file or directory: 'inputs/track'" (moving framework)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+**Do not interpolate the track** to work around this situation: the toolkit already uses the exact track
+positions at the data times. Interpolating would introduce positions that are not in the track.
 
-**Problem**: Using ``-t`` flag but haven't specified a track file.
+**When it is still an error**: the alignment is made only when it is unambiguous. The run stops with an
+explanation when:
 
-**Solution**: Either:
+- the track or the data times are duplicated or not in increasing order;
+- the track interval is irregular, or the data interval is irregular inside the track period (a gap);
+- the data interval is not a whole multiple of the track interval (e.g. 4-hourly track, 6-hourly data);
+- the data times do not fall on track times (aligning would need an interpolation);
+- track times on the data grid are missing from the data (a gap or truncation, not a subsampled time);
+- fewer than two positions would remain.
 
-1. **Create a track file** at ``inputs/track``
-2. **Use the --trackfile flag** to specify a different path:
+When the data are sampled **more** often than the track (e.g. 6-hourly track, 3-hourly data), every track
+position is used, as before.
+
+.. _ts-remote-acquisition:
+
+3. Remote Acquisition
+---------------------
+
+The methods themselves (accounts, coverage, limits) are described in :doc:`remote_data_acquisition`.
+
+CDS API: authentication fails or HTTP 403
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Checklist**:
+
+1. **The credentials file exists and is private** — check without printing its content:
 
    .. code-block:: bash
-   
-      python lorenzcycletoolkit.py data.nc -r -t --trackfile path/to/your/track.csv
 
-CDS API Issues
---------------
-
-CDS API authentication fails
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Error**: Connection or authentication errors when using ``--cdsapi``.
-
-**Solution checklist**:
-
-1. **Check credentials file exists**:
-
-   .. code-block:: bash
-   
-      cat ~/.cdsapirc
-
-2. **Verify format**:
-
-   .. code-block:: text
-   
-      url: https://cds.climate.copernicus.eu/api
-      key: YOUR-UID:YOUR-API-KEY
-
-3. **Verify credentials are correct**: Log in to https://cds.climate.copernicus.eu/user and check your UID and API key
-
-4. **Check permissions**:
-
-   .. code-block:: bash
-   
+      ls -l ~/.cdsapirc        # should exist, mode -rw------- (600)
       chmod 600 ~/.cdsapirc
 
-5. **Accept Terms and Conditions**: You must accept the Copernicus terms at https://cds.climate.copernicus.eu/ before API access works
+2. **Its format is** (open it in an editor; do not paste the key into terminals, issues or logs):
 
-CDS API download is very slow
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   .. code-block:: text
 
-**Problem**: Downloads take hours or timeout.
+      url: https://cds.climate.copernicus.eu/api
+      key: <your-personal-access-token>
 
-**Causes and solutions**:
+3. **The key is current**: compare it with the one shown in your CDS profile after logging in.
+4. **The ERA5 licence is accepted** in the CDS web interface; without it requests are refused with HTTP 403.
 
-1. **CDS servers are busy**: Try during off-peak hours (evenings/weekends in Europe)
-2. **Domain is too large**: Reduce spatial coverage or temporal resolution
-3. **Requesting too many levels**: Consider requesting only tropospheric levels
-4. **Use coarser temporal resolution**:
+CDS API: "Request too large" or cost limits exceeded
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   .. code-block:: bash
-   
-      # Use 6-hour instead of 3-hour
-      python lorenzcycletoolkit.py file.nc -t -r --cdsapi --time-resolution 6
+The 37 levels are always requested, so reduce the hours or the area:
 
-Figures and Maps
-----------------
+- use a larger ``--time-resolution`` (6 or 12 hours);
+- shorten the track period or reduce its extent.
+
+.. code-block:: bash
+
+   python lorenzcycletoolkit.py case.nc -t -r --cdsapi --time-resolution 6 --trackfile inputs/track_case
+
+A track sampled more often than the requested hours is aligned automatically (see :ref:`ts-track-alignment`).
+
+CDS API: download hangs or is very slow
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Most of the time is usually spent in the CDS queue, which varies from minutes to hours. Use ``-v`` to follow each
+day, check the CDS service status page, and reduce the volume as above. **Stopping the client does not cancel the
+job**: it may stay queued or running and use the account's quota; check the account for pending requests before
+submitting again.
+
+``--ncar``: the date is not available
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+GDEX publishes ERA5 months after the CDS. The last day of the track is requested first, so an unpublished date
+fails at once, before anything is downloaded, with a message suggesting ``--cdsapi``. Use ``--cdsapi`` for recent
+cases.
+
+``--ncar``: timeouts, HTTP 503 or 504
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Each request is attempted up to 4 times. If all attempts fail, run the same command again later: the responses
+already verified (in ``<file>.parts/``) are reused and only the missing ones are requested. In the D-Bench
+tests such failures occurred on some domains of 1.9–3.9 GiB; their cause has not been established.
+
+``--ncar``: the existing file is not reused
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+An existing file is never overwritten, and it is reused only if its provenance record matches it and it covers the
+whole request with the same variable names and numeric type. The message gives the reason. Use another file name
+for a new download, or run without ``--ncar`` to read the file as a plain local input.
+
+``--ncar``: "another retrieval is writing" the file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A lock file ``<file>.lock`` prevents two downloads of the same file (for instance two runs started together).
+Wait for the first one, or use different file names. A killed download does not block the next one; on systems
+where the lock is left behind, the message says how to remove it.
+
+"request not made" before a ``--cdsapi`` or ``--ncar`` download
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The track was checked against the hours of ``--time-resolution`` before downloading and the request could not serve
+it (for example track times that do not fall on the requested hours). Nothing was downloaded. Choose a
+``--time-resolution`` whose hours fall on the track times; see :ref:`ts-track-alignment`.
+
+.. _ts-performance:
+
+4. Performance and Memory
+-------------------------
+
+"MemoryError" or system becomes unresponsive
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Problem**: the dataset is too large for the available memory.
+
+**Solutions**: pre-process the data to what the analysis needs (see "Input Data Requirements" in :doc:`usage`):
+
+1. **Smaller domain**:
+
+   .. code-block:: python
+
+      import xarray as xr
+
+      ds = xr.open_dataset('large_file.nc')
+      ds_subset = ds.sel(latitude=slice(-50, -10), longitude=slice(-70, -30))
+      ds_subset.to_netcdf('smaller_file.nc')
+
+2. **Shorter period**: ``ds.sel(time=slice('2020-01-01', '2020-01-07'))``
+3. **Fewer times**, e.g. 6-hourly instead of 3-hourly: ``ds.sel(time=ds.time.dt.hour.isin([0, 6, 12, 18]))``
+4. **Only the five required variables** and their coordinates.
+5. **Fewer levels**, e.g. ``ds.sel(level=slice(1000, 100))``. This changes the integrated layer and therefore the
+   results; see :ref:`rda-science` before relying on reduced level sets.
+
+**See also**: "System Requirements and Performance" in :doc:`usage`.
+
+Analysis takes too long
+~~~~~~~~~~~~~~~~~~~~~~~
+
+1. Use 6-hourly instead of hourly data when the study allows it.
+2. Reduce the domain to the region of interest.
+3. Omit ``-p`` for initial runs.
+4. Use ``-f`` or ``-t`` instead of ``-c`` when an interactive choice is not needed.
+5. Prefer an uncompressed, already subset NetCDF file: compressed files with large blocks can be read much more
+   slowly (an example is given in :ref:`rda-comparison`).
+
+.. _ts-results-figures:
+
+5. Results and Figures
+----------------------
 
 The run ends with "PARTIAL output" and exit status 3
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -553,27 +455,116 @@ The periods fail with CyclophaserCompatibilityError
 
 **Cause**: The minimum lengths are known only for cyclophaser 1.7.3, the options of the toolkit and regular time steps of 1, 3 or 6 hours. With another version, other options or another time step the periods are reported as failed without calling cyclophaser, rather than applying limits that may be wrong. Use the tested cyclophaser version, or ask for the limits to be established for your configuration.
 
-Still Having Issues?
---------------------
+.. _ts-faq:
+
+6. Frequently Asked Questions
+-----------------------------
+
+Which acquisition method should I use?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It depends on the purpose: recent dates, account, transfer volume, tolerance to failures, and whether the study
+depends on magnitudes or vertical structure. See :ref:`rda-conclusions`.
+
+Do I need all 37 levels?
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Not necessarily. In the case assessed, 13 or 17 levels gave the same time evolution, signs and timing of Ca, Ce and
+Ck, but magnitudes changed (mainly Ca, about 5 % in the time mean). For magnitudes, budgets or vertical structure use
+the same full level set throughout. See :ref:`rda-science`.
+
+Will CDS and NCAR files give identical results?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Not always to the last digit. The fields agree within tight tolerances, but small temperature differences can move
+tendency and residual terms beyond 10\ :sup:`-4` of each column. Do not mix sources in one comparison that needs
+that level of agreement. See :ref:`rda-precision`.
+
+Is the track ever interpolated?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+No. When the data are sampled less often than the track, the positions at the data times are used unchanged; in any
+other mismatch the run stops. See :ref:`ts-track-alignment`.
+
+Do variables need to match units specified in namelist?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Short answer**: No, but the namelist must specify the **actual units in your file**.
+
+**How it works**:
+
+1. The namelist tells the toolkit what units are **currently** in your NetCDF file
+2. The toolkit reads the data with those units
+3. The toolkit **automatically converts** everything to SI units internally using MetPy
+
+**Example**:
+
+If your ERA5 file has temperature in Kelvin:
+
+.. code-block:: text
+
+   ;standard_name;Variable;Units
+   Air Temperature;air_temperature;t;K
+
+The toolkit will:
+
+- Read temperature as Kelvin
+- Keep it in Kelvin for calculations (Kelvin is already SI)
+
+If your file had temperature in Celsius (unusual):
+
+.. code-block:: text
+
+   ;standard_name;Variable;Units
+   Air Temperature;air_temperature;t;degC
+
+The toolkit would:
+
+- Read temperature as Celsius
+- Convert to Kelvin internally
+- Perform all calculations in SI units
+
+**Important**: The "Units" column in the namelist should match what's **actually in your file**, not what you want. The toolkit handles conversions automatically.
+
+Pressure levels must be in Pa or hPa?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Answer**: Either is fine! The toolkit automatically converts to Pascals (Pa) internally.
+
+**Example from the code**:
+
+.. code-block:: python
+
+   # The toolkit does this automatically:
+   levels_Pa = (data[LevelIndexer] * units(str(data[LevelIndexer].units))).metpy.convert_units("Pa")
+
+Your file can have:
+
+- ``pressure_level`` in hPa: [1000, 925, 850, 700, 500, ...]
+- ``pressure_level`` in Pa: [100000, 92500, 85000, 70000, 50000, ...]
+
+Both will work correctly. Just make sure the units attribute in your NetCDF file is set correctly.
+
+.. _ts-reporting:
+
+7. Reporting a Problem
+----------------------
 
 If your problem isn't covered here:
 
-1. **Enable verbose logging** to see detailed information:
+1. **Enable verbose logging**:
 
    .. code-block:: bash
-   
+
       python lorenzcycletoolkit.py your_file.nc -r -f -v
 
-2. **Check the log file** in ``LEC_Results/*/log.*`` for detailed error messages
+2. **Check the log file** in ``LEC_Results/*/log.*`` and ``run_status.json`` in the same directory.
 
-3. **Review the documentation**:
-   
-   - :doc:`configuration` - Setup requirements
-   - :doc:`usage` - Command-line options and data requirements
-   - :doc:`examples_and_tutorials` - Step-by-step examples
+3. **Review the documentation**: :doc:`configuration`, :doc:`usage`, :doc:`remote_data_acquisition`,
+   :doc:`examples_and_tutorials`.
 
 4. **Seek support**:
-   
+
    - GitHub Issues: https://github.com/daniloceano/LorenzCycleToolkit/issues
    - Email: danilo.oceano@gmail.com
 
@@ -584,3 +575,6 @@ When reporting issues, please include:
 - Relevant parts of the log file
 - Description of your input data (source, resolution, coverage)
 - LorenzCycleToolkit version: check with ``git describe --tags``
+
+**Never include credentials** (``~/.cdsapirc`` content, API keys or tokens) in a report, log excerpt or screenshot;
+remove them before sharing.

@@ -241,7 +241,7 @@ The boundary terms are given by:
    & -\left(\frac{1}{2 g}\left[\omega\left[(u)_\lambda^2+(v)_\lambda^2\right]\right]_{\lambda \varphi}\right)_{p_1}^{p_2} \nonumber
    \end{aligned}
 
-where :math:`c_1=-\left[a\left(\lambda_2-\lambda_1\right)\left(\sin \varphi_2-\sin \varphi_1\right)\right]^{-1}, c_2=-\left[a\left(\sin \varphi_2-\sin \varphi_1\right)\right]^{-1}`.
+where :math:`c_1=-\left[a\left(\lambda_2-\lambda_1\right)\left(\sin \varphi_2-\sin \varphi_1\right)\right]^{-1}` and :math:`c_2=-\left[a\left(\sin \varphi_2-\sin \varphi_1\right)\right]^{-1}`.
 
 Lastly, the terms :math:`B\Phi_Z` and :math:`B\Phi_E` are given by:
 

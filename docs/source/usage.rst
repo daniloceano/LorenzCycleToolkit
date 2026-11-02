@@ -88,50 +88,29 @@ To avoid memory issues and improve processing speed, it is **strongly recommende
 System Requirements and Performance
 ------------------------------------
 
-**Memory Requirements**
+The memory and time a run needs are not fixed: they depend on the case and the machine. The main factors are:
 
-The toolkit loads entire NetCDF files into memory using xarray with dask. Typical requirements:
+- **Input size**: number of latitudes × longitudes × pressure levels × times × variables, and the numeric precision
+  of the file (float64 needs twice the memory of float32). Five variables are required; extra variables in the file
+  only add reading time.
+- **Framework**: ``-f`` uses one box for all times; ``-t`` cuts a box per time step; ``-c`` waits for your choice at
+  every time step.
+- **File layout**: compressed files with large blocks can be read much more slowly than an uncompressed, already
+  subset file with the same values.
+- **Figures**: ``-p`` adds maps and plots after the computation; maps may also need Natural Earth data.
+- **Downloads**: with ``--cdsapi`` or ``--ncar`` the acquisition usually takes much longer than the computation.
 
-- **Small domain** (10° × 10°, 7 days, 3-hour resolution): ~500 MB RAM
-- **Medium domain** (30° × 30°, 30 days, 6-hour resolution): ~2-4 GB RAM
-- **Large domain** (60° × 60°, 60 days, 3-hour resolution): ~8-16 GB RAM
+**Measured examples** (observations, not guarantees):
 
-**Performance Tips**
+- Track 19791150, 27 six-hourly times, 32 effective levels, area of about 42° × 76° at 0.25°, ``-t -r`` without
+  figures, from an uncompressed local NetCDF file on a shared Linux server (2026-11-02): about 11 s; the same values
+  from the CDS NetCDF (3-hourly, compressed in blocks of 19 times) took 128 s. See :ref:`rda-comparison`.
+- D-Bench acquisition tests, ``--ncar`` with the energetics in the same process, ten 1979–1980 cases of 0.5 to 6.7 GiB
+  (2026-10-31): peak memory 0.48 to 3.21 GiB.
 
-1. **Pre-process your data** to include only the necessary components:
-   
-   - Time period of interest
-   - Spatial domain (with small buffer around analysis region)
-   - Pressure levels relevant to your study (e.g., 1000-100 hPa for tropospheric analyses)
-   - Required variables only (u, v, ω, T, geopotential)
-
-2. **Choose appropriate temporal resolution**:
-   
-   - Synoptic-scale analysis: 6-hour intervals
-   - Mesoscale systems: 3-hour intervals
-   - High-resolution studies: 1-hour intervals (requires significantly more memory)
-
-3. **For very large datasets**, consider:
-   
-   - Splitting the analysis into smaller time periods
-   - Using ERA5 on a coarser grid (0.5° instead of 0.25°)
-   - Processing days or weeks individually
-
-**Computational Time**
-
-Typical processing times (on a modern desktop with 16 GB RAM):
-
-- Small domain, 7 days: ~2-5 minutes
-- Medium domain, 30 days: ~10-20 minutes  
-- Large domain, 60 days: ~30-60 minutes
-
-Time increases with:
-
-- Domain size
-- Number of timesteps
-- Number of vertical levels
-- Plot generation (``-p`` flag)
-- Interactive framework (``-c`` flag, requires user input at each timestep)
+**To reduce memory and time**, subset the input to the period, area, levels and variables the analysis needs (see
+"Input Data Requirements" above), omit ``-p`` for exploratory runs, and split very long periods. Reducing levels or
+the time step changes the results; see :ref:`rda-science`.
 
 Fixed Framework
 ---------------
@@ -191,10 +170,10 @@ The box of every time step is drawn first; the computation starts after the last
    python lorenzcycletoolkit.py path/to/infile.nc -r -c
 
 Advanced Options
-================
+----------------
 
 Custom Output Names
--------------------
+~~~~~~~~~~~~~~~~~~~
 
 By default, results are saved in ``LEC_Results/<inputfile>_<framework>/``. You can customize the output directory name using the ``-o/--outname`` flag:
 
@@ -217,7 +196,7 @@ Versions before this change used ``--outname`` only to rename the main CSV of th
 - Avoiding overwriting previous results
 
 Existing Results and ``--overwrite``
-------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A run never overwrites the results of an earlier run by default. If its results directory (``LEC_Results/<name>_<framework>/``) already contains files, the program stops with exit status 2 before writing anything, names the files found and suggests ``--overwrite`` or ``-o/--outname``. An empty directory is not an earlier run.
 
@@ -230,7 +209,7 @@ With ``--overwrite`` the run reuses the directory: its files are rewritten in pl
    python lorenzcycletoolkit.py data.nc -r -f --overwrite  # reuses the directory
 
 Using Pre-computed Vorticity
------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Flag**: ``-z`` or ``--zeta``
 
@@ -257,7 +236,7 @@ By default, the toolkit computes relative vorticity at 850 hPa for system tracki
    2020-01-01 12:00:00;-26.0;-44.0;4.1e-5
 
 Working with MPAS-A Data
--------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Flag**: ``-m`` or ``--mpas``
 
@@ -304,68 +283,26 @@ The Model for Prediction Across Scales - Atmosphere (MPAS-A) uses an unstructure
 **Note**: The MPAS-A flag is only needed for data processed with MPAS-BR routines. Regular MPAS output requires additional preprocessing steps not covered by the toolkit.
 
 Automatic ERA5 Data Download
-============================
+----------------------------
 
-The LorenzCycleToolkit supports automatic downloading of ERA5 reanalysis data from the Copernicus Climate Data Store (CDS) using the ``--cdsapi`` flag. This feature is particularly useful when you have a track file but haven't yet downloaded the corresponding atmospheric data.
-
-**Prerequisites**
-
-1. **CDS API Account**: Create a free account at the `CDS registration page <https://cds.climate.copernicus.eu/user/register>`_.
-
-2. **API Key Configuration**: After registration, obtain your API key from your `user profile <https://cds.climate.copernicus.eu/user>`_ and create a ``.cdsapirc`` file in your home directory:
-
-   .. code-block:: text
-
-      url: https://cds.climate.copernicus.eu/api
-      key: YOUR-UID:YOUR-API-KEY
-
-   Replace ``YOUR-UID`` and ``YOUR-API-KEY`` with your actual credentials.
-
-3. **Namelist Configuration**: The ``--cdsapi`` flag now **automatically** uses the ERA5-compatible namelist (``inputs/namelist_ERA5-cdsapi``). You no longer need to manually copy or configure the namelist file.
-
-**How It Works**
-
-When using the ``--cdsapi`` flag:
-
-1. The program reads your track file to determine:
-   - Temporal range (exact start and end times, not just dates)
-   - Spatial domain (automatically adds a 15° buffer around track boundaries)
-
-2. Downloads ERA5 pressure level data with smart time detection:
-   - **First day**: Downloads only from track start time onwards
-   - **Last day**: Downloads only until track end time
-   - **Middle days**: Downloads complete days (all hours)
-   - **Temporal resolution**: Configurable via ``--time-resolution`` flag (default: 3 hours)
-   - **Variables**: U and V wind components, temperature, vertical velocity (omega), geopotential
-   - **Pressure levels**: All standard pressure levels (1000 hPa to 1 hPa)
-
-3. Saves the data to the filename specified as the first argument
-
-This smart time detection minimizes unnecessary downloads and reduces API costs.
-
-**Usage Example**
-
-For a track file covering January 1-3, 2020:
+Instead of a local NetCDF file, the toolkit can download the ERA5 fields of a track itself, then run the
+energetics on them:
 
 .. code-block:: bash
 
-   python lorenzcycletoolkit.py my_output_file.nc -t -r -p --cdsapi --trackfile inputs/track_20200101.csv
+   python lorenzcycletoolkit.py case.nc -t -r -p --cdsapi --trackfile inputs/track_case   # Copernicus CDS
+   python lorenzcycletoolkit.py case.nc -t -r -p --ncar --trackfile inputs/track_case     # NCAR GDEX (experimental)
 
-**Important Notes**
+The first argument is the file the download writes. The area (track extent plus a 15° buffer) and the hours
+(``--time-resolution``, default 3) are derived from the track file. Accounts, data coverage, limits, the other ERA5
+services and how they compare are described in :doc:`remote_data_acquisition`.
 
-- The filename provided (``my_output_file.nc``) doesn't need to exist beforehand—it will be created by the download process
-- **Temporal resolution**: Default is 3 hours. Using 1-hour intervals may exceed CDS API cost limits for large domains/long periods
-- Recommended time resolutions: 3, 6, or 12 hours
-- Download times depend on data volume and CDS server load (typically several minutes)
-- A 15° buffer is automatically applied to ensure adequate spatial coverage
-- If the file already exists, the download is skipped and the existing file is used
-- **Input files are kept.** No input NetCDF file is deleted after a run, whether it was given by you, reused or downloaded by the run (earlier versions deleted the ``--cdsapi`` file at the end of every ``--track`` run, even a reused one). To delete a file that the run itself downloaded, add ``--delete-downloaded-input``: the file is deleted only if it did not exist before the run, the run ended with status ``success`` and the file is unchanged since the download. ``run_status.json`` records the decision under ``input_cleanup``. The same applies to ``--ncar`` (its provenance record is kept).
-
-**Troubleshooting**
-
-- **Authentication errors**: Verify your ``.cdsapirc`` file is correctly formatted and contains valid credentials
-- **Slow downloads**: CDS API can be slow during peak hours; use the ``-v`` flag for detailed progress logging
-- **File size**: ERA5 files can be large (>1 GB); ensure adequate disk space
+**Input files are kept.** No input NetCDF file is deleted after a run, whether it was given by you, reused or
+downloaded by the run (earlier versions deleted the ``--cdsapi`` file at the end of every ``--track`` run, even a
+reused one). To delete a file that the run itself downloaded, add ``--delete-downloaded-input``: the file is deleted
+only if it did not exist before the run, the run ended with status ``success`` and the file is unchanged since the
+download. ``run_status.json`` records the decision under ``input_cleanup``. The same applies to ``--ncar`` (its
+provenance record is kept).
 
 **Guarded CDS mode (controlled runs)**
 
@@ -382,7 +319,7 @@ For controlled runs such as benchmarks, ``--cds-max-seconds`` turns on an opt-in
 Stopping the client does not cancel a remote request: it may remain queued or running and use the account's quota. A delete that the CDS does not confirm, or a killed process, leaves its state unknown; check the account before submitting again.
 
 Flags
-=====
+-----
 
 - `-r`, `--residuals`: Compute the Dissipation and Generation terms as residuals.
 - `-f`, `--fixed`: Compute the energetics for a fixed domain specified by the 'box_limits' file.
@@ -395,8 +332,9 @@ Flags
 - `--allow-partial-plots`: Exit with status 0 when the computation is complete but some requested figures could not be generated (default: exit status 3). The run is still reported as ``partial`` in ``run_status.json`` and in the log. See `Exit Status`_.
 - `--offline-maps`: Draw maps from local Natural Earth data only (``CARTOPY_DATA_DIR`` or Cartopy's data directory) and never download them. A map whose data are missing is reported as failed (partial output); the computation is unaffected. Without this option Cartopy downloads missing Natural Earth files as usual.
 - `-v`, `--verbosity`: Enable debug logging for detailed output.
-- `--cdsapi`: Automatically download ERA5 data from CDS API based on track file (experimental).
-- `--time-resolution`: Temporal resolution in hours for CDS API downloads (default: 3). Recommended values: 3, 6, or 12 hours to avoid exceeding API cost limits.
+- `--cdsapi`: Download the ERA5 fields of the track from the Copernicus CDS before the run (see :ref:`rda-cdsapi`).
+- `--ncar`: Download the ERA5 fields of the track from NCAR GDEX before the run; experimental (see :ref:`rda-ncss`). Cannot be combined with ``--cdsapi``.
+- `--time-resolution`: Hours between the times requested by ``--cdsapi`` or ``--ncar`` (default: 3). With ``--cdsapi``, 3, 6 or 12 hours avoid most CDS cost limits.
 - `--delete-downloaded-input`: With ``--cdsapi`` or ``--ncar``, delete the input NetCDF file after the run, only if this run downloaded it, the run succeeded and the file is unchanged. Without it no input file is ever deleted.
 - `--cds-max-seconds`, `--cds-ledger`, `--cds-retries`, `--cds-timeout`, `--cds-case-id`, `--cds-delete-on-stop`: guarded CDS mode for controlled runs (see *Guarded CDS mode* above).
 - `--trackfile`: Specify a custom track file path (default: ``inputs/track``).
@@ -405,7 +343,7 @@ Flags
 Ensure that the provided NetCDF file and the `namelist` configuration align with the selected flags.
 
 Exit Status
------------
+~~~~~~~~~~~
 
 Every run writes ``run_status.json`` in its results directory (see :doc:`results`), with or without ``-p``. The exit status of the command line follows the state recorded there:
 
@@ -419,9 +357,9 @@ A product that does not apply to the data is reported as ``unavailable``, which 
 Figures are optional products: a figure failure never stops the computation, and the remaining figures are still attempted. In the moving framework, a map that cannot be drawn at a time step (for instance because Natural Earth data are unavailable offline) is reported and the energetics of that step are still computed. The messages "🎉 Analysis complete!" and "🎉 All plots generated successfully!" are written only when every requested product was generated.
 
 Experimental options
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
-``apply_floor`` (:func:`src.utils.thermodynamics.StaticStability`)
+``apply_floor`` (argument of ``StaticStability`` in ``src/utils/thermodynamics.py``)
    The ``sigma = 0.03`` static-stability floor is a numerical safeguard, not
    part of the Lorenz Energy Cycle equations. It is applied by default.
    Passing ``apply_floor=False`` disables it for a diagnostic experiment, and
@@ -433,15 +371,8 @@ Experimental options
    with the floor disabled are not comparable with the defaults. Use the
    default for production runs.
 
-Common Issues and Questions
-===========================
+Problems
+--------
 
-If you encounter problems:
-
-- **Track file timesteps don't match data**: See :doc:`troubleshooting` section on "Track File Issues"
-- **Units and variable specifications**: See :doc:`troubleshooting` section on "Units and Variable Specifications"
-- **Memory or performance issues**: See :doc:`troubleshooting` section on "Memory and Performance Issues"
-- **Configuration errors**: See :doc:`troubleshooting` section on "Configuration Issues"
-- **CDS API problems**: See :doc:`troubleshooting` section on "CDS API Issues"
-
-For a comprehensive list of common issues and solutions, visit the :doc:`troubleshooting` page.
+Solutions to common problems (input data and tracks, remote acquisition, memory, figures) are collected in
+:doc:`troubleshooting`.

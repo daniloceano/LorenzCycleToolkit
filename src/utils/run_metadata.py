@@ -16,7 +16,8 @@ selection is changed here):
 
 ``lec_metadata.json``
     Provenance (version, command, SHA-256 of the input file, namelist), the
-    time axis, the retained pressure layer, the units of every column of the
+    time axis, how the track times were aligned with the data times (track
+    mode), the retained pressure layer, the units of every column of the
     main results file and, for every per-level file, its units, its relation
     to the column value and its layout.
 
@@ -229,14 +230,17 @@ class RunMetadata:
         variable_list_df (pd.DataFrame): Parsed namelist.
         extent (dict): Extent of the input data (see ``input_extent``).
         top_cut (dict, optional): What the cut at 10 hPa did (see ``top_cut``).
+        track_alignment (dict, optional): How the track times were aligned with
+            the data times (see ``track_alignment.track_alignment``; track mode).
     """
 
-    def __init__(self, args, method, variable_list_df, extent, top_cut=None):
+    def __init__(self, args, method, variable_list_df, extent, top_cut=None, track_alignment=None):
         self.args = args
         self.method = method
         self.variable_list_df = variable_list_df
         self.extent = extent
         self.top_cut = top_cut
+        self.track_alignment = track_alignment
         self.domain_rows = []
         self.vertical_rows = []
         self.input_levels = None
@@ -447,6 +451,7 @@ class RunMetadata:
                 _level_file_entry(p, results_directory, names.loc["Vertical Level"]["Variable"]) for p in level_files
             ],
             "trackfile": _relative(trackfile, results_directory) if trackfile else None,
+            "track_time_alignment": self.track_alignment,
             "run_status_file": run_status_file,
         }
         path = results_directory / METADATA_FILE

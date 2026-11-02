@@ -10,20 +10,33 @@ Welcome to the LorenzCycleToolkit documentation! This toolkit is designed to cal
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Getting Started
 
    overview
    installation
    configuration
    usage
    examples_and_tutorials
-   cdsapi_example
-   ncar_gdex_example
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Data Acquisition
+
    remote_data_acquisition
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Results and Scientific Background
+
    results
-   troubleshooting
    file_naming_convention
    math
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Help and Project
+
+   troubleshooting
    contributing
    support
    references

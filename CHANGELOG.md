@@ -12,6 +12,26 @@ All notable changes to this project will be documented in this file.
   are now always kept, whatever their origin; `run_status.json` records the
   decision under `input_cleanup`. No change in the computation.
 
+### Fixed
+
+- **Track sampled more often than the data (track mode).** A 3-hourly track
+  with 6-hourly data stopped with "Data time step (6h) is higher than track
+  time step (3h)": with a local file always, and with `--cdsapi`/`--ncar`
+  and `--time-resolution 6` only after the download, because the check ran
+  before the track was matched to the data times. The track is now
+  subsampled at the data times by exact match (`src/utils/track_alignment.py`),
+  with the same rule for local files, `--cdsapi` and `--ncar`: original
+  coordinates kept, no interpolation, missing data times never filled, track
+  file not modified. A warning gives the intervals and counts once, and
+  `lec_metadata.json` records them under `track_time_alignment`. With
+  `--cdsapi`/`--ncar` the track is also checked against the requested hours
+  before any download. Gaps, truncations, irregular or unordered times,
+  intervals that are not whole multiples, data times off the track times and
+  fewer than two remaining positions are errors. Runs whose track times are
+  all data times are unchanged; on the real case of 2026-11-02 the corrected
+  `--ncar` run gave results identical byte for byte to a run with the track
+  resampled by hand.
+
 ### Added
 
 - **`--delete-downloaded-input`**: with `--cdsapi` or `--ncar`, delete the
