@@ -185,20 +185,12 @@ Tutorial 3: Downloading and Analyzing ERA5 Data
 
 **Estimated time**: 30-60 minutes (depending on download speed)
 
-**Prerequisites**: CDS API account and credentials configured
+**Prerequisites**: CDS account and credentials configured (see :ref:`rda-cdsapi`)
 
 **Step 1: Setup CDS API credentials**
 
-Create or edit ``~/.cdsapirc``:
-
-.. code-block:: bash
-
-   cat > ~/.cdsapirc << EOF
-   url: https://cds.climate.copernicus.eu/api
-   key: YOUR-UID:YOUR-API-KEY
-   EOF
-
-Replace ``YOUR-UID:YOUR-API-KEY`` with your credentials from https://cds.climate.copernicus.eu/user
+Register at the Climate Data Store, accept the ERA5 licence and store your personal key in ``~/.cdsapirc``, as
+described in :ref:`rda-cdsapi`.
 
 **Step 2: Prepare track file**
 
@@ -247,7 +239,8 @@ If the NetCDF file already exists, the toolkit skips the download:
    # Download with 6-hour resolution (faster, less data)
    python lorenzcycletoolkit.py era5_6h.nc -t -r -p --cdsapi --time-resolution 6 --trackfile inputs/track_era5_example
 
-**For more details**, see :doc:`cdsapi_example`.
+**For more details** (other ERA5 services, the experimental ``--ncar`` route, limits and how the routes
+compare), see :doc:`remote_data_acquisition`.
 
 Tutorial 4: Interactive Domain Selection
 -----------------------------------------

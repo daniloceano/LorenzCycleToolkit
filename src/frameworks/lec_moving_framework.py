@@ -34,6 +34,7 @@ from ..utils.run_metadata import RunMetadata, input_extent, top_cut
 from ..utils.run_status import RunStatus
 from ..utils.select_area import draw_box_map, plot_domain_attributes
 from ..utils.tools import find_extremum_coordinates, initialize_logging
+from ..utils.track_alignment import track_alignment
 from ..utils.vertical_harmonization import harmonize_levels
 
 
@@ -96,11 +97,11 @@ def handle_track_file(
     if track.index.tz is not None:
         track.index = track.index.tz_localize(None)
 
-    if args.cdsapi:
-        time_delta = int(
-            (data[TimeIndexer][1] - data[TimeIndexer][0]) / np.timedelta64(1, "h")
-        )
-        track = track[track.index.hour % time_delta == 0]
+    # Keep the positions at the data times: preprocessing.process_data has
+    # already selected the data at the track times, subsampling the track when
+    # the data are sampled less often (track_alignment); the coordinates of the
+    # positions kept are the original ones
+    track = track[track.index.isin(pd.DatetimeIndex(times))]
 
     try:
         data_lon_max, data_lon_min = float(data[LonIndexer].max()), float(
@@ -746,7 +747,8 @@ def lec_moving(
     terms_dict = create_terms_dict(args)
 
     # What each time step actually used (domain_selection.csv, lec_metadata.json)
-    metadata = RunMetadata(args, mode, variable_list_df, input_extent(data), top_cut(data))
+    metadata = RunMetadata(args, mode, variable_list_df, input_extent(data), top_cut(data),
+                           track_alignment(data))
     metadata.record_harmonization(harmonization)
 
     # Iterating over times

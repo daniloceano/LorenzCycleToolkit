@@ -1,0 +1,12 @@
+/* Let long inline literals (paths, options) wrap on narrow screens instead of widening the page. */
+.rst-content code.literal {
+  overflow-wrap: anywhere;
+}
+
+/* Wide display equations scroll inside their own block instead of the whole page. */
+.rst-content div.math,
+.rst-content mjx-container[display="true"] {
+  overflow-x: auto;
+  overflow-y: hidden;
+  position: relative;  /* also clips MathJax's absolutely positioned assistive copy */
+}

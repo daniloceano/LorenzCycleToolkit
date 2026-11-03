@@ -7,3 +7,5 @@ Registro da [limpeza documentalmente homologada do notebook (24/10)](2026-10-24-
 Registro da [ocorrência de 27/10 na Frente D](2026-10-27-front-D-precommit.md): commits anteriores à revisão visual, com histórico preservado, e origem da regra de revisão antes do commit.
 
 Registro do [encerramento técnico da D-Bench (01/11)](2026-11-01-dbench-closure.md): resultados, resultados negativos, ressalvas e retenções.
+
+Registro da [investigação complementar ERA5/Zarr e níveis verticais (02/11)](2026-11-02-lzv-era5-zarr-vertical-levels.md), com o desvio de protocolo, os resultados negativos e a correção do alinhamento temporal track × dados; em PR (#55), aguarda integração e releitura em `develop`.
