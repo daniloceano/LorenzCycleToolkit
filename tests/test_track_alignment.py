@@ -116,6 +116,36 @@ def test_an_irregular_track_is_not_subsampled():
         align_track_times(track, data)
 
 
+def test_an_irregular_track_with_every_time_in_the_data_fails():
+    # 00, 06, 18, 24 UTC: all in the 6-hourly data, but 12 UTC is missing from the track
+    track = pd.DatetimeIndex(["2018-08-09 00:00", "2018-08-09 06:00", "2018-08-09 18:00", "2018-08-10 00:00"])
+    data = _range("2018-08-09 00:00", "2018-08-10 00:00", 6)
+    with pytest.raises(TrackAlignmentError, match=r"interval is not regular \(intervals of 6, 12 h\)"):
+        align_track_times(track, data)
+
+
+def test_an_irregular_track_fails_also_with_data_sampled_more_often():
+    # 19 UTC is not a data time, so no subsampling applies; the track gap must still be reported
+    track = pd.DatetimeIndex(["2018-08-09 00:00", "2018-08-09 06:00", "2018-08-09 18:00", "2018-08-09 19:00"])
+    data = _range("2018-08-08 21:00", "2018-08-09 21:00", 3)
+    with pytest.raises(TrackAlignmentError, match="interval is not regular"):
+        align_track_times(track, data)
+
+
+def test_a_regular_track_with_every_time_in_the_data_is_unchanged():
+    track = _range("2018-08-09 00:00", "2018-08-10 00:00", 6)
+    data = _range("2018-08-08 00:00", "2018-08-11 00:00", 6)
+    alignment = align_track_times(track, data)
+    assert not alignment.adapted and list(alignment.selected) == list(track)
+    assert alignment.track_step_h == 6
+
+
+def test_a_track_with_fewer_than_two_positions_fails():
+    data = _range("2018-08-09 00:00", "2018-08-10 00:00", 6)
+    with pytest.raises(TrackAlignmentError, match=f"at least {MIN_TIMES} are needed"):
+        align_track_times(data[:1], data)
+
+
 def test_a_data_step_that_is_not_a_multiple_of_the_track_step_fails():
     track = _range("2018-08-09 00:00", "2018-08-10 00:00", 4)
     data = _range("2018-08-09 00:00", "2018-08-10 00:00", 6)

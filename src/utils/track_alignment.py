@@ -11,6 +11,8 @@ changed.
 Rules of :func:`align_track_times`:
 
 - track and data times must be strictly increasing (no duplicates);
+- the track must have at least :data:`MIN_TIMES` times at a regular interval,
+  also when no subsampling is needed (a gap in the track is an error);
 - when every track time is a data time nothing changes (the behaviour before
   this module, also when the data are sampled more often than the track);
 - otherwise the track is subsampled only when the data are sampled less often
@@ -152,22 +154,32 @@ def align_track_times(track_times, data_times, data_label="the data"):
         then apply unchanged).
 
     Raises:
-        TrackAlignmentError: Duplicated or unordered times, or a subsampling
+        TrackAlignmentError: Duplicated or unordered times, a track with fewer
+            than :data:`MIN_TIMES` times or an irregular interval, or a subsampling
             that would need interpolation, extrapolation or filling, or that
             leaves fewer than :data:`MIN_TIMES` positions.
     """
     track = _times(track_times, "The track")
     data = _times(data_times, f"The time axis of {data_label}")
+    if len(track) < MIN_TIMES:
+        raise TrackAlignmentError(
+            f"The track has {len(track)} time(s); at least {MIN_TIMES} are needed."
+        )
+    track_steps = _steps(track)
+    if len(track_steps) != 1:
+        raise TrackAlignmentError(
+            f"The track interval is not regular (intervals of {', '.join(f'{s:g}' for s in track_steps)} h): "
+            f"times are missing from the track. Provide a regular track."
+        )
     unchanged = TrackAlignment(False, track, len(track), _single_step_h(track))
     if track.isin(data).all():
         unchanged.data_step_h = _single_step_h(data[(data >= track[0]) & (data <= track[-1])])
         return unchanged
 
     window = data[(data >= track[0]) & (data <= track[-1])]
-    track_steps = _steps(track) if len(track) > 1 else []
     # inside the track period when possible, else over the whole data axis
     data_steps = _steps(window) if len(window) > 1 else (_steps(data) if len(data) > 1 else [])
-    if not track_steps or not data_steps or min(data_steps) <= min(track_steps):
+    if not data_steps or min(data_steps) <= min(track_steps):
         # the data are not sampled less often than the track: nothing to subsample
         return unchanged
 
@@ -176,12 +188,6 @@ def align_track_times(track_times, data_times, data_label="the data"):
         raise TrackAlignmentError(
             f"Only {len(window)} time(s) of {data_label} fall inside the track period "
             f"({_iso(track[0])} to {_iso(track[-1])}); at least {MIN_TIMES} are needed."
-        )
-    if len(track_steps) != 1:
-        raise TrackAlignmentError(
-            f"The track is sampled more often than {data_label} ({data_step:g} h), but its interval is not "
-            f"regular (intervals of {', '.join(f'{s:g}' for s in track_steps)} h), so it cannot be subsampled "
-            f"safely. Provide a regular track or data with the times of the track."
         )
     if len(data_steps) != 1:
         gaps = [window[i + 1] for i, d in enumerate(np.diff(window.values)) if _hours(d) != data_step]
