@@ -1,6 +1,12 @@
 # Investigação complementar pré-F — ERA5/Zarr, níveis verticais e correção do alinhamento temporal (02/11/2026)
 
-**Estado: CONCLUÍDA TECNICAMENTE — EM PR (#55), AGUARDANDO INTEGRAÇÃO.** Commit original `2101de2de15ee74b3180f2161722b1bdf0e71860`; GitHub Actions e CircleCI aprovados nesse commit; integração em `develop`, releitura e retenção final pendentes. Investigação **complementar**, fora da ordem principal: **não abre a Frente F**, não reabre D, D-Bench, E, G ou K e não altera `main`, tags, versões ou publicações. Este registro só deve ser lido como definitivo depois de integrado e relido em `develop`.
+**Estado: ENCERRADA — RETENÇÃO VALIDADA (06/11/2026).**
+- **Integração:** em `develop` pelo PR #55 (merge `24ffe5b30dc11ac78c2c0c7c8732733657dff9c5`, 03/11/2026, com os commits `2101de2` e `7e170ac`). A CI de `develop` e a releitura aprovaram.
+- **Retenção:** a retenção GOV-RET-01 foi concluída em 06/11/2026, depois da indisponibilidade do servidor de processamento.
+- **Encerramento:** [registro de 06/11](2026-11-06-lzv-closure-retention.md).
+- **Abaixo:** o texto preserva a redação de 02–03/11; as atualizações posteriores estão marcadas com data.
+
+**Estado em 02–03/11/2026 (redação original, preservada): CONCLUÍDA TECNICAMENTE — EM PR (#55), AGUARDANDO INTEGRAÇÃO.** Commit original `2101de2de15ee74b3180f2161722b1bdf0e71860`; GitHub Actions e CircleCI aprovados nesse commit; integração em `develop`, releitura e retenção final pendentes. Investigação **complementar**, fora da ordem principal: **não abre a Frente F**, não reabre D, D-Bench, E, G ou K e não altera `main`, tags, versões ou publicações. Este registro só deve ser lido como definitivo depois de integrado e relido em `develop`.
 
 ## 1. Natureza, escopo e perguntas
 
@@ -102,7 +108,15 @@ O responsável examinou os resultados e aprovou a interpretação: **neste estud
 | 1 (02/11, campanha) | 1902 duplicatas byte a byte (cópia da referência, espelhos ARCO A2/mínimo/interrompido) | 3,44 GiB; 0 falhas; manifesto `RETENCAO_INVENTARIO_v2.json` (sha256 `e292af4b…`) |
 | 3 (02/11, após a correção) | subconjuntos controlados e diagnóstico (regenerados bit a bit a partir do arquivo D-Bench antes da exclusão), export `835478e` (idêntico a `git archive 835478e`), arquivo de envio da correção, ambiente Zarr (recriável pelo *freeze*), bytecode | 2287 arquivos, 8,09 GB incluindo as cópias de prova; 0 falhas após uma parada registrada por permissão somente leitura do export, resolvida por `chmod` documentado; manifesto `RETENCAO_MANIFESTO_v3.json` (sha256 `7150f00d…`) |
 | Notebook | export de `b4a5f77`, temporários do pytest e cache do Sphinx | 13 608 arquivos, 2,45 GB; 0 falhas |
+| 4 (06/11, após a integração) | export da correção: 410 arquivos, todos idênticos a blobs Git de commits publicados | 49 370 918 bytes de conteúdo (50 540 544 em disco); 0 falhas; manifesto `RETENCAO_MANIFESTO_v4.json` (sha256 `d3dd4b12…`); [registro de 06/11](2026-11-06-lzv-closure-retention.md) |
 
 A área do servidor passou de 7,6 GB para **3,7 GB**. **Retidos temporariamente** até a releitura desta integração em `develop` e, no máximo, até o Marco B: espelho ARCO A1 e NetCDF A1/A3 (bytes brutos e entrada do LECTK), arquivo NCAR com proveniência (entrada da verificação da correção) e export da correção (única cópia, até o commit). **Memória permanente externa:** protocolo, adendo, ledger HTTP, logs, instrumentos, resultados, figuras e execuções LECTK. Reproduzir C0–C3 exige o arquivo CDS retido em `dbench_private/`, cuja retenção pertence à D-Bench. Nada de `dbench_private/`, `LEC_Results/`, Frente D, D-Bench ou do job MPAS em execução foi tocado.
 
 **Estado de retenção:** auditada e executada no escopo verificado; **não** declarar ENCERRADA — RETENÇÃO VALIDADA antes da integração e da releitura em `develop`.
+
+**Atualização de 06/11/2026: ENCERRADA — RETENÇÃO VALIDADA.**
+- **Rodada 4:** depois da integração (PR #55, 03/11) e da indisponibilidade do servidor (03–05/11), excluiu só o export da correção, cuja redundância com os commits publicados foi reverificada arquivo a arquivo.
+- **Cópia independente:** a memória permanente da área, os NetCDF ARCO A1/A3 e NCAR e as entradas pequenas ganharam cópia independente verificada fora do servidor.
+- **Só no servidor:** fica apenas o espelho ARCO A1, recuperável da fonte pública e com hash por objeto.
+- **Até o Marco B:** espelho e NetCDF continuam retidos.
+- **Contagens, hashes e verificação posterior:** [registro de 06/11](2026-11-06-lzv-closure-retention.md).
