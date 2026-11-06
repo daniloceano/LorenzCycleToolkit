@@ -8,4 +8,6 @@ Registro da [ocorrência de 27/10 na Frente D](2026-10-27-front-D-precommit.md):
 
 Registro do [encerramento técnico da D-Bench (01/11)](2026-11-01-dbench-closure.md): resultados, resultados negativos, ressalvas e retenções.
 
-Registro da [investigação complementar ERA5/Zarr e níveis verticais (02/11)](2026-11-02-lzv-era5-zarr-vertical-levels.md), com o desvio de protocolo, os resultados negativos e a correção do alinhamento temporal track × dados; em PR (#55), aguarda integração e releitura em `develop`.
+Registro da [investigação complementar ERA5/Zarr e níveis verticais (02/11)](2026-11-02-lzv-era5-zarr-vertical-levels.md), com o desvio de protocolo, os resultados negativos e a correção do alinhamento temporal track × dados; integrada em `develop` pelo PR #55 (03/11).
+
+Registro do [encerramento da LZV (06/11)](2026-11-06-lzv-closure-retention.md): auditoria do servidor após a indisponibilidade, cópia independente fora do servidor, retenção GOV-RET-01 final e sincronização do checkout do servidor.
