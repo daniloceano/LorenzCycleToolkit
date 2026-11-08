@@ -1,4 +1,26 @@
-# Fila de frentes — decisão de 18/10 e atualização de 25/10
+# Fila de frentes — replanejamento de 07/11/2026
+
+## Ordem vigente (decisão do responsável, 07/11/2026)
+
+Substitui a fila antiga a partir da Frente F ([D-018](decisions.md); [registro](evidence/records/2026-11-07-replanning-decisions.md)). Fechar uma etapa não abre automaticamente a seguinte.
+
+| Etapa | Objeto | Dependência | Estado |
+|---|---|---|---|
+| 1 | Registro das decisões de replanejamento (Frente R) | — | Em integração |
+| 2a | Validação externa: Reg1–Reg3 de Dias Pinto & da Rocha (2011), NCEP/NCAR R1, caixas fixas e fases do artigo | 1 | Não aberta; correspondência dos `inputs/` com o artigo não verificada |
+| 2b | Benchmark unificado de fontes ERA5 (paralelo a 2a) | 1 | Não aberta; Etapa 0, nada executado |
+| 3 | Níveis verticais: medição simples, 10 casos D-Bench, caixa fixa | 2b | Não aberta |
+| 4 | Inclusão das fontes escolhidas e documentação de cada uma (absorve F) | 2b | Não aberta |
+| 5 | Arrumação final (pendências de D-019) | — | Não aberta |
+| 6 | Nova versão oficial única (Marco B de GOV-RET-01) | 1–5 | Exige autorização específica |
+
+G–J seguem como backlog; K continua fora do escopo.
+
+---
+
+# Histórico — fila de 18/10 e atualização de 25/10
+
+*Preservada como escrita; a partir de F, superada pela ordem acima (07/11/2026).*
 
 A ordem inicial aprovada foi **A → B condicional → C → D → E → F condicional** (D-010). G–J são backlog; K foi acrescentada como hipótese não testada. Fechar uma frente não abre automaticamente a próxima.
 

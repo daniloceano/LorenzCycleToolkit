@@ -2,6 +2,8 @@
 
 **Corte de consolidação: 2026-10-24.** Esta memória consolida 19 Sources do Project, quatro anexos de encerramento e 33 evidências SHA-256 verificadas a partir de duas coletas documentais. Os registros históricos continuam datados: não transformar o estado em uma data no estado atual.
 
+**Atualização de 07/11/2026:** replanejamento do projeto de modernização por decisão do responsável — entregável, versão única ao fim, validação externa, nova ordem de trabalho. Ver [fila vigente](queue.md) e [registro](evidence/records/2026-11-07-replanning-decisions.md).
+
 ## Navegação
 
 - [Panorama](overview.md)

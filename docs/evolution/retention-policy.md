@@ -28,6 +28,8 @@ Depois que uma nova versão tiver sido **deliberadamente homologada, promovida c
 
 A criação da versão/tag é um **gatilho de revisão para descarte**, **não** prova automática de que arquivos externos ao Git foram preservados e **não** concede autorização automática de exclusão. Eliminar o que deixou de ser necessário, mediante manifesto aprovado. Permanências além desse marco exigem justificativa renovada e próximo marco de revisão.
 
+**Nota de 07/11/2026 (decisão do responsável, D-013):** o Marco B passa a ser a **única nova versão oficial, ao fim do projeto de modernização**; retenções registradas como válidas “até a próxima versão/tag” são reavaliadas nesse marco. Continua valendo que a tag é gatilho de avaliação, não autorização de exclusão.
+
 A auditoria de Marco B não autoriza, não cria e não publica versão, tag, `main`, PyPI ou Pages: esses atos mantêm aprovações próprias.
 
 ## 3. Classes e critério de decisão
