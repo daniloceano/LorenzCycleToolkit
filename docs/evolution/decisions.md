@@ -22,7 +22,7 @@
 | D-018 | Nova ordem de trabalho; substitui D-010 a partir de F | Decisão do responsável, 07/11; supera D-010 nesse trecho |
 | D-019 | Pendências de arrumação registradas, não executadas | Decisão do responsável, 07/11 |
 | D-020 | Correções factuais por nota (modo protegido CDS no PR #47; revisão visual do PR #55) | Decisão do responsável, 07/11 |
-| D-021 | Frente 2a (Dias Pinto & da Rocha 2011, NCEP R1): FAIL numérico global, 53/89 termos aceitáveis (59,6 %; limiar 60 %); mecanismos dominantes 3/3 iguais; conversões 22/24; divergência concentrada na partição fronteira × resíduo, causa indeterminável; controles majoritariamente falha. Portão visual pendente | Pré-registro aprovado pelo responsável, 08/11; [registro](evidence/records/2026-11-08-frente-2a-dias-pinto-2011.md) |
+| D-021 | Frente 2a (Dias Pinto & da Rocha 2011, NCEP R1): FAIL numérico global, 53/89 termos aceitáveis (59,6 %; limiar 60 %); mecanismos dominantes 3/3 iguais; conversões 22/24; divergência concentrada na partição fronteira × resíduo, causa indeterminável; controles majoritariamente falha. Portão visual: responsável concorda; desconforto registrado com conversões do Reg3 | Pré-registro aprovado pelo responsável, 08/11; [registro](evidence/records/2026-11-08-frente-2a-dias-pinto-2011.md) |
 
 **GOV-09 (25/10):** entrega automática, pela filha, de prompt pronto para a mãe ao fechar frente, após verificação de integração, com ressalvas e fila. **GOV-10 (25/10):** checklist visual breve e atualizado em toda resposta de filha, logo após o contexto. [Texto vinculante](coordination-protocol.md).
 

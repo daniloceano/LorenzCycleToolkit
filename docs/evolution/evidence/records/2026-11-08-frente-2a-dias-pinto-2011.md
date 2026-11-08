@@ -72,8 +72,8 @@ Por grupo (aceitáveis/termos com |A| ≥ 1): conversões 22/24; tendências 18/
   discreta dos termos de fronteira.
 - **Conversões:** mecanismos reproduzidos nos três casos; magnitudes próximas em Reg1 e Reg2. No Reg3, CA e CE
   são sistematicamente 19–25 % menores no LECTK, em todas as fases, no limite da tolerância.
-  **Hipótese não testada:** níveis abaixo do relevo andino na caixa do Reg3. Encaminhada como evidência à
-  etapa de níveis verticais (D-016, fora desta frente).
+  **Hipótese não testada:** níveis abaixo do relevo andino na caixa do Reg3. Tema excluído do escopo
+  atual (D-015); registrado como evidência caso o responsável decida reabri-lo.
 
 ## 6. Limitações
 
@@ -81,7 +81,8 @@ Por grupo (aceitáveis/termos com |A| ≥ 1): conversões 22/24; tendências 18/
 - O controle do Reg3 discrimina pouco (35,7 % aceitável, contra 53,6 % no caso real).
 - Comparar com outra implementação não é validação física independente; concordância ou divergência não diz
   qual das duas está certa.
-- Portão visual do item 8: pendente com o responsável.
+- Portão visual (item 8): inspeção do responsável em 08/11 concorda que as divergências principais estão nas
+  fronteiras; registra desconforto com diferenças nas conversões, em especial o viés sistemático de CA e CE no Reg3.
 
 ## 7. Verificação independente
 
