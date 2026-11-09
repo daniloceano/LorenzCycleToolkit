@@ -171,7 +171,9 @@ def StaticStability(
     apply_floor: bool
         Whether to apply the legacy SIGMA_FLOOR numerical safeguard. Setting it
         to False is EXPERIMENTAL: it changes Az, Ae, Ca, Gz and Ge, and the
-        results are not comparable with the defaults.
+        results are not comparable with the defaults. SIGMA_FLOOR also
+        affects the boundary terms BAz and BAe, which are weighted by
+        1/sigma as well.
     app_logger: logging.Logger, optional
         logger used for the stability diagnostics
 
