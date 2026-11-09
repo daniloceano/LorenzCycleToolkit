@@ -6,16 +6,14 @@ Substitui a fila antiga a partir da Frente F ([D-018](decisions.md); [registro](
 
 | Etapa | Objeto | Dependência | Estado |
 |---|---|---|---|
-| 1 | Registro das decisões de replanejamento (Frente R) | — | Concluída (PR #57) |
-| 2a | Validação externa: Reg1–Reg3 de Dias Pinto & da Rocha (2011), NCEP/NCAR R1, caixas fixas e fases do artigo | 1 | Encerrada com FAIL pré-registrado (D-021, PR #58; [registro](evidence/records/2026-11-08-frente-2a-dias-pinto-2011.md)) |
+| 1 | Registro das decisões de replanejamento (Frente R) | — | Concluída — registro integrado em `develop` (PR #57); encerramento formal da Frente R não documentado |
+| 2a | Validação externa: Reg1–Reg3 de Dias Pinto & da Rocha (2011), NCEP/NCAR R1, caixas fixas e fases do artigo | 1 | Em andamento — comparação executada e documentada (D-021, PR #58); FAIL numérico global (53/89, 59,6%); decisão de encerramento pendente |
 | 2a.1 | Conferência interna dos termos de fronteira e do fechamento do resíduo (ligada a 2a) | 2a | Concluída em 09/11/2026: implementação conferida (T1–T5 PASS), sem erro de fórmula; ver [registro](evidence/records/2026-11-09-subfrente-2a1-boundary-terms.md) |
 | 2b | Benchmark unificado de fontes ERA5 (paralelo a 2a) | 1 | Não aberta; Etapa 0, nada executado |
 | 3 | Níveis verticais: medição simples, 10 casos D-Bench, caixa fixa | 2b | Não aberta |
 | 4 | Inclusão das fontes escolhidas e documentação de cada uma (absorve F) | 2b | Não aberta |
 | 5 | Arrumação final (pendências de D-019) | — | Não aberta |
 | 6 | Nova versão oficial única (Marco B de GOV-RET-01) | 1–5 | Exige autorização específica |
-
-Nota de 09/11/2026: estado das etapas 1 e 2a corrigido por autorização do responsável; a redação anterior refletia 07/11.
 
 G–J seguem como backlog; K continua fora do escopo.
 
