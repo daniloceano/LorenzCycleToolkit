@@ -13,3 +13,5 @@ Registro da [investigação complementar ERA5/Zarr e níveis verticais (02/11)](
 Registro do [encerramento da LZV (06/11)](2026-11-06-lzv-closure-retention.md): auditoria do servidor após a indisponibilidade, cópia independente fora do servidor, retenção GOV-RET-01 final e sincronização do checkout do servidor.
 
 Registro do [replanejamento de 07/11](2026-11-07-replanning-decisions.md): decisões do responsável sobre entregável, versão única, validação externa, benchmark, nova ordem de trabalho, pendências e correções factuais.
+
+Registros da Frente 2b (benchmark unificado de fontes ERA5): [Etapa 0 e pré-registro v1 (09/11)](2026-11-09-front-2b-stage0-preregistration.md) e [pré-voo, emenda 1 e início da campanha (10/11)](2026-11-10-front-2b-preflight-amendment.md).
