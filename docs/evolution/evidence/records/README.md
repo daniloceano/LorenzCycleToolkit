@@ -14,4 +14,4 @@ Registro do [encerramento da LZV (06/11)](2026-11-06-lzv-closure-retention.md): 
 
 Registro do [replanejamento de 07/11](2026-11-07-replanning-decisions.md): decisões do responsável sobre entregável, versão única, validação externa, benchmark, nova ordem de trabalho, pendências e correções factuais.
 
-Registros da Frente 2b (benchmark unificado de fontes ERA5): [Etapa 0 e pré-registro v1 (09/11)](2026-11-09-front-2b-stage0-preregistration.md), [pré-voo, emenda 1 e início da campanha (10/11)](2026-11-10-front-2b-preflight-amendment.md) e [resultados da fase 1 (13/11)](2026-11-13-front-2b-phase1-results.md).
+Registros da Frente 2b (benchmark unificado de fontes ERA5): [Etapa 0 e pré-registro v1 (09/11)](2026-11-09-front-2b-stage0-preregistration.md), [pré-voo, emenda 1 e início da campanha (10/11)](2026-11-10-front-2b-preflight-amendment.md), [resultados da fase 1 (13/11)](2026-11-13-front-2b-phase1-results.md) e [emenda 2, rodada complementar (13/11)](2026-11-13-front-2b-amendment-02.md).
