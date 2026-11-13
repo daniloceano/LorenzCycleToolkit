@@ -8,6 +8,7 @@ and with the same coordinate metadata.
 """
 
 import datetime
+import email.message
 import functools
 import io
 import json
@@ -142,8 +143,59 @@ def test_kerchunk_gives_the_ncss_file(tmp_path):
     assert record["responses"][0]["http"]["chunks"][0]["status"] == 206
 
 
+def _assert_contiguous_longitudes(plan, path):
+    """Longitudes increasing, without duplicates or gaps, and those of the plan."""
+    with xr.open_dataset(path) as data:
+        lons = data["longitude"].values
+    assert np.array_equal(lons, np.asarray(plan.longitudes))
+    assert np.allclose(np.diff(lons), g.GRID_STEP) and len(np.unique(lons)) == len(lons)
+
+
 def test_kerchunk_across_greenwich(tmp_path):
     plan, path, _, _ = _kerchunk(tmp_path, area=POLAR_GREENWICH)
+    _assert_same_as_ncss(tmp_path, plan, path)
+
+
+def test_kerchunk_across_greenwich_reads_each_chunk_once(tmp_path):
+    # D-026 defect 3: with two longitude segments each piece read the same global chunk again
+    plan, path, record, fake = _kerchunk(tmp_path, area=POLAR_GREENWICH)
+    assert len({r.segment_index for r in plan.requests}) == 2
+    assert len(fake.calls) == 5 * len(plan.times) == record["method"]["chunks"]
+    assert record["totals"]["received_bytes_counted"] <= gs.KerchunkSource(
+        str(tmp_path / "refs"), opener=fake.opener).estimated_bytes(plan)
+    # the second segment's pieces say which piece read their chunks
+    shared = [r["http"] for r in record["responses"] if r["http"].get("chunks_read_with")]
+    assert len(shared) == 5 * len(DAYS)
+    _assert_same_as_ncss(tmp_path, plan, path)
+    _assert_contiguous_longitudes(plan, path)
+
+
+def test_kerchunk_across_greenwich_fits_a_limit_counting_each_chunk_once(tmp_path):
+    # the Frente 2b harness allowed 1.5x the estimate (each chunk once); the duplicated reads exhausted it
+    refs = tmp_path / "refs"
+    refs.mkdir()
+    fake = FakeKerchunk(refs)
+    plan = g.plan_retrieval(POLAR_GREENWICH, DAYS)
+    source = gs.KerchunkSource(str(refs), opener=fake.opener)
+    estimate = source.estimated_bytes(plan)
+    chunk_bytes = sum(size for _, _, size, _ in source._chunks.values())
+    limit = estimate - g.HEADER_ALLOWANCE * len(source._chunks) + chunk_bytes // 2   # < 2x the chunks
+    g.retrieve(plan, str(tmp_path / "k.nc"), _names(), logger=LOGGER, source=source, max_total_bytes=limit)
+    _assert_same_as_ncss(tmp_path, plan, tmp_path / "k.nc")
+
+
+def test_kerchunk_resumes_one_segment_reading_its_chunks_once(tmp_path):
+    plan, path, _, fake = _kerchunk(tmp_path, area=POLAR_GREENWICH, keep_parts=True)
+    parts = tmp_path / "kerchunk.nc.parts"
+    path.unlink()
+    (tmp_path / "kerchunk.nc.provenance.json").unlink()
+    for request in plan.requests:
+        if request.segment_index == 1:
+            (parts / f"{request.key}.nc").unlink()
+    fake.calls.clear()
+    source = gs.KerchunkSource(str(tmp_path / "refs"), opener=fake.opener)
+    g.retrieve(plan, str(path), _names(), logger=LOGGER, source=source)
+    assert len(fake.calls) == 5 * len(plan.times)
     _assert_same_as_ncss(tmp_path, plan, path)
 
 
@@ -181,8 +233,18 @@ def test_kerchunk_refuses_a_reference_to_another_day(tmp_path):
 class FakeSubset:
     """GDEX Get a Subset API and file server."""
 
-    def __init__(self, listed=None, lose_submit=False, failing_file=None, listing_fails_after_purge=False):
+    def __init__(self, listed=None, lose_submit=False, failing_file=None, listing_fails_after_purge=False,
+                 redirect_without_slash=False, redirect_to=None, crossing_fault=True):
         self.listed = list(listed or [])
+        # GDEX since 2026-11-10: status/<id>, get_req_files/<id> and purge/<id> answer 301 to the same path with
+        # a trailing slash (relative Location, query kept, as Django's APPEND_SLASH does)
+        self.redirect_without_slash = redirect_without_slash
+        self.redirect_to = redirect_to                  # callable(url) -> Location of every API answer (tests)
+        # What Frente 2b observed (mechanism inferred, D-025a): for a box crossing Greenwich in the GDEX
+        # 0..360 grid, a file larger than the size listed for it arrives. Emulated with a padded body.
+        self.crossing_fault = crossing_fault
+        self.crossing = set()
+        self.controls = []
         self.lose_submit = lose_submit
         self.failing_file = failing_file
         self.listing_fails_after_purge = listing_fails_after_purge
@@ -237,9 +299,20 @@ class FakeSubset:
             if url == self.failing_file:
                 raise ConnectionResetError(54, "reset (emulated)")
             body = self.files[url]
+            if url.split("/download/", 1)[1].split("/", 1)[0] in self.crossing:
+                body += b"\0" * (g.HEADER_ALLOWANCE + 1024)
             return FakeResponse(body, {"Content-Length": len(body), "Content-Type": "application/x-netcdf"})
+        if parsed.netloc != "gdex.ucar.edu":
+            raise AssertionError(f"request sent to another host: {parsed.scheme}://{parsed.netloc}")
         self.tokens.update(query.get("token", []))
         endpoint = parsed.path.split("/api/", 1)[1]
+        target = None if self.redirect_to is None else self.redirect_to(url)
+        if target is not None:
+            raise self._redirect(url, target)
+        if (self.redirect_without_slash and not endpoint.endswith("/")
+                and endpoint.split("/", 1)[0] in ("status", "get_req_files", "purge")):
+            location = parsed.path + "/" + (f"?{parsed.query}" if parsed.query else "")
+            raise self._redirect(url, location)
         if endpoint == "status/":
             if self.purged and self.listing_fails_after_purge:
                 raise urllib.error.HTTPError(url, 503, "unavailable", {}, io.BytesIO(b"busy " + TOKEN.encode()))
@@ -247,8 +320,11 @@ class FakeSubset:
                               {"data": None, "error_messages": ["No requests for given email"]})
         if endpoint == "submit/":
             control = json.loads(request.data)
+            self.controls.append(control)
             rid = str(self.next_id)
             self.next_id += 1
+            if self.crossing_fault and float(control["wlon"]) % 360.0 > float(control["elon"]) % 360.0:
+                self.crossing.add(rid)
             parameters = ",".join(f"8!{control['dataset']}:{p}" for p in control["param"].split("/"))
             rinfo = (f"dsnum={control['dataset']};startdate=" + "{0}-{1}-{2} {3}:{4}".format(
                 control["date"][0:4], control["date"][4:6], control["date"][6:8], control["date"][8:10],
@@ -275,6 +351,13 @@ class FakeSubset:
                     r["status"] = "Set for Purge"
             return self._json({"data": {"purge_successful": "true"}})
         raise urllib.error.HTTPError(url, 404, "not found", {}, io.BytesIO(b""))
+
+    @staticmethod
+    def _redirect(url, location):
+        headers = email.message.Message()
+        headers["Location"] = location
+        headers["Content-Length"] = "0"
+        return urllib.error.HTTPError(url, 301, "Moved Permanently", headers, io.BytesIO(b""))
 
     def submits(self):
         return sum(1 for method, path in self.calls if path.endswith("/submit/"))
@@ -314,6 +397,126 @@ def test_subset_gives_the_ncss_file_without_leaking_the_token(tmp_path, caplog):
 def test_subset_across_greenwich(tmp_path):
     plan, path, _ = _subset(tmp_path, FakeSubset(), area=POLAR_GREENWICH)
     _assert_same_as_ncss(tmp_path, plan, path)
+
+
+# --- D-026 defect 1: HTTP 301 of the GDEX API
+def test_subset_follows_the_trailing_slash_redirect_of_the_api(tmp_path, caplog):
+    fake = FakeSubset(redirect_without_slash=True)
+    with caplog.at_level(logging.DEBUG):
+        plan, path, record = _subset(tmp_path, fake, purge=True)
+    paths = [p for _, p in fake.calls]
+    assert "/api/status/960001" in paths and "/api/status/960001/" in paths
+    assert "/api/get_req_files/960001" in paths and "/api/get_req_files/960001/" in paths
+    assert [p for m, p in fake.calls if m == "DELETE"] == ["/api/purge/960001", "/api/purge/960001/"]
+    assert record["method"]["purge"]["answer"] == {"purge_successful": "true"}
+    assert fake.tokens == {TOKEN} and TOKEN not in caplog.text
+    assert TOKEN not in (tmp_path / "subset.nc.provenance.json").read_text()
+    _assert_same_as_ncss(tmp_path, plan, path)
+
+
+def test_subset_follows_an_absolute_redirect_to_the_same_host(tmp_path):
+    def location(url):
+        parsed = urllib.parse.urlparse(url)
+        return None if parsed.path.endswith("/") else f"https://gdex.ucar.edu{parsed.path}/?{parsed.query}"
+
+    fake = FakeSubset(redirect_to=location)
+    plan, path, _ = _subset(tmp_path, fake)
+    assert "/api/status/960001" in [p for _, p in fake.calls] and fake.tokens == {TOKEN}
+    _assert_same_as_ncss(tmp_path, plan, path)
+
+
+@pytest.mark.parametrize("location", [
+    "https://evil.example.org/api/status/960001/?token={token}",
+    "http://gdex.ucar.edu/api/status/960001/?token={token}",          # downgrade to plain HTTP
+    "https://gdex.ucar.edu.evil.example.org/api/status/960001/",
+    "//evil.example.org/api/status/960001/",
+])
+def test_subset_never_follows_a_redirect_to_another_host_or_scheme(tmp_path, caplog, location):
+    fake = FakeSubset(redirect_to=lambda url: location.format(token=TOKEN))
+    with caplog.at_level(logging.DEBUG), pytest.raises(g.NcarRequestError, match="not followed") as error:
+        _subset(tmp_path, fake)
+    assert TOKEN not in str(error.value) and TOKEN not in caplog.text
+    assert all(path.startswith("/api/") for _, path in fake.calls)   # the fake fails on any other host
+    assert fake.submits() == 0
+
+
+def test_subset_stops_after_too_many_redirects(tmp_path):
+    fake = FakeSubset(redirect_to=lambda url: urllib.parse.urlparse(url).path + "x/")
+    with pytest.raises(g.NcarRequestError, match="redirect"):
+        _subset(tmp_path, fake)
+    assert len(fake.calls) == 1 + gs.SUBSET_MAX_REDIRECTS
+
+
+# --- D-026 defect 2: boxes crossing Greenwich
+def test_subset_never_submits_a_box_crossing_greenwich(tmp_path):
+    fake = FakeSubset()
+    plan, path, record = _subset(tmp_path, fake, area=POLAR_GREENWICH, purge=True)
+    assert fake.submits() == 2
+    boxes = [(float(c["wlon"]), float(c["elon"])) for c in fake.controls]
+    assert boxes == [(-2.0, -0.25), (0.0, 3.0)]
+    assert all(w % 360 <= e % 360 for w, e in boxes)
+    # one request per segment, both created and purged by this retrieval
+    method = record["method"]
+    assert [r["request_id"] for r in method["requests"]] == ["960001", "960002"]
+    assert all(r["created_here"] for r in method["requests"])
+    assert [p for m, p in fake.calls if m == "DELETE"] == ["/api/purge/960001", "/api/purge/960002"]
+    assert [p["listed_after"] for p in method["purge"]["requests"]] == ["Set for Purge"] * 2
+    _assert_same_as_ncss(tmp_path, plan, path)
+    _assert_contiguous_longitudes(plan, path)
+
+
+def test_subset_controls():
+    plan = g.plan_retrieval(POLAR, DAYS)
+    assert gs.subset_controls(plan) == [gs.subset_control(plan)]          # one box: the request is unchanged
+    assert gs.subset_control(plan) == {
+        "dataset": "d633000", "groupindex": "26", "date": "201808091200/to/201808100600",
+        "param": "T/Z/W/U/V", "product": "Analysis", "oformat": "netCDF",
+        "nlat": "90", "slat": "88", "wlon": "-50", "elon": "-48"}
+    crossing = g.plan_retrieval(POLAR_GREENWICH, DAYS)
+    west, east = gs.subset_controls(crossing)
+    assert (west["wlon"], west["elon"], east["wlon"], east["elon"]) == ("-2", "-0.25", "0", "3")
+    assert {k: v for k, v in west.items() if k not in ("wlon", "elon")} == \
+        {k: v for k, v in gs.subset_control(crossing).items() if k not in ("wlon", "elon")}
+
+
+def test_subset_across_greenwich_needs_room_for_both_requests(tmp_path):
+    fake = FakeSubset(listed=[{"request_index": i, "status": "Completed", "rinfo": "dsnum=x"} for i in range(6)])
+    with pytest.raises(g.NcarRequestError, match="8 open requests"):
+        _subset(tmp_path, fake, area=POLAR_GREENWICH)
+    assert fake.submits() == 0
+
+
+def test_subset_across_greenwich_resumes_with_the_same_requests(tmp_path):
+    fake = FakeSubset()
+    plan = g.plan_retrieval(POLAR_GREENWICH, DAYS)
+    original = fake._make_files
+
+    def make_and_break(rid, control):
+        original(rid, control)
+        if rid == "960002":
+            fake.failing_file = list(fake.files)[-1]
+
+    fake._make_files = make_and_break
+    with pytest.raises(g.NcarTransferError):
+        g.retrieve(plan, str(tmp_path / "s.nc"), _names(), logger=LOGGER,
+                   source=gs.SubsetSource(token=TOKEN, opener=fake.opener))
+    parts = tmp_path / "s.nc.parts"
+    assert json.loads((parts / gs.SUBSET_STATE).read_text())["request_id"] == "960001"
+    assert json.loads((parts / "subset_request.segment1.json").read_text())["request_id"] == "960002"
+    fake.failing_file = None
+    g.retrieve(plan, str(tmp_path / "s.nc"), _names(), logger=LOGGER,
+               source=gs.SubsetSource(token=TOKEN, opener=fake.opener))
+    assert fake.submits() == 2
+    _assert_same_as_ncss(tmp_path, plan, tmp_path / "s.nc")
+
+
+def test_subset_without_greenwich_keeps_one_request_and_its_record(tmp_path):
+    fake = FakeSubset()
+    plan, path, record = _subset(tmp_path, fake)
+    assert fake.controls == [gs.subset_control(plan)] and fake.submits() == 1
+    assert "requests" not in record["method"] and record["method"]["request_id"] == "960001"
+    assert set(record["method"]) >= {"request_id", "created_here", "reused_existing_request", "submit_answer_lost",
+                                     "files", "listed_bytes", "remote_status"}
 
 
 def test_subset_purges_only_its_own_request_and_records_the_listing(tmp_path):
