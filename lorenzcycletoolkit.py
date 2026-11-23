@@ -147,11 +147,30 @@ def create_arg_parser():
         "--ncar",
         action="store_true",
         help=(
-            "Download the ERA5 data from the NCAR GDEX copy of ERA5 (dataset d633000, no account) instead of "
-            "the CDS API when the input file does not exist (experimental). Same area, 37 pressure levels and "
-            "hours as --cdsapi (track file and --time-resolution). A provenance record is written next to the "
+            "Download the ERA5 data from the NCAR GDEX copy of ERA5 (dataset d633000) instead of "
+            "the CDS API when the input file does not exist. Same area, 37 pressure levels and "
+            "hours as --cdsapi (track file and --time-resolution). The access method is chosen with "
+            "--ncar-method (default: kerchunk). A provenance record is written next to the "
             "file, and the file is reused only if it matches that record."
         ),
+    )
+    parser.add_argument(
+        "--ncar-method",
+        choices=("kerchunk", "subset", "ncss"),
+        default=None,
+        help=(
+            "With --ncar: access method (default: kerchunk). kerchunk: byte ranges of the GDEX files, no "
+            "account; its reference files are kept in --kerchunk-refs and downloaded once when missing. "
+            "subset: GDEX Get a Subset, needs a GDEX token (GDEX_API_TOKEN or ~/.gdex_api_token). "
+            "ncss (experimental): NetCDF Subset Service; no success in the 2026-11 benchmark."
+        ),
+    )
+    parser.add_argument(
+        "--kerchunk-refs",
+        type=str,
+        default=None,
+        help=("With --ncar and the kerchunk method: directory of the GDEX kerchunk reference files "
+              "(default: inputs/kerchunk_refs)."),
     )
     guard = parser.add_argument_group(
         "guarded CDS mode (opt-in, for controlled runs such as D-Bench; see src/utils/cds_guard.py)")
@@ -327,6 +346,10 @@ def main():
 
     if args.cdsapi and args.ncar:
         parser.error("--cdsapi and --ncar are alternative data sources; use one of them")
+    if args.ncar_method is not None and not args.ncar:
+        parser.error("--ncar-method needs --ncar")
+    if args.kerchunk_refs is not None and not (args.ncar and (args.ncar_method or "kerchunk") == "kerchunk"):
+        parser.error("--kerchunk-refs needs --ncar with the kerchunk method")
     if args.delete_downloaded_input and not (args.cdsapi or args.ncar):
         parser.error("--delete-downloaded-input needs --cdsapi or --ncar (local input files are never deleted)")
     guard_options = [name for name in ("cds_ledger", "cds_retries", "cds_timeout", "cds_case_id", "cds_delete_on_stop")

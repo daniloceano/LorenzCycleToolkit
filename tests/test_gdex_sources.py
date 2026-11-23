@@ -14,6 +14,7 @@ import io
 import json
 import logging
 import os
+import types
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -234,8 +235,16 @@ class FakeSubset:
     """GDEX Get a Subset API and file server."""
 
     def __init__(self, listed=None, lose_submit=False, failing_file=None, listing_fails_after_purge=False,
-                 redirect_without_slash=False, redirect_to=None, crossing_fault=True):
+                 redirect_without_slash=False, redirect_to=None, crossing_fault=True, chunk_framing=0,
+                 extra_bytes=0, replace_body=None, cut_bytes=0):
         self.listed = list(listed or [])
+        # What stage 4a measured on GDEX (2026-11-23, case 19790205): files are sent chunked, without
+        # Content-Length; 9665 chunks of a 52788269-byte file added 74104 bytes of framing on the wire, more
+        # than HEADER_ALLOWANCE. Emulated by charging ``chunk_framing`` bytes against the connection limit.
+        self.chunk_framing = chunk_framing
+        self.extra_bytes = extra_bytes                  # body larger than the size listed for it
+        self.replace_body = replace_body                # body that is not the listed file (e.g. an HTML page)
+        self.cut_bytes = cut_bytes                      # body shorter than the size listed for it
         # GDEX since 2026-11-10: status/<id>, get_req_files/<id> and purge/<id> answer 301 to the same path with
         # a trailing slash (relative Location, query kept, as Django's APPEND_SLASH does)
         self.redirect_without_slash = redirect_without_slash
@@ -301,6 +310,13 @@ class FakeSubset:
             body = self.files[url]
             if url.split("/download/", 1)[1].split("/", 1)[0] in self.crossing:
                 body += b"\0" * (g.HEADER_ALLOWANCE + 1024)
+            body = (self.replace_body if self.replace_body is not None else body) + b"\0" * self.extra_bytes
+            body = body[:len(body) - self.cut_bytes]
+            if self.chunk_framing:
+                wire = 530 + len(body) + self.chunk_framing    # status line and headers measured: 530 bytes
+                if wire > request.lectk_limit:
+                    raise g._ResponseTooLarge(types.SimpleNamespace(limit=request.lectk_limit))
+                return FakeResponse(body, {"Transfer-Encoding": "chunked", "Content-Type": "application/x-netcdf"})
             return FakeResponse(body, {"Content-Length": len(body), "Content-Type": "application/x-netcdf"})
         if parsed.netloc != "gdex.ucar.edu":
             raise AssertionError(f"request sent to another host: {parsed.scheme}://{parsed.netloc}")
@@ -558,6 +574,27 @@ def test_nothing_is_submitted_with_too_many_listed_requests(tmp_path):
     assert fake.submits() == 0
 
 
+def test_requests_set_for_purge_do_not_count_in_the_listed_limit(tmp_path):
+    # stage 4a (19/11/2026): "Set for Purge" requests are on their way out and no longer take one of the 7 places
+    listed = ([{"request_index": i, "status": "Completed", "rinfo": "dsnum=x"} for i in range(5)]
+              + [{"request_index": 10 + i, "status": "Set for Purge", "rinfo": "dsnum=x"} for i in range(4)])
+    fake = FakeSubset(listed=listed)
+    plan, path, _ = _subset(tmp_path, fake)
+    assert fake.submits() == 1
+    _assert_same_as_ncss(tmp_path, plan, path)
+
+
+def test_the_listed_limit_still_counts_every_other_state(tmp_path):
+    listed = ([{"request_index": i, "status": "Completed", "rinfo": "dsnum=x"} for i in range(4)]
+              + [{"request_index": 10 + i, "status": s, "rinfo": "dsnum=x"}
+                 for i, s in enumerate(("Queued for Processing", "Error", "Set for Purge"))]
+              + [{"request_index": 20, "status": "Processing", "rinfo": "dsnum=x"}])
+    fake = FakeSubset(listed=listed)
+    with pytest.raises(g.NcarRequestError, match="7 GDEX requests count against the limit"):
+        _subset(tmp_path, fake)
+    assert fake.submits() == 0
+
+
 def test_a_lost_submission_answer_adopts_the_new_request_without_resubmitting_or_purging(tmp_path):
     fake = FakeSubset(lose_submit=True)
     plan, path, record = _subset(tmp_path, fake, purge=True)
@@ -666,3 +703,98 @@ def test_token_redaction_covers_its_url_encoded_forms():
     text = f"https://gdex.ucar.edu/api/status/?token={urllib.parse.quote_plus(token)} {token} " \
            f"{urllib.parse.quote(token, safe='')}"
     assert token not in gs._redact(text, token) and "%2B" not in gs._redact(text, token)
+
+
+# ------------------------------------- kerchunk references cache (stage 4a, 19/11/2026)
+class RefsServer:
+    """The GDEX file server of the reference files, in front of a FakeKerchunk store."""
+
+    def __init__(self, store_dir, fake, bad=None):
+        self.store_dir, self.fake, self.bad = store_dir, fake, set(bad or ())
+        self.downloads = []
+
+    def opener(self, request, timeout=None):
+        url = request.full_url
+        if url.startswith(gs.KERCHUNK_REFS_URL):
+            name = url[len(gs.KERCHUNK_REFS_URL):]
+            self.downloads.append(name)
+            body = b"<html>not json</html>" if name in self.bad else (self.store_dir / name).read_bytes()
+            return FakeResponse(body, {"Content-Length": len(body), "Content-Type": "application/json"})
+        return self.fake.opener(request, timeout)
+
+
+def _served(tmp_path, bad=None):
+    store = tmp_path / "served"
+    store.mkdir()
+    return RefsServer(store, FakeKerchunk(store), bad=bad)
+
+
+def test_missing_reference_files_are_downloaded_once_then_reused(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    server = _served(tmp_path)
+    plan = g.plan_retrieval(POLAR, DAYS)
+    record = g.retrieve(plan, str(tmp_path / "a.nc"), _names(), logger=LOGGER,
+                        source=gs.KerchunkSource(opener=server.opener))
+    cache = tmp_path / "inputs" / "kerchunk_refs"           # the default directory
+    assert sorted(server.downloads) == sorted(server.fake.refs)   # only the fields and decade of the request
+    assert sorted(p.name for p in cache.iterdir()) == sorted(server.fake.refs)
+    origin = record["method"]["reference_files_origin"]
+    assert all(v.startswith("downloaded from https://tds.gdex.ucar.edu/") for v in origin.values())
+    _assert_same_as_ncss(tmp_path, plan, tmp_path / "a.nc")
+
+    server.downloads.clear()
+    record = g.retrieve(plan, str(tmp_path / "b.nc"), _names(), logger=LOGGER,
+                        source=gs.KerchunkSource(opener=server.opener))
+    assert server.downloads == []                           # found in the directory: used as they are
+    assert set(record["method"]["reference_files_origin"].values()) == {"found in the references directory"}
+
+
+def test_an_invalid_reference_download_is_not_kept(tmp_path):
+    server = _served(tmp_path, bad={"temperature.2010-2019-remote.json"})
+    cache = tmp_path / "refs"
+    with pytest.raises(g.NcarContentError, match="not a kerchunk reference file"):
+        g.retrieve(g.plan_retrieval(POLAR, DAYS), str(tmp_path / "a.nc"), _names(), logger=LOGGER,
+                   source=gs.KerchunkSource(str(cache), opener=server.opener, attempts=1))
+    assert not (cache / "temperature.2010-2019-remote.json").exists()
+    assert not any(p.name.endswith(".part") for p in cache.iterdir())
+
+
+def test_without_download_a_missing_reference_file_stops(tmp_path):
+    (tmp_path / "refs").mkdir()
+    source = gs.KerchunkSource(str(tmp_path / "refs"), download_refs=False, opener=lambda *a, **k: pytest.fail())
+    with pytest.raises(g.NcarRetrievalError, match="not found"):
+        g.retrieve(g.plan_retrieval(POLAR, DAYS), str(tmp_path / "a.nc"), _names(), logger=LOGGER, source=source)
+
+
+# --- stage 4a: per-file limit of Get a Subset (cases 19790205 and 19790585 of round 2b)
+def test_subset_accepts_chunk_framing_beyond_the_header_allowance(tmp_path):
+    # measured on GDEX: 74104 bytes of chunk framing for a 52788269-byte file
+    fake = FakeSubset(chunk_framing=74104)
+    plan, path, record = _subset(tmp_path, fake)
+    _assert_same_as_ncss(tmp_path, plan, path)
+
+
+def test_subset_warns_and_keeps_a_valid_file_larger_than_listed(tmp_path, caplog):
+    fake = FakeSubset(extra_bytes=4096)
+    with caplog.at_level(logging.WARNING):
+        plan, path, record = _subset(tmp_path, fake)
+    _assert_same_as_ncss(tmp_path, plan, path)
+    assert "larger than the" in caplog.text and "listed" in caplog.text
+
+
+def test_subset_refuses_a_file_that_is_not_netcdf(tmp_path):
+    fake = FakeSubset(replace_body=b"<html>maintenance</html>", extra_bytes=256 * 1024)
+    with pytest.raises(g.NcarTransferError, match="not a NetCDF file"):
+        _subset(tmp_path, fake)
+
+
+def test_subset_still_stops_an_answer_far_larger_than_listed(tmp_path):
+    fake = FakeSubset(chunk_framing=1, extra_bytes=50 * 1024 ** 2)
+    with pytest.raises(g.NcarTransferError, match="bytes read|larger than"):
+        _subset(tmp_path, fake)
+
+
+def test_subset_downloads_again_a_file_smaller_than_listed(tmp_path):
+    fake = FakeSubset(cut_bytes=10)
+    with pytest.raises(g.NcarTransferError, match="fewer than the"):
+        _subset(tmp_path, fake)

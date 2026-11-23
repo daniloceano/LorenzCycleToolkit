@@ -6,6 +6,23 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- Get a Subset: files sent chunked (without Content-Length) are no longer refused when the chunk framing exceeds 64 KiB (cases 19790205 and 19790585 of stage 2b). A file may now arrive up to twice its listed size; a larger-than-listed file is kept with a warning, a smaller one is downloaded again, and a body that is not NetCDF is refused.
+- **`--ncar` uses kerchunk by default; new `--ncar-method {kerchunk,subset,ncss}`.**
+  The access method of the NCAR GDEX route is chosen with `--ncar-method`
+  (valid only with `--ncar`); NCSS stays available as an experimental method.
+  The standalone `python -m src.utils.ncar_gdex` also defaults to kerchunk.
+  The kerchunk reference files are kept in `inputs/kerchunk_refs` (or
+  `--kerchunk-refs DIR`) and downloaded once from GDEX when missing; the
+  provenance record says whether each was downloaded or found.
+- **Guarded CDS mode no longer locks the route after a failed download of a
+  completed request.** When the request finished on the CDS but its download
+  failed or was empty (0 B), the same result is downloaded once more (never
+  resubmitted); if that fails too the case ends as `download_failed`, which
+  does not block later submissions. Unknown or unfinished remote states still
+  block until `resolve`.
+- **Get a Subset: requests "Set for Purge" no longer count** in the limit of
+  7 listed requests (they still block an identical request).
+
 - **Input NetCDF files are no longer deleted after a run.** The moving
   framework deleted the `--cdsapi` input file at the end of every `--track`
   run, even when the file already existed and was only reused. Input files
@@ -55,7 +72,8 @@ All notable changes to this project will be documented in this file.
   request instead of resubmitting, and purges only a request it created, on
   request (`--gdex-purge`). Both fill the same verified pieces as NCSS, so
   checks, resumption, assembly and provenance are unchanged; the method is
-  recorded in the provenance file. The default remains `ncss`.
+  recorded in the provenance file. The default was then `ncss`; since
+  2026-11-19 it is `kerchunk` (see above).
 
 - **Run timing in `run_status.json`** (D-Bench instrumentation): a new
   `timing` key records the acquisition (`--cdsapi`/`--ncar`), preparation,

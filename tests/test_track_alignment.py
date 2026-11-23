@@ -211,7 +211,7 @@ def test_the_three_sources_align_the_3h_track_with_6h_data_in_the_same_way(lectk
     # --ncar: the request is every 6 h; before the correction the run failed after the download
     fake = FakeGdex()
     monkeypatch.setattr(g, "default_opener", lambda: fake.opener)
-    assert _run(monkeypatch, ["ncar_case.nc", "-r", "-t", "--ncar", "--time-resolution", "6"]) == 0
+    assert _run(monkeypatch, ["ncar_case.nc", "-r", "-t", "--ncar", "--ncar-method", "ncss", "--time-resolution", "6"]) == 0
     assert len(fake.calls) == 10  # two days, five fields
     data = workdir / "ncar_case.nc"
 
@@ -268,7 +268,7 @@ def test_compatible_times_record_no_adaptation_and_no_warning(lectk_workdir, mon
         "time;Lat;Lon\n" + "".join(TRACK.splitlines(keepends=True)[1::2]))  # the 6-hourly positions
     fake = FakeGdex()
     monkeypatch.setattr(g, "default_opener", lambda: fake.opener)
-    assert _run(monkeypatch, ["ncar_case.nc", "-r", "-t", "--ncar", "--time-resolution", "6"]) == 0
+    assert _run(monkeypatch, ["ncar_case.nc", "-r", "-t", "--ncar", "--ncar-method", "ncss", "--time-resolution", "6"]) == 0
     frame, metadata, trackfile, log = _outputs(workdir, "ncar_case")
     assert list(pd.to_datetime(frame.index)) == list(SELECTED)
     assert metadata["track_time_alignment"]["adapted"] is False
@@ -285,7 +285,7 @@ def test_ncar_refuses_before_any_request_a_track_the_request_cannot_serve(lectk_
     fake = FakeGdex()
     monkeypatch.setattr(g, "default_opener", lambda: fake.opener)
     with pytest.raises(TrackAlignmentError, match="do not fall on track times"):
-        _run(monkeypatch, ["ncar_case.nc", "-r", "-t", "--ncar", "--time-resolution", "6"])
+        _run(monkeypatch, ["ncar_case.nc", "-r", "-t", "--ncar", "--ncar-method", "ncss", "--time-resolution", "6"])
     assert fake.calls == [] and not (workdir / "ncar_case.nc").exists()
 
 
@@ -301,7 +301,7 @@ def test_a_local_file_with_a_gap_is_refused(lectk_workdir, monkeypatch):
     workdir = _workdir(lectk_workdir)
     fake = FakeGdex()
     monkeypatch.setattr(g, "default_opener", lambda: fake.opener)
-    assert _run(monkeypatch, ["ncar_case.nc", "-r", "-t", "--ncar", "--time-resolution", "6"]) == 0
+    assert _run(monkeypatch, ["ncar_case.nc", "-r", "-t", "--ncar", "--ncar-method", "ncss", "--time-resolution", "6"]) == 0
     import xarray as xr
     with xr.open_dataset(workdir / "ncar_case.nc") as dataset:
         dataset.drop_isel(valid_time=2).to_netcdf(workdir / "gap_case.nc")  # 2018-08-10 00 UTC removed

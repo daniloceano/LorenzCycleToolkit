@@ -226,3 +226,6 @@ src/plots/.vscode/settings.json
 # VSCode settings folder
 .vscode/
 
+
+# kerchunk reference files downloaded by --ncar (kerchunk method)
+inputs/kerchunk_refs/
