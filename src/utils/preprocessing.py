@@ -27,6 +27,7 @@ import pandas as pd
 import xarray as xr
 from metpy.units import units
 
+from .input_files import resolve_input_file
 from .ncar_gdex import get_ncar_data
 from .run_metadata import record_top_cut
 from .run_timing import RunTiming
@@ -460,6 +461,28 @@ def process_data(
     return data
 
 
+ERA5_NAMELIST = "inputs/namelist_ERA5-cdsapi"
+
+
+def namelist_for_run(args) -> str:
+    """
+    Namelist of a run: the file that prepares the data is also the one the LEC reads.
+
+    With ``--cdsapi`` or ``--wekeo`` the file downloaded has the ERA5 names, so the
+    preset ``inputs/namelist_ERA5-cdsapi`` is used. In every other case (local
+    file, ``--ncar``) it is ``inputs/namelist`` (or its ``.default`` companion).
+
+    Args:
+        args (argparse.Namespace): Command-line arguments.
+
+    Returns:
+        str: Path of the namelist for the whole run (preparation and LEC).
+    """
+    if args.cdsapi or getattr(args, "wekeo", False):
+        return ERA5_NAMELIST
+    return resolve_input_file("inputs/namelist")
+
+
 def prepare_data(
     args, varlist: str = "inputs/namelist", app_logger: logging.Logger = None, timing=None
 ) -> xr.Dataset:
@@ -478,7 +501,7 @@ def prepare_data(
     """
     # Automatically use ERA5-cdsapi namelist with --cdsapi or --wekeo (same file contents)
     if args.cdsapi or getattr(args, "wekeo", False):
-        varlist = "inputs/namelist_ERA5-cdsapi"
+        varlist = ERA5_NAMELIST
         app_logger.info("🌐 CDS API/WEkEO mode detected: automatically using ERA5-compatible namelist")
         app_logger.debug(f"📋 Using namelist: {varlist}")
 

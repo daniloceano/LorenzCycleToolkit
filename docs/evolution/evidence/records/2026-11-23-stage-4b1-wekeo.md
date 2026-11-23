@@ -257,6 +257,14 @@ download (`KeyError: 'time'`). `configuration.rst` diz que o usuário não preci
 `--cdsapi`, mas o exemplo manda copiar. **Não foi corrigido nesta etapa;** fica como pendência para a 4c ou para uma
 correção própria.
 
+## 8. Encerramento da 4b·1 (23/11/2026)
+
+PR #79 integrado em `develop` (merge `b4d5d17`, 23/11/2026 20:38 UTC), com os três checks de CI verdes (dois
+"Python application / build" e `ci/circleci: build_test`) e releitura no SHA do merge: este registro, no merge, é
+idêntico ao do commit `236aa91`, cabeça do PR. Os dois achados deixados em aberto aqui foram tratados na 4b·x: o
+namelist do LEC (§7) foi corrigido e os 34 × 35 horários (§5.4) foram explicados; ver
+[registro da 4b·x](2026-11-23-stage-4bx-namelist-and-times.md).
+
 ## Fora deste registro
 
 ARCO e DestinE, robustez do kerchunk, conferência dos 34 × 35 horários e reescrita da documentação (4c). Merge, CI e

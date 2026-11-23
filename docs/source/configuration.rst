@@ -68,10 +68,10 @@ For the moving framework, a `track_file` can be used to define the system's cent
 
 **Note**: The track file uses semicolon (``;``) as the delimiter and must include a ``time`` column that can be parsed as datetime.
 
-Namelist for ERA5 Data (CDS API)
----------------------------------
+Namelist for ERA5 Data (CDS API and WEkEO)
+------------------------------------------
 
-When using the ``--cdsapi`` flag to automatically download ERA5 data, the toolkit **automatically** uses the ERA5-compatible namelist (``inputs/namelist_ERA5-cdsapi``). You do not need to manually create or configure the namelist file when using this feature.
+When using the ``--cdsapi`` or ``--wekeo`` flag to automatically download ERA5 data, the toolkit **automatically** uses the ERA5-compatible namelist (``inputs/namelist_ERA5-cdsapi``), both to prepare the data and to run the LEC. ``inputs/namelist`` is not read in this mode, so you do not need to create or copy it; only the preset must be present.
 
 The ``inputs/namelist_ERA5-cdsapi`` preset contains:
 
@@ -88,7 +88,7 @@ The ``inputs/namelist_ERA5-cdsapi`` preset contains:
     Time;;valid_time
     Vertical Level;;pressure_level
 
-If you have ERA5 data from other sources (not downloaded via ``--cdsapi``), you should manually create your namelist:
+If you have ERA5 data from other sources (not downloaded via ``--cdsapi`` or ``--wekeo``), you should manually create your namelist:
 
 .. code-block:: bash
 

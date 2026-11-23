@@ -42,7 +42,7 @@ from src.utils.input_cleanup import cleanup_input, downloaded_input
 from src.utils.input_files import resolve_input_file
 from src.utils.offline_maps import offline_maps
 from src.utils.output_names import results_directory, validate_outname
-from src.utils.preprocessing import prepare_data
+from src.utils.preprocessing import namelist_for_run, prepare_data
 from src.utils.run_status import EXIT_PARTIAL, RunStatus, snapshot_directory
 from src.utils.run_timing import RunTiming
 from src.utils.tools import initialize_logging
@@ -271,7 +271,7 @@ def setup_results_directory(args, method):
 
 
 def run_lec_analysis(data, args, results_subdirectory, figures_directory, results_subdirectory_vertical_levels, app_logger, run_status=None,
-                     downloaded=None):
+                     downloaded=None, namelist=None):
     """
     Runs the LEc analysis on the given data using the specified method and arguments.
 
@@ -284,6 +284,9 @@ def run_lec_analysis(data, args, results_subdirectory, figures_directory, result
         downloaded (tuple): Fingerprint of the input file when this run
             downloaded it (see src.utils.input_cleanup), else None; only
             such a file can be deleted, with --delete-downloaded-input.
+        namelist (str): Namelist with which the data were prepared (see
+            src.utils.preprocessing.namelist_for_run); inputs/namelist when
+            not given.
 
     Returns:
         RunStatus: The status of the run, also written to run_status.json.
@@ -299,7 +302,7 @@ def run_lec_analysis(data, args, results_subdirectory, figures_directory, result
         run_status.write()
 
     with run_status.guard(), offline_maps(getattr(args, "offline_maps", False)):
-        variable_list_df = pd.read_csv(resolve_input_file("inputs/namelist"), sep=";", index_col=0, header=0)
+        variable_list_df = pd.read_csv(namelist or resolve_input_file("inputs/namelist"), sep=";", index_col=0, header=0)
 
         # Timing of the framework only (the namelist read above is preparation)
         with run_status.timing.phase("lec"):
@@ -439,12 +442,14 @@ def main():
 
     # Prepare data
     existed_before = os.path.exists(args.infile)
+    namelist = namelist_for_run(args)  # the same file prepares the data and feeds the LEC
     with run_status.guard(), timing.phase("preparation"):
-        data = prepare_data(args, resolve_input_file("inputs/namelist"), app_logger, timing=timing)
+        data = prepare_data(args, namelist, app_logger, timing=timing)
 
     # Run LEC analysis
     run_lec_analysis(data, args, results_subdirectory, figures_directory, results_subdirectory_vertical_levels, app_logger,
-                     run_status=run_status, downloaded=downloaded_input(args, existed_before, timing))
+                     run_status=run_status, downloaded=downloaded_input(args, existed_before, timing),
+                     namelist=namelist)
 
     return run_status.exit_code
 

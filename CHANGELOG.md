@@ -22,6 +22,18 @@ All notable changes to this project will be documented in this file.
   module `src/utils/wekeo_hda.py`. No change to the other routes or to the
   computation.
 
+### Fixed
+
+- **`--cdsapi` and `--wekeo`: the LEC now reads the namelist with which the data were
+  prepared.** The data were prepared with `inputs/namelist_ERA5-cdsapi`, but the LEC
+  read `inputs/namelist` again; when the two differed the run failed after the
+  download (`KeyError: 'time'`). The namelist is now chosen once
+  (`preprocessing.namelist_for_run`) and passed to both steps, and
+  `run_lec_analysis` accepts it as `namelist`. A missing preset is still reported
+  before any request. `--ncar` and local files were not affected (both steps read
+  `inputs/namelist`). No output value of the LEC changes. `docs/source/configuration.rst`
+  no longer asks to copy the namelist for these routes.
+
 ### Changed
 
 - **`--ncar`: default volume limit raised from 8 GiB to 20 GiB, and new `--max-gib`

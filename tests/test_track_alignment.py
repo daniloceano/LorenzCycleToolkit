@@ -307,3 +307,24 @@ def test_a_local_file_with_a_gap_is_refused(lectk_workdir, monkeypatch):
         dataset.drop_isel(valid_time=2).to_netcdf(workdir / "gap_case.nc")  # 2018-08-10 00 UTC removed
     with pytest.raises(TrackAlignmentError, match="not regular inside the track period"):
         _run(monkeypatch, ["gap_case.nc", "-r", "-t"])
+
+
+def test_request_for_a_track_ending_off_the_data_grid_has_no_time_after_the_track():
+    """
+    Case 19790205 of the 2b benchmark (track every 3 h, 18/03 12 UTC to 26/03 21 UTC, 68 positions;
+    only the times are used, not the coordinates). With --time-resolution 6 the request has 34 times,
+    the last 26/03 18 UTC. The 35th time of the sealed 2b request (27/03 00 UTC, "last track time
+    rounded up") is after the last track position: it is not a track time, so no position is lost.
+    """
+    track = pd.date_range("1979-03-18 12:00", "1979-03-26 21:00", freq="3h")
+    request = planned_request_times(track, 6)
+    assert len(track) == 68 and len(request) == 34
+    assert request[0] == track[0] and request[-1] == pd.Timestamp("1979-03-26 18:00")
+    sealed_2b = pd.date_range(track[0], "1979-03-27 00:00", freq="6h")
+    assert len(sealed_2b) == 35 and list(sealed_2b.difference(request)) == [pd.Timestamp("1979-03-27 00:00")]
+    assert not track.isin(sealed_2b.difference(request)).any()
+    # every track position on the 6-hourly grid is in the request; with either set of times the
+    # track mode uses the same 34 positions
+    assert track.isin(sealed_2b).sum() == track.isin(request).sum() == 34
+    for data_times in (request, sealed_2b):
+        assert align_track_times(track, data_times).selected.equals(request)
