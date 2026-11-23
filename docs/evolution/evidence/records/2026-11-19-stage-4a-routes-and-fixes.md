@@ -234,6 +234,14 @@ total contra 12 GiB aprovados).
 - Pasta `lectk_stage4a1_default_cap_20261123` (1,6 GB): destino junto com as demais, no fim da etapa 4 (D-028).
 - O CSV do LEC sobre o pedido do comando principal (34 × 27) não tem referência anterior; não foi interpretado.
 
+### 7.6 Encerramento da 4a.1 (23/11/2026)
+
+PR #77 integrado em `develop` (merge `a39d304`), com os três checks de CI verdes e releitura no SHA do merge (conteúdo
+idêntico ao commit `1e0bccd`). O responsável deu a 4a.1 por concluída em 23/11/2026, sem refazer o LEC sobre o pedido
+selado, por considerar a igualdade do CSV muito provável. **Essa igualdade não foi verificada**: o que está comprovado
+é a igualdade bit a bit dos dados na região comum (§7.3); o CSV `ac5c7eec…` não foi reproduzido pelo comando
+principal e o LEC não foi refeito sobre o arquivo de grade comum.
+
 ## Fora deste registro
 
 Aprovação, merge, CI e releitura deste documento não podem constar dele.
