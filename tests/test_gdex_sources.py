@@ -798,3 +798,12 @@ def test_subset_downloads_again_a_file_smaller_than_listed(tmp_path):
     fake = FakeSubset(cut_bytes=10)
     with pytest.raises(g.NcarTransferError, match="fewer than the"):
         _subset(tmp_path, fake)
+
+
+def test_kerchunk_refs_url_matches_the_gdex_catalog():
+    # Checked against the live service on 2026-11-23 (stage 4a): the catalog
+    # catalog_d633000.xml lists files/d633000/kerchunk/pressure_levels/ (no "g/"),
+    # and the file server answered 200 for temperature.1970-1979-remote.json;
+    # the former address with ".../files/g/d633000/..." answered 404.
+    assert gs.KERCHUNK_REFS_URL == (
+        "https://tds.gdex.ucar.edu/thredds/fileServer/files/d633000/kerchunk/pressure_levels/")

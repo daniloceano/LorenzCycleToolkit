@@ -140,11 +140,11 @@ KERCHUNK_NAMES = {"T": "temperature", "Z": "geopotential", "W": "vertical_veloci
 KERCHUNK_HOST_REWRITE = ("https://data.rda.ucar.edu/", "https://data.gdex.ucar.edu/")
 # Reference files: looked for in the references directory (default ``inputs/kerchunk_refs``) and, when missing,
 # downloaded once from the GDEX THREDDS file server of the catalog
-# https://tds.gdex.ucar.edu/thredds/catalog/files/g/d633000/kerchunk/pressure_levels/catalog.html
-# (stage 4a, 19/11/2026: the file-server address is taken from that public catalog and was not yet checked
-# against the live service).
+# https://tds.gdex.ucar.edu/thredds/catalog/files/d633000/kerchunk/pressure_levels/catalog.html
+# (stage 4a, 23/11/2026: checked against the live service; the address first written on 19/11/2026,
+# with ".../files/g/d633000/...", answered 404).
 KERCHUNK_REFS_DIR = os.path.join("inputs", "kerchunk_refs")
-KERCHUNK_REFS_URL = "https://tds.gdex.ucar.edu/thredds/fileServer/files/g/d633000/kerchunk/pressure_levels/"
+KERCHUNK_REFS_URL = "https://tds.gdex.ucar.edu/thredds/fileServer/files/d633000/kerchunk/pressure_levels/"
 KERCHUNK_REFS_MAX_BYTES = 64 * 1024 ** 2   # one reference file (about 14-16 MB measured)
 KERCHUNK_LEVELS = 37
 KERCHUNK_GRID_STEP = 0.25
