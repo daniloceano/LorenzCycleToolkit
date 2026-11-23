@@ -172,6 +172,15 @@ def create_arg_parser():
         help=("With --ncar and the kerchunk method: directory of the GDEX kerchunk reference files "
               "(default: inputs/kerchunk_refs)."),
     )
+    parser.add_argument(
+        "--max-gib",
+        type=float,
+        default=None,
+        help=("With --ncar: largest volume accepted for the download, in GiB (default: 20 GiB), for any "
+              "--ncar-method. The estimate is checked before anything is downloaded and, if it passes the "
+              "limit, the run stops saying the --max-gib needed; bytes of failed attempts and retries count "
+              "too. Same meaning as in python -m src.utils.ncar_gdex."),
+    )
     guard = parser.add_argument_group(
         "guarded CDS mode (opt-in, for controlled runs such as D-Bench; see src/utils/cds_guard.py)")
     guard.add_argument(
@@ -348,6 +357,10 @@ def main():
         parser.error("--cdsapi and --ncar are alternative data sources; use one of them")
     if args.ncar_method is not None and not args.ncar:
         parser.error("--ncar-method needs --ncar")
+    if args.max_gib is not None and not args.ncar:
+        parser.error("--max-gib needs --ncar")
+    if args.max_gib is not None and not args.max_gib > 0:
+        parser.error("--max-gib must be greater than 0")
     if args.kerchunk_refs is not None and not (args.ncar and (args.ncar_method or "kerchunk") == "kerchunk"):
         parser.error("--kerchunk-refs needs --ncar with the kerchunk method")
     if args.delete_downloaded_input and not (args.cdsapi or args.ncar):

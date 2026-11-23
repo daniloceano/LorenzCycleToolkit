@@ -142,7 +142,10 @@ MAX_WAIT = 300.0
 # Slowest transfer accepted: an attempt fails (and may be retried) when it
 # lasts longer than its timeout plus its largest response at this rate.
 MIN_TRANSFER_RATE = 25_000
-DEFAULT_MAX_TOTAL_BYTES = 8 * 1024 ** 3
+# Largest retrieval accepted unless --max-gib says otherwise (both commands, the three access methods). It was
+# 8 GiB until stage 4a.1 (23/11/2026): the kerchunk method reads whole global chunks, so its volume grows with the
+# number of hours (case 19790205 of the 2b benchmark: 10.1 GiB) and half the typical cases passed 8 GiB.
+DEFAULT_MAX_TOTAL_BYTES = 20 * 1024 ** 3
 RETRY_STATUS = {429, 500, 502, 503, 504}
 # A response without Content-Length is chunked: its framing (a size line per
 # chunk) is reserved on top of the response, 1/64 of it (chunks of 512 bytes
@@ -1613,8 +1616,9 @@ def _retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout
     if estimate > max_total_bytes:
         raise NcarRetrievalError(
             f"the retrieval would transfer about {estimate / 1024 ** 3:.2f} GiB, more than the limit of "
-            f"{max_total_bytes / 1024 ** 3:.2f} GiB. Shorten the period, use a larger --time-resolution, "
-            f"or raise the limit (python -m src.utils.ncar_gdex ... --max-gib)."
+            f"{max_total_bytes / 1024 ** 3:.2f} GiB in force; no data was downloaded. Raise the limit with "
+            f"--max-gib {math.ceil(estimate / 1024 ** 3)} (the smallest whole number of GiB that fits), or "
+            f"shorten the period, or use a larger --time-resolution."
         )
     directory = os.path.dirname(os.path.abspath(path))
     if not os.path.isdir(directory):
@@ -1830,7 +1834,9 @@ def get_ncar_data(args, track, app_logger, namelist="inputs/namelist", on_retrie
     Args:
         args (argparse.Namespace): Command-line arguments (``infile``,
             ``trackfile``, ``time_resolution``, ``ncar_method``,
-            ``kerchunk_refs``).
+            ``kerchunk_refs``, ``max_gib``). ``max_gib`` (GiB; None for
+            DEFAULT_MAX_TOTAL_BYTES) is the limit on the bytes received,
+            unless ``max_total_bytes`` is passed in ``options``.
         track (pd.DataFrame): Track with 'Lat' and 'Lon' columns and a
             datetime index.
         app_logger (logging.Logger): Logger for the application.
@@ -1864,6 +1870,8 @@ def get_ncar_data(args, track, app_logger, namelist="inputs/namelist", on_retrie
                     "trackfile": trackfile,
                     "trackfile_sha256": _sha256(trackfile) if trackfile and os.path.isfile(trackfile) else None,
                 }
+                if getattr(args, "max_gib", None) is not None:
+                    options.setdefault("max_total_bytes", int(args.max_gib * 1024 ** 3))
                 if "source" not in options:
                     options["source"] = make_source(ncar_method(args),
                                                     kerchunk_refs=getattr(args, "kerchunk_refs", None),

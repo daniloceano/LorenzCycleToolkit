@@ -1068,3 +1068,142 @@ def test_standalone_command_defaults_to_kerchunk(tmp_path, monkeypatch, capsys):
     g.main([str(tmp_path / "out.nc"), "--trackfile", str(track), "--time-resolution", "6",
             "--namelist", str(REPO_ROOT / "inputs" / "namelist_ERA5"), "--dry-run"])
     assert made == ["kerchunk"]
+
+
+# ----------------------------- volume cap of the main program (stage 4a.1, 23/11/2026)
+GIB = 1024 ** 3
+BIG_AREA = (-10.0, -70.0, -70.0, -10.0)      # 60 x 60 degrees
+MEDIUM_AREA = (-20.0, -60.0, -60.0, -20.0)   # 40 x 40 degrees
+
+
+def _days(count):
+    first = datetime.date(1979, 3, 1)
+    return [(first + datetime.timedelta(days=i), (0, 6, 12, 18)) for i in range(count)]
+
+
+# Retrieval sizes per method (estimates in GiB, from the plans below): "about" is between the old cap (8 GiB)
+# and the new one (20 GiB); "above" is over 20 GiB. Kerchunk needs the reference files to estimate, so its
+# estimate is stated instead (10.1 GiB is that of case 19790205, measured in stage 4a).
+SIZES = {
+    "ncss": {"about": (BIG_AREA, _days(100)), "above": (BIG_AREA, _days(160))},         # 16.0 and 25.6 GiB
+    "subset": {"about": (MEDIUM_AREA, _days(60)), "above": (MEDIUM_AREA, _days(100))},  # 12.8 and 21.4 GiB
+    "kerchunk": {"about": 10.1 * GIB, "above": 25.3 * GIB},
+}
+
+
+class _PastTheCap(Exception):
+    """Raised where the retrieval stops right after the estimate check, before any request."""
+
+
+def _cap_case(tmp_path, monkeypatch, method, size, **extra):
+    """
+    ``get_ncar_data`` as the main program calls it, for a retrieval of the given size.
+
+    Nothing is requested: with the estimate accepted the retrieval is stopped by ``_PastTheCap`` (raised where
+    the free disk space is read, the step after the check), and any opener or access to the service fails the test.
+
+    Returns:
+        tuple: (the call without arguments, the estimate in bytes, the arguments of the run).
+    """
+    from src.utils import gdex_sources as gs
+
+    track, args = _track_and_args(tmp_path)
+    args.ncar_method = method
+    args.kerchunk_refs = str(tmp_path / "refs")
+    for name, value in extra.items():
+        setattr(args, name, value)
+    wanted = SIZES[method][size]
+    if method == "kerchunk":
+        estimate = int(wanted)
+        monkeypatch.setattr(gs.KerchunkSource, "estimated_bytes", lambda self, plan: estimate)
+    else:
+        plan = g.plan_retrieval(*wanted)
+        estimate = plan.estimated_bytes if method == "ncss" else gs.SubsetSource().estimated_bytes(plan)
+        monkeypatch.setattr(g, "plan_retrieval", lambda area, days: plan)
+
+    def stop(path):
+        raise _PastTheCap
+
+    monkeypatch.setattr(g.shutil, "disk_usage", stop)
+
+    def no_request(*args, **kwargs):
+        pytest.fail("a request would have been made")
+
+    monkeypatch.setattr(g, "default_opener", lambda: no_request)
+    namelist = str(REPO_ROOT / "inputs" / "namelist_ERA5")
+    return (lambda: g.get_ncar_data(args, track, LOGGER, namelist=namelist)), estimate, args
+
+
+def test_default_cap_is_20_gib_for_both_commands(capsys):
+    assert g.DEFAULT_MAX_TOTAL_BYTES == 20 * GIB
+    with pytest.raises(SystemExit):
+        g.main(["--help"])
+    assert "(default: 20)" in " ".join(capsys.readouterr().out.split())
+
+
+@pytest.mark.parametrize("method", ["ncss", "subset", "kerchunk"])
+def test_an_estimate_of_about_10_gib_or_more_passes_with_the_default_cap(method, tmp_path, monkeypatch):
+    call, estimate, _ = _cap_case(tmp_path, monkeypatch, method, "about")
+    assert 8 * GIB < estimate < 20 * GIB
+    with pytest.raises(_PastTheCap):
+        call()
+
+
+@pytest.mark.parametrize("method", ["ncss", "subset", "kerchunk"])
+def test_an_estimate_above_20_gib_is_refused_with_the_figures_and_nothing_is_downloaded(method, tmp_path,
+                                                                                        monkeypatch):
+    call, estimate, args = _cap_case(tmp_path, monkeypatch, method, "above")
+    assert estimate > 20 * GIB
+    with pytest.raises(g.NcarRetrievalError) as refused:
+        call()
+    message = str(refused.value)
+    assert f"{estimate / GIB:.2f} GiB" in message and "20.00 GiB" in message
+    assert f"--max-gib {math.ceil(estimate / GIB)}" in message
+    assert not os.path.exists(args.infile) and not os.path.exists(f"{args.infile}.parts")
+
+
+@pytest.mark.parametrize("method", ["ncss", "subset", "kerchunk"])
+def test_max_gib_above_the_default_accepts_the_case(method, tmp_path, monkeypatch):
+    call, estimate, args = _cap_case(tmp_path, monkeypatch, method, "above")
+    args.max_gib = math.ceil(estimate / GIB)
+    assert args.max_gib > 20
+    with pytest.raises(_PastTheCap):
+        call()
+
+
+@pytest.mark.parametrize("method", ["ncss", "subset", "kerchunk"])
+def test_max_gib_below_the_estimate_refuses_and_names_the_cap_in_force(method, tmp_path, monkeypatch):
+    call, estimate, _ = _cap_case(tmp_path, monkeypatch, method, "about", max_gib=8)
+    with pytest.raises(g.NcarRetrievalError) as refused:
+        call()
+    message = str(refused.value)
+    assert f"{estimate / GIB:.2f} GiB" in message and "8.00 GiB" in message
+    assert f"--max-gib {math.ceil(estimate / GIB)}" in message
+
+
+def test_max_gib_of_the_main_program_is_read_in_gib():
+    assert _parse(["x.nc", "-f", "--ncar"])[1].max_gib is None
+    assert _parse(["x.nc", "-f", "--ncar", "--max-gib", "30"])[1].max_gib == 30.0
+
+
+@pytest.mark.parametrize("source", [[], ["--cdsapi"]])
+def test_max_gib_needs_ncar(source, monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["lorenzcycletoolkit.py", "x.nc", "-f", *source, "--max-gib", "30"])
+    with pytest.raises(SystemExit) as exit_info:
+        lorenzcycletoolkit.main()
+    assert exit_info.value.code == 2 and "--max-gib needs --ncar" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("value", ["0", "-5"])
+def test_max_gib_must_be_positive(value, monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["lorenzcycletoolkit.py", "x.nc", "-f", "--ncar", "--max-gib", value])
+    with pytest.raises(SystemExit) as exit_info:
+        lorenzcycletoolkit.main()
+    assert exit_info.value.code == 2 and "--max-gib must be greater than 0" in capsys.readouterr().err
+
+
+def test_main_program_help_documents_max_gib_and_its_default(capsys):
+    with pytest.raises(SystemExit):
+        lorenzcycletoolkit.create_arg_parser().parse_args(["--help"])
+    text = " ".join(capsys.readouterr().out.split())
+    assert "--max-gib" in text and "20 GiB" in text

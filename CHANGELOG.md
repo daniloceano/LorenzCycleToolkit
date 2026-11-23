@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- **`--ncar`: default volume limit raised from 8 GiB to 20 GiB, and new `--max-gib`
+  in `lorenzcycletoolkit.py`.** The limit (any `--ncar-method`) was fixed at 8 GiB in
+  the main program, which would refuse cases that kerchunk handles (for example
+  case 19790205 of the 2b benchmark, about 10.1 GiB). `--max-gib GIB` (valid only
+  with `--ncar`, same meaning as in `python -m src.utils.ncar_gdex`, which now also
+  defaults to 20 GiB) sets the limit. When the estimate passes the limit, the run
+  stops before requesting any data and reports the estimate, the limit in force and
+  the `--max-gib` needed (with kerchunk the estimate needs the reference files, so
+  any that are missing, 14 to 28 MB each, are downloaded once before the check).
+  No change in the computation or in any value of the data.
 - Get a Subset: files sent chunked (without Content-Length) are no longer refused when the chunk framing exceeds 64 KiB (cases 19790205 and 19790585 of stage 2b). A file may now arrive up to twice its listed size; a larger-than-listed file is kept with a warning, a smaller one is downloaded again, and a body that is not NetCDF is refused.
 - **`--ncar` uses kerchunk by default; new `--ncar-method {kerchunk,subset,ncss}`.**
   The access method of the NCAR GDEX route is chosen with `--ncar-method`
