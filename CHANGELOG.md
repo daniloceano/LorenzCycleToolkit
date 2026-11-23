@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **`--wekeo`: ERA5 from WEkEO (Harmonised Data Access) in `lorenzcycletoolkit.py`.**
+  Alternative to `--cdsapi` and `--ncar` (mutually exclusive) with the same request
+  as the CDS route (track area with the 15-degree buffer, 37 pressure levels, the
+  same hours) and the same file contents (names, units, dimension order, longitude
+  convention; `inputs/namelist_ERA5-cdsapi`), one WEkEO request per month. Optional
+  dependency: `pip install "lorenzcycletoolkit[wekeo]"` (hda); credential in
+  `~/.hdarc` or `HDA_USER`/`HDA_PASSWORD`, never read or logged by the toolkit.
+  `--max-gib` (default 20 GiB) and a disk-space check refuse a request before
+  anything is ordered; every byte received counts. Orders are recorded in
+  `<file>.wekeo-orders.json` before submission and resumed (never resubmitted) by a
+  new run; a submission without a recorded order id blocks the route until the
+  ledger is removed. A provenance record `<file>.provenance.json` lists the orders,
+  bytes and SHA-256 sums. `--delete-downloaded-input` works with `--wekeo`. New
+  module `src/utils/wekeo_hda.py`. No change to the other routes or to the
+  computation.
+
 ### Changed
 
 - **`--ncar`: default volume limit raised from 8 GiB to 20 GiB, and new `--max-gib`

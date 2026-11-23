@@ -11,6 +11,12 @@ Remote Data Acquisition Methods
    are kept in ``inputs/kerchunk_refs`` (or ``--kerchunk-refs DIR``) and downloaded once when missing. The rest of
    this page still describes the earlier state and will be rewritten.
 
+   **WEkEO is available (since 2026-11-23):** ``--wekeo`` downloads the same ERA5 file as ``--cdsapi`` (same area,
+   37 levels, hours and file contents) from WEkEO Harmonised Data Access, one request per month. It needs the
+   optional ``hda`` package (``pip install "lorenzcycletoolkit[wekeo]"``) and a free WEkEO account in ``~/.hdarc``
+   (lines ``user:`` and ``password:``) or in ``HDA_USER`` and ``HDA_PASSWORD``. ``--max-gib`` limits the volume
+   (default 20 GiB). See ``python lorenzcycletoolkit.py --help``; a full section will follow.
+
 .. raw:: html
 
    <style>.wy-table-responsive table td, .wy-table-responsive table th { white-space: normal; }</style>
