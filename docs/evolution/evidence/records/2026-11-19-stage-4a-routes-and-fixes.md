@@ -1,7 +1,7 @@
 # Etapa 0 e etapa 4a — rotas ERA5, correções dos clientes NCAR e CDS e kerchunk como padrão do `--ncar`
 
 **Data:** 19/11/2026. **Base:** `develop` em `d65e515` (PR #74); `main` em `48fe8e2`.
-**Estado deste registro:** integrado em `develop` pelo PR #75 (merge `c0e3942`); diagnóstico na Swell **confirmado** (23/11/2026); verificação do kerchunk como padrão e encerramento na §6 (23/11/2026).
+**Estado deste registro:** integrado em `develop` pelo PR #75 (merge `c0e3942`); diagnóstico na Swell **confirmado** (23/11/2026); verificação do kerchunk como padrão e encerramento na §6 (23/11/2026); teto de volume do `--ncar` (4a.1) na §7 (23/11/2026).
 
 ## 1. Decisões do responsável (19/11/2026)
 
@@ -136,6 +136,103 @@ reproduz bit a bit a saída da 2b, dentro da tolerância do pré-registro da fas
 - O destino de `/p1-swell/danilocs/lectk_stage4a_diag_20261122/` (≈ 101 MB) e de
   `/p1-swell/danilocs/lectk_stage4a_kerchunk_20261123/` (≈ 1,7 GB) fica para o fim da etapa 4, junto com os dados
   da 2b (D-028).
+
+## 7. 23/11/2026 — Etapa 4a.1: teto de volume do `--ncar` no programa principal
+
+**Problema.** O `--ncar` do programa principal usava o teto fixo de 8 GiB (`DEFAULT_MAX_TOTAL_BYTES`) e não aceitava
+`--max-gib` (achado da §6). Com o kerchunk como padrão (D-030), o volume cresce com o número de horários, porque
+o kerchunk baixa blocos globais: o caso 19790205 precisa de ~10,1 GiB e seria recusado.
+
+**Decisão do responsável (23/11/2026; D-035).** Teto padrão de 20 GiB nos três métodos; `--max-gib` no programa
+principal, só com `--ncar`; recusa que informa a estimativa, o teto em vigor e o `--max-gib` necessário, sem baixar
+dados. Base: `develop` em `c464955` (PR #76).
+
+### 7.1 Mudanças
+
+- `DEFAULT_MAX_TOTAL_BYTES` passa de 8 para 20 GiB. É a mesma constante do comando separado
+  (`python -m src.utils.ncar_gdex`), que por isso passou ao mesmo padrão sem outra alteração; o `--help` dele
+  mostra `(default: 20)`.
+- `--max-gib GIB` no programa principal: erro se usado sem `--ncar` ou com valor ≤ 0; `get_ncar_data` o repassa como
+  `max_total_bytes`.
+- Mensagem de recusa: estimativa em GiB, teto em vigor e `--max-gib N`, com N o menor número inteiro de GiB que
+  comporta a estimativa. Nenhum dado é pedido. **Nuance:** com o kerchunk a própria estimativa precisa das
+  referências; as que faltarem (≤ 5 arquivos, 14 a 28 MB) são baixadas uma vez antes da checagem. Não são dados
+  ERA5; ficam dentro de `inputs/kerchunk_refs`.
+- Ajuda do programa principal e as três citações de 8 GiB em `docs/source/remote_data_acquisition.rst` (só o teto).
+  A reescrita completa fica para a 4c. Nenhum valor de dado muda.
+
+### 7.2 Testes (offline)
+
+19 testes novos em `tests/test_ncar_gdex.py` (seção "volume cap of the main program"), cobrindo NCSS, Get a Subset e
+kerchunk (o kerchunk com estimativa simulada, pois precisa das referências):
+
+| Caso | Antes | Depois |
+|---|---|---|
+| Teto padrão de 20 GiB (constante e `--help` do comando separado) | falha | passa |
+| Estimativa entre 10 e 20 GiB (10,1 / 12,8 / 16,0 GiB) passa com o padrão, 3 métodos | 3 falham | 3 passam |
+| Estimativa acima de 20 GiB (21,4 / 25,3 / 25,6 GiB) é recusada com a mensagem correta e sem pedido nem arquivo, 3 métodos | 3 falham | 3 passam |
+| `--max-gib` acima do padrão aceita o caso, 3 métodos | 3 falham | 3 passam |
+| `--max-gib` abaixo da estimativa recusa e nomeia o teto em vigor, 3 métodos | 3 falham | 3 passam |
+| `--max-gib` lido em GiB; sem `--ncar` (e com `--cdsapi`) dá erro; ≤ 0 dá erro; ajuda o documenta | 6 falham | 6 passam |
+
+Total: 19 falhavam antes (19/19) e 19 passam depois. Suíte completa no Mac (ambiente `lorenz`): 644 passam; 1 falha
+(`test_packaging::test_installed_metadata_matches_pyproject`, `cmocean` ausente do ambiente instalado, falha igual na
+`develop` limpa) e 16 erros do fixture de Natural Earth (arquivos ausentes localmente; ficam para o CI).
+
+### 7.3 Teste real na Swell (autorizado em 23/11/2026, com consulta prévia, D-034)
+
+Comando principal, sem `--ncar-method` e sem `--max-gib`:
+`lorenzcycletoolkit.py case_19790205.nc -f -r --ncar --trackfile inputs/track --time-resolution 6 -o kerchunk_19790205`.
+Pasta nova `/p1-swell/danilocs/lectk_stage4a1_default_cap_20261123/` (fora do repositório; 1,6 GB). Track
+`track_19790205.txt` (sha256 `9da9d809…`, o selado da 2b), caixa e namelist da fase 2 (cópias das do teste da 4a);
+referências copiadas de `lectk_stage4a_kerchunk_20261123/refs` (sha256 conferidos; as originais não foram
+alteradas). Código: export do checkout **não commitado** sobre `c464955` (sha256 do `git diff HEAD` no momento do
+teste: `58f70d87…`; as alterações posteriores foram só documentação). Ambiente `lorenz` da Swell (Python 3.12.12, NumPy
+2.0.0, xarray 2024.2.0, MetPy 1.6.2). Estimativa prévia (`--dry-run`, mesmo plano): 9,864 GiB, abaixo dos 12 GiB
+aprovados; vigia do meu processo com parada em 12 GiB pelo contador da interface (não disparou).
+
+| Grandeza | Valor |
+|---|---|
+| Teto em vigor (provenância) | 21 474 836 480 B (20 GiB, o padrão) |
+| Aceitou o caso | sim, sem recusa |
+| Janela | 16:30:06 a 17:03:11 UTC; código de saída 0 |
+| Tempo total / aquisição / transferência / montagem / LEC | 1 979 s / 1 856 s / 1 656 s / 195 s / 123 s |
+| Pedidos HTTP / tentativas repetidas | 170 (34 horários × 5 campos) / 0 |
+| Bytes recebidos (contados pelo `ByteBudget`) | 10 580 329 581 B (9,85 GiB) |
+| Tráfego da interface de rede durante a janela (limite superior, inclui tudo) | 11 284 436 189 B (10,51 GiB), abaixo de 12 GiB |
+| Arquivo baixado | 1 568 848 237 B, sha256 `6881a228…` (37 níveis, 34 horários, N-24 W-82 S-80 E76, 225 × 633) |
+| CSV do LEC | 34 × 27, sha256 `ffad993f…` (32 níveis, acima de 10 hPa descartados) |
+
+**Critério de aprovação: parcialmente atendido.** O comando principal aceitou o caso com o padrão. **O CSV não tem o
+sha256 `ac5c7eec…` da fase 2, e não poderia ter:** o pedido do comando principal é outro, por construção.
+
+| | Fase 2 / teste da 4a | Comando principal (`--ncar`) |
+|---|---|---|
+| Buffer da caixa de dados | 5° (caixa selada) | 15° (`area_from_track`), N-24 W-82 S-80 E76 |
+| Horários | 35 (até 27/03 00 UTC) | 34 (até 26/03 18 UTC, regra `daily_hours`) |
+| Níveis no arquivo / usados no LEC | 37 / 13 (via `to_common_grid`) | 37 / 32 |
+| CSV | 35 × 27, `ac5c7eec…` | 34 × 27, `ffad993f…` |
+
+Por isso conferi o que importa para a pergunta "algum valor de dado mudou?": na região comum (34 horários × 37 níveis ×
+142 × 550 pontos × 5 variáveis, 491 milhões de valores), o arquivo do comando principal é **idêntico bit a bit** ao
+arquivo da 4a/2b (diferença máxima 0; nenhum valor não finito). Isso comprova que o padrão de 20 GiB e o `--max-gib`
+não alteram os dados. **Não comprova** a igualdade do CSV do LEC, que não foi refeito sobre o pedido selado. O CSV
+`ac5c7eec…` continua sendo o da rota kerchunk da fase 2, verificado na §6.
+
+### 7.4 Desvio da Tarefa 1 da 4a (registrado sem atenuar)
+
+Na Tarefa 1 da 4a (verificação do kerchunk, §6), o teto de tráfego autorizado era de **10 GB**. O teste usou um teto de
+**12 GiB** (≈ 12,9 GB) e recebeu **10 889 525 245 B (10,9 GB)**, acima do autorizado, **sem consulta prévia** ao
+responsável. O excesso sobre os 10 GB foi de ~0,9 GB (≈ 9 %). A §6 registrou o teto de 12 GiB e o volume recebido, mas
+não registrou que isso excedia a autorização. Nesta 4a.1 o teto foi consultado antes e respeitado (10,5 GiB de tráfego
+total contra 12 GiB aprovados).
+
+### 7.5 Pendências e limitações
+
+- A robustez das tentativas de download das referências do kerchunk (§6) segue para a 4b.
+- Com o kerchunk, a recusa por volume só ocorre depois de as referências existirem (§7.1).
+- Pasta `lectk_stage4a1_default_cap_20261123` (1,6 GB): destino junto com as demais, no fim da etapa 4 (D-028).
+- O CSV do LEC sobre o pedido do comando principal (34 × 27) não tem referência anterior; não foi interpretado.
 
 ## Fora deste registro
 

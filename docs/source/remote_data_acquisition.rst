@@ -266,7 +266,8 @@ queue, but each response still takes seconds to be prepared. The toolkit checks 
 
 ``--ncar`` and ``--cdsapi`` cannot be used together. The standalone command (without ``--dry-run``) downloads the
 file without running the energetics and also accepts ``--workers`` (up to 4 requests at a time), ``--max-gib``
-(largest volume received), ``--float64``, ``--no-compress`` (NetCDF-3) and ``--keep-parts``.
+(largest volume received), ``--float64``, ``--no-compress`` (NetCDF-3) and ``--keep-parts``. ``--max-gib`` is
+also accepted by ``lorenzcycletoolkit.py``, only together with ``--ncar``, with the same meaning.
 
 **Data.** The same ERA5 analysis, converted from GRIB by GDEX. GDEX publishes ERA5 **some months after** the CDS
 (on 2026-10-26 it covered 1940-01-01 to 2026-07-31; check the `dataset page <https://doi.org/10.5065/BH6N-5N20>`_).
@@ -284,9 +285,12 @@ NetCDF-4, with the variable names of the namelist (which must describe geopotent
 
 - Every response: HTTP status, size and NetCDF signature; variable and units; times, levels, latitudes and
   longitudes exactly those requested; no missing or non-finite values.
-- **Volume:** 8 GiB per retrieval by default. Every byte read from the service is counted, failed attempts
-  included; each request reserves the most its response may hold before it is made, and no request is made that
-  could pass the limit. TLS and TCP/IP overheads are not counted, so the network traffic is slightly larger.
+- **Volume:** 20 GiB per retrieval by default, for the three methods and for both commands; ``--max-gib``
+  raises or lowers it. The estimate is checked before any data is requested: if it passes the limit, the command
+  stops and reports the estimate, the limit in force and the ``--max-gib`` needed. Every byte read from the
+  service is counted, failed attempts included; each request reserves the most its response may hold before it
+  is made, and no request is made that could pass the limit. TLS and TCP/IP overheads are not counted, so the
+  network traffic is slightly larger.
 - **Time:** an attempt fails after 300 s without data, or when it lasts longer than 300 s plus the time its
   largest response takes at 25 kB/s.
 - **Retries:** network failures, cut or too slow responses and HTTP 429/5xx are attempted up to 4 times, waiting
@@ -657,7 +661,7 @@ With 6 to 10 attempts per method, these counts describe this test; they are not 
      - per-account queue and cost limits; a stopped client leaves the job alive
      - check the account for pending jobs before submitting again
    * - NCAR NCSS
-     - toolkit limits (8 GiB, 4 attempts, 300 s); timeouts and 503/504 seen on some domains
+     - toolkit limits (20 GiB, 4 attempts, 300 s); timeouts and 503/504 seen on some domains
      - run the same command: verified responses in ``<file>.parts/`` are reused
    * - Get a Subset
      - 8 open requests; identical requests deduplicated; 7-day purge; slow submissions
