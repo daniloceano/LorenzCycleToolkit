@@ -62,6 +62,9 @@ Get a Subset rules, from the D-Bench campaigns:
   parameters to get around the deduplication.
 * An account holds at most 8 open requests: nothing is submitted when the
   requests listed plus those to submit would pass ``SUBSET_MAX_LISTED``.
+  Requests listed as "Set for Purge" are on their way out and are not
+  counted (decision of 2026-11-19); they still block an identical request
+  (deduplication, above).
 * The API redirects some addresses (since 2026-11: ``status/<id>`` and the
   like, to the same path with a final slash). A redirect is followed, up to
   ``SUBSET_MAX_REDIRECTS`` times, only to the API's own scheme and host, so
@@ -99,6 +102,7 @@ Contact:
 import datetime
 import hashlib
 import json
+import logging
 import os
 import re
 import stat
@@ -134,6 +138,14 @@ KERCHUNK_NAMES = {"T": "temperature", "Z": "geopotential", "W": "vertical_veloci
 # The references name data.rda.ucar.edu, whose TLS certificate failed on 2026-10-30; the same
 # files are served by data.gdex.ucar.edu.
 KERCHUNK_HOST_REWRITE = ("https://data.rda.ucar.edu/", "https://data.gdex.ucar.edu/")
+# Reference files: looked for in the references directory (default ``inputs/kerchunk_refs``) and, when missing,
+# downloaded once from the GDEX THREDDS file server of the catalog
+# https://tds.gdex.ucar.edu/thredds/catalog/files/g/d633000/kerchunk/pressure_levels/catalog.html
+# (stage 4a, 19/11/2026: the file-server address is taken from that public catalog and was not yet checked
+# against the live service).
+KERCHUNK_REFS_DIR = os.path.join("inputs", "kerchunk_refs")
+KERCHUNK_REFS_URL = "https://tds.gdex.ucar.edu/thredds/fileServer/files/g/d633000/kerchunk/pressure_levels/"
+KERCHUNK_REFS_MAX_BYTES = 64 * 1024 ** 2   # one reference file (about 14-16 MB measured)
 KERCHUNK_LEVELS = 37
 KERCHUNK_GRID_STEP = 0.25
 
@@ -141,6 +153,7 @@ KERCHUNK_GRID_STEP = 0.25
 SUBSET_API = "https://gdex.ucar.edu/api/"
 SUBSET_GROUP_INDEX = "26"            # ERA5 atmospheric pressure level analysis [netCDF4]
 SUBSET_MAX_LISTED = 7                # nothing is submitted with this many requests listed (GDEX limit: 8)
+SUBSET_UNCOUNTED_STATUS = "set for purge"   # listed requests in this state do not count in SUBSET_MAX_LISTED
 SUBSET_SUBMIT_TIMEOUT = 600.0
 SUBSET_API_TIMEOUT = 120.0
 SUBSET_API_LIMIT = 4 * 1024 ** 2     # bytes reserved for one API answer
@@ -149,6 +162,11 @@ SUBSET_POLL = (30.0, 120.0, 900.0)   # seconds between status checks: first, lat
 SUBSET_COMPRESSION = 0.5             # files / float32 content of every hour, upper bound of the D-Bench ratios (0.43)
 SUBSET_STATE = "subset_request.json"
 SUBSET_MAX_REDIRECTS = 3             # redirects followed for one API call (same scheme and host only)
+# A file may arrive up to this many times the size listed for it (plus HEADER_ALLOWANCE) before it is refused.
+# GDEX sends files chunked, without Content-Length, and the chunk framing is counted on the wire (stage 4a,
+# 2026-11-23: 74104 bytes for a 52788269-byte file, more than HEADER_ALLOWANCE alone). A size different from
+# the listed one is only a warning when larger (smaller is an incomplete file, downloaded again); the file must still be NetCDF and hold what the request asked for.
+SUBSET_SIZE_CEILING = 2
 TOKEN_ENV = "GDEX_API_TOKEN"
 TOKEN_FILE = os.path.join("~", ".gdex_api_token")
 
@@ -403,9 +421,15 @@ class KerchunkSource(_Source):
     Byte ranges of the GDEX NetCDF-4 files, located by kerchunk references.
 
     Args:
-        refs_dir (str): Directory with the GDEX reference files
+        refs_dir (str): Directory of the GDEX reference files
             ``<variable>.<decade start>-<decade end>-remote.json`` (for example
-            ``temperature.1970-1979-remote.json``).
+            ``temperature.1970-1979-remote.json``); default
+            ``inputs/kerchunk_refs``, created if needed.
+        download_refs (bool): Download a missing reference file once from
+            ``KERCHUNK_REFS_URL`` into ``refs_dir`` (default); a file already
+            there is used as it is. Only the files of the fields and decades
+            of the request are downloaded. Without it a missing file stops
+            the retrieval.
         opener, timeout, attempts, backoff: As for NCSS
             (:func:`src.utils.ncar_gdex.retrieve`).
     """
@@ -413,11 +437,17 @@ class KerchunkSource(_Source):
     name = "kerchunk"
     service = "HTTPS byte ranges of the GDEX NetCDF-4 files located with GDEX kerchunk references"
 
-    def __init__(self, refs_dir, **options):
+    def __init__(self, refs_dir=None, download_refs=True, refs_url=KERCHUNK_REFS_URL, logger=None, **options):
         super().__init__(**options)
-        if not refs_dir or not os.path.isdir(refs_dir):
+        refs_dir = refs_dir or KERCHUNK_REFS_DIR
+        if download_refs:
+            os.makedirs(refs_dir, exist_ok=True)
+        elif not os.path.isdir(refs_dir):
             raise ValueError(f"kerchunk reference directory not found: {refs_dir!r}")
         self.refs_dir = refs_dir
+        self.download_refs = bool(download_refs)
+        self.refs_url = refs_url
+        self.logger = logger or logging.getLogger("lorenzcycletoolkit.ncar_gdex")
         self._refs = {}
         self._chunks = None
         self._siblings = {}     # (field name, day) -> the requests of that field and day, one per segment
@@ -430,7 +460,11 @@ class KerchunkSource(_Source):
             name = f"{KERCHUNK_NAMES[field_name]}.{decade}-{decade + 9}-remote.json"
             path = os.path.join(self.refs_dir, name)
             if not os.path.isfile(path):
-                raise g.NcarRetrievalError(f"kerchunk reference file {name} not found in {self.refs_dir}")
+                if not self.download_refs:
+                    raise g.NcarRetrievalError(f"kerchunk reference file {name} not found in {self.refs_dir}")
+                self._download_reference(name, path)
+            else:
+                self.details.setdefault("reference_files_origin", {})[name] = "found in the references directory"
             with open(path, encoding="utf-8") as handle:
                 refs = json.load(handle)["refs"]
             array = refs[f"{field_name}/.zarray"]
@@ -449,6 +483,35 @@ class KerchunkSource(_Source):
                                "file": name, "sha256": g._sha256(path)}
             self.details.setdefault("reference_files", {})[name] = self._refs[key]["sha256"]
         return self._refs[key]
+
+    def _download_reference(self, name, path):
+        """Download one missing reference file into the references directory (checked before it is kept)."""
+        url = self.refs_url + name
+        self.logger.info(f"📥 kerchunk reference file {name} not in {self.refs_dir}: downloading it once from GDEX")
+        budget = g.ByteBudget(2 * self.attempts * KERCHUNK_REFS_MAX_BYTES)
+        ticket = _Ticket(f"reference {name}", url, KERCHUNK_REFS_MAX_BYTES)
+        cancel = threading.Event()
+
+        def get(attempt):
+            with open(f"{path}.part", "wb") as sink:
+                _, size, sha, _ = _transfer(budget, ticket, url, self.opener, self.timeout, cancel, sink=sink)
+            try:
+                with open(f"{path}.part", encoding="utf-8") as handle:
+                    if not isinstance(json.load(handle).get("refs"), dict):
+                        raise ValueError("no 'refs' object")
+            except (ValueError, AttributeError) as error:
+                raise g.NcarContentError(f"{name} downloaded from {url} is not a kerchunk reference file "
+                                         f"({error})") from None
+            os.replace(f"{path}.part", path)
+            return size, sha
+
+        try:
+            (size, sha), _ = _retrying(ticket.key, self.attempts, self._backoff, cancel, self.logger, get)
+        finally:
+            if os.path.exists(f"{path}.part"):
+                os.remove(f"{path}.part")   # never leave a partial reference file behind
+        self.details.setdefault("reference_files_origin", {})[name] = f"downloaded from {url}"
+        self.logger.info(f"  ✓ {name}: {size / 1024 ** 2:.1f} MiB kept in {self.refs_dir}")
 
     def _chunk(self, field, moment):
         ref = self._references(field.name, moment.year)
@@ -869,12 +932,14 @@ class SubsetSource(_Source):
                 f"(https://gdex.ucar.edu), then run again; nothing was submitted")
         if not to_submit:
             return
-        if len(listed) + len(to_submit) > SUBSET_MAX_LISTED:
+        counted = [r for r in listed if str(r.get("status", "")).strip().lower() != SUBSET_UNCOUNTED_STATUS]
+        if len(counted) + len(to_submit) > SUBSET_MAX_LISTED:
             needs = (f"; this area crosses Greenwich and needs {len(to_submit)} requests, one per side"
                      if len(to_submit) > 1 else "")
             raise g.NcarRequestError(
-                f"{len(listed)} GDEX requests are listed on the account (GDEX accepts 8 open requests){needs}; "
-                f"nothing was submitted. Wait for requests to expire or purge your own, then run again")
+                f"{len(counted)} GDEX requests count against the limit ({len(listed)} listed on the account, "
+                f"those set for purge not counted; GDEX accepts 8 open requests){needs}; nothing was submitted. "
+                f"Wait for requests to expire or purge your own, then run again")
         known = {str(r.get("request_index")) for r in listed}
         for request in to_submit:
             self._submit(request, known, parts_dir, budget, logger, cancel)
@@ -965,14 +1030,17 @@ class SubsetSource(_Source):
             kept = state["files"].get(name)
             if kept and os.path.isfile(path) and g._sha256(path) == kept["sha256"]:
                 continue
-            ticket = _Ticket(f"file {name}", item["web_path"], size + g.HEADER_ALLOWANCE)
+            ticket = _Ticket(f"file {name}", item["web_path"], SUBSET_SIZE_CEILING * size + g.HEADER_ALLOWANCE)
 
             def get(attempt, item=item, path=path, size=size, ticket=ticket):
                 with open(f"{path}.part", "wb") as sink:
                     _, got, sha, http = _transfer(budget, ticket, item["web_path"], self.opener, self.timeout,
                                                   cancel, sink=sink, secret=self.token)
-                if size and got != size:
-                    raise g._Retryable(f"{got} bytes instead of the {size} listed")
+                if size and got < size:
+                    raise g._Retryable(f"{got} bytes, fewer than the {size} listed (incomplete file)")
+                with open(f"{path}.part", "rb") as part:
+                    if not part.read(8).startswith(g.NETCDF_SIGNATURES):
+                        raise g._Retryable(f"{got} bytes that are not a NetCDF file")
                 os.replace(f"{path}.part", path)
                 return sha, http, got
 
@@ -982,6 +1050,10 @@ class SubsetSource(_Source):
                 if os.path.exists(f"{path}.part"):
                     os.remove(f"{path}.part")
             state["files"][name] = {"url": item["web_path"], "bytes": got, "sha256": sha, "attempts": used}
+            if size and got > size:
+                state["files"][name]["listed_bytes"] = size
+                logger.warning(f"⚠️ {name}: {got} bytes, larger than the {size} "
+                               f"listed by GDEX; kept (it is a NetCDF file, and its content is checked when read)")
             self._save_state(parts_dir, request)
             logger.info(f"  ⬇️ {name}: {got / 1024 ** 2:.1f} MiB")
         for name in state["files"]:

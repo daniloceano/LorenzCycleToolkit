@@ -3,6 +3,14 @@
 Remote Data Acquisition Methods
 ===============================
 
+.. warning::
+
+   **This page is under revision (stage 4 of the modernisation project, November 2026).** Since 2026-11-19,
+   ``--ncar`` uses the **kerchunk** method by default; the method is chosen with ``--ncar-method
+   {kerchunk,subset,ncss}``, and NCSS remains available as an experimental method. The kerchunk reference files
+   are kept in ``inputs/kerchunk_refs`` (or ``--kerchunk-refs DIR``) and downloaded once when missing. The rest of
+   this page still describes the earlier state and will be rewritten.
+
 .. raw:: html
 
    <style>.wy-table-responsive table td, .wy-table-responsive table th { white-space: normal; }</style>
@@ -238,7 +246,7 @@ one submission at a time per account; see :doc:`usage`.
 2.2 NCAR GDEX NCSS — experimental native integration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Status:** experimental (``--ncar``). Validated on one two-day case: its values were bit-identical to an earlier
+**Status:** experimental (``--ncar --ncar-method ncss``; it was the default of ``--ncar`` until 2026-11-19). Validated on one two-day case: its values were bit-identical to an earlier
 download of the same GDEX data, and the toolkit reproduced that case's results byte for byte. Its options and
 messages may still change.
 
@@ -319,8 +327,7 @@ https://doi.org/10.5065/BH6N-5N20, together with the Copernicus terms of use of 
 2.3 NCAR GDEX Get a Subset — external method
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Status:** experimental standalone method; not selectable through ``--ncar`` or any option of
-``lorenzcycletoolkit.py`` (a ``--ncar-method`` selector is specified for the future but **not** implemented).
+**Status:** selectable with ``--ncar --ncar-method subset`` (since 2026-11-19).
 
 - *In the code:* ``python -m src.utils.ncar_gdex case.nc --trackfile ... --method subset``.
 - *Tested:* offline only, against emulated GDEX services (``tests/test_gdex_sources.py``).
@@ -365,8 +372,7 @@ with a field-by-field merge, memory stays small (peak RSS 0.43–0.58 GiB measur
 2.4 NCAR GDEX kerchunk — external method
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Status:** experimental standalone method; not selectable through ``--ncar`` or any option of
-``lorenzcycletoolkit.py``.
+**Status:** the default method of ``--ncar`` (since 2026-11-19); ``--ncar-method kerchunk``.
 
 - *In the code:* ``python -m src.utils.ncar_gdex case.nc --trackfile ... --method kerchunk --kerchunk-refs DIR``
   (the reference files must already be in ``DIR``; the module does not download them).
@@ -579,7 +585,7 @@ service load, network and queues change from day to day. The numbers are observa
      - median 41 min (14–74 min, 10 cases)
      - 3–11 × the values needed (whole globe per field and hour)
      - most of its time (74–82 %) is spent transferring whole-globe chunks
-   * - NCSS (``--ncar``)
+   * - NCSS (``--ncar --ncar-method ncss``, experimental)
      - median 25 min (11–93 min, 4 cases)
      - 1.0 × the values needed
      - median of different cases from the others; see 3.3
@@ -914,7 +920,7 @@ These are criteria, not a ranking.
      - CDS API or an NCAR GDEX method; avoid the 13-level ARCO grid. Use the same level set as the values you
        compare with.
    * - you have no account, or cannot keep a personal token
-     - NCAR NCSS (``--ncar``); kerchunk if you can prepare the file yourself.
+     - NCAR GDEX kerchunk (``--ncar``, the default method).
    * - transfer volume or time is limited
      - methods that cut the area on the server (CDS, NCSS, Get a Subset); kerchunk and Zarr stores transfer much more
        than they use.

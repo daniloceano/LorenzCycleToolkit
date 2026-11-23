@@ -258,11 +258,12 @@ def test_remote_failure_is_recorded_with_job_id(tmp_path, ledger, clock):
 
 
 def test_download_failure_is_recorded(tmp_path, ledger, clock):
+    # stage 4a: a completed request whose download fails is terminal, recorded as such, and does not block
     remote = FakeRemote(["successful"], fail=OSError("connection reset"))
-    with pytest.raises(OSError):
+    with pytest.raises(cg.CdsDownloadFailed):
         _guard(ledger, clock).retrieve(FakeClient(remote), REQUEST, str(tmp_path / "d.nc"), day="d")
     last = cg.read_ledger(ledger)[-1]
-    assert (last["state"], last["remote_state"]) == ("failed", "successful")
+    assert (last["state"], last["remote_state"]) == ("download_failed", "successful")
 
 
 def test_interruption_while_queued_is_recorded_as_unknown(tmp_path, ledger, clock):
@@ -588,3 +589,86 @@ def test_ledger_is_valid_json_lines(tmp_path, ledger, clock):
     for line in open(ledger):
         entry = json.loads(line)
         assert {"utc", "case_id", "state", "elapsed_s", "pid"} <= set(entry)
+
+
+# ------------------------------------- known remote state (stage 4a, 19/11/2026)
+class EmptyDownload(FakeRemote):
+    """A completed CDS request whose download leaves an empty file (the 0 B case of 14/11/2026)."""
+
+    def __init__(self, statuses, empty_times=1, **kwargs):
+        super().__init__(statuses, **kwargs)
+        self.empty_times = empty_times
+        self.downloads = 0
+
+    def download(self, target):
+        self.downloads += 1
+        if self.downloads <= self.empty_times:
+            if self.clock:
+                self.clock.now += self.download_seconds
+            open(target, "wb").close()
+            return target
+        return super().download(target)
+
+
+def test_empty_download_of_completed_request_is_retried_once_without_resubmitting(tmp_path, ledger, clock):
+    remote = EmptyDownload(["successful"], empty_times=1)
+    client = FakeClient(remote)
+    _guard(ledger, clock).retrieve(client, REQUEST, str(tmp_path / "d.nc"), day="d")
+    entries = cg.read_ledger(ledger)
+    assert [e["state"] for e in entries] == ["submitting", "submitted", "download_retry", "downloaded"]
+    assert entries[2]["remote_state"] == "successful" and entries[2]["error"]["category"] == "empty_download"
+    assert entries[-1]["download_attempts"] == 2 and entries[-1]["bytes"] > 0
+    assert len(client.calls) == 1 and remote.downloads == 2
+    assert not cg.blocking_reasons(entries)
+
+
+def test_empty_download_twice_is_terminal_and_does_not_block(tmp_path, ledger, clock):
+    remote = EmptyDownload(["successful"], empty_times=5)
+    client = FakeClient(remote)
+    with pytest.raises(cg.CdsDownloadFailed, match="not blocked"):
+        _guard(ledger, clock).retrieve(client, REQUEST, str(tmp_path / "d.nc"), day="d")
+    entries = cg.read_ledger(ledger)
+    assert [e["state"] for e in entries] == ["submitting", "submitted", "download_retry", "download_failed"]
+    last = entries[-1]
+    assert (last["remote_state"], last["download_attempts"], last["blocks_new_submissions"]) == (
+        "successful", 2, False)
+    assert remote.downloads == 2 and len(client.calls) == 1   # one new download at most, no new submission
+    assert not (tmp_path / "d.nc").exists()                    # the empty file is not left behind
+    assert not cg.blocking_reasons(entries) and cg.main(["status", ledger]) == 0
+    # the route is not locked: the next case is submitted normally
+    other = FakeClient(FakeRemote(["successful"]))
+    _guard(ledger, clock, case="19800318-cds-r1").retrieve(other, REQUEST, str(tmp_path / "e.nc"), day="e")
+    assert len(other.calls) == 1 and _states(ledger)[-1] == "downloaded"
+    assert DUMMY_KEY not in open(ledger).read()
+
+
+def test_download_error_of_completed_request_is_retried_once(tmp_path, ledger, clock):
+    remote = FakeRemote(["successful"], fail=OSError("connection reset"))
+    client = FakeClient(remote)
+    with pytest.raises(cg.CdsDownloadFailed):
+        _guard(ledger, clock).retrieve(client, REQUEST, str(tmp_path / "d.nc"), day="d")
+    entries = cg.read_ledger(ledger)
+    assert [e["state"] for e in entries][-2:] == ["download_retry", "download_failed"]
+    assert entries[-1]["error"]["type"] == "OSError" and len(client.calls) == 1
+    assert not cg.blocking_reasons(entries)
+
+
+def test_no_download_retry_after_the_deadline(tmp_path, ledger, clock):
+    remote = EmptyDownload(["successful"], empty_times=5, clock=clock, download_seconds=50)
+    with pytest.raises(cg.CdsDownloadFailed):
+        _guard(ledger, clock, max_seconds=20).retrieve(FakeClient(remote), REQUEST, str(tmp_path / "d"), day="d")
+    last = cg.read_ledger(ledger)[-1]
+    assert (last["state"], last["download_attempts"]) == ("download_failed", 1) and remote.downloads == 1
+    assert not cg.blocking_reasons(cg.read_ledger(ledger))
+
+
+@pytest.mark.parametrize("statuses, error", [
+    (["accepted"], CdsDeadlineExceeded),                 # deadline with the request queued
+    (["accepted", KeyboardInterrupt()], KeyboardInterrupt),  # process stopped while waiting
+    (["running", "failed"], ProcessingFailedError),      # the request itself failed on the CDS
+])
+def test_unknown_or_unfinished_remote_state_still_blocks(tmp_path, ledger, clock, statuses, error):
+    with pytest.raises(error):
+        _guard(ledger, clock, max_seconds=30).retrieve(FakeClient(FakeRemote(statuses)), REQUEST,
+                                                       str(tmp_path / "d.nc"), day="d")
+    assert cg.blocking_reasons(cg.read_ledger(ledger))

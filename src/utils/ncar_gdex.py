@@ -1786,6 +1786,39 @@ def _retrieve(plan, path, names, logger=None, workers=None, opener=None, timeout
     return record
 
 
+NCAR_METHODS = ("kerchunk", "subset", "ncss")
+DEFAULT_NCAR_METHOD = "kerchunk"   # since 2026-11-19 (stage 4a); NCSS was the default before
+
+
+def ncar_method(args):
+    """Access method of ``--ncar`` (``--ncar-method``; default kerchunk)."""
+    return getattr(args, "ncar_method", None) or DEFAULT_NCAR_METHOD
+
+
+def make_source(method, kerchunk_refs=None, gdex_purge=False, logger=None):
+    """
+    Access method object for :func:`retrieve` (``source``); None for NCSS.
+
+    Args:
+        method (str): ``kerchunk`` (default of ``--ncar``), ``subset`` or
+            ``ncss`` (experimental).
+        kerchunk_refs (str): Directory of the kerchunk reference files
+            (default ``inputs/kerchunk_refs``; missing files are downloaded
+            once into it).
+        gdex_purge (bool): With ``subset``, purge the requests this
+            retrieval created after the file is written.
+        logger (logging.Logger): Logger of the retrieval.
+    """
+    if method not in NCAR_METHODS:
+        raise ValueError(f"unknown NCAR GDEX access method {method!r}; use one of {', '.join(NCAR_METHODS)}")
+    if method == "ncss":
+        return None
+    from .gdex_sources import KerchunkSource, SubsetSource
+    if method == "kerchunk":
+        return KerchunkSource(kerchunk_refs, logger=logger)
+    return SubsetSource(purge=gdex_purge)
+
+
 def get_ncar_data(args, track, app_logger, namelist="inputs/namelist", on_retrieved=None, **options):
     """
     Retrieve the ERA5 data of a track from NCAR GDEX into ``args.infile``.
@@ -1796,7 +1829,8 @@ def get_ncar_data(args, track, app_logger, namelist="inputs/namelist", on_retrie
 
     Args:
         args (argparse.Namespace): Command-line arguments (``infile``,
-            ``trackfile``, ``time_resolution``).
+            ``trackfile``, ``time_resolution``, ``ncar_method``,
+            ``kerchunk_refs``).
         track (pd.DataFrame): Track with 'Lat' and 'Lon' columns and a
             datetime index.
         app_logger (logging.Logger): Logger for the application.
@@ -1830,6 +1864,10 @@ def get_ncar_data(args, track, app_logger, namelist="inputs/namelist", on_retrie
                     "trackfile": trackfile,
                     "trackfile_sha256": _sha256(trackfile) if trackfile and os.path.isfile(trackfile) else None,
                 }
+                if "source" not in options:
+                    options["source"] = make_source(ncar_method(args),
+                                                    kerchunk_refs=getattr(args, "kerchunk_refs", None),
+                                                    logger=app_logger)
                 record = _retrieve(plan, args.infile, names, logger=app_logger, request_info=request_info,
                                    namelist=namelist, **options)
                 if on_retrieved is not None:
@@ -1876,11 +1914,13 @@ def main(argv=None):
                         help="Store the float32 values as float64 (exact); the toolkit then computes in float64.")
     parser.add_argument("--keep-parts", action="store_true", help="Keep the responses after writing the file.")
     parser.add_argument("--dry-run", action="store_true", help="Show the requests and sizes; retrieve nothing.")
-    parser.add_argument("--method", choices=("ncss", "kerchunk", "subset"), default="ncss",
-                        help=("Access method (default: ncss). kerchunk and subset are experimental: see "
+    parser.add_argument("--method", choices=NCAR_METHODS, default=DEFAULT_NCAR_METHOD,
+                        help=("Access method: kerchunk (default), subset (Get a Subset, needs a GDEX token) or "
+                              "ncss (experimental: no success in the 2026-11 benchmark). See "
                               "src/utils/gdex_sources.py."))
     parser.add_argument("--kerchunk-refs", default=None,
-                        help="With --method kerchunk: directory of the GDEX kerchunk reference files (JSON).")
+                        help=("With --method kerchunk: directory of the GDEX kerchunk reference files (JSON); "
+                              "default inputs/kerchunk_refs. Missing files are downloaded once into it."))
     parser.add_argument("--gdex-purge", action="store_true",
                         help=("With --method subset: purge the GDEX request after the file is written, only if "
                               "this retrieval created it. Token: GDEX_API_TOKEN or ~/.gdex_api_token."))
@@ -1895,13 +1935,8 @@ def main(argv=None):
         namelist = resolve_input_file(args.namelist)
         names = output_names(namelist)
         plan = plan_retrieval(area_from_track(track), daily_hours(track.index, args.time_resolution))
-        source = None
-        if args.method == "kerchunk":
-            from .gdex_sources import KerchunkSource
-            source = KerchunkSource(args.kerchunk_refs)
-        elif args.method == "subset":
-            from .gdex_sources import SubsetSource
-            source = SubsetSource(purge=args.gdex_purge)
+        source = make_source(args.method, kerchunk_refs=args.kerchunk_refs, gdex_purge=args.gdex_purge,
+                             logger=logger)
         if args.dry_run and source is not None:
             print(f"{args.method}: {len(plan.requests)} pieces, {len(plan.times)} times, about "
                   f"{source.estimated_bytes(plan) / 1024 ** 2:.1f} MiB to transfer")

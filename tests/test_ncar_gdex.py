@@ -758,7 +758,8 @@ def _track_and_args(tmp_path, name="case.nc"):
     trackfile = tmp_path / "track"
     trackfile.write_text(TRACK)
     track = g._read_track(str(trackfile), LOGGER)
-    args = argparse.Namespace(infile=str(tmp_path / name), trackfile=str(trackfile), time_resolution=6)
+    args = argparse.Namespace(infile=str(tmp_path / name), trackfile=str(trackfile), time_resolution=6,
+                              ncar_method="ncss")
     return track, args
 
 
@@ -928,7 +929,8 @@ def test_ncar_run_end_to_end(mode, lectk_workdir, monkeypatch):
     (workdir / "inputs" / "box_limits").write_text(BOX)
     fake = FakeGdex()
     monkeypatch.setattr(g, "default_opener", lambda: fake.opener)
-    argv = ["lorenzcycletoolkit.py", "ncar_case.nc", "-r", mode, "--ncar", "--time-resolution", "6"]
+    argv = ["lorenzcycletoolkit.py", "ncar_case.nc", "-r", mode, "--ncar", "--ncar-method", "ncss",
+            "--time-resolution", "6"]
     monkeypatch.setattr(sys, "argv", argv)
     assert lorenzcycletoolkit.main() == 0
     assert len(fake.calls) == 5  # one day, five fields
@@ -955,7 +957,8 @@ def test_ncar_run_refuses_an_unverified_existing_file(lectk_workdir, monkeypatch
     (workdir / "ncar_case.nc").write_bytes(b"not provenance-checked")
     fake = FakeGdex()
     monkeypatch.setattr(g, "default_opener", lambda: fake.opener)
-    monkeypatch.setattr(sys, "argv", ["lorenzcycletoolkit.py", "ncar_case.nc", "-r", "-t", "--ncar"])
+    monkeypatch.setattr(sys, "argv", ["lorenzcycletoolkit.py", "ncar_case.nc", "-r", "-t", "--ncar",
+                                      "--ncar-method", "ncss"])
     with pytest.raises(g.NcarReuseError, match="no provenance record"):
         lorenzcycletoolkit.main()
     assert fake.calls == []
@@ -977,7 +980,7 @@ def test_dry_run_lists_the_requests_without_retrieving(tmp_path, monkeypatch, ca
     track.write_text(TRACK)
     monkeypatch.setattr(g, "default_opener", lambda: pytest.fail("no request in a dry run"))
     code = g.main([str(tmp_path / "out.nc"), "--trackfile", str(track), "--time-resolution", "6",
-                   "--namelist", str(REPO_ROOT / "inputs" / "namelist_ERA5"), "--dry-run"])
+                   "--namelist", str(REPO_ROOT / "inputs" / "namelist_ERA5"), "--method", "ncss", "--dry-run"])
     lines = capsys.readouterr().out.splitlines()
     assert code == 0
     assert len([line for line in lines if line.startswith("https://")]) == 5
@@ -991,7 +994,7 @@ def test_standalone_command_retrieves_then_reuses_and_keeps_the_numeric_type(tmp
     monkeypatch.setattr(g, "default_opener", lambda: fake.opener)
     out = tmp_path / "out.nc"
     command = [str(out), "--trackfile", str(track), "--time-resolution", "6",
-               "--namelist", str(REPO_ROOT / "inputs" / "namelist_ERA5"), "--float64"]
+               "--namelist", str(REPO_ROOT / "inputs" / "namelist_ERA5"), "--method", "ncss", "--float64"]
     assert g.main(command) == 0 and len(fake.calls) == 5
     record = json.loads(Path(f"{out}.provenance.json").read_text())
     assert record["output"]["dtype"] == "float64" and record["request"]["trackfile_sha256"] == g._sha256(str(track))
@@ -1010,3 +1013,58 @@ def test_standalone_command_reports_errors_without_a_traceback(tmp_path, capsys)
     assert code == 1
     assert "no provenance record" in capsys.readouterr().err
     assert out.read_bytes() == b"not provenance-checked"
+
+
+# ------------------------------------- --ncar-method (stage 4a, 19/11/2026)
+def _parse(argv):
+    parser = lorenzcycletoolkit.create_arg_parser()
+    return parser, parser.parse_args(argv)
+
+
+def test_ncar_method_defaults_to_kerchunk_and_accepts_the_three_methods():
+    assert g.ncar_method(_parse(["x.nc", "-f", "--ncar"])[1]) == "kerchunk"
+    for method in ("kerchunk", "subset", "ncss"):
+        assert g.ncar_method(_parse(["x.nc", "-f", "--ncar", "--ncar-method", method])[1]) == method
+
+
+def test_ncar_method_needs_ncar(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["lorenzcycletoolkit.py", "x.nc", "-f", "--ncar-method", "ncss"])
+    with pytest.raises(SystemExit) as exit_info:
+        lorenzcycletoolkit.main()
+    assert exit_info.value.code == 2 and "--ncar-method" in capsys.readouterr().err
+
+
+def test_kerchunk_refs_needs_the_kerchunk_method(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["lorenzcycletoolkit.py", "x.nc", "-f", "--ncar", "--ncar-method", "ncss",
+                                      "--kerchunk-refs", "refs"])
+    with pytest.raises(SystemExit) as exit_info:
+        lorenzcycletoolkit.main()
+    assert exit_info.value.code == 2 and "--kerchunk-refs" in capsys.readouterr().err
+
+
+def test_help_marks_ncss_as_experimental_and_kerchunk_as_default(capsys):
+    with pytest.raises(SystemExit):
+        lorenzcycletoolkit.create_arg_parser().parse_args(["--help"])
+    text = " ".join(capsys.readouterr().out.split())
+    assert "default: kerchunk" in text and "ncss (experimental" in text
+
+
+def test_source_for_each_method(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    from src.utils import gdex_sources as gs
+    assert g.make_source("ncss") is None
+    kerchunk = g.make_source("kerchunk")
+    assert isinstance(kerchunk, gs.KerchunkSource) and kerchunk.refs_dir == gs.KERCHUNK_REFS_DIR
+    assert g.make_source("kerchunk", kerchunk_refs=str(tmp_path / "r")).refs_dir == str(tmp_path / "r")
+    subset = g.make_source("subset", gdex_purge=True)
+    assert isinstance(subset, gs.SubsetSource) and subset.purge is True
+
+
+def test_standalone_command_defaults_to_kerchunk(tmp_path, monkeypatch, capsys):
+    track = tmp_path / "track"
+    track.write_text(TRACK)
+    made = []
+    monkeypatch.setattr(g, "make_source", lambda method, **kw: made.append(method) or None)
+    g.main([str(tmp_path / "out.nc"), "--trackfile", str(track), "--time-resolution", "6",
+            "--namelist", str(REPO_ROOT / "inputs" / "namelist_ERA5"), "--dry-run"])
+    assert made == ["kerchunk"]

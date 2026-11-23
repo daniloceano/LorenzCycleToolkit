@@ -19,12 +19,20 @@ Guarded mode (``--cds-max-seconds`` with ``--cds-ledger``):
 - a private ledger (JSON lines, mode 0600, outside Git) with an entry
   written *before* each submission and the job id as soon as the API gives
   it (``null`` if it never does);
-- stop policy: after any failure, deadline or interruption with a request
-  submitted, the ledger blocks every later submission until an operator has
-  checked the account and appended a ``resolved`` entry
+- stop policy: after a failure, deadline or interruption that leaves the
+  remote state unknown or unfinished (submission without answer, deadline or
+  interruption with the request queued or running, a killed process, the
+  request failed on the CDS), the ledger blocks every later submission until
+  an operator has checked the account and appended a ``resolved`` entry
   (``python -m src.utils.cds_guard resolve LEDGER --confirm-no-pending --note ...``;
   refused while an acquisition holds the ledger lock); ``resolve`` is a human
   attestation, it does not query the CDS;
+- known, finished remote state (since 2026-11-19): when the request has
+  completed on the CDS but its download fails or leaves an empty (0 B) file,
+  the same result is downloaded once more (``download_retry``), never
+  resubmitted; if that also fails, the case ends as ``download_failed``, a
+  terminal state that does *not* block later submissions (nothing is left
+  pending on the account). No retry is made once the deadline has passed;
 - an explicit credential is required (``CDSAPI_URL`` and ``CDSAPI_KEY``, or a
   private ``CDSAPI_RC``), so that ``~/.cdsapirc`` is never used silently; the
   key is never read, logged or written by this module;
@@ -64,8 +72,11 @@ DATASET = "reanalysis-era5-pressure-levels"
 # Ledger states. A submission ends in one of TERMINAL; BLOCKING states (and a
 # submission left without a terminal state) stop every later submission until
 # a "resolved" entry is appended.
-TERMINAL = {"downloaded", "failed", "abandoned", "interrupted"}
+# "download_failed" is terminal but not blocking: the request completed on the CDS
+# (remote state known and finished), only its download failed, twice at most.
+TERMINAL = {"downloaded", "download_failed", "failed", "abandoned", "interrupted"}
 BLOCKING = {"failed", "abandoned", "interrupted"}
+DOWNLOAD_ATTEMPTS = 2   # the first download of a completed request and at most one more
 
 DEFAULT_RETRIES = 3
 DEFAULT_TIMEOUT = 120
@@ -84,6 +95,14 @@ class CdsSubmissionBlocked(CdsGuardError):
     """A new submission is refused (active submission, or unresolved stop in the ledger)."""
 
 
+class CdsDownloadFailed(CdsGuardError):
+    """A request completed on the CDS but could not be downloaded; the ledger is not blocked."""
+
+
+class _EmptyDownload(OSError):
+    """The download of a completed request left no file or an empty one."""
+
+
 def _utc():
     return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
@@ -98,6 +117,8 @@ def _category(exc):
     text = f"{type(exc).__name__} {exc}".lower()
     if any(word in text for word in ("licen", "quota", "limit", "policy", "forbidden")):
         return "policy_or_quota"
+    if isinstance(exc, _EmptyDownload):
+        return "empty_download"
     if type(exc).__name__ == "ProcessingFailedError":
         return "remote_failed"
     if isinstance(exc, (TimeoutError,)) or "timeout" in text or "timed out" in text:
@@ -352,6 +373,48 @@ class CdsGuard:
         self._append("delete_requested", remote_state=outcome["status_after"] or "unknown", **outcome, **base,
                      note="best-effort delete of this job only; the ledger still blocks new submissions")
 
+    # ---------------------------------------------------------- download
+    def _download_completed(self, remote, target, job_id, base):
+        """
+        Download the result of a request that completed on the CDS.
+
+        A failed or empty (0 B) download is tried once more from the same
+        result, while the deadline allows; nothing is ever resubmitted. When
+        both fail the case ends as ``download_failed``, which does not block
+        later submissions: the remote state is known and finished.
+
+        Returns:
+            tuple: (path, bytes, download attempts).
+        """
+        error = None
+        for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+            try:
+                path = remote.get_results().download(target)
+                size = os.path.getsize(path) if path and os.path.exists(path) else 0
+                if not size:
+                    raise _EmptyDownload(f"the download of job {job_id} left an empty file (0 B)")
+                return path, size, attempt
+            except Exception as exc:
+                error = exc
+                with contextlib.suppress(OSError):
+                    if os.path.exists(target) and not os.path.getsize(target):
+                        os.remove(target)   # never leave an empty file behind
+            if attempt < DOWNLOAD_ATTEMPTS and self.remaining() > 0:
+                self._append("download_retry", job_id=job_id, error=_error(error), remote_state="successful",
+                             download_attempt=attempt, **base,
+                             note="the request completed on the CDS; its result is downloaded once more, "
+                                  "nothing is resubmitted")
+                continue
+            break
+        self._append("download_failed", job_id=job_id, error=_error(error), remote_state="successful",
+                     download_attempts=attempt, blocks_new_submissions=False, **base,
+                     note="the request completed on the CDS (remote state known and finished) but could not be "
+                          "downloaded; nothing is pending on the account, so later submissions are not blocked")
+        raise CdsDownloadFailed(
+            f"CDS job {job_id} completed but its download failed after {attempt} attempt(s) "
+            f"({type(error).__name__}: {str(error)[:200]}); the case failed, the ledger is not blocked"
+        ) from error
+
     # ----------------------------------------------------------- request
     def retrieve(self, client, request, target, day):
         """
@@ -398,11 +461,7 @@ class CdsGuard:
                 self._sleep(max(0.0, min(delay, self.remaining())))
                 delay = min(delay * 1.5, self.sleep_max)
 
-            try:
-                path = remote.get_results().download(target)
-            except Exception as exc:
-                self._append("failed", job_id=job_id, error=_error(exc), remote_state="successful", **base)
-                raise
+            path, size, downloads = self._download_completed(remote, target, job_id, base)
         except BaseException as exc:
             if not isinstance(exc, Exception):  # Ctrl+C, SystemExit: remote state unknown
                 self._append("interrupted", job_id=job_id, remote_state="unknown",
@@ -410,8 +469,7 @@ class CdsGuard:
                 if job_id is not None:
                     self._delete_own_job(remote, job_id, base)
             raise
-        size = os.path.getsize(path) if os.path.exists(path) else None
-        self._append("downloaded", job_id=job_id, bytes=size, **base)
+        self._append("downloaded", job_id=job_id, bytes=size, download_attempts=downloads, **base)
         self.check_time(f"after downloading day {day}")
         return target
 
