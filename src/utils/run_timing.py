@@ -6,10 +6,11 @@ Every duration is measured with ``time.perf_counter`` (monotonic), never with
 the system clock. The phases do not overlap:
 
     acquisition   the call that obtains the input file: get_cdsapi_data
-                  (a --cdsapi download) or get_ncar_data (a --ncar download,
+                  (a --cdsapi download), get_wekeo_data (a --wekeo download)
+                  or get_ncar_data (a --ncar download,
                   or the provenance check that lets an existing file be
                   reused). ``null`` when no such call runs: a local input file,
-                  or an existing --cdsapi file (reused without any check).
+                  or an existing --cdsapi/--wekeo file (reused without any check).
     preparation   prepare_data without the acquisition: namelist, opening,
                   validation, processing and slicing of the data.
     lec           the Lorenz Energy Cycle framework (with --plots, the figures
@@ -22,7 +23,7 @@ is estimated.
 
 ``input_data`` says where the input file came from: ``downloaded`` (written
 by this run), ``reused`` (an existing file accepted without downloading) or
-``local`` (a file given without --cdsapi/--ncar). With --ncar, ``downloaded``
+``local`` (a file given without --cdsapi/--ncar/--wekeo). With --ncar, ``downloaded``
 and the transfer/assembly times of the provenance record come only from the
 record handed over by get_ncar_data's own retrieval in this process (no
 timestamp comparison); a file written meanwhile by another run is ``reused``,
@@ -68,7 +69,7 @@ class RunTiming:
             self._raw[name] = time.perf_counter() - started
 
     def set_source(self, provider, input_data):
-        """Record the data source ('cds', 'ncar', 'local') and the origin of the file."""
+        """Record the data source ('cds', 'wekeo', 'ncar', 'local') and the origin of the file."""
         self.provider = provider
         self.input_data = input_data
 

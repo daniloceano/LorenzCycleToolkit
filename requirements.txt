@@ -87,3 +87,5 @@ urllib3==2.2.2
 wheel==0.43.0
 xarray==2024.2.0
 zipp==3.19.2
+# Optional, only for --wekeo (not installed by default): hda==2.40
+#   pip install "lorenzcycletoolkit[wekeo]"  or  pip install hda==2.40

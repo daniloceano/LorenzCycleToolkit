@@ -2,7 +2,7 @@
 Optional deletion of the input NetCDF file after a run (``--delete-downloaded-input``).
 
 By default no input file is ever deleted, whether it was given by the user,
-reused or downloaded by the run itself (--cdsapi or --ncar). With
+reused or downloaded by the run itself (--cdsapi, --ncar or --wekeo). With
 ``--delete-downloaded-input`` the input file is deleted only when every
 condition below holds; otherwise it is kept and ``run_status.json``
 (``input_cleanup``) says why:
@@ -42,7 +42,7 @@ def downloaded_input(args, existed_before, timing):
         existed_before (bool): Whether the input file existed before the run.
         timing (RunTiming): Timing of the run (origin of the input file).
     """
-    if existed_before or not (getattr(args, "cdsapi", False) or getattr(args, "ncar", False)):
+    if existed_before or not any(getattr(args, name, False) for name in ("cdsapi", "ncar", "wekeo")):
         return None
     if timing.input_data != "downloaded":
         return None

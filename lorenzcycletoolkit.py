@@ -133,7 +133,7 @@ def create_arg_parser():
         "--delete-downloaded-input",
         action="store_true",
         help=(
-            "With --cdsapi or --ncar: delete the input NetCDF file after the run, only if this run downloaded it, "
+            "With --cdsapi, --ncar or --wekeo: delete the input NetCDF file after the run, only if this run downloaded it, "
             "the run succeeded and the file is unchanged. Without this flag no input file is ever deleted."
         ),
     )
@@ -152,6 +152,19 @@ def create_arg_parser():
             "hours as --cdsapi (track file and --time-resolution). The access method is chosen with "
             "--ncar-method (default: kerchunk). A provenance record is written next to the "
             "file, and the file is reused only if it matches that record."
+        ),
+    )
+    parser.add_argument(
+        "--wekeo",
+        action="store_true",
+        help=(
+            "Download the ERA5 data from WEkEO (Harmonised Data Access, dataset "
+            "EO:ECMWF:DAT:REANALYSIS_ERA5_PRESSURE_LEVELS) instead of the CDS API when the input file does not "
+            "exist: same area, 37 pressure levels, hours and file contents as --cdsapi, one request per month. "
+            "Needs the optional hda package (pip install \"lorenzcycletoolkit[wekeo]\") and a WEkEO account in "
+            "~/.hdarc (or HDA_USER and HDA_PASSWORD). Volume limit: --max-gib (default 20 GiB). Orders are "
+            "recorded in <file>.wekeo-orders.json before submission and resumed by a new run; a provenance "
+            "record is written next to the file."
         ),
     )
     parser.add_argument(
@@ -176,7 +189,7 @@ def create_arg_parser():
         "--max-gib",
         type=float,
         default=None,
-        help=("With --ncar: largest volume accepted for the download, in GiB (default: 20 GiB), for any "
+        help=("With --ncar or --wekeo: largest volume accepted for the download, in GiB (default: 20 GiB), for any "
               "--ncar-method. The estimate is checked before anything is downloaded and, if it passes the "
               "limit, the run stops saying the --max-gib needed; bytes of failed attempts and retries count "
               "too. Same meaning as in python -m src.utils.ncar_gdex."),
@@ -353,18 +366,18 @@ def main():
     parser = create_arg_parser()
     args = parser.parse_args()
 
-    if args.cdsapi and args.ncar:
-        parser.error("--cdsapi and --ncar are alternative data sources; use one of them")
+    if sum(bool(x) for x in (args.cdsapi, args.ncar, args.wekeo)) > 1:
+        parser.error("--cdsapi, --ncar and --wekeo are alternative data sources; use one of them")
     if args.ncar_method is not None and not args.ncar:
         parser.error("--ncar-method needs --ncar")
-    if args.max_gib is not None and not args.ncar:
-        parser.error("--max-gib needs --ncar")
+    if args.max_gib is not None and not (args.ncar or args.wekeo):
+        parser.error("--max-gib needs --ncar or --wekeo")
     if args.max_gib is not None and not args.max_gib > 0:
         parser.error("--max-gib must be greater than 0")
     if args.kerchunk_refs is not None and not (args.ncar and (args.ncar_method or "kerchunk") == "kerchunk"):
         parser.error("--kerchunk-refs needs --ncar with the kerchunk method")
-    if args.delete_downloaded_input and not (args.cdsapi or args.ncar):
-        parser.error("--delete-downloaded-input needs --cdsapi or --ncar (local input files are never deleted)")
+    if args.delete_downloaded_input and not (args.cdsapi or args.ncar or args.wekeo):
+        parser.error("--delete-downloaded-input needs --cdsapi, --ncar or --wekeo (local input files are never deleted)")
     guard_options = [name for name in ("cds_ledger", "cds_retries", "cds_timeout", "cds_case_id", "cds_delete_on_stop")
                      if getattr(args, name) is not None]
     if args.cds_max_seconds is not None or guard_options:

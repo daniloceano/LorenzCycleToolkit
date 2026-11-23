@@ -39,7 +39,7 @@ from .validation import validate_track_file, validate_namelist_file
 
 def check_planned_times(track, args, source, app_logger):
     """
-    Before a ``--cdsapi``/``--ncar`` download, check the track against the times the request will retrieve.
+    Before a ``--cdsapi``/``--wekeo``/``--ncar`` download, check the track against the times the request will retrieve.
 
     The requested hours are known before the download (``--time-resolution``), so a track that they
     cannot serve is refused here instead of after the transfer. This does not replace the check
@@ -129,6 +129,26 @@ def get_data(args: argparse.Namespace, app_logger: logging.Logger, varlist: str 
                     f"Use a new destination."
                 )
             app_logger.info("✅ CDS API data already exists, skipping download.")
+    elif getattr(args, "wekeo", False):
+        # Same track reading and reuse rule as the CDS API route
+        timing.set_source("wekeo", "reused")
+        if not os.path.exists(infile):
+            delimiter, _ = validate_track_file(args.trackfile, app_logger)
+            track = pd.read_csv(
+                args.trackfile,
+                delimiter=delimiter,
+                index_col="time",
+                parse_dates=["time"],
+                date_format="%Y-%m-%d-%H%M"
+            )
+            check_planned_times(track, args, "WEkEO", app_logger)
+            from .wekeo_hda import get_wekeo_data
+            timing.set_source("wekeo", None)  # "downloaded" only once the call succeeds
+            with timing.phase("acquisition"):
+                infile = get_wekeo_data(args, track, app_logger)
+            timing.set_source("wekeo", "downloaded")
+        else:
+            app_logger.info("✅ WEkEO data already exists, skipping download.")
     elif getattr(args, "ncar", False):
         # Same track reading as the CDS API route; an existing file is reused
         # only if its provenance record verifies it
@@ -456,10 +476,10 @@ def prepare_data(
     Returns:
         xr.Dataset: The prepared dataset for analysis.
     """
-    # Automatically use ERA5-cdsapi namelist when --cdsapi flag is set
-    if args.cdsapi:
+    # Automatically use ERA5-cdsapi namelist with --cdsapi or --wekeo (same file contents)
+    if args.cdsapi or getattr(args, "wekeo", False):
         varlist = "inputs/namelist_ERA5-cdsapi"
-        app_logger.info("🌐 CDS API mode detected: automatically using ERA5-compatible namelist")
+        app_logger.info("🌐 CDS API/WEkEO mode detected: automatically using ERA5-compatible namelist")
         app_logger.debug(f"📋 Using namelist: {varlist}")
 
     # Validate and load namelist using validation module
