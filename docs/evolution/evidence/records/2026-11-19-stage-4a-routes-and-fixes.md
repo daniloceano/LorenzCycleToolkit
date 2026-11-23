@@ -1,7 +1,7 @@
 # Etapa 0 e etapa 4a — rotas ERA5, correções dos clientes NCAR e CDS e kerchunk como padrão do `--ncar`
 
 **Data:** 19/11/2026. **Base:** `develop` em `d65e515` (PR #74); `main` em `48fe8e2`.
-**Estado deste registro:** rascunho para inspeção do responsável; diagnóstico na Swell **confirmado** (23/11/2026).
+**Estado deste registro:** integrado em `develop` pelo PR #75 (merge `c0e3942`); diagnóstico na Swell **confirmado** (23/11/2026); verificação do kerchunk como padrão e encerramento na §6 (23/11/2026).
 
 ## 1. Decisões do responsável (19/11/2026)
 
@@ -93,6 +93,49 @@ descartadas para este arquivo. O caso 19790585 não foi testado; a mesma causa �
   vezes no pedido de remoção); ficou listado como `Completed` e expira pelas regras do GDEX.
 - Os testes de "antes" da correção do limite por arquivo rodaram com o `gdex_sources.py` da `develop`.
 - Os testes de mapas não rodaram localmente (sem os arquivos Natural Earth); ficam para o CI.
+
+## 6. 23/11/2026 — Verificação do kerchunk como padrão e encerramento da 4a
+
+**Endereço das referências (corrige a §5).** O endereço derivado em 19/11
+(`…/thredds/fileServer/files/g/d633000/kerchunk/pressure_levels/`) respondeu **HTTP 404** no serviço real. O catálogo
+`catalog_d633000.xml` do GDEX lista as referências em `files/d633000/kerchunk/pressure_levels/`, sem o `g/`; o
+endereço `https://tds.gdex.ucar.edu/thredds/fileServer/files/d633000/kerchunk/pressure_levels/` respondeu
+**HTTP 200** (`temperature.1970-1979-remote.json`, 14 172 501 B), do Mac e da Swell. Com autorização do responsável,
+`KERCHUNK_REFS_URL` foi corrigido, com um teste que falhava antes da correção e passa depois.
+
+**Teste real na Swell (autorizado em 23/11/2026).** Caso 19790205, mesmo pedido selado da rodada 2 da 2b (caixa,
+13 níveis, 35 horários), método padrão do `--ncar` (`DEFAULT_NCAR_METHOD`, kerchunk), referências numa pasta vazia,
+teto de 12 GiB, um download por vez. Código: `c0e3942` mais a correção do endereço. Pasta:
+`/p1-swell/danilocs/lectk_stage4a_kerchunk_20261123/` (fora do repositório; ≈ 1,7 GB).
+
+| Grandeza | Valor |
+|---|---|
+| 1ª tentativa (11:55–12:09 UTC) | 3 de 5 referências baixadas; a de `u` falhou 4 vezes (1 resposta incompleta e 3 timeouts de conexão da Swell, `Errno 110`); parou antes de qualquer dado do caso |
+| 2ª tentativa (12:22–12:52 UTC) | as 3 referências reaproveitadas; `u` e `v` baixadas do endereço corrigido; recuperação completa |
+| Referências | 5 arquivos, 14,2 a 28,2 MB; sha256 iguais aos da rodada 2 da 2b |
+| Tempo de recuperação (2ª tentativa) | 1 560,5 s (2b, rodada 2, rep. 1: 1 914,4 s) |
+| Bytes recebidos (dados, contados pelo `ByteBudget`) | 10 889 525 245 B em 175 pedidos HTTP (igual à 2b) |
+| Arquivo de grade comum | sha256 `567ccdce…`, **idêntico** ao da 2b |
+| LEC (`-f -r`, mesma caixa e namelist da fase 2) | rodou até o fim; CSV de resultados com sha256 `ac5c7eec…`, **idêntico** ao da rota kerchunk da fase 2 (35 × 26 valores, diferença máxima 0) |
+
+**Conclusão.** PASS: o kerchunk como padrão baixa as referências do endereço corrigido, monta o arquivo e
+reproduz bit a bit a saída da 2b, dentro da tolerância do pré-registro da fase 2 (classe "idêntico").
+
+**Achados para a 4b.**
+
+- O `--ncar` do programa principal usa o teto fixo de 8 GiB (`DEFAULT_MAX_TOTAL_BYTES`) e não tem `--max-gib`;
+  recusaria este caso (≈ 10,1 GiB). O teste usou o mesmo cliente com teto de 12 GiB.
+- A conexão da Swell com `tds.gdex.ucar.edu` falhou de forma intermitente (respostas incompletas e timeouts); as 4
+  tentativas por referência não bastaram na primeira vez. Nenhum arquivo parcial foi guardado.
+
+**Notas do responsável (23/11/2026).**
+
+- A folga de 2× do Get a Subset (`SUBSET_SIZE_CEILING`) fica mantida por escolha consciente; a causa medida (§4)
+  pedia ≈ 0,14 %.
+- O pedido de teste 989514 (§4, §5) foi apagado pelo responsável.
+- O destino de `/p1-swell/danilocs/lectk_stage4a_diag_20261122/` (≈ 101 MB) e de
+  `/p1-swell/danilocs/lectk_stage4a_kerchunk_20261123/` (≈ 1,7 GB) fica para o fim da etapa 4, junto com os dados
+  da 2b (D-028).
 
 ## Fora deste registro
 
