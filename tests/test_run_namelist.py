@@ -1,7 +1,7 @@
 """
 The LEC reads the namelist with which the data were prepared (offline tests).
 
-With ``--cdsapi`` or ``--wekeo`` the data are prepared with the preset
+With ``--cdsapi``, ``--wekeo`` or ``--arco`` the data are prepared with the preset
 ``inputs/namelist_ERA5-cdsapi``. The LEC used to read ``inputs/namelist`` all
 the same and failed with ``KeyError: 'time'`` when the two differed. Here the
 input file already exists (the routes reuse it, nothing is downloaded) and
@@ -21,7 +21,7 @@ import pytest
 import xarray as xr
 
 import lorenzcycletoolkit
-from src.utils import preprocessing, wekeo_hda
+from src.utils import arco_zarr, preprocessing, wekeo_hda
 from tests import ncss_emulator as emu
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -62,9 +62,10 @@ def forbid_download(monkeypatch):
         raise AssertionError("a download was requested")
     monkeypatch.setattr(preprocessing, "get_cdsapi_data", boom)
     monkeypatch.setattr(wekeo_hda, "get_wekeo_data", boom)
+    monkeypatch.setattr(arco_zarr, "get_arco_data", boom)
 
 
-@pytest.mark.parametrize("route", ["--cdsapi", "--wekeo"])
+@pytest.mark.parametrize("route", ["--cdsapi", "--wekeo", "--arco"])
 def test_lec_uses_the_namelist_of_the_route(route, workdir, monkeypatch):
     forbid_download(monkeypatch)
     era5_file(workdir / "era5.nc", CDS_NAMES)  # reused, as the routes do for an existing file
@@ -75,7 +76,7 @@ def test_lec_uses_the_namelist_of_the_route(route, workdir, monkeypatch):
     assert status["status"] == "success"
 
 
-@pytest.mark.parametrize("route", ["--cdsapi", "--wekeo"])
+@pytest.mark.parametrize("route", ["--cdsapi", "--wekeo", "--arco"])
 def test_missing_route_namelist_stops_before_any_download(route, workdir, monkeypatch):
     forbid_download(monkeypatch)
     (workdir / "inputs" / "namelist_ERA5-cdsapi").unlink()
@@ -99,5 +100,6 @@ def test_namelist_for_run(workdir):
     parse = lambda *extra: parser.parse_args(["x.nc", "-t", *extra])
     assert preprocessing.namelist_for_run(parse("--cdsapi")) == "inputs/namelist_ERA5-cdsapi"
     assert preprocessing.namelist_for_run(parse("--wekeo")) == "inputs/namelist_ERA5-cdsapi"
+    assert preprocessing.namelist_for_run(parse("--arco")) == "inputs/namelist_ERA5-cdsapi"
     assert preprocessing.namelist_for_run(parse("--ncar")) == "inputs/namelist"
     assert preprocessing.namelist_for_run(parse()) == "inputs/namelist"
