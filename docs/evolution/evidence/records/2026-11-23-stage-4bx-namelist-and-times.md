@@ -104,6 +104,13 @@ modo que o 35º horário não entra no cálculo. Um teste offline (só horários
 - Em testes comparativos com a 2b, lembrar que a caixa (15° contra 5°), os níveis (37 contra 13) e os horários (34
   contra 35) do comando principal são outros.
 
+## 4. Encerramento da 4b·x (23/11/2026)
+
+PR #80 integrado em `develop` (merge `ae2fb79`, 23/11/2026 22:41 UTC), com os três checks de CI verdes (dois
+"Python application / build" e `ci/circleci: build_test`) e releitura no SHA do merge: `lorenzcycletoolkit.py`,
+`src/utils/preprocessing.py`, `tests/test_run_namelist.py` e este registro são idênticos aos do commit `c37a63a`,
+cabeça do PR. A D-038, marcada "a aprovar com o diff", foi aprovada com a autorização do commit e do PR.
+
 ## Fora deste registro
 
 ARCO, DestinE, robustez do kerchunk, reescrita da documentação (4c). Aprovação, merge, CI e releitura entram por nota
