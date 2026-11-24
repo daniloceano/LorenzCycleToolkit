@@ -41,6 +41,8 @@ dependencies = [
 [project.optional-dependencies]
 # --wekeo (WEkEO HDA route, src/utils/wekeo_hda.py); 2.40 is the tested version
 wekeo = ["hda>=2.40", "requests>=2.5.0"]
+# --arco (CDS ARCO Zarr route, src/utils/arco_zarr.py); zarr 3 is not supported, numcodecs 0.16 breaks zarr 2.18
+arco = ["zarr>=2.16,<3", "numcodecs>=0.11,<0.16", "fsspec>=2024.6.1", "aiohttp>=3.9"]
 
 [project.urls]
 Documentation = "https://lorenzcycletoolkit.readthedocs.io/"
