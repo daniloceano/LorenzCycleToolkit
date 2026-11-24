@@ -6,6 +6,24 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **`--arco`: ERA5 from the CDS ARCO Zarr store in `lorenzcycletoolkit.py`.**
+  Alternative to `--cdsapi`, `--wekeo` and `--ncar` (mutually exclusive) that reads the
+  time-chunked ARCO store of the CDS (no request queue) and writes the file of the CDS
+  route (same area with the 15-degree buffer, same hours, names, units, dimension order,
+  longitude convention; `inputs/namelist_ERA5-cdsapi`). Limits of the product, warned at
+  the start of every run and recorded in the provenance: **13 pressure levels** (1000 to
+  50 hPa, not interpolated or completed; the cycle can differ from routes with 37
+  levels), **6-hourly** data (a `--time-resolution` that is not a multiple of 6 is
+  refused before any read) and a transfer several times larger than the data kept.
+  Optional dependency: `pip install "lorenzcycletoolkit[arco]"` (zarr 2, numcodecs,
+  fsspec, aiohttp); credential: the CDS API key of `--cdsapi` (`CDSAPI_KEY`, or
+  `CDSAPI_RC` / `~/.cdsapirc`), sent as a bearer token and never logged or recorded.
+  `--max-gib` (default 20 GiB) is checked before any chunk is read, on the whole chunks
+  the box touches, and every byte received is counted afterwards; reads are retried at
+  most 3 times, 4 in parallel; a missing chunk is an error, never NaN. A provenance
+  record `<file>.provenance.json` lists store, versions, commit, box, times, levels,
+  bytes and SHA-256. `--delete-downloaded-input` works with `--arco`. New module
+  `src/utils/arco_zarr.py`. No change to the other routes or to the computation.
 - **`--wekeo`: ERA5 from WEkEO (Harmonised Data Access) in `lorenzcycletoolkit.py`.**
   Alternative to `--cdsapi` and `--ncar` (mutually exclusive) with the same request
   as the CDS route (track area with the 15-degree buffer, 37 pressure levels, the

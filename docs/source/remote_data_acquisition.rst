@@ -17,6 +17,18 @@ Remote Data Acquisition Methods
    (lines ``user:`` and ``password:``) or in ``HDA_USER`` and ``HDA_PASSWORD``. ``--max-gib`` limits the volume
    (default 20 GiB). See ``python lorenzcycletoolkit.py --help``; a full section will follow.
 
+   **ARCO Zarr is available (since 2026-11-24):** ``--arco`` reads the ERA5 pressure-level data from the *Analysis
+   Ready, Cloud Optimised* Zarr store of the CDS and writes the same file contents as ``--cdsapi`` (same area and
+   hours; ``inputs/namelist_ERA5-cdsapi``). Know the limits of the product before using it: **13 pressure levels**
+   (1000 to 50 hPa, nothing interpolated or completed), **every 6 hours** (``--time-resolution`` must be a multiple of
+   6; anything else is refused before any read), and a **transfer several times larger than the data kept**, because
+   whole chunks are read (7.5 times in the 2026-11 test). Terms of the Lorenz Energy Cycle can differ from routes
+   with 37 levels (in the LZV case, Ca was 5 % lower on average); against the CDS file the values differ only by
+   rounding (at most 0.04 % in the cycle in the 2b benchmark). It needs the optional packages
+   (``pip install "lorenzcycletoolkit[arco]"``) and the CDS API key of ``--cdsapi`` (``CDSAPI_KEY``, or
+   ``CDSAPI_RC`` / ``~/.cdsapirc``). ``--max-gib`` limits the volume (default 20 GiB), counted on the bytes
+   received. See ``python lorenzcycletoolkit.py --help``; a full section will follow.
+
 .. raw:: html
 
    <style>.wy-table-responsive table td, .wy-table-responsive table th { white-space: normal; }</style>

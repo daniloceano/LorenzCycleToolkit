@@ -133,7 +133,7 @@ def create_arg_parser():
         "--delete-downloaded-input",
         action="store_true",
         help=(
-            "With --cdsapi, --ncar or --wekeo: delete the input NetCDF file after the run, only if this run downloaded it, "
+            "With --cdsapi, --ncar, --wekeo or --arco: delete the input NetCDF file after the run, only if this run downloaded it, "
             "the run succeeded and the file is unchanged. Without this flag no input file is ever deleted."
         ),
     )
@@ -168,6 +168,20 @@ def create_arg_parser():
         ),
     )
     parser.add_argument(
+        "--arco",
+        action="store_true",
+        help=(
+            "Read the ERA5 data from the CDS ARCO Zarr store (Analysis Ready, Cloud Optimised) instead of the CDS "
+            "API when the input file does not exist: same area, hours and file contents as --cdsapi, BUT only "
+            "13 pressure levels (1000 to 50 hPa), every 6 h (--time-resolution must be a multiple of 6), and a "
+            "transfer several times larger than the data kept (whole chunks). Terms of the cycle may differ from "
+            "routes with 37 levels (in the LZV case, Ca -5 %% on average). Needs the optional packages "
+            "(pip install \"lorenzcycletoolkit[arco]\") and the CDS API key of --cdsapi (CDSAPI_KEY, or "
+            "CDSAPI_RC / ~/.cdsapirc). Volume limit: --max-gib (default 20 GiB), counted on the bytes "
+            "transferred. A provenance record is written next to the file."
+        ),
+    )
+    parser.add_argument(
         "--ncar-method",
         choices=("kerchunk", "subset", "ncss"),
         default=None,
@@ -189,7 +203,7 @@ def create_arg_parser():
         "--max-gib",
         type=float,
         default=None,
-        help=("With --ncar or --wekeo: largest volume accepted for the download, in GiB (default: 20 GiB), for any "
+        help=("With --ncar, --wekeo or --arco: largest volume accepted for the download, in GiB (default: 20 GiB), for any "
               "--ncar-method. The estimate is checked before anything is downloaded and, if it passes the "
               "limit, the run stops saying the --max-gib needed; bytes of failed attempts and retries count "
               "too. Same meaning as in python -m src.utils.ncar_gdex."),
@@ -369,18 +383,24 @@ def main():
     parser = create_arg_parser()
     args = parser.parse_args()
 
-    if sum(bool(x) for x in (args.cdsapi, args.ncar, args.wekeo)) > 1:
-        parser.error("--cdsapi, --ncar and --wekeo are alternative data sources; use one of them")
+    if sum(bool(x) for x in (args.cdsapi, args.ncar, args.wekeo, args.arco)) > 1:
+        parser.error("--cdsapi, --ncar, --wekeo and --arco are alternative data sources; use one of them")
+    if args.arco:
+        from src.utils.arco_zarr import ArcoRequestError, check_time_resolution
+        try:
+            check_time_resolution(args.time_resolution)  # before anything is read
+        except ArcoRequestError as error:
+            parser.error(str(error))
     if args.ncar_method is not None and not args.ncar:
         parser.error("--ncar-method needs --ncar")
-    if args.max_gib is not None and not (args.ncar or args.wekeo):
-        parser.error("--max-gib needs --ncar or --wekeo")
+    if args.max_gib is not None and not (args.ncar or args.wekeo or args.arco):
+        parser.error("--max-gib needs --ncar or --wekeo (or --arco)")
     if args.max_gib is not None and not args.max_gib > 0:
         parser.error("--max-gib must be greater than 0")
     if args.kerchunk_refs is not None and not (args.ncar and (args.ncar_method or "kerchunk") == "kerchunk"):
         parser.error("--kerchunk-refs needs --ncar with the kerchunk method")
-    if args.delete_downloaded_input and not (args.cdsapi or args.ncar or args.wekeo):
-        parser.error("--delete-downloaded-input needs --cdsapi, --ncar or --wekeo (local input files are never deleted)")
+    if args.delete_downloaded_input and not (args.cdsapi or args.ncar or args.wekeo or args.arco):
+        parser.error("--delete-downloaded-input needs --cdsapi, --ncar, --wekeo or --arco (local input files are never deleted)")
     guard_options = [name for name in ("cds_ledger", "cds_retries", "cds_timeout", "cds_case_id", "cds_delete_on_stop")
                      if getattr(args, name) is not None]
     if args.cds_max_seconds is not None or guard_options:
