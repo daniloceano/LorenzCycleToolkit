@@ -40,7 +40,7 @@ from .validation import validate_track_file, validate_namelist_file
 
 def check_planned_times(track, args, source, app_logger):
     """
-    Before a ``--cdsapi``/``--wekeo``/``--arco``/``--ncar`` download, check the track against the times the request will retrieve.
+    Before a ``--cdsapi``/``--wekeo``/``--arco``/``--destine``/``--ncar`` download, check the track against the times the request will retrieve.
 
     The requested hours are known before the download (``--time-resolution``), so a track that they
     cannot serve is refused here instead of after the transfer. This does not replace the check
@@ -175,6 +175,26 @@ def get_data(args: argparse.Namespace, app_logger: logging.Logger, varlist: str 
             timing.set_source("arco", "downloaded")
         else:
             app_logger.info("✅ ARCO data already exists, skipping download.")
+    elif getattr(args, "destine", False):
+        # Same track reading and reuse rule as the CDS API route
+        timing.set_source("destine", "reused")
+        if not os.path.exists(infile):
+            delimiter, _ = validate_track_file(args.trackfile, app_logger)
+            track = pd.read_csv(
+                args.trackfile,
+                delimiter=delimiter,
+                index_col="time",
+                parse_dates=["time"],
+                date_format="%Y-%m-%d-%H%M"
+            )
+            from .destine_edh import get_destine_data
+            check_planned_times(track, args, "DestinE", app_logger)
+            timing.set_source("destine", None)  # "downloaded" only once the call succeeds
+            with timing.phase("acquisition"):
+                infile = get_destine_data(args, track, app_logger)
+            timing.set_source("destine", "downloaded")
+        else:
+            app_logger.info("✅ DestinE data already exists, skipping download.")
     elif getattr(args, "ncar", False):
         # Same track reading as the CDS API route; an existing file is reused
         # only if its provenance record verifies it
@@ -493,7 +513,7 @@ def namelist_for_run(args) -> str:
     """
     Namelist of a run: the file that prepares the data is also the one the LEC reads.
 
-    With ``--cdsapi``, ``--wekeo`` or ``--arco`` the file downloaded has the ERA5 names, so the
+    With ``--cdsapi``, ``--wekeo``, ``--arco`` or ``--destine`` the file downloaded has the ERA5 names, so the
     preset ``inputs/namelist_ERA5-cdsapi`` is used. In every other case (local
     file, ``--ncar``) it is ``inputs/namelist`` (or its ``.default`` companion).
 
@@ -503,7 +523,7 @@ def namelist_for_run(args) -> str:
     Returns:
         str: Path of the namelist for the whole run (preparation and LEC).
     """
-    if args.cdsapi or getattr(args, "wekeo", False) or getattr(args, "arco", False):
+    if args.cdsapi or any(getattr(args, name, False) for name in ("wekeo", "arco", "destine")):
         return ERA5_NAMELIST
     return resolve_input_file("inputs/namelist")
 
@@ -524,10 +544,10 @@ def prepare_data(
     Returns:
         xr.Dataset: The prepared dataset for analysis.
     """
-    # Automatically use ERA5-cdsapi namelist with --cdsapi, --wekeo or --arco (same file contents)
-    if args.cdsapi or getattr(args, "wekeo", False) or getattr(args, "arco", False):
+    # Automatically use ERA5-cdsapi namelist with --cdsapi, --wekeo, --arco or --destine (same file contents)
+    if args.cdsapi or any(getattr(args, name, False) for name in ("wekeo", "arco", "destine")):
         varlist = ERA5_NAMELIST
-        app_logger.info("🌐 CDS API/WEkEO/ARCO mode detected: automatically using ERA5-compatible namelist")
+        app_logger.info("🌐 CDS API/WEkEO/ARCO/DestinE mode detected: automatically using ERA5-compatible namelist")
         app_logger.debug(f"📋 Using namelist: {varlist}")
 
     # Validate and load namelist using validation module

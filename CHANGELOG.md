@@ -6,6 +6,29 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **`--destine`: ERA5 from the DestinE Earth Data Hub Zarr store in `lorenzcycletoolkit.py`.**
+  Alternative to `--cdsapi`, `--wekeo`, `--ncar` and `--arco` (mutually exclusive) that
+  reads the Zarr v2 ERA5 pressure-level store of the Earth Data Hub (the one of the 2b
+  benchmark, no longer updated since 2026-07-06; later dates are refused before any
+  read) and writes the file of the CDS route (same area, hours, names, units, dimension
+  order and longitude convention; `inputs/namelist_ERA5-cdsapi`). Limits, warned at the
+  start of every run and recorded in the provenance: the product's own **19 pressure
+  levels** (1000 to 1 hPa, not interpolated) and **values stored with reduced
+  precision** (in the 2b comparison, 18 of 240 terms of the cycle differed between 1 %
+  and 2.7 % from the CDS; energy contents and conversions did not change). Hourly data:
+  any `--time-resolution` works. **Requests:** one HTTP request per chunk against the
+  monthly quota of the account (500 000); the requests are estimated and shown before
+  any chunk is read and limited by the new `--max-requests` (default 10 000), every
+  attempt counts, and the HTTP requests really made are recorded. `--max-gib` (default
+  20 GiB) is checked before any read on the whole chunks touched plus a codec margin,
+  and on every byte received; each chunk is read once (no dask graph over the store),
+  4 in parallel, at most 3 tries; 401/403/429 are not retried; a missing chunk is an
+  error, never NaN. Optional dependency: `pip install "lorenzcycletoolkit[destine]"`
+  (the packages of `[arco]`); credential: the Earth Data Hub API key from `~/.netrc`
+  (`machine data.earthdatahub.destine.eu`, `password`) or `DESTINE_EDH_TOKEN`, sent as
+  basic authentication, never logged or recorded. `--delete-downloaded-input` works with
+  `--destine`. New module `src/utils/destine_edh.py`. No change to the other routes or
+  to the computation.
 - **`--arco`: ERA5 from the CDS ARCO Zarr store in `lorenzcycletoolkit.py`.**
   Alternative to `--cdsapi`, `--wekeo` and `--ncar` (mutually exclusive) that reads the
   time-chunked ARCO store of the CDS (no request queue) and writes the file of the CDS

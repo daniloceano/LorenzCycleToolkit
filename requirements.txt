@@ -91,3 +91,5 @@ zipp==3.19.2
 #   pip install "lorenzcycletoolkit[wekeo]"  or  pip install hda==2.40
 # Optional, only for --arco (not installed by default): zarr==2.18.4, numcodecs==0.15.1, aiohttp
 #   pip install "lorenzcycletoolkit[arco]"
+# Optional, only for --destine (not installed by default): the same packages as --arco
+#   pip install "lorenzcycletoolkit[destine]"
