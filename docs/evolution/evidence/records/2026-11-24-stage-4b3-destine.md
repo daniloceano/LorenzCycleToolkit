@@ -6,8 +6,8 @@ dado de outra rota muda, e o cálculo do LEC também não muda. `main`, tags e r
 **Base:** `develop` em `eca3864` (merge do encerramento da 4b·2, PR #83, conferido antes da branch
 `feat/stage-4b3-destine`); `main` em `48fe8e2`.
 
-**Estado:** implementação e testes offline concluídos na Swell (§4). **Teste real na Swell: pendente** — exige commit na branch
-(D-040), a escolha da credencial pelo responsável e a aprovação dos limites (§5).
+**Estado:** implementação, testes offline e teste real concluídos na Swell (§4, §5). Os dois critérios foram atendidos:
+dados idênticos à DestinE da 2b e, contra o CDS, só BΦE acima de 1 % (1,21 %), como na 2b para este caso.
 
 ## Resumo em linguagem simples
 
@@ -97,7 +97,7 @@ ficar perto de 9 GiB. Valores úteis: 1,71 GiB.
 caso de teste, o v3 custaria ≈ 5 700 requisições e 110 GiB de limite superior, contra ≈ 1 530 e 45 GiB no v2. **Respostas
 do responsável:** usar o **store v2 da 2b**; padrão de **10 000 requisições** por execução (2 % da cota mensal).
 
-**D-041 (proposta, a confirmar na revisão do diff):** rota DestinE (etapa 4b·3): `--destine`, mutuamente exclusivo com
+**D-041 (aprovada pelo responsável em 24/11/2026, com o diff; commit `cc9729f`):** rota DestinE (etapa 4b·3): `--destine`, mutuamente exclusivo com
 `--cdsapi`, `--wekeo`, `--ncar` e `--arco`; store **Zarr v2 da 2b** (`reanalysis-era5-pressure-levels-v0.zarr`), congelado
 desde 06/07/2026, com recusa antes de qualquer leitura de horários fora dele; níveis do store (19), sem interpolar;
 qualquer `--time-resolution` em horas inteiras; mesma caixa, mesmos horários e mesmo contrato de arquivo do CDS
@@ -176,14 +176,86 @@ zarr 3; autenticação *basic* e *trace* só no *mapper*; contador HTTP; arquivo
 `--max-requests`, `--delete-downloaded-input`, opções aceitas, texto do `--help`); o token não aparece em log nem na
 proveniência.
 
-## 5. Teste real na Swell
+## 5. Teste real na Swell (24/11/2026)
 
-**Pendente.** Plano a aprovar: pasta nova fora do repositório; código de um commit da branch (D-040, SHA na
-proveniência); comando `lorenzcycletoolkit.py case_19790205.nc -f -r --destine --trackfile inputs/track
---time-resolution 6 --max-gib <teto> --max-requests <limite> -o destine_19790205`, com o track e a caixa da 4a.1, 4b·1 e
-4b·2; `--time-resolution 6` como a 2b. Critérios: (1) na região comum, dados idênticos à DestinE da 2b e, contra o CDS,
-diferença da mesma natureza da fase 2; (2) LEC até o fim, comparado com o CDS da 2b nos mesmos horários e níveis, dizendo
-se os mesmos termos passam de 1 %.
+**Autorizações do responsável (24/11):** diff aprovado e commit `cc9729f` antes do teste; credencial: **o token da 2b**
+(`~/.config/lectk_bench/destine_token`), passado ao processo por `DESTINE_EDH_TOKEN` dentro do comando, sem ser lido,
+copiado ou impresso; limites **`--max-requests 2000`** e **`--max-gib 46`**, aprovados sobre a estimativa da §1.3.
+
+**Ambiente (pasta nova, fora do repositório):** `/p1-swell/danilocs/lectk_stage4b3_destine_20261124/` (2,8 GB). **Código:
+clone git da branch no commit `cc9729f2ae76aa4f0da2976906c765d7d844675a`**, sem alterações locais (`git status` vazio);
+a proveniência grava esse SHA em `lectk_commit` (D-040 atendida sem comparação de hashes). `venv-zarr` sobre o ambiente
+`lorenz` (Python 3.12.12, numpy 2.0.0, xarray 2024.2.0) mais zarr 2.18.4, numcodecs 0.15.1, aiohttp 3.14.5 e fsspec
+2024.6.1. Entradas copiadas de `lectk_stage4b2_arco_20261124/run2/inputs` (track `9da9d809…`, o selado da 2b; caixa e
+namelist, sha256 iguais). Nenhuma pasta existente foi alterada (2b, fase 2, 4b·1 e 4b·2 só lidas).
+
+**Comando** (`run_main.sh 46 2000`): `lorenzcycletoolkit.py case_19790205.nc -f -r --destine --trackfile inputs/track
+--time-resolution 6 --max-gib 46 --max-requests 2000 -o destine_19790205`. `--time-resolution 6` como a 2b; o track é de
+3 h e foi alinhado aos 34 horários de 6 h (mensagem do programa).
+
+### 5.1 Execução
+
+| Item | Resultado |
+|---|---|
+| Início / fim (UTC) | 20:32:22 / 20:50:11; código de saída 0; LEC `success` |
+| Tempo total | **1 066 s (17 min 46 s)**: aquisição 1 010,4 s, preparação 0,09 s, LEC 55,8 s |
+| Previsão antes de ler (log) | **1 520 blocos, 1 528 requisições, até 45,23 GiB** (48 568 570 372 B); igual à §1.3 |
+| Requisições | **1 528** contadas pelo store e **1 528** enviadas pelo aiohttp, todas **HTTP 200**; 8 de metadados + 1 520 blocos; **0 novas tentativas**; nenhum bloco lido duas vezes |
+| Bytes recebidos | **9 435 028 228 B (8,79 GiB)**, dos quais 168 452 B de metadados; **19,4 % do limite superior** (2b: 20 %); 5,4 × os valores úteis (1 754,9 MiB) |
+| Níveis | 19 confirmados no store (1000 → 1 hPa), avisos (a) e (b) no log, no atributo do arquivo e na proveniência |
+| Arquivo | 1 840 155 398 B; sha256 `ee5e846388d892573e34bfaf9faa92b8681a706268f7c1529c46e5b1ca258add`; 34 horários (1979-03-18 12 UTC a 03-26 18 UTC) × 19 níveis × 225 × 633; N−24 W−82 S−80 E76 |
+| CSV do LEC (34 × 26) | sha256 `7ba757d2a4def7b830e492205a6f88ade932959e40082d09da2df5138da8b18c` |
+| Token | não aparece em nenhum arquivo de `run/` e `logs_real/` (busca feita na Swell sem imprimir o valor) |
+
+O uso desta execução na cota de novembro: 1 528 das 500 000 requisições (0,3 %).
+
+### 5.2 Critério 1: dados na região comum
+
+Grade comum da 2b (34 horários × 13 níveis × 142 × 550, 34 520 200 valores por campo), com `to_common_grid` do harness
+da rodada 2 (verificações `ok`); `cmp_data.py`, só leitura das pastas da 2b:
+
+| Comparado com | `t` | `z` | `u`, `v`, `w` |
+|---|---|---|---|
+| **DestinE da 2b, rep. 1, 2 e 3** | **idêntico** | **idêntico** | **idênticos** |
+| CDS da 2b | máx. 0,125 K, 99,99 % dos pontos | máx. 64 m² s⁻², 99,9 % | máx. 0,031 / 0,031 m s⁻¹ e 0,006 Pa s⁻¹ |
+| WEkEO e ARCO da 2b | iguais ao CDS | iguais ao CDS | iguais ao CDS |
+
+**Critério 1: atendido.** Mesmo produto que a DestinE da 2b, bit a bit; contra o CDS, a diferença é a da fase 2 (máx.
+0,125 K e 64 m² s⁻², classe "relevante" nos campos de entrada; u, v, ω com diferença pequena). Os degraus são do produto,
+não do cliente.
+
+### 5.3 Critério 2: LEC
+
+O LEC rodou até o fim no comando principal. Para comparar com o CDS, a grade comum do arquivo novo foi processada com o
+**mesmo export de código da 4b·1 e da 4b·2** (`068c3a9`, `launch_lectk.py`, `-f -r`, caixa e namelist da 4b·2, sha256
+iguais) e comparada com o LEC do CDS da 2b recortado nos mesmos 34 horários (`d46d82ba…`, o da 4b·1, só lido),
+**com a classificação da fase 2** (`classify_term` do harness: e_max = máx.|Δ| / máx(média|ref|, F), "relevante" acima
+de 1 %); `cmp_lec.py`:
+
+| | Resultado |
+|---|---|
+| CSV da grade comum | `ced56f3e…` (difere do CDS `d46d82ba…`) |
+| Termos (24 classificados) | **23 pequena, 1 relevante** (+2 auxiliares sem classe) |
+| Acima de 1 % | **só BΦE: 1,21 %** |
+| Seguintes | Ge 0,91 %, RGe 0,75 %, BΦZ 0,71 %, RGz 0,56 %, Gz 0,55 %, BAe 0,35 % |
+| Reservatórios e conversões | todos "pequena": Az 0,010 %, Ae 0,026 %, Kz 0,005 %, Ke 0,001 %; Cz 0,020 %, Ca 0,029 %, Ck 0,027 %, Ce 0,030 % |
+| Na 2b, mesmo caso (35 h) | **só BΦE relevante, 1,24 %** |
+
+**Critério 2: atendido.** Os mesmos termos passam de 1 % que na 2b para este caso: **só BΦE**, com o mesmo tamanho
+(1,21 % × 1,24 %). Os 18 de 240 da 2b somam os 10 casos; neste, era um. Reservatórios e conversões não mudam (≤ 0,03 %).
+**Não se declara equivalência com o CDS.**
+
+**Observação [PRELIMINAR], fora dos critérios:** o CSV do comando principal (19 níveis, até 10 hPa no LEC) difere do da
+grade comum (13 níveis, até 50 hPa), ambos DestinE, na mesma caixa fixa: médias de Kz +2,1 %, Ke +0,9 %, Cz +1,0 % e
+**Ck +12,5 %**; Ca e Ce < 0,2 %. É o efeito dos níveis 70, 30, 20 e 10 hPa neste caso, **não** o efeito de 19 contra 37
+níveis, que não foi medido aqui (a LZV mediu outro caso por subamostragem).
+
+### 5.4 Onde estão os resultados
+
+Pasta `/p1-swell/danilocs/lectk_stage4b3_destine_20261124/`: `code/` (clone em `cc9729f`), `run/` e `logs_real/` (teste
+real), `cmp/` (grade comum, LEC da comparação, `lec_by_term_destine_new_vs_cds34.csv`, saídas), `cmp_data.py`,
+`cmp_lec.py`, `run_main.sh`; `base/`, `base_z/`, `work/`, `work_z/` e `logs/` (suítes da §4). O destino da pasta fica
+para o fim da etapa 4 (D-028).
 
 ## 6. Limitações (leia antes de usar `--destine`)
 
@@ -191,5 +263,7 @@ se os mesmos termos passam de 1 %.
   recusadas. O v3 atual não é suportado (exigiria zarr 3 e outro xarray).
 - **19 níveis** e **precisão reduzida**: ver os avisos; o efeito só foi medido na 2b (13 níveis comuns, 10 casos).
 - **Cota:** 500 000 requisições por mês na conta; o LECTK limita cada execução, não o mês.
-- **Volume:** blocos de 120 h × 256 × 256; o recebido foi 14–20 × o útil na 2b.
+- **Volume:** blocos de 120 h × 256 × 256; no teste real, 8,79 GiB recebidos (5,4 × o útil, 19 % do limite superior);
+  17 min 46 s no total (uma medição).
+- **Um só caso** (19790205) e uma execução real.
 - **Causa dos degraus:** não verificada (§1.2).
