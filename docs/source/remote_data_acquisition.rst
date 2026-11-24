@@ -29,6 +29,20 @@ Remote Data Acquisition Methods
    ``CDSAPI_RC`` / ``~/.cdsapirc``). ``--max-gib`` limits the volume (default 20 GiB), counted on the bytes
    received. See ``python lorenzcycletoolkit.py --help``; a full section will follow.
 
+   **DestinE Earth Data Hub is available (since 2026-11-24):** ``--destine`` reads the ERA5 pressure-level data from
+   the Zarr v2 store of the Earth Data Hub used in the 2b benchmark and writes the same file contents as ``--cdsapi``
+   (same area and hours; ``inputs/namelist_ERA5-cdsapi``). Know the limits before using it: the product's **own 19
+   pressure levels** (1000 to 1 hPa, not interpolated; the toolkit uses those down to 10 hPa), **values stored with
+   reduced precision** (in the 2b comparison, 18 of 240 terms of the cycle differed between 1 % and 2.7 % from the
+   CDS: boundary, generation and residual terms; energy contents and conversions did not change), and a **monthly
+   quota of 500 000 HTTP requests** per account, one request per chunk. The requests are estimated and shown before
+   any read and limited by ``--max-requests`` (default 10 000); the transfer, many times the data kept, is limited by
+   ``--max-gib`` (default 20 GiB). Hourly data: any ``--time-resolution`` works. The v2 store is **no longer updated
+   since 2026-07-06** (the Earth Data Hub moved ERA5 to Zarr v3 stores, not supported here); later dates are
+   refused before any read. It needs the optional packages (``pip install "lorenzcycletoolkit[destine]"``) and the
+   Earth Data Hub API key in ``~/.netrc`` (``machine data.earthdatahub.destine.eu`` with ``password <key>``) or in
+   ``DESTINE_EDH_TOKEN``. See ``python lorenzcycletoolkit.py --help``; a full section will follow.
+
 .. raw:: html
 
    <style>.wy-table-responsive table td, .wy-table-responsive table th { white-space: normal; }</style>
@@ -474,6 +488,9 @@ NetCDF.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Status:** not a toolkit route and **not measured**: no DestinE token was available for the assessment.
+*Update (2026-11-24): the route* ``--destine`` *now exists (see the note at the top of this page); it reads the
+Zarr v2 store, whose chunks hold 120 hours × 256 × 256 points of one level. The chunk shape given below is that of
+the Zarr v3 stores, which the route does not use. This section will be rewritten.*
 
 **Mechanism and data.** The Destination Earth Data Hub distributes ERA5 as Zarr with 19 pressure levels
 (1–1000 hPa) and an hourly step, from 1940; on 2026-11-02 its catalogue covered up to 2026-10-15, with monthly

@@ -6,7 +6,7 @@ Every duration is measured with ``time.perf_counter`` (monotonic), never with
 the system clock. The phases do not overlap:
 
     acquisition   the call that obtains the input file: get_cdsapi_data
-                  (a --cdsapi download), get_wekeo_data (a --wekeo download), get_arco_data (an --arco download)
+                  (a --cdsapi download), get_wekeo_data (a --wekeo download), get_arco_data (an --arco download), get_destine_data (a --destine download)
                   or get_ncar_data (a --ncar download,
                   or the provenance check that lets an existing file be
                   reused). ``null`` when no such call runs: a local input file,
@@ -69,7 +69,7 @@ class RunTiming:
             self._raw[name] = time.perf_counter() - started
 
     def set_source(self, provider, input_data):
-        """Record the data source ('cds', 'wekeo', 'arco', 'ncar', 'local') and the origin of the file."""
+        """Record the data source ('cds', 'wekeo', 'arco', 'destine', 'ncar', 'local') and the origin of the file."""
         self.provider = provider
         self.input_data = input_data
 
