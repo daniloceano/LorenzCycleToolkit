@@ -267,3 +267,33 @@ para o fim da etapa 4 (D-028).
   17 min 46 s no total (uma medição).
 - **Um só caso** (19790205) e uma execução real.
 - **Causa dos degraus:** não verificada (§1.2).
+
+## 7. Acréscimos de 24/11/2026 (encerramento documental; o texto acima não foi reescrito)
+
+### 7.1 Integração e CI
+
+PR #84 integrado em `develop` pelo responsável em 24/11/2026 (23:42 UTC); merge
+`83a10be7d182b758da702a9356dab04cd1b8378a`, com pais `eca3864` (develop) e `07bc624` (cabeça da branch). Os três checks
+passaram (`build` do GitHub Actions, duas vezes, e `ci/circleci: build_test`). `main` ficou em `48fe8e2`, sem tag nem
+release; nenhuma tag contém `cc9729f`.
+
+### 7.2 Identidade do código testado na Swell
+
+**O que foi comparado.** O teste real (§5) rodou num clone git da branch no commit `cc9729f`, sem alterações locais
+(§5, `git status` vazio), e `lectk_commit` da proveniência registra esse SHA. Na releitura (24/11/2026), comparou-se esse
+commit com o merge pelo Git:
+
+- as árvores de `07bc624` e de `83a10be` são idênticas;
+- entre `cc9729f` e `83a10be` mudam só três documentos (`docs/evolution/decisions.md`, `docs/evolution/queue.md` e este
+  registro), todos do commit `07bc624`; nenhum código, teste, dependência ou página do Read the Docs muda;
+- o sha256 de `src/utils/destine_edh.py` no merge é `601f57eb…`, o mesmo do commit testado.
+
+**Limite da afirmação.** A identidade vale para os arquivos rastreados; o ambiente da Swell (`lorenz` mais `venv-zarr`,
+versões na §5) não é parte da comparação. Não houve nova leitura na Swell para este encerramento.
+
+### 7.3 Pendências para a 4c
+
+- Reescrever o §2.6 de `remote_data_acquisition.rst` (hoje com uma nota de atualização; o formato de bloco ali é o do v3).
+- Decidir se o LECTK passa a ler os stores Zarr v3 da EDH (exige zarr 3 e outro xarray).
+- Retenção da pasta da Swell (2,8 GB) no fim da etapa 4 (D-028).
+
