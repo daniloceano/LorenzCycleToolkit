@@ -55,7 +55,7 @@ def _optional_dependencies():
 
 
 # Import names of optional distributions that the installed environment may lack
-OPTIONAL_IMPORTS = {"hda": "hda", "requests": "requests"}
+OPTIONAL_IMPORTS = {"hda": "hda", "requests": "requests", "zarr": "zarr"}  # zarr: extras [arco] and [destine]
 
 
 def test_every_imported_distribution_is_declared():

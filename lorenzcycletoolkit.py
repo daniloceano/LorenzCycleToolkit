@@ -127,7 +127,7 @@ def create_arg_parser():
     parser.add_argument(
         "--cdsapi",
         action="store_true",
-        help="Use CDS API for downloading data (experimental).",
+        help="Download the ERA5 data with the CDS API when the input file does not exist (37 pressure levels).",
     )
     parser.add_argument(
         "--delete-downloaded-input",
@@ -141,7 +141,11 @@ def create_arg_parser():
         "--time-resolution",
         type=int,
         default=3,
-        help="Temporal resolution in hours for CDS API data download (default: 3). Use 3, 6, or 12 to avoid cost limits.",
+        help=("Temporal resolution, in whole hours, of the data downloaded by any data source (--cdsapi, --ncar, "
+              "--wekeo, --arco, --destine; default: 3): the same hours of each day for all of them. Restrictions: "
+              "--arco only multiples of 6 (6-hourly product: 6, 12, 18, 24), refused otherwise before anything is "
+              "read; --cdsapi: 3, 6 or 12 keep the request within the CDS cost limits; --ncar, --wekeo and "
+              "--destine (hourly products): any whole number of hours. Not used without a data source."),
     )
     parser.add_argument(
         "--ncar",
@@ -185,18 +189,30 @@ def create_arg_parser():
         "--destine",
         action="store_true",
         help=(
-            "Read the ERA5 data from the DestinE Earth Data Hub Zarr store (the v2 store of the 2026-11 benchmark, "
-            "no longer updated since 2026-07-06) instead of the CDS API when the input file does not exist: same "
-            "area, hours and file contents as --cdsapi, BUT the product's own 19 pressure levels (1000 to 1 hPa, "
-            "not interpolated) and values stored with reduced precision: in the 2b comparison, 18 of 240 terms "
-            "of the cycle differed between 1 %% and 2.7 %% from the CDS (boundary, generation and residual terms); "
-            "energy contents and conversions did not change. Every chunk is one HTTP request against the monthly "
-            "quota of the account (500 000): the requests are estimated and limited before any read "
-            "(--max-requests, default 10000), and the transfer is many times the data kept (--max-gib, default "
-            "20 GiB). Needs the optional packages (pip install \"lorenzcycletoolkit[destine]\") and the Earth "
+            "Read the ERA5 data from the DestinE Earth Data Hub Zarr store (the Zarr v3 store, updated monthly; "
+            "see --destine-store) instead of the CDS API when the input file does not exist: same area, hours "
+            "and file contents as --cdsapi, BUT the product's own 19 pressure levels (1000 to 1 hPa, not "
+            "interpolated) and values stored with reduced precision (13 bits of mantissa in the v3 store; with "
+            "the 10 bits of the v2 store, 18 of 240 terms of the cycle differed between 1 %% and 2.7 %% from the "
+            "CDS in the 2b comparison: boundary, generation and residual terms; energy contents and conversions "
+            "did not change). Every chunk is one HTTP request against the monthly quota of the account "
+            "(500 000): the requests are estimated and limited before any read (--max-requests, default 10000), "
+            "and the transfer is many times the data kept, whole chunks of 60 days x 15 x 15 degrees in the v3 "
+            "store (--max-gib, default 20 GiB, is usually too small: the refusal says the value needed). Needs "
+            "the optional packages (pip install \"lorenzcycletoolkit[destine]\") and the Earth "
             "Data Hub API key in ~/.netrc (machine data.earthdatahub.destine.eu, password <key>) or "
             "DESTINE_EDH_TOKEN. A provenance record is written next to the file."
         ),
+    )
+    parser.add_argument(
+        "--destine-store",
+        choices=("v3", "v2"),
+        default=None,
+        help=("With --destine: Earth Data Hub store (default: v3). v3: Zarr v3 store, updated monthly, chunks of "
+              "60 days x 1 level x 15 x 15 degrees, 13 bits of mantissa. v2: Zarr v2 store of the 2026-11 "
+              "benchmark, no longer updated since 2026-07-06 and possibly withdrawn without notice, chunks of "
+              "5 days x 1 level x 64 x 64 degrees, 10 bits of mantissa; fewer requests and bytes for short "
+              "cases, other values (coarser rounding)."),
     )
     parser.add_argument(
         "--max-requests",
@@ -422,6 +438,8 @@ def main():
         parser.error("--max-gib needs --ncar or --wekeo (or --arco, --destine)")
     if args.max_requests is not None and not args.destine:
         parser.error("--max-requests needs --destine")
+    if args.destine_store is not None and not args.destine:
+        parser.error("--destine-store needs --destine")
     if args.max_requests is not None and not args.max_requests > 0:
         parser.error("--max-requests must be greater than 0")
     if args.max_gib is not None and not args.max_gib > 0:

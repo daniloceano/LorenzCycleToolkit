@@ -2,12 +2,12 @@
 Offline tests of the CDS ARCO Zarr route (src/utils/arco_zarr.py, --arco).
 
 No network is used. The remote store is a local zarr store (a dict of keys to
-bytes) holding a synthetic ERA5 shaped like the product (13 levels, 6-hourly,
-0.25-degree grid, chunked by time with whole latitude bands, longitudes in
--180..180 or 0..360), whose values depend only on variable, time, level,
-latitude and longitude. The tests that write or read zarr need zarr 2
-(``pip install "lorenzcycletoolkit[arco]"``) and are skipped without it; the
-others (resolution, credential, byte counting, retries) do not.
+bytes, in Zarr format 2 as the real store) holding a synthetic ERA5 shaped like
+the product (13 levels, 6-hourly, 0.25-degree grid, chunked by time with whole
+latitude bands, longitudes in -180..180 or 0..360), whose values depend only on
+variable, time, level, latitude and longitude. The tests that write or read zarr
+need zarr 3 (``pip install "lorenzcycletoolkit[arco]"``) and are skipped without
+it; the others (resolution, credential, byte counting, retries) do not.
 """
 
 import argparse
@@ -55,10 +55,18 @@ def field(short, times, levels, lat, lon):
                  + np.asarray(lat)[None, None, :, None] * 1e-1 + lon[None, None, None, :] * 1e-3)).astype("float32")
 
 
+def key_bytes(ds, encoding, zarr_format):
+    """The dataset written by zarr 3 with consolidated metadata, as a dict of store keys to bytes."""
+    import zarr
+    memory = zarr.storage.MemoryStore()
+    ds.to_zarr(memory, mode="w", consolidated=True, encoding=encoding, zarr_format=zarr_format)
+    return {key: value.to_bytes() for key, value in memory._store_dict.items()}
+
+
 def build_store(lat, lon_signed, times, convention="signed", dims_order=("time", "pressureLevels", "latitude", "longitude"),
                 chunk_lat=40, fields="long", chunks=None):
     """
-    Synthetic ARCO store as a zarr-2 dict: consolidated metadata, chunks of one time step and whole bands.
+    Synthetic ARCO store as a Zarr v2 dict: consolidated metadata, chunks of one time step and whole bands.
 
     ``fields``: "long" (names of the user guide) or "short" (names of the real store, observed 2026-11-24);
     ``chunks``: sizes by dimension name, to override the default (one time step, all levels, bands of ``chunk_lat``).
@@ -82,9 +90,7 @@ def build_store(lat, lon_signed, times, convention="signed", dims_order=("time",
         encoding[name] = {"chunks": tuple(sizes[d] for d in dims_order)}
     ds = xr.Dataset(data, coords={"time": pd.DatetimeIndex(times), level_dim: levels,
                                   "latitude": np.asarray(lat, float), "longitude": lon_store})
-    store = {}
-    ds.to_zarr(store, mode="w", consolidated=True, encoding=encoding)
-    return store
+    return key_bytes(ds, encoding, a.STORE_ZARR_FORMAT)
 
 
 class Recorder(dict):
@@ -217,7 +223,7 @@ def test_task_graph_does_not_grow_with_the_store(track):
     lat = np.arange(-10.0, -50.0 - 1e-9, -0.25)
     lon = np.arange(-70.0, -28.0 + 1e-9, 0.25)
     mapping = build_store(lat, lon, times_6h("2020-01-01 00:00", 120))
-    ds = xr.open_zarr(a.CountingStore(mapping, a.Budget(10 ** 12)), consolidated=True, chunks=None)
+    ds = a.open_store_dataset(a.CountingStore(mapping, a.Budget(10 ** 12)), a.STORE_ZARR_FORMAT)
     plan = a.plan_request(track, 6)
     result = a.build_output(ds, plan, a.select(ds, plan))
     graph = result["t"].data.__dask_graph__()
@@ -271,7 +277,7 @@ def test_levels_warning_and_provenance(store, track, tmp_path, caplog, monkeypat
 def test_estimate_counts_whole_chunks(store, track):
     import zarr  # noqa: F401
     counting = a.CountingStore(store, a.Budget(10 ** 12))
-    ds = xr.open_zarr(counting, consolidated=True, chunks=None)
+    ds = a.open_store_dataset(counting, a.STORE_ZARR_FORMAT)
     selection = a.select(ds, a.plan_request(track, 6))
     total, by_variable = a.estimate_bytes(ds, selection)
     # 3 times x 1 chunk of 13 levels x (latitudes 129 -> chunks of 40) x all 169 longitudes, float32
@@ -289,7 +295,7 @@ def test_estimate_above_limit_reads_no_chunk(store, track, tmp_path):
     with pytest.raises(a.ArcoVolumeError, match=r"--max-gib 0\.\d or more") as error:
         a.get_arco_data(args_for(out, max_gib=0.001), track, LOGGER, mapping=store)
     assert "no chunk was read" in str(error.value)
-    chunk_reads = [k for k in store.reads if not os.path.basename(k).startswith(".z") and "/" in k
+    chunk_reads = [k for k in store.reads if not a._is_metadata(k) and "/" in k
                    and not k.split("/")[0] in ("time", "latitude", "longitude", "pressureLevels")]
     assert chunk_reads == [] and not out.exists()
 
@@ -414,13 +420,42 @@ def test_missing_package(monkeypatch):
         a.load_packages()
 
 
-def test_zarr_3_is_refused(monkeypatch):
-    fakes = {"zarr": types.SimpleNamespace(__version__="3.0.1"), "fsspec": types.SimpleNamespace(),
+def test_zarr_2_is_refused(monkeypatch):
+    fakes = {"zarr": types.SimpleNamespace(__version__="2.18.4"), "fsspec": types.SimpleNamespace(),
              "aiohttp": types.SimpleNamespace()}
     real = a.importlib.import_module
     monkeypatch.setattr(a.importlib, "import_module", lambda name, *x: fakes[name] if name in fakes else real(name, *x))
-    with pytest.raises(a.ArcoSetupError, match="zarr 2"):
+    with pytest.raises(a.ArcoSetupError, match="needs zarr 3"):
         a.load_packages()
+
+
+def test_metadata_keys_of_both_formats():
+    assert all(a._is_metadata(k) for k in (".zmetadata", "t/.zarray", "t/.zattrs", ".zgroup", "zarr.json", "t/zarr.json"))
+    assert not any(a._is_metadata(k) for k in ("t/0.0.0.0", "t/c/0/0/0/0", "time/0"))
+
+
+def test_at_most_four_reads_at_a_time(track, tmp_path):
+    """zarr 3 reads chunks concurrently: the counted store lets at most 4 requests run at the same time."""
+    import threading
+    import time as clock
+    lat = np.arange(-10.0, -50.0 - 1e-9, -0.25)
+    lon = np.arange(-70.0, -28.0 + 1e-9, 0.25)
+    lock, state = threading.Lock(), {"now": 0, "peak": 0}
+
+    class Slow(dict):
+        def __getitem__(self, key):
+            with lock:
+                state["now"] += 1
+                state["peak"] = max(state["peak"], state["now"])
+            clock.sleep(0.005)
+            with lock:
+                state["now"] -= 1
+            return super().__getitem__(key)
+
+    mapping = Slow(build_store(lat, lon, times_6h("2020-01-29 00:00", 8), chunk_lat=8))
+    a.get_arco_data(args_for(tmp_path / "par.nc"), track, LOGGER, mapping=mapping)
+    prov = json.loads((tmp_path / "par.nc.provenance.json").read_text())
+    assert 1 < state["peak"] <= a.WORKERS and prov["max_parallel_reads"] == state["peak"]
 
 
 def test_bearer_header_only_in_the_mapper():

@@ -25,7 +25,8 @@ dependencies = [
     "cmocean>=4.0.3",
     # src/utils/cyclophaser_compat.py accepts only the tested version
     "cyclophaser==1.7.3",
-    "dask>=2024.7.0",
+    # lower bound = version tested in stage 4d (D-043); the toolkit uses only dask.config
+    "dask>=2026.8.0",
     "lorenz-phase-space>=1.2.4",
     "matplotlib>=3.5.0",
     "metpy>=1.3.0",
@@ -35,16 +36,17 @@ dependencies = [
     "pint>=0.19",
     "scipy>=1.8.0",
     "shapely>=2.0.5",
-    "xarray>=2022.3.0",
+    # lower bound = version tested with zarr 3 in stage 4d (D-043)
+    "xarray>=2026.9.0",
 ]
 
 [project.optional-dependencies]
 # --wekeo (WEkEO HDA route, src/utils/wekeo_hda.py); 2.40 is the tested version
 wekeo = ["hda>=2.40", "requests>=2.5.0"]
-# --arco (CDS ARCO Zarr route, src/utils/arco_zarr.py); zarr 3 is not supported, numcodecs 0.16 breaks zarr 2.18
-arco = ["zarr>=2.16,<3", "numcodecs>=0.11,<0.16", "fsspec>=2024.6.1", "aiohttp>=3.9"]
-# --destine (DestinE Earth Data Hub Zarr v2 route, src/utils/destine_edh.py); same packages as [arco]
-destine = ["zarr>=2.16,<3", "numcodecs>=0.11,<0.16", "fsspec>=2024.6.1", "aiohttp>=3.9"]
+# --arco (CDS ARCO Zarr route, src/utils/arco_zarr.py); zarr 3 (D-043), lower bounds = versions tested in stage 4d
+arco = ["zarr>=3.4.2,<4", "numcodecs>=0.17.1", "fsspec>=2026.9.0", "aiohttp>=3.9"]
+# --destine (DestinE Earth Data Hub Zarr v3/v2 route, src/utils/destine_edh.py); same packages as [arco]
+destine = ["zarr>=3.4.2,<4", "numcodecs>=0.17.1", "fsspec>=2026.9.0", "aiohttp>=3.9"]
 
 [project.urls]
 Documentation = "https://lorenzcycletoolkit.readthedocs.io/"

@@ -72,6 +72,27 @@ data differences and limitations, in `docs/source/remote_data_acquisition.rst`.
 
 #### Changed
 
+- **Environment updated for zarr 3; `--destine` reads the Earth Data Hub Zarr v3 store
+  by default (stage 4d, decision D-043).** Tested set: zarr 3.4.2 and numcodecs 0.17.1
+  (new in `requirements.txt`, with aiohttp, so that the Zarr tests run in CI), xarray
+  2024.2.0 → 2026.9.0 (the first that reads with zarr 3), fsspec 2024.6.1 → 2026.9.0,
+  dask 2024.7.0 → 2026.8.0, packaging 24.1 → 26.3, typing_extensions 4.12.2 → 4.16.0, plus
+  the dependencies of zarr (donfig, google-crc32c, msgspec) and of aiohttp. numpy, pandas,
+  scipy, netCDF4, h5py, h5netcdf, MetPy, Cartopy and matplotlib are unchanged. In
+  `pyproject.toml`, the extras `[arco]` and `[destine]` now need zarr 3 (`zarr>=3.4.2,<4`),
+  and the lower bounds of xarray and dask are the tested versions. `--arco` and
+  `--destine` refuse zarr 2 and say how to install the extra. The counted store of both
+  routes is read by zarr 3 through a small read-only store adapter: counting, limits,
+  retries and refusal of missing chunks are unchanged, at most 4 reads run at a time
+  (recorded as `max_parallel_reads` in the provenance), and a sharded store is refused.
+  `--destine` now reads the Zarr v3 store `era5-pressure-levels-v0.zarr` (updated
+  monthly; chunks of 60 days × 1 level × 15° × 15°; 13 bits of mantissa kept) and the new
+  `--destine-store v2` keeps the v2 store of the benchmark (10 bits; no longer updated
+  since 2026-07-06) while it is served; the two stores do not hold the same values. The
+  provenance records the store version and its Zarr format.
+- **`--help`: `--cdsapi` is no longer marked as experimental, and `--time-resolution`
+  says that it applies to every data source,** with the restriction of each one
+  (`--arco`: multiples of 6 h only; the hourly products: any whole number of hours).
 - **`--ncar`: default volume limit raised from 8 GiB to 20 GiB, and new `--max-gib`
   in `lorenzcycletoolkit.py`.** The limit (any `--ncar-method`) was fixed at 8 GiB in
   the main program, which would refuse cases that kerchunk handles (for example
