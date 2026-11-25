@@ -6,7 +6,7 @@
 **Base:** `develop` em `91dfbed` (PR #87); `main` em `48fe8e2`. Branch única da etapa: `feat/stage-4d-zarr3` (D-042).
 
 **Estado deste registro:** Partes 1 a 3 concluídas (regressão sem download e testes reais com o commit `f923d80`,
-D-040). PR, CI e merge: a preencher no encerramento.
+D-040). Encerrado em 25/11/2026: PR #88, merge `436279b`, CI verde; ver §9.
 
 ## Resumo em linguagem simples
 
@@ -224,3 +224,32 @@ Nada foi apagado na Swell. Pasta da etapa `/p1-swell/danilocs/lectk_stage4d_zarr
 Para a retenção (D-028): os arquivos v3 e v2 do caso são idênticos em valores, então o v3 não é evidência nova além da
 proveniência e do LEC; `dev/`, `dev2/`, `base/` e os `.tgz` são descartáveis; decidir o destino de `lorenz` × `lorenz-4d`
 depois do merge.
+
+## 9. Nota de fechamento (25/11/2026): aprovação, PR, CI, merge e releitura
+
+- **Aprovação:**
+  - o responsável inspecionou os diffs no VS Code e autorizou o commit `f923d80`, que é o código dos testes da Parte 3;
+  - depois autorizou o commit `dd1bdf0` (correção dos 13 bits, §7.3) e o PR.
+- **Commits e PR:**
+  - `f923d80` e `dd1bdf0` na branch única da etapa (`feat/stage-4d-zarr3`, D-042);
+  - PR único para a `develop`: [#88](https://github.com/daniloceano/LorenzCycleToolkit/pull/88).
+- **CI do PR:** verde. Os dois `build` do workflow "Python application" passaram (15 min 13 s e 11 min 22 s), e o
+  `ci/circleci: build_test` também. O workflow instala o `requirements.txt` com zarr 3, então rodou a suíte inteira com
+  os testes Zarr depois da correção.
+- **Merge:** feito pelo responsável em 25/11/2026 às 20:54 UTC; o commit de merge é `436279b`
+  (`436279b70b8f18adb2bb76b4fb201bd771647c4f`).
+- **Releitura no SHA do merge:**
+  - a árvore do merge é idêntica à do commit `dd1bdf0` (diff vazio).
+  - Entre `f923d80` (o código dos testes reais) e o merge, o código só muda em texto:
+    - a constante do aviso de precisão (`PRECISION_WARNING_V3` removida; o v3 usa o mesmo `PRECISION_WARNING` do v2);
+    - a ajuda de `--destine` e `--destine-store`;
+    - o docstring de `destine_edh.py`.
+
+    Nenhuma leitura, seleção ou cálculo mudou, então os testes reais e a regressão valem para o código do merge.
+  - O build do Sphinx (`-n -W`, mesmo ambiente isolado) a partir de um `git archive` de `436279b` terminou sem avisos.
+  - A página `remote_data_acquisition` diz "10 bits of mantissa". "13 bits" só aparece onde se explica que é o valor
+    declarado nos metadados do v3.
+  - Em `docs/source` não há caminho da Swell nem credencial.
+- **Pendências da etapa 4:** retenção dos dados na Swell (D-028; ver §8) e resumo de transferência. Fica registrado
+  também o `FutureWarning` de `drop` → `drop_vars` em `src/utils/preprocessing.py` (linhas 428 e 430) visto na
+  regressão (§6); ele não afeta o resultado.
