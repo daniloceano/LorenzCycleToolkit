@@ -224,8 +224,8 @@ last data time.
    Track final timestamp (2020-01-10 23:00:00) is later than data final timestamp (2020-01-08 18:00:00).
    Please adjust the track file or re-download the data.
 
-**Solutions**: provide data that cover the whole track (with ``--cdsapi`` or ``--ncar``, use a new output file
-name: an existing file is not extended), or shorten the track file yourself and keep a record of what you changed.
+**Solutions**: provide data that cover the whole track (with a download route such as ``--cdsapi`` or ``--ncar``,
+use a new output file name: an existing file is not extended), or shorten the track file yourself and keep a record of what you changed.
 
 Track file covers a shorter period than the data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -250,11 +250,11 @@ Track sampled more often than the data (automatic alignment)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Problem**: The track is sampled more often than the data, for example a 3-hourly track with 6-hourly ERA5
-data (``--cdsapi`` or ``--ncar`` with ``--time-resolution 6``, or a local file).
+data (a download route with ``--time-resolution 6``, the 6-hourly ``--arco`` product, or a local file).
 
 **Behavior**: The toolkit keeps the track positions at the data times, with their original coordinates, and
 leaves the other positions out. It is a selection by exact time, not an interpolation, and the track file is
-not modified. The same rule applies to local files, ``--cdsapi`` and ``--ncar``. A warning is written once to
+not modified. The same rule applies to local files and to every download route. A warning is written once to
 the terminal and to the run log, with the counts of the run:
 
 .. code-block:: text
@@ -274,7 +274,7 @@ the terminal and to the run log, with the counts of the run:
 ``lec_metadata.json`` records the alignment under ``track_time_alignment``: ``adapted``, ``rule``, the track, data
 and selected intervals, the counts of original, selected and excluded positions, the selected times, and
 ``spatial_interpolation: false`` and ``trackfile_modified: false``. The moving framework's track output
-(``<name>_track_trackfile``) holds only the positions used. With ``--cdsapi`` and ``--ncar`` the track is also checked against the requested hours **before**
+(``<name>_track_trackfile``) holds only the positions used. With every download route the track is also checked against the requested hours **before**
 the download, so a track that the request cannot serve is refused before any transfer, with the message
 "request not made" and the reason.
 
@@ -345,19 +345,83 @@ day, check the CDS service status page, and reduce the volume as above. **Stoppi
 job**: it may stay queued or running and use the account's quota; check the account for pending requests before
 submitting again.
 
+Download stopped before starting: volume or request limit
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Message** (examples): "... above the limit of 20.00 GiB; nothing was requested. Use --max-gib N or more to accept
+it", or, with ``--destine``, "... about N HTTP requests ..., above the limit of 10000; no chunk was read. Use
+--max-requests N or more".
+
+**Cause**: ``--ncar``, ``--wekeo``, ``--arco`` and ``--destine`` estimate the volume (and ``--destine`` the number of
+requests) before downloading, and the estimate passed the limit in force. Nothing was downloaded. For ARCO and
+DestinE the estimate is an upper bound (whole chunks, uncompressed); the volume received is usually smaller.
+
+**Solutions**: run again with the ``--max-gib`` (or ``--max-requests``) value given in the message, if you accept
+that volume, or reduce the request: a shorter track, a larger ``--time-resolution``, or another route that cuts the
+area on the server (``--cdsapi``, ``--wekeo``). With ``--destine``, remember the monthly quota of 500,000 requests of
+the account. A message about free disk space means the destination directory cannot hold the file: free space or
+write elsewhere.
+
+Optional package missing (``--wekeo``, ``--arco``, ``--destine``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Message** (example): "--wekeo needs the optional hda package: ...", or "--arco was tested with zarr 2 and found
+zarr 3 ...".
+
+**Solution**: install the extra of the route in the active environment, for example ``pip install -e ".[wekeo]"``,
+``".[arco]"`` or ``".[destine]"`` (see :doc:`installation`). ARCO and DestinE need zarr 2: if zarr 3 is installed,
+install the extra in a separate environment.
+
+Credential not found or refused (``--wekeo``, ``--arco``, ``--destine``, Get a Subset)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The message says which file or variable was looked for; the value is never printed. Check, without printing the key:
+
+- **WEkEO:** ``~/.hdarc`` with the lines ``user:`` and ``password:``, or ``HDA_USER`` and ``HDA_PASSWORD``.
+- **ARCO:** the CDS key of ``--cdsapi`` (``CDSAPI_KEY``, ``CDSAPI_RC`` or ``~/.cdsapirc``). HTTP 401 or 403: check
+  the key and that your CDS account accepted the ERA5 licence.
+- **DestinE:** ``~/.netrc`` with ``machine data.earthdatahub.destine.eu`` and ``password <key>``, or
+  ``DESTINE_EDH_TOKEN``. HTTP 401 or 403: check the key on the Earth Data Hub key page.
+- **Get a Subset:** ``GDEX_API_TOKEN`` or ``~/.gdex_api_token``.
+
+Keep these files private (``chmod 600``). See :ref:`rda-methods` for each route.
+
+``--destine``: HTTP 429 or "no longer updated"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- **HTTP 429 (too many requests):** the monthly request quota of the account may be exhausted. The run stopped
+  without retrying. Check the usage on your Earth Data Hub account page; the quota renews on the 1st of the month.
+- **"The Earth Data Hub Zarr v2 store used by --destine is no longer updated":** the track has dates after the
+  freeze of the store (2026-07-06). Nothing was read. Use another route for those dates.
+
+``--arco``: "--time-resolution ... is not a multiple of 6 h"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ARCO product is 6-hourly. Use ``--time-resolution 6`` (or 12, ...); the default is 3. For 3-hourly or hourly
+data use another route. Nothing was read.
+
+``--wekeo``: the order "was being submitted when an earlier run stopped"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+An earlier run stopped while sending an order, before WEkEO's answer was recorded, so the order may or may not
+exist on WEkEO. Nothing was requested. Check your WEkEO account; then remove ``<file>.wekeo-orders.json`` to submit
+again. An order "not ready after 3600 s" is different: it is recorded, and running the same command resumes it
+without a new order.
+
 ``--ncar``: the date is not available
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 GDEX publishes ERA5 months after the CDS. The last day of the track is requested first, so an unpublished date
-fails at once, before anything is downloaded, with a message suggesting ``--cdsapi``. Use ``--cdsapi`` for recent
-cases.
+fails at once, before anything is downloaded, with a message suggesting ``--cdsapi``. Use ``--cdsapi``, ``--wekeo``
+or ``--arco`` for recent cases.
 
 ``--ncar``: timeouts, HTTP 503 or 504
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Each request is attempted up to 4 times. If all attempts fail, run the same command again later: the responses
-already verified (in ``<file>.parts/``) are reused and only the missing ones are requested. In the D-Bench
-tests such failures occurred on some domains of 1.9–3.9 GiB; their cause has not been established.
+Each request is attempted a few times. If all attempts fail, run the same command again later: the pieces already
+verified (in ``<file>.parts/``) and the kerchunk reference files already downloaded are reused, and only the missing
+ones are requested. With the experimental NCSS method such failures were the rule in the 2026-11 benchmark (0 of 16
+successes); prefer the default kerchunk method.
 
 ``--ncar``: the existing file is not reused
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -373,8 +437,8 @@ A lock file ``<file>.lock`` prevents two downloads of the same file (for instanc
 Wait for the first one, or use different file names. A killed download does not block the next one; on systems
 where the lock is left behind, the message says how to remove it.
 
-"request not made" before a ``--cdsapi`` or ``--ncar`` download
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"request not made" before a download
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The track was checked against the hours of ``--time-resolution`` before downloading and the request could not serve
 it (for example track times that do not fall on the requested hours). Nothing was downloaded. Choose a
@@ -418,7 +482,7 @@ Analysis takes too long
 3. Omit ``-p`` for initial runs.
 4. Use ``-f`` or ``-t`` instead of ``-c`` when an interactive choice is not needed.
 5. Prefer an uncompressed, already subset NetCDF file: compressed files with large blocks can be read much more
-   slowly (an example is given in :ref:`rda-comparison`).
+   slowly (an example is given in "System Requirements and Performance" in :doc:`usage`).
 
 .. _ts-results-figures:
 
@@ -463,22 +527,25 @@ The periods fail with CyclophaserCompatibilityError
 Which acquisition method should I use?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It depends on the purpose: recent dates, account, transfer volume, tolerance to failures, and whether the study
-depends on magnitudes or vertical structure. See :ref:`rda-conclusions`.
+It depends on the purpose: recent dates, account, queue, transfer volume, levels and time step, and whether the
+study depends on magnitudes, boundary terms or vertical structure. See :ref:`rda-quick-choice` and
+:ref:`rda-conclusions`.
 
 Do I need all 37 levels?
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 Not necessarily. In the case assessed, 13 or 17 levels gave the same time evolution, signs and timing of Ca, Ce and
 Ck, but magnitudes changed (mainly Ca, about 5 % in the time mean). For magnitudes, budgets or vertical structure use
-the same full level set throughout. See :ref:`rda-science`.
+the same full level set throughout. See :ref:`rda-vertical`.
 
-Will CDS and NCAR files give identical results?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Will files from different routes give identical results?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Not always to the last digit. The fields agree within tight tolerances, but small temperature differences can move
-tendency and residual terms beyond 10\ :sup:`-4` of each column. Do not mix sources in one comparison that needs
-that level of agreement. See :ref:`rda-precision`.
+Not always. CDS and WEkEO gave identical files for identical requests; ARCO and the NCAR methods differ from the CDS
+by rounding only (at most 0.043 % in the cycle in the 2026-11 comparison); DestinE stores values with reduced
+precision, and some boundary, generation and residual terms differed by 1 % to 2.7 %. With 37 levels, small
+temperature differences can also move tendency and residual terms beyond 10\ :sup:`-4` of each column. Use one route
+for all the cases of a study. See :ref:`rda-precision`.
 
 Is the track ever interpolated?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

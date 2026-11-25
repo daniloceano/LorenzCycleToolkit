@@ -63,6 +63,32 @@ If you prefer using Python's built-in virtual environment:
 
       lorenzcycletoolkit --help
 
+Optional Packages for the Download Routes
+-----------------------------------------
+
+The CDS API (``--cdsapi``) and NCAR GDEX (``--ncar``) routes need nothing beyond ``requirements.txt``. Three routes
+need optional packages, installed as extras of the toolkit (from the cloned repository):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 22 60
+
+   * - Route
+     - Command
+     - Packages
+   * - ``--wekeo``
+     - ``pip install -e ".[wekeo]"``
+     - ``hda`` (2.40 or later) and ``requests``
+   * - ``--arco``
+     - ``pip install -e ".[arco]"``
+     - ``zarr`` 2 (zarr 3 is not supported), ``numcodecs`` < 0.16, ``fsspec`` and ``aiohttp``
+   * - ``--destine``
+     - ``pip install -e ".[destine]"``
+     - the same packages as ``[arco]``
+
+Without them, the route stops at once and prints the installation command. Accounts and credentials are described in
+:doc:`remote_data_acquisition`.
+
 Troubleshooting
 ---------------
 

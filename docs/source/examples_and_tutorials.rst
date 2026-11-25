@@ -239,8 +239,8 @@ If the NetCDF file already exists, the toolkit skips the download:
    # Download with 6-hour resolution (faster, less data)
    python lorenzcycletoolkit.py era5_6h.nc -t -r -p --cdsapi --time-resolution 6 --trackfile inputs/track_era5_example
 
-**For more details** (other ERA5 services, the experimental ``--ncar`` route, limits and how the routes
-compare), see :doc:`remote_data_acquisition`.
+**For more details** (the other ERA5 routes ``--wekeo``, ``--ncar``, ``--arco`` and ``--destine``, their limits
+and how their data compare), see :doc:`remote_data_acquisition`.
 
 Tutorial 4: Interactive Domain Selection
 -----------------------------------------

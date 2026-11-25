@@ -3,54 +3,33 @@
 Remote Data Acquisition Methods
 ===============================
 
-.. warning::
-
-   **This page is under revision (stage 4 of the modernisation project, November 2026).** Since 2026-11-19,
-   ``--ncar`` uses the **kerchunk** method by default; the method is chosen with ``--ncar-method
-   {kerchunk,subset,ncss}``, and NCSS remains available as an experimental method. The kerchunk reference files
-   are kept in ``inputs/kerchunk_refs`` (or ``--kerchunk-refs DIR``) and downloaded once when missing. The rest of
-   this page still describes the earlier state and will be rewritten.
-
-   **WEkEO is available (since 2026-11-23):** ``--wekeo`` downloads the same ERA5 file as ``--cdsapi`` (same area,
-   37 levels, hours and file contents) from WEkEO Harmonised Data Access, one request per month. It needs the
-   optional ``hda`` package (``pip install "lorenzcycletoolkit[wekeo]"``) and a free WEkEO account in ``~/.hdarc``
-   (lines ``user:`` and ``password:``) or in ``HDA_USER`` and ``HDA_PASSWORD``. ``--max-gib`` limits the volume
-   (default 20 GiB). See ``python lorenzcycletoolkit.py --help``; a full section will follow.
-
-   **ARCO Zarr is available (since 2026-11-24):** ``--arco`` reads the ERA5 pressure-level data from the *Analysis
-   Ready, Cloud Optimised* Zarr store of the CDS and writes the same file contents as ``--cdsapi`` (same area and
-   hours; ``inputs/namelist_ERA5-cdsapi``). Know the limits of the product before using it: **13 pressure levels**
-   (1000 to 50 hPa, nothing interpolated or completed), **every 6 hours** (``--time-resolution`` must be a multiple of
-   6; anything else is refused before any read), and a **transfer several times larger than the data kept**, because
-   whole chunks are read (7.5 times in the 2026-11 test). Terms of the Lorenz Energy Cycle can differ from routes
-   with 37 levels (in the LZV case, Ca was 5 % lower on average); against the CDS file the values differ only by
-   rounding (at most 0.04 % in the cycle in the 2b benchmark). It needs the optional packages
-   (``pip install "lorenzcycletoolkit[arco]"``) and the CDS API key of ``--cdsapi`` (``CDSAPI_KEY``, or
-   ``CDSAPI_RC`` / ``~/.cdsapirc``). ``--max-gib`` limits the volume (default 20 GiB), counted on the bytes
-   received. See ``python lorenzcycletoolkit.py --help``; a full section will follow.
-
-   **DestinE Earth Data Hub is available (since 2026-11-24):** ``--destine`` reads the ERA5 pressure-level data from
-   the Zarr v2 store of the Earth Data Hub used in the 2b benchmark and writes the same file contents as ``--cdsapi``
-   (same area and hours; ``inputs/namelist_ERA5-cdsapi``). Know the limits before using it: the product's **own 19
-   pressure levels** (1000 to 1 hPa, not interpolated; the toolkit uses those down to 10 hPa), **values stored with
-   reduced precision** (in the 2b comparison, 18 of 240 terms of the cycle differed between 1 % and 2.7 % from the
-   CDS: boundary, generation and residual terms; energy contents and conversions did not change), and a **monthly
-   quota of 500 000 HTTP requests** per account, one request per chunk. The requests are estimated and shown before
-   any read and limited by ``--max-requests`` (default 10 000); the transfer, many times the data kept, is limited by
-   ``--max-gib`` (default 20 GiB). Hourly data: any ``--time-resolution`` works. The v2 store is **no longer updated
-   since 2026-07-06** (the Earth Data Hub moved ERA5 to Zarr v3 stores, not supported here); later dates are
-   refused before any read. It needs the optional packages (``pip install "lorenzcycletoolkit[destine]"``) and the
-   Earth Data Hub API key in ``~/.netrc`` (``machine data.earthdatahub.destine.eu`` with ``password <key>``) or in
-   ``DESTINE_EDH_TOKEN``. See ``python lorenzcycletoolkit.py --help``; a full section will follow.
-
 .. raw:: html
 
-   <style>.wy-table-responsive table td, .wy-table-responsive table th { white-space: normal; }</style>
+   <style>
+   .wy-table-responsive table td, .wy-table-responsive table th { white-space: normal; }
+   .rda-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin: 1em 0 1.5em; }
+   .rda-card { border: 1px solid #d0d7de; border-radius: 6px; padding: 10px 14px; background: #fafbfc; }
+   .rda-card > p:first-child { font-size: 1.05em; margin-bottom: 6px; border-bottom: 1px solid #e1e4e8; padding-bottom: 4px; }
+   .rda-card ul { margin: 0 0 6px 0 !important; }
+   .rda-card li { list-style: none !important; margin-left: 0 !important; padding-left: 1.4em; text-indent: -1.4em; }
+   .rda-pros li::before { content: "\2714\FE0E\00a0\00a0"; color: #1a7f37; font-weight: bold; }
+   .rda-cons li::before { content: "\2716\FE0E\00a0\00a0"; color: #cf222e; font-weight: bold; }
+   .rda-card li > p { display: inline; margin: 0 !important; }
+   .rda-card li { margin-bottom: 4px !important; line-height: 1.4; }
+   .rda-card .rda-pros, .rda-card .rda-cons { margin-bottom: 4px; }
+   .rda-card-status { font-size: 0.85em; color: #57606a; margin-bottom: 6px !important; }
+   .rda-card-more { font-size: 0.85em; margin: 4px 0 0 0 !important; }
+   </style>
 
-The toolkit always computes the energetics from **one NetCDF file** of pressure-level fields. That file can be
-prepared by you, downloaded by the toolkit itself (``--cdsapi``, ``--ncar``), or prepared outside the toolkit from
-other ERA5 services. This page is the single reference for all of these routes: what each needs, how to use it,
-what was measured with it, and how the ERA5 products differ scientifically.
+The toolkit always computes the energetics from **one NetCDF file** of pressure-level fields. You can prepare that
+file yourself (the main route: give its name as ``infile``), or let the toolkit download it from one of **seven
+ERA5 routes** before the run. This page tells you, for each route, how to use it, what it needs (account, token,
+package), what time and volume to expect, how its data differ from those of the Copernicus Climate Data Store (CDS),
+and its limitations and best uses.
+
+All routes deliver the same reanalysis, ERA5. They differ in the pressure levels and time step of the product, in
+how the values are stored, and in how the data travel. This page shows those differences; it does **not** name one
+source as the correct one. The CDS is used as the reference of the comparisons only by convention.
 
 .. contents:: On this page
    :local:
@@ -58,25 +37,376 @@ what was measured with it, and how the ERA5 products differ scientifically.
 
 .. note::
 
-   **No method is best everywhere.** The measurements on this page come from a few tests, each on one day,
-   from one machine, for cyclone cases of 1979–1980 over the South Atlantic. Transfer times, queues, failures
-   and volumes depend on the network, the load of each service, the period requested and the size of the domain.
-   Read every number as an observation under the stated conditions, not as a property of the service.
+   **How to read the numbers.** Every time and volume on this page is **what we observed** in a stated test, on
+   stated dates, from one processing server in Brazil, for South Atlantic cyclone cases of 1979–1980. Queues,
+   network and service load change from day to day. Read the numbers as observations, not as promises; see
+   :ref:`rda-comparison`.
 
-   - **Measured:** observed in a stated run, on a stated date.
-   - **Estimated:** computed from sizes or documented limits, not observed.
-   - **Hypothesis:** a possible explanation that has not been tested.
+.. _rda-quick-choice:
+
+1. Quick choice
+---------------
+
+.. _rda-pros-cons:
+
+Pros and cons at a glance
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A short summary of each route. The details are further down: one section per route in :ref:`rda-methods`, the
+data differences in :ref:`rda-science` and the numbers with their caveats in :ref:`rda-comparison`.
+
+.. container:: rda-cards
+
+   .. container:: rda-card
+
+      :ref:`CDS API <rda-cdsapi>` — ``--cdsapi``
+
+      .. container:: rda-card-status
+
+         Status: official
+
+      .. container:: rda-pros
+
+         - the source most ERA5 analyses cite; reference of the comparisons on this page
+         - 37 levels, hourly; the most recent data (about 5 days behind real time)
+         - area cut on the server: small transfer (0.09 GB per case in the benchmark)
+
+      .. container:: rda-cons
+
+         - queue: a new request waited 2.7 h (median) in the benchmark
+         - needs a CDS account and API key
+
+      .. container:: rda-card-more
+
+         :ref:`Details → <rda-cdsapi>`
+
+   .. container:: rda-card
+
+      :ref:`WEkEO <rda-wekeo>` — ``--wekeo``
+
+      .. container:: rda-card-status
+
+         Status: integrated; tested on one case
+
+      .. container:: rda-pros
+
+         - delivered files identical to the CDS for identical requests
+         - its own queue, separate from the CDS one; 37 levels, hourly
+         - area cut on the server: small transfer (0.11 GB per case)
+
+      .. container:: rda-cons
+
+         - needs a WEkEO account and the extra ``[wekeo]``
+         - tested on one case only; its latest date was not checked
+         - an order can end in an unknown state (see :doc:`troubleshooting`)
+
+      .. container:: rda-card-more
+
+         :ref:`Details → <rda-wekeo>`
+
+   .. container:: rda-card
+
+      :ref:`kerchunk (NCAR) <rda-kerchunk>` — ``--ncar``
+
+      .. container:: rda-card-status
+
+         Status: official; default of ``--ncar``
+
+      .. container:: rda-pros
+
+         - no account, no token, no queue
+         - 37 levels, hourly; differs from the CDS by rounding only
+
+      .. container:: rda-cons
+
+         - transfers much more than it keeps (7.5 GB per case in the benchmark)
+         - GDEX copy is months behind the CDS
+         - slower than the other routes without a queue (16 min per case)
+
+      .. container:: rda-card-more
+
+         :ref:`Details → <rda-kerchunk>`
+
+   .. container:: rda-card
+
+      :ref:`Get a Subset (NCAR) <rda-subset>` — ``--ncar --ncar-method subset``
+
+      .. container:: rda-card-status
+
+         Status: official
+
+      .. container:: rda-pros
+
+         - area cut on the server (1.1 GB per case)
+         - 37 levels, hourly; differs from the CDS by rounding only
+
+      .. container:: rda-cons
+
+         - needs a UCAR/GDEX account and API token
+         - waiting for a free request slot took up to 6–8 h
+         - GDEX copy is months behind the CDS
+
+      .. container:: rda-card-more
+
+         :ref:`Details → <rda-subset>`
+
+   .. container:: rda-card
+
+      :ref:`NCSS (NCAR) <rda-ncss>` — ``--ncar --ncar-method ncss``
+
+      .. container:: rda-card-status
+
+         Status: experimental
+
+      .. container:: rda-pros
+
+         - no account
+
+      .. container:: rda-cons
+
+         - no success in the benchmark (0 of 16 requests)
+         - none of its uses is recommended now
+
+      .. container:: rda-card-more
+
+         :ref:`Details → <rda-ncss>`
+
+   .. container:: rda-card
+
+      :ref:`ARCO (CDS Zarr) <rda-arco>` — ``--arco``
+
+      .. container:: rda-card-status
+
+         Status: integrated; tested on one case
+
+      .. container:: rda-pros
+
+         - no queue; fast in the benchmark (6.8 min per case)
+         - recent data (about 5 days behind real time)
+         - differs from the CDS by rounding only on its levels
+
+      .. container:: rda-cons
+
+         - only **13 levels** and a **6-hourly** step
+         - reads whole stored chunks (2.5 GB per case)
+         - needs a CDS API key and the extra ``[arco]``; tested on one case
+
+      .. container:: rda-card-more
+
+         :ref:`Details → <rda-arco>`
+
+   .. container:: rda-card
+
+      :ref:`DestinE (Earth Data Hub) <rda-destine>` — ``--destine``
+
+      .. container:: rda-card-status
+
+         Status: integrated; tested on one case
+
+      .. container:: rda-pros
+
+         - 7.8 min per case in the benchmark
+         - hourly data on 19 levels
+
+      .. container:: rda-cons
+
+         - **reduced precision:** 18 of 240 cycle terms differed from the CDS by 1 % to 2.7 %
+         - **frozen store:** no data after 2026-07-06
+         - many small requests (1,528 in the full test) against a monthly quota of 500,000 per account
+         - needs a DestinE account, API key and the extra ``[destine]``
+
+      .. container:: rda-card-more
+
+         :ref:`Details → <rda-destine>`
+
+.. _rda-methods-overview:
+
+The seven routes at a glance
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+All routes take the area and the hours from the track file (see :ref:`rda-requirements`) and write a file that the
+toolkit reads with the same namelist rules.
+
+.. list-table:: Access, product and status
+   :header-rows: 1
+   :widths: 17 20 25 16 22
+
+   * - Route
+     - Option
+     - Account / token / package
+     - Levels / step
+     - Status
+   * - :ref:`CDS API <rda-cdsapi>`
+     - ``--cdsapi``
+     - CDS account and API key; no extra package
+     - 37 / 1 h
+     - official
+   * - :ref:`WEkEO <rda-wekeo>`
+     - ``--wekeo``
+     - WEkEO account; extra ``[wekeo]``
+     - 37 / 1 h
+     - integrated; tested on one case
+   * - :ref:`kerchunk <rda-kerchunk>` (NCAR)
+     - ``--ncar`` (default method)
+     - none
+     - 37 / 1 h
+     - official; default of ``--ncar``
+   * - :ref:`Get a Subset <rda-subset>` (NCAR)
+     - ``--ncar --ncar-method subset``
+     - UCAR/GDEX account and API token
+     - 37 / 1 h
+     - official
+   * - :ref:`NCSS <rda-ncss>` (NCAR)
+     - ``--ncar --ncar-method ncss``
+     - none
+     - 37 / 1 h
+     - **experimental**
+   * - :ref:`ARCO <rda-arco>` (CDS Zarr)
+     - ``--arco``
+     - CDS API key; extra ``[arco]``
+     - **13** / **6 h**
+     - integrated; tested on one case
+   * - :ref:`DestinE <rda-destine>` (Earth Data Hub)
+     - ``--destine``
+     - DestinE account and API key; extra ``[destine]``
+     - **19** / 1 h
+     - integrated; tested on one case
+
+.. list-table:: What we observed (details and caveats in :ref:`rda-comparison`)
+   :header-rows: 1
+   :widths: 15 24 18 21 22
+
+   * - Route
+     - Time per case, 2026-11 benchmark (median)
+     - Received per case, benchmark (median)
+     - One full test with the main command, 2026-11
+     - Difference from the CDS data
+   * - CDS API
+     - 2.7 h for a new request (queue); 30 s when the same request was repeated
+     - 0.09 GB
+     - not made
+     - reference by convention
+   * - WEkEO
+     - 1.2 min (possibly served from a cache)
+     - 0.11 GB
+     - ≈ 24 min (17 min of queue), 1.60 GiB
+     - identical for an identical request; rounding only otherwise
+   * - kerchunk
+     - 16 min
+     - 7.5 GB
+     - 31 min of acquisition, 9.85 GiB
+     - rounding only (≤ 0.043 % in the cycle)
+   * - Get a Subset
+     - 6.6 min, **plus** waits for a free request slot (up to 6–8 h)
+     - 1.1 GB
+     - not made
+     - rounding only (≤ 0.043 % in the cycle)
+   * - NCSS
+     - no success (0 of 16)
+     - —
+     - not made
+     - —
+   * - ARCO
+     - 6.8 min
+     - 2.5 GB
+     - 13 min 46 s, 4.60 GiB
+     - rounding only on the 13 levels; fewer levels
+   * - DestinE
+     - 7.8 min
+     - 3.1 GB
+     - 17 min 46 s, 1,528 requests, 8.79 GiB
+     - **reduced precision:** 18 of 240 terms of the cycle differed by 1 % to 2.7 %
+
+*Benchmark* (2026-11-10 to 2026-11-18): ten cyclone cases of 1979–1980, area = track + 5°, 13 levels (1000–50 hPa),
+6-hourly, three repetitions per case; the median is per case. These requests are smaller than those of the main
+command. *Full test*: one case (``19790205``) with the main command, area = track + 15° (225 × 633 points), 34
+six-hourly times and all the levels of the product; one run per route.
+
+.. _rda-temporal:
+
+Dates and time steps
+~~~~~~~~~~~~~~~~~~~~
+
+All products start in 1940. They differ in how recent their data are and in their time step:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 42 18 22
+
+   * - Route
+     - Latest data (when checked)
+     - Stored step
+     - ``--time-resolution``
+   * - CDS API, WEkEO
+     - CDS: about 5 days behind real time, updated daily (checked 2026-11-02); WEkEO serves the same CDS dataset
+       (its latest date was not checked)
+     - 1 h
+     - any whole number of hours (default 3)
+   * - kerchunk, Get a Subset, NCSS
+     - GDEX copy, months behind the CDS: 2026-07-31 when checked on 2026-10-26; updated monthly
+     - 1 h
+     - any whole number of hours
+   * - ARCO
+     - about 5 days behind real time: 2026-11-18 18 UTC when read on 2026-11-24
+     - 6 h (00, 06, 12, 18 UTC)
+     - 6, 12, 18 or 24 only; anything else is refused before any read
+   * - DestinE
+     - **frozen**: the store used is no longer updated since 2026-07-06; later dates are refused before any read
+     - 1 h
+     - any whole number of hours
+
+End dates move with each update: check the source before choosing a route for a recent case
+(`CDS ERA5 pressure levels <https://cds.climate.copernicus.eu/datasets/reanalysis-era5-pressure-levels>`_,
+`ECMWF ERA5 ARCO documentation <https://confluence.ecmwf.int/pages/viewpage.action?pageId=639215289>`_,
+`NCAR GDEX d633000 <https://gdex.k8s.ucar.edu/datasets/d633000/>`_,
+`DestinE ERA5 pressure levels <https://earthdatahub.destine.eu/collections/era5/datasets/era5-pressure-levels>`_).
+
+.. _rda-conclusions:
+
+Choosing by purpose
+~~~~~~~~~~~~~~~~~~~
+
+These are criteria, not a ranking.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 38 62
+
+   * - If ...
+     - consider ...
+   * - you have no account, or cannot keep a personal token
+     - ``--ncar`` (kerchunk, the default method): no account; it transfers much more than it keeps.
+   * - the case is recent (after the GDEX copy)
+     - ``--cdsapi`` or ``--wekeo``; ``--arco`` if 13 levels and 6 h are acceptable. Not ``--destine`` (frozen store).
+   * - you want the data that most ERA5 analyses cite, or must reproduce an earlier CDS run
+     - ``--cdsapi``; ``--wekeo`` delivered identical files for identical requests.
+   * - the CDS queue is too long for you
+     - ``--wekeo`` (its own queue), or the routes without a queue: ``--ncar`` (kerchunk) and ``--arco``.
+   * - transfer volume is limited
+     - routes that cut the area on the server: ``--cdsapi``, ``--wekeo``, Get a Subset. kerchunk, ARCO and DestinE
+       read whole stored chunks.
+   * - the analysis needs hourly or 3-hourly fields
+     - any route except ``--arco``.
+   * - you need the 37 levels (vertical structure, budgets, comparison with published magnitudes)
+     - ``--cdsapi``, ``--wekeo`` or ``--ncar``; not ``--arco`` (13 levels) or ``--destine`` (19 levels).
+   * - the study depends on boundary, generation or residual terms
+     - avoid ``--destine``: its reduced precision moved some of those terms by more than 1 % (see
+       :ref:`the DestinE warning <rda-destine-warning>`).
+   * - results must be compared across cases or with another study
+     - one route, one level set and one numeric precision for all cases; report them.
+
+.. _rda-methods:
+
+2. The routes
+-------------
 
 .. _rda-requirements:
 
-1. Overview and data requirements
----------------------------------
+2.0 Common to all routes
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-What the toolkit reads
-~~~~~~~~~~~~~~~~~~~~~~
-
-Whatever the route, the input is one NetCDF file on a regular latitude–longitude grid with pressure levels and
-five fields:
+**What the toolkit reads.** One NetCDF file on a regular latitude–longitude grid with pressure levels and five
+fields:
 
 .. list-table::
    :header-rows: 1
@@ -84,7 +414,7 @@ five fields:
 
    * - Field
      - ERA5 short name
-     - Units expected by the default namelist
+     - Units expected by the ERA5 namelist
    * - Air temperature
      - ``t``
      - K
@@ -101,144 +431,82 @@ five fields:
      - ``v``
      - m s\ :sup:`-1`
 
-The variable and coordinate names, and the units, must match the namelist (see :doc:`configuration`). When
-``inputs/namelist`` does not exist, ``inputs/namelist.default`` is used; it describes the NetCDF files that the CDS
-delivers for ERA5 (it is identical to the preset ``inputs/namelist_ERA5-cdsapi``). ``--ncar`` writes its file
-with the names of the namelist of the run, so the same namelist serves both downloads.
+**Namelist.** ``--cdsapi``, ``--wekeo``, ``--arco`` and ``--destine`` write the file with the names of the preset
+``inputs/namelist_ERA5-cdsapi`` and use that preset both to prepare the data and to compute the cycle; you do not
+need to create ``inputs/namelist``. ``--ncar`` writes its file with the names of ``inputs/namelist`` (or
+``inputs/namelist.default``, identical to the ERA5 preset) and reads it again. See :doc:`configuration`.
 
-Integrated access and external preparation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+**What a request contains.** Every route derives the same request from the track:
 
-- **Integrated (native) access:** the toolkit derives the request from the track, downloads the fields, writes the
-  NetCDF file and runs the energetics in one command (``--cdsapi``, ``--ncar``).
-- **Experimental standalone retrieval:** the module ``python -m src.utils.ncar_gdex`` downloads the file without
-  running the energetics; besides NCSS it offers two experimental GDEX access methods (``--method kerchunk`` and
-  ``--method subset``) that are **not** options of ``lorenzcycletoolkit.py``. They are tested offline only; the
-  D-Bench (the project's acquisition benchmark) measurements of these methods were made with separate clients.
-- **External preparation:** you obtain the fields with your own tools (for example ``xarray``) and write a NetCDF
-  file that matches the contract above; the toolkit then reads it as a local input.
+- the extent of the track with a **15° buffer**, rounded outwards to whole degrees, on the 0.25° ERA5 grid;
+- the hours of the track on the grid of ``--time-resolution`` (default 3 h): from the first track time, every step,
+  up to the last step that does not pass the last track time;
+- the levels of the product: 37 (1000–1 hPa) for the CDS, WEkEO and the NCAR methods, 13 for ARCO, 19 for DestinE.
 
-What a track request contains
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The integrated routes request the same data for a track:
-
-- the extent of the track with a 15° buffer, rounded outwards to whole degrees, on the 0.25° ERA5 grid;
-- the hours of the track on the grid of ``--time-resolution`` (default 3 h): from the first track time on the first
-  day, every step on the middle days, up to the last track time on the last day;
-- the 37 ERA5 pressure levels, 1000 to 1 hPa.
-
-In float32, the volume of values a case needs is
+The track defines the area and hours also in fixed mode (``-f``). In float32, the values a case needs weigh
 
 .. math::
 
    V = 5 \times n_\mathrm{levels} \times n_\mathrm{lat} \times n_\mathrm{lon} \times n_\mathrm{times} \times 4\ \mathrm{bytes}.
 
-The ten cyclone trajectories examined in the acquisition tests need 0.5 to 6.7 GiB with 37 levels. The methods differ in **how much more than V they
-transfer**, **where the area and the hours are cut**, and **when the data start to arrive**.
+The ten cyclone cases of the tests need 0.5 to 6.7 GiB with 37 levels. Routes that read stored chunks (kerchunk,
+ARCO, DestinE) transfer several times V; see each section.
 
-Time step of the data and of the track
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The data may be sampled less often than the track (for example ``--time-resolution 6`` or a 6-hourly product with
-a 3-hourly track). In track mode the toolkit then keeps the track positions at the data times, unchanged, and warns
-once; nothing is interpolated. With ``--cdsapi`` and ``--ncar`` this is checked **before** the download. See
-:ref:`ts-track-alignment`.
+**Time step of the data and of the track.** The data may be sampled less often than the track (for example
+``--time-resolution 6`` or the 6-hourly ARCO product with a 3-hourly track). In track mode the toolkit then keeps the
+track positions at the data times, unchanged, and warns once; nothing is interpolated. Every route checks this
+**before** the download. See :ref:`ts-track-alignment`.
 
 .. _rda-levels:
 
-Vertical levels: nominal and effective
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+**Nominal and effective levels.** Levels above 10 hPa are discarded before any computation, and only levels
+complete inside the box at every time are integrated. The **effective** levels are therefore 32 (1000–10 hPa) for
+the 37-level routes, 17 (1000–10 hPa) for DestinE and 13 (1000–50 hPa) for ARCO. Each run records the levels it
+used in ``lec_metadata.json`` (``vertical.levels_used_Pa``; see :doc:`results`). Their effect is discussed in
+:ref:`rda-vertical`.
 
-The ERA5 products do **not** all carry the same levels (see :ref:`rda-methods-overview`). Moreover, levels above
-10 hPa are discarded before any computation, and only levels complete inside the box at every time step are
-integrated. The **effective** levels are therefore 32 (1000–10 hPa) for the 37-level products, 17 (1000–10 hPa)
-for the 19-level DestinE grid and 13 (1000–50 hPa) for the 13-level ARCO grid. Each run records the levels it used
-in ``lec_metadata.json`` (``vertical.levels_used_Pa``; see :doc:`results`). How much this matters is discussed in
-:ref:`rda-science`.
+**Limits checked before any download.** Except for ``--cdsapi``, every route estimates the volume first and stops,
+**without downloading anything**, when the estimate passes ``--max-gib`` (default **20 GiB**) or the free disk. The
+message gives the estimate, the limit in force and the ``--max-gib`` needed. The bytes received, failed attempts
+included, are counted against the same limit during the transfer. ``--destine`` also limits the number of HTTP
+requests (``--max-requests``, default 10 000). With ``--cdsapi``, the size is limited by the CDS itself (per-account
+cost limits).
 
-Authentication and provenance
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+**An existing file is reused.** If the file named on the command line already exists, it is read as it is and
+nothing is downloaded. ``--ncar`` reuses it only after checking it against its provenance record, and the guarded
+CDS mode refuses it. Use a new file name for a new download.
 
-- Keep keys and tokens in the files or environment variables that each client reads, with permissions for the
-  owner only (``chmod 600``). **Never print them, paste them in issues, logs or notebooks, or commit them.**
-- ``lec_metadata.json`` of every run records the SHA-256 of its input file. ``--ncar`` also writes a provenance
-  record next to the file. For externally prepared files, keep your own record of the product, the selection and
-  the date of the download.
+**Input files are kept.** No input file is deleted unless ``--delete-downloaded-input`` is given; then only a file
+that this run downloaded, unchanged, after a successful run. See :doc:`usage`.
 
-.. _rda-methods-overview:
+**Provenance.** ``lec_metadata.json`` records the SHA-256 of the input file. ``--ncar``, ``--wekeo``, ``--arco``
+and ``--destine`` also write ``<file>.provenance.json`` next to the file: the route, the request, the bytes received,
+the software versions and the SHA-256 of the file.
 
-Methods at a glance
-~~~~~~~~~~~~~~~~~~~
+**Credentials.** Keep keys and tokens in the files or environment variables that each route reads, with
+permissions for the owner only (``chmod 600``). The toolkit never writes them to logs or provenance records.
+**Never print them, paste them in issues, logs or notebooks, or commit them.**
 
-.. list-table::
-   :header-rows: 1
-   :widths: 22 20 13 9 16 20
-
-   * - Method
-     - Product
-     - Levels (hPa)
-     - Step
-     - Account
-     - Status in the toolkit
-   * - :ref:`CDS API <rda-cdsapi>`
-     - CDS ``reanalysis-era5-pressure-levels``
-     - 37 (1–1000)
-     - 1 h
-     - CDS account and key
-     - supported: ``--cdsapi``
-   * - :ref:`NCAR GDEX NCSS <rda-ncss>`
-     - NCAR GDEX ``d633000``
-     - 37 (1–1000)
-     - 1 h
-     - none
-     - experimental: ``--ncar``
-   * - :ref:`NCAR GDEX Get a Subset <rda-subset>`
-     - NCAR GDEX ``d633000``
-     - 37 (1–1000)
-     - 1 h
-     - UCAR/GDEX account and token
-     - not in the main command; experimental standalone retrieval
-   * - :ref:`NCAR GDEX kerchunk <rda-kerchunk>`
-     - NCAR GDEX ``d633000``
-     - 37 (1–1000)
-     - 1 h
-     - none
-     - not in the main command; experimental standalone retrieval
-   * - :ref:`CDS ERA5 ARCO Zarr <rda-arco>`
-     - ECMWF ARCO time-chunked store
-     - 13 (50–1000)
-     - 6 h
-     - see the section
-     - external preparation only
-   * - :ref:`DestinE ERA5 Zarr <rda-destine>`
-     - DestinE Earth Data Hub
-     - 19 (1–1000)
-     - 1 h
-     - DestinE personal token
-     - not tested
-
-.. _rda-methods:
-
-2. Acquisition methods
-----------------------
+**Optional packages.** WEkEO, ARCO and DestinE need extra packages, installed with the extras of the toolkit (see
+:doc:`installation`). Without them, the route stops at once with the installation command.
 
 .. _rda-cdsapi:
 
-2.1 CDS API — native integration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2.1 CDS API (``--cdsapi``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Status:** supported (``--cdsapi``).
+**Status:** official.
 
-**Mechanism.** One asynchronous job per day, with the five fields together. The Climate Data Store queues the job,
-cuts the area and the hours, converts GRIB to NetCDF and makes the file available. The toolkit waits for each job,
-downloads it and merges the days into the file named on the command line.
+**How it works.** One job per day of the track, with the five fields together. The Climate Data Store queues the
+job, cuts the area and the hours, converts GRIB to NetCDF and makes the file available; the toolkit waits for each
+job, downloads it and merges the days.
 
-**Requirements and authentication.**
+**Credential, step by step.**
 
 1. Register at the `Climate Data Store <https://cds.climate.copernicus.eu>`_.
 2. Accept the ERA5 licence (CC-BY-4.0) in the CDS web interface; without it the request is refused (HTTP 403).
-3. Put your personal key in ``~/.cdsapirc`` (owner-only permissions):
+3. Copy your personal API key from your CDS profile into ``~/.cdsapirc`` and make the file private
+   (``chmod 600 ~/.cdsapirc``):
 
    .. code-block:: text
 
@@ -252,572 +520,422 @@ downloads it and merges the days into the file named on the command line.
    python lorenzcycletoolkit.py case.nc -t -r -p --cdsapi --trackfile inputs/track_case
    python lorenzcycletoolkit.py case.nc -t -r -p --cdsapi --time-resolution 6 --trackfile inputs/track_case
 
-- ``case.nc`` does not need to exist: it is written by the download. **If it already exists, it is used as it is**
-  and nothing is downloaded, so a second run with other flags reuses it.
-- The track defines the area and hours also in fixed mode (``-f``).
-- No input file is deleted after a run unless ``--delete-downloaded-input`` is given (see :doc:`usage`).
-- The log shows one line per day with the hours requested and the size received, then the merged file and its time
-  coverage; ``-v`` adds timing details.
+``case.nc`` is written by the download. The log shows one line per day with the hours requested and the size
+received; ``-v`` adds details. A complete example is Tutorial 3 in :doc:`examples_and_tutorials`.
 
-**Data.** ERA5 at 0.25°, 37 levels, 1940 to a few days before today, NetCDF as converted by the CDS.
+**What we observed** (2026-11 benchmark, 13 levels, 5° area). The time is almost all queue. New requests took a
+median of 2.7 h per case (6.5 min to 4.4 h; 10 of 10 completed). The same requests repeated one or two days later were
+ready in about 30 s, probably served from results the CDS had kept (not confirmed); that is the best case, not the
+time of a new request. About 0.09 GB per case was received.
 
-**Advantages.** The most recent dates; area and hours cut on the server (about V transferred, estimated); the
-copy of ERA5 most analyses cite.
+**Limitations.**
 
-**Limitations.** Queue waits that vary from minutes to hours; per-account queue and cost limits —
-``--time-resolution 1`` over large areas or long periods may exceed them; use 3, 6 or 12 hours. The 37 levels are
-always requested.
+- Queue waits from minutes to hours; per-account cost limits: ``--time-resolution 1`` over large areas or long
+  periods may exceed them; use 3, 6 or 12 hours.
+- The 37 levels are always requested.
+- **Stopping the client does not cancel a job:** it may stay queued or running and use the account's quota. Check
+  the account for pending requests before submitting again.
 
-**Operational considerations.** Stopping the client does **not** cancel a job: it may stay queued or running and
-use the account's quota. Check the account for pending requests before submitting again. For controlled runs
-(benchmarks), the opt-in guarded mode (``--cds-max-seconds`` and related options) adds a deadline, a ledger and
-one submission at a time per account; see :doc:`usage`.
+**Best uses.** Recent cases; analyses that must match the copy of ERA5 most studies cite; small and medium requests
+when a queue of hours is acceptable.
 
-.. _rda-ncss:
+**Guarded mode for controlled runs.** ``--cds-max-seconds`` and related options add a global deadline, a private
+ledger written before each submission and one submission at a time per account. A job that ended (completed, or
+whose download failed) does not block the next submission; a job in an unknown state does, until you check the
+account and resolve the ledger. See :doc:`usage`.
 
-2.2 NCAR GDEX NCSS — experimental native integration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _rda-wekeo:
 
-**Status:** experimental (``--ncar --ncar-method ncss``; it was the default of ``--ncar`` until 2026-11-19). Validated on one two-day case: its values were bit-identical to an earlier
-download of the same GDEX data, and the toolkit reproduced that case's results byte for byte. Its options and
-messages may still change.
+2.2 WEkEO (``--wekeo``)
+~~~~~~~~~~~~~~~~~~~~~~~
 
-**Mechanism.** Synchronous HTTP requests to the THREDDS NetCDF Subset Service of the NCAR Geoscience Data Exchange
-(GDEX, dataset `d633000 <https://doi.org/10.5065/BH6N-5N20>`_), one per field and day (two when the area crosses
-Greenwich). The server cuts the area and picks the hours and answers on the same connection; there is no job
-queue, but each response still takes seconds to be prepared. The toolkit checks every response and writes one file.
+**Status:** integrated (since 2026-11-23); tested on one real case.
 
-**Requirements and authentication.** None (no account).
+**How it works.** The same request as ``--cdsapi`` (area, 37 levels, hours, variables) is sent to the WEkEO
+Harmonised Data Access (HDA) service, dataset ``EO:ECMWF:DAT:REANALYSIS_ERA5_PRESSURE_LEVELS``, as **one order per
+month**. WEkEO queues the order and delivers NetCDF; the toolkit keeps the hours of the track and writes the same
+file contents as ``--cdsapi`` (names, units, dimension order, longitude convention).
 
-**Usage.** Show the requests and their size first, then run:
+**Credential and package, step by step.**
+
+1. Create a free account at `WEkEO <https://www.wekeo.eu/register>`_.
+2. Install the optional package: ``pip install -e ".[wekeo]"`` (the ``hda`` client, version 2.40 or later).
+3. Put the account in ``~/.hdarc`` (owner-only), or in the environment variables ``HDA_USER`` and ``HDA_PASSWORD``:
+
+   .. code-block:: text
+
+      user: <your-wekeo-username>
+      password: <your-wekeo-password>
+
+**Usage.**
 
 .. code-block:: bash
 
-   python -m src.utils.ncar_gdex case.nc --trackfile inputs/track_case --time-resolution 6 --dry-run
-   python lorenzcycletoolkit.py case.nc -t -r --ncar --trackfile inputs/track_case --time-resolution 6
+   python lorenzcycletoolkit.py case.nc -t -r --wekeo --trackfile inputs/track_case --time-resolution 6
 
-``--ncar`` and ``--cdsapi`` cannot be used together. The standalone command (without ``--dry-run``) downloads the
-file without running the energetics and also accepts ``--workers`` (up to 4 requests at a time), ``--max-gib``
-(largest volume received), ``--float64``, ``--no-compress`` (NetCDF-3) and ``--keep-parts``. ``--max-gib`` is
-also accepted by ``lorenzcycletoolkit.py``, only together with ``--ncar``, with the same meaning.
+**Orders are recorded before they are sent.** ``<file>.wekeo-orders.json`` gets an entry before each order and the
+order id as soon as WEkEO answers. If a run stops, the same command resumes the recorded orders without sending them
+again. If a run stopped while an order was being sent (no id recorded), its remote state is unknown and the route
+refuses to continue until you check your WEkEO account and remove that file. The file is deleted at the end of a
+successful download, and the order ids go to the provenance record. An order not ready after 1 h stops the run; the
+next run resumes it.
 
-**Data.** The same ERA5 analysis, converted from GRIB by GDEX. GDEX publishes ERA5 **some months after** the CDS
-(on 2026-10-26 it covered 1940-01-01 to 2026-07-31; check the `dataset page <https://doi.org/10.5065/BH6N-5N20>`_).
-The last day of the track is requested first, so an unpublished date fails at once, before anything else is
-downloaded. The values are kept as delivered (float32), without interpolation or unit conversion, in compressed
-NetCDF-4, with the variable names of the namelist (which must describe geopotential, not geopotential height).
+**What we observed.**
 
-**What is written.**
+- *Benchmark* (13 levels, 5° area): median 1.2 min per case (0.4 to 7.3 min), 0.11 GB, 30 of 30. The requests were
+  identical in the three repetitions, so WEkEO may have delivered results it had kept: read 1 min as the delivery of
+  a ready result, not as the time of a new order.
+- *Full test* (2026-11-23, one case, 37 levels, 15° area): one order; **17 min in the queue**, 4.5 min of transfer,
+  2 min of assembly, about **24 min** in all; **1.60 GiB** received (the estimate, an upper bound, was 3.54 GiB).
 
-- ``case.nc``, written only after every response and the file itself have been checked;
-- ``case.nc.provenance.json``: URL, size and SHA-256 of every response, the SHA-256 and numeric type of
-  ``case.nc``, how the request was derived from the track, software versions and timings.
+**Limitations.**
 
-**Checks and limits.**
+- WEkEO documents a limit of 500 downloadable items per hour and no monthly quota.
+- The ``hda`` client cannot cancel an order; an interrupted order stays on WEkEO (its id is recorded and resumed).
+- Two runs writing the same file at the same time are not prevented.
+- The volume estimate is an uncompressed upper bound; the real volume is usually smaller.
 
-- Every response: HTTP status, size and NetCDF signature; variable and units; times, levels, latitudes and
-  longitudes exactly those requested; no missing or non-finite values.
-- **Volume:** 20 GiB per retrieval by default, for the three methods and for both commands; ``--max-gib``
-  raises or lowers it. The estimate is checked before any data is requested: if it passes the limit, the command
-  stops and reports the estimate, the limit in force and the ``--max-gib`` needed. Every byte read from the
-  service is counted, failed attempts included; each request reserves the most its response may hold before it
-  is made, and no request is made that could pass the limit. TLS and TCP/IP overheads are not counted, so the
-  network traffic is slightly larger.
-- **Time:** an attempt fails after 300 s without data, or when it lasts longer than 300 s plus the time its
-  largest response takes at 25 kB/s.
-- **Retries:** network failures, cut or too slow responses and HTTP 429/5xx are attempted up to 4 times, waiting
-  10, 30 and 90 s (or the longer ``Retry-After``; over 300 s the program stops and asks to run again later).
-- **Stops at once** on a refused request (4xx), a redirect, a page that is not NetCDF (e.g. maintenance), a
-  response larger than its reservation or a response that is not the requested data.
-- **One download per file:** a lock ``<file>.lock`` stops a second download of the same file; a killed download
-  does not block the next one.
+**Best uses.** An alternative to the CDS queue with the same request and the same file contents; recent cases;
+37 levels.
 
-**Running again.** An existing ``case.nc`` is never overwritten. It is reused only if its provenance record matches
-its SHA-256, it has the same variable names and numeric type, and it covers the whole request; otherwise the
-program stops and explains why (run without ``--ncar`` to use any NetCDF file as a plain local input). An
-interrupted retrieval keeps its verified responses in ``case.nc.parts/`` and downloads only what is missing. A
-misspelt file name starts a new download: use ``--dry-run`` first.
+.. _rda-ncar:
 
-**Costs (measured in the validation, 2026-10-27, from Brazil).** No money. About 4 bytes per value: a two-day track
-at 6-hour resolution over 129 × 129 points needed 10 requests of 9.9 MB (94 MiB). Each response waited 6 to 24 s
-before its first byte and then arrived at about 3 MB/s. The compressed file was 44 % of the volume downloaded.
+NCAR GDEX routes (``--ncar``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Precision.** The toolkit computes in the numeric type of its input file; ``--ncar`` keeps float32 by default. In
-the two-day case, float32 and float64 copies of the same values gave fixed and moving results that differed by at
-most 2.7 × 10\ :sup:`-7` of the largest value of each output column, with no sign change. ``--float64`` costs about
-3 % more disk, twice the input memory and, in the moving framework, about twice the time. The regression references
-of the test suite were computed from float64 input. A float64 file is not reused by a float32 request, nor the
-reverse.
+The three NCAR methods read the GDEX copy of ERA5 (dataset `d633000 <https://doi.org/10.5065/BH6N-5N20>`_, 37
+levels, hourly). The method is chosen with ``--ncar-method {kerchunk,subset,ncss}`` (default ``kerchunk``). They
+deliver the same values, published **months after** the CDS (see :ref:`rda-temporal`); the last day of the track is
+requested first, so an unpublished date fails at once.
 
-**Limitations and failures.** One long synchronous response per request. In the D-Bench tests of 2026-10-30 and
-2026-10-31 four runs failed, two on each day, on domains of 1.9 to 3.9 GiB: a request got no response within 300 s,
-or HTTP 503/504 from the GDEX front end, four times in a row; the largest domain (6.7 GiB) succeeded. The cause
-(service load, particular files, or both) has **not** been established.
+Common to the three methods:
 
-**Citation.** ECMWF (2019), ERA5 Reanalysis (0.25 Degree Latitude-Longitude Grid), Research Data Archive at the
-National Center for Atmospheric Research, Computational and Information Systems Laboratory,
-https://doi.org/10.5065/BH6N-5N20, together with the Copernicus terms of use of ERA5 (CC-BY-4.0).
-
-.. _rda-subset:
-
-2.3 NCAR GDEX Get a Subset — external method
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Status:** selectable with ``--ncar --ncar-method subset`` (since 2026-11-19).
-
-- *In the code:* ``python -m src.utils.ncar_gdex case.nc --trackfile ... --method subset``.
-- *Tested:* offline only, against emulated GDEX services (``tests/test_gdex_sources.py``).
-- *Benchmarked:* in D-Bench, with a separate instrumented client, not with this module.
-- *Not demonstrated:* the times and reliability of the current standalone implementation against the real
-  service.
-
-**Mechanism.** An asynchronous request through the GDEX API: the client submits a control document (dataset, date
-range, fields, area), polls the request until it is ``Completed``, lists its output files and downloads them. The
-server cuts the area; the output is one NetCDF-4 file per field and day. The request has no time step, so **every
-hour** of the date range is delivered; the track hours are picked locally and the files are merged into one file.
-An area crossing Greenwich needs only one request (measured): the files hold both sides in 0–360° order.
-
-**Requirements and authentication.** A UCAR/GDEX account and its personal API token. The standalone module reads it
-from ``GDEX_API_TOKEN`` or ``~/.gdex_api_token`` (owner-only). The token is sent with every API call: keep it out of
-logs, shell history and shared files.
-
-**Preparing a file.** Either use the experimental standalone module, or prepare the files yourself and merge them
-into one NetCDF file with the five fields, the track hours and names matching the namelist (see
-:ref:`rda-requirements`).
-
-**Data.** Same values as NCSS: in the D-Bench tests the files of the three GDEX methods were identical value by value.
-
-**Advantages.** Server-side area cut with compressed files (measured 1.22–1.30 × V for 3-hourly tracks); short
-remote processing in the benchmark (2–6 minutes per request).
-
-**Limitations (documented by GDEX and observed).**
-
-- at most 8 open requests per user; a request is purged after 7 days;
-- **identical requests are deduplicated**: while a request is listed, in any state (including ``Set for Purge``),
-  submitting it again returns the old one instead of a new run;
-- a purge is asynchronous: the request stays ``Set for Purge`` for hours;
-- a submission may take more than two minutes to be answered, and the request may be created even when the client
-  stopped waiting.
-
-**Operational considerations.** A failed download is repeated from the file list **without a new request**. Never
-"force" a new request by changing its scientific parameters. Disk holds every hour of the range before the merge;
-with a field-by-field merge, memory stays small (peak RSS 0.43–0.58 GiB measured).
+- **What is written:** ``case.nc``, written only after every response and the file itself have been checked, and
+  ``case.nc.provenance.json`` (URL, size and SHA-256 of every response, SHA-256 and numeric type of the file, how
+  the request was derived from the track, software versions and timings).
+- **Checks:** every response is checked (HTTP status, size, NetCDF signature, variable, times, levels, latitudes
+  and longitudes, no missing or non-finite values).
+- **Running again:** an existing ``case.nc`` is never overwritten; it is reused only if it matches its provenance
+  record, has the same variable names and numeric type and covers the whole request. An interrupted retrieval keeps
+  its verified pieces in ``case.nc.parts/`` and downloads only what is missing. A lock ``<file>.lock`` stops a second
+  download of the same file.
+- **Precision:** the values are kept as delivered, float32, in compressed NetCDF-4. In a two-day test (2026-10-27),
+  float32 and float64 copies of the same values gave results that differed by at most 2.7 × 10\ :sup:`-7` of the
+  largest value of each output column.
+- **Standalone retrieval:** ``python -m src.utils.ncar_gdex case.nc --trackfile ... --method kerchunk`` downloads
+  the file without computing the cycle. Add ``--dry-run`` to see the requests and their size first. It also accepts
+  ``--workers``, ``--max-gib``, ``--float64``, ``--no-compress`` and ``--keep-parts`` (see its ``--help``).
+- **Citation:** ECMWF (2019), ERA5 Reanalysis (0.25 Degree Latitude-Longitude Grid), Research Data Archive at the
+  National Center for Atmospheric Research, Computational and Information Systems Laboratory,
+  https://doi.org/10.5065/BH6N-5N20, together with the Copernicus terms of use of ERA5 (CC-BY-4.0).
 
 .. _rda-kerchunk:
 
-2.4 NCAR GDEX kerchunk — external method
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2.3 NCAR GDEX kerchunk (``--ncar``, default method)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Status:** the default method of ``--ncar`` (since 2026-11-19); ``--ncar-method kerchunk``.
+**Status:** official; the default method of ``--ncar`` since 2026-11-19.
 
-- *In the code:* ``python -m src.utils.ncar_gdex case.nc --trackfile ... --method kerchunk --kerchunk-refs DIR``
-  (the reference files must already be in ``DIR``; the module does not download them).
-- *Tested:* offline only, against emulated services (``tests/test_gdex_sources.py``).
-- *Benchmarked:* in D-Bench, with a separate instrumented client, not with this module.
-- *Not demonstrated:* the times and reliability of the current standalone implementation against the real
-  service.
+**How it works.** GDEX publishes kerchunk reference files (JSON) that map every chunk of its NetCDF-4 files to a
+byte range. A chunk is one field, one hour, all 37 levels and the **whole globe** (721 × 1440 points). The toolkit
+reads only the chunks of the hours it needs, with HTTPS range requests, and cuts the area locally.
 
-**Mechanism.** GDEX publishes kerchunk reference files (JSON) that map every chunk of its NetCDF-4 files to a byte
-range. A chunk is one field, one hour, all 37 levels and the **whole globe** (721 × 1440 points), compressed with
-zlib and byte shuffle. The client reads only the chunks of the hours it needs with HTTPS range requests,
-decompresses them and cuts the area **locally**.
+**Credential.** None. The reference files (one per field and decade, 14 to 28 MB each) are kept in
+``inputs/kerchunk_refs`` (or ``--kerchunk-refs DIR``) and downloaded once, only for the fields and decades of the
+request, when missing. With kerchunk the volume check needs these files, so missing ones are downloaded before it.
 
-**Requirements and authentication.** No account. The reference files must be obtained first (about 16 MB per field
-and decade). They name a host whose TLS certificate failed on 2026-10-30; the benchmark client used another GDEX host
-serving the same files.
+**Usage.**
 
-**Preparing a file.** Read the chunks of the track hours, cut the area and write one NetCDF file matching the
-contract in :ref:`rda-requirements`, or use the experimental standalone module.
+.. code-block:: bash
 
-**Advantages.** No account, no queue and no server-side processing; every chunk is an independent request that can
-be retried alone and resumed; no failed range in 2,190 requests in the D-Bench tests.
+   python lorenzcycletoolkit.py case.nc -t -r --ncar --trackfile inputs/track_case --time-resolution 6
+   python lorenzcycletoolkit.py case.nc -t -r --ncar --trackfile inputs/track_case --max-gib 30
 
-**Limitations.** The whole globe is transferred for every field and hour, so the volume does not shrink with the
-domain (measured 3.0–11.1 × V, more for small domains). Writing chunk by chunk keeps memory small (peak RSS
-0.70–0.74 GiB); a prototype that held all fields in memory needed 13.7 GB on the largest case.
+**What we observed.**
+
+- *Benchmark* (13 levels, 5° area): median 16 min per case (6.9 to 33 min), 7.5 GB received, 30 of 30, including the
+  cases that cross Greenwich.
+- *Full test* (2026-11-23, one case, 37 levels, 15° area, 34 times): 31 min of acquisition (28 min of transfer),
+  **9.85 GiB** received in 170 requests, no retry; the file was bit-identical to the benchmark data on the common
+  region. In another test the same day, the download of one reference file failed four times on the server's
+  connection; running again reused the files already downloaded.
+
+**Limitations.** The whole globe is transferred for every field and hour, so the volume grows with the number of
+times and does **not** shrink with the area: the 8-day test case at 6 h needed about 10 GiB, so a longer track or a
+3-hour step can pass the 20 GiB default (raise it with ``--max-gib``). The connection to the GDEX file server was intermittent in one test.
+
+**Best uses.** No account or token; no queue; historical cases (before the GDEX end date); runs that must resume
+chunk by chunk.
+
+.. _rda-subset:
+
+2.4 NCAR GDEX Get a Subset (``--ncar --ncar-method subset``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Status:** official.
+
+**How it works.** An asynchronous request through the GDEX API: the toolkit submits the dataset, dates, fields and
+area, waits until the request is ``Completed``, lists its output files and downloads them. The server cuts the area;
+every hour of the date range is delivered (one NetCDF-4 file per field and day) and the track hours are picked
+locally.
+
+**Credential, step by step.**
+
+1. Create a UCAR/GDEX account and obtain its personal API token from the GDEX service.
+2. Put the token in the environment variable ``GDEX_API_TOKEN`` or in the file ``~/.gdex_api_token`` (owner-only).
+   The token is sent with every API call: keep it out of logs, shell history and shared files.
+
+**Usage.**
+
+.. code-block:: bash
+
+   python lorenzcycletoolkit.py case.nc -t -r --ncar --ncar-method subset --trackfile inputs/track_case
+
+**What we observed** (benchmark, 13 levels, 5° area): median **6.6 min** per request (2.6 to 12.6 min), 1.1 GB
+received. That time does **not** include the wait for a free request slot: GDEX allows few open requests per account
+and clears purged ones in batches, so the 20 waits of the benchmark added 46 h in all, the longest 6 to 8 h. 13 of
+the 20 cases that ran completed. Most failures (two cases, "file larger than the limit") came from the toolkit's own
+size check, which counted the chunked transfer framing; this was corrected on 2026-11-19 and the corrected size check
+was confirmed on one file, but a full case was not retrieved again with this method after the correction.
+
+**Limitations.**
+
+- At most 8 open requests per account; the toolkit submits nothing while 7 are listed (requests "Set for Purge" are
+  not counted). A request is purged after 7 days, and a purge takes hours.
+- **Identical requests are deduplicated:** while a request is listed, in any state, submitting it again returns the
+  old one. Never "force" a new request by changing its scientific parameters.
+- A submission may take more than two minutes to be answered.
+- Disk holds every hour of the date range before the merge.
+
+**Best uses.** Server-side cut with compressed files (about 1.2–1.3 × V in earlier tests); when a GDEX account is
+available and waits of hours for a slot are acceptable.
+
+.. _rda-ncss:
+
+2.5 NCAR GDEX NCSS (``--ncar --ncar-method ncss``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Status:** **experimental.** It was the default of ``--ncar`` until 2026-11-19.
+
+**How it works.** Synchronous HTTP requests to the THREDDS NetCDF Subset Service of GDEX, one per field and day (two
+when the area crosses Greenwich). The server cuts the area and answers on the same connection. Each request is tried
+up to 4 times (waits of 10, 30 and 90 s); an attempt fails after 300 s without data.
+
+**Credential.** None.
+
+**What we observed.** **No success in the 2026-11 benchmark** (0 of 12 in the first campaign, 0 of 16 in the second):
+timeouts, HTTP 504 and incomplete responses from the GDEX server. In earlier tests (2026-10-30 and 2026-10-31) four
+cases completed and two failed.
+
+**Limitations.** One long synchronous response per request; the service failed repeatedly in 2026-11.
+
+**Best uses.** None recommended now; kept for comparison and in case the service becomes reliable again.
 
 .. _rda-arco:
 
-2.5 CDS ERA5 ARCO Zarr — external preparation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2.6 CDS ARCO Zarr (``--arco``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Status:** not a toolkit route. Assessed once (2026-11-02) by converting a selection to NetCDF outside the toolkit.
+**Status:** integrated (since 2026-11-24); tested on one real case.
 
-**Mechanism.** ECMWF's analysis-ready, cloud-optimised (ARCO) ERA5 store is a Zarr archive read over HTTPS. In the
-time-chunked store used here, each chunk holds **one time and one level for 721 latitudes and 1024 longitudes**, so
-a regional case downloads whole latitude bands.
+.. warning::
 
-**Requirements and authentication.** In the assessment, the existing CDS API key was sent as a bearer token. Whether
-the store can be read without an account, and what its access conditions will be, was not established.
+   ``--arco`` delivers **13 pressure levels** (1000, 925, 850, 700, 600, 500, 400, 300, 250, 200, 150, 100 and
+   50 hPa; nothing interpolated or completed) **every 6 hours**. Terms of the cycle can differ from the 37-level
+   routes: in the one case measured, Ca was 5 % lower on average (see :ref:`rda-vertical`). The program repeats this
+   warning at the start of the run and in the provenance record.
 
-**Data.** 13 pressure levels (50–1000 hPa) and a 6-hourly time step; it covered 1940-01-01 to 2026-10-27 18 UTC when
-queried (the store is updated daily, about 5 days behind real time; see :ref:`rda-temporal`). With a 3-hourly track, the toolkit keeps the positions at the 6-hourly times (see
-:ref:`ts-track-alignment`). Effective levels: 13.
+**How it works.** The toolkit reads ECMWF's *Analysis Ready, Cloud Optimised* (ARCO) ERA5 store, a Zarr archive read
+over HTTPS, without a queue. Each stored chunk holds one time and one level for **721 latitudes × 1024
+longitudes**, so a regional case reads whole latitude bands. The toolkit cuts the area and the hours and writes the
+same file contents as ``--cdsapi``.
 
-**Preparing a file.** The example below reads the store with ``xarray`` (``zarr`` 2 and ``fsspec`` with
-``aiohttp``) and writes a NetCDF file whose names match the default namelist. Adapt the times and area to your
-track. The key is read from an environment variable and must not be written into the script.
+**Credential and package, step by step.**
 
-.. code-block:: python
+1. Use the CDS account and API key of ``--cdsapi`` (see :ref:`rda-cdsapi`); the key is sent as a bearer token. In
+   our tests no other licence was asked.
+2. Install the optional packages: ``pip install -e ".[arco]"`` (zarr 2, numcodecs < 0.16, fsspec, aiohttp; zarr 3
+   is not supported).
+3. The key is read from ``CDSAPI_KEY``, or from the file named by ``CDSAPI_RC``, or from ``~/.cdsapirc``.
 
-   import os
-   import xarray as xr
+**Usage.**
 
-   url = ("https://arco.datastores.ecmwf.int/cadl-arco-time-048/arco/"
-          "reanalysis_era5_pressure_levels/pl/timeChunked.zarr")
-   headers = {"Authorization": f"Bearer {os.environ['CDS_API_KEY']}"}
-   ds = xr.open_zarr(url, consolidated=True, storage_options={"headers": headers})
-   sel = (ds[["t", "z", "u", "v", "w"]]
-          .rename({"time": "valid_time", "pressureLevel": "pressure_level"})
-          .sel(valid_time=slice("1979-12-29T06", "1980-01-04T18"),
-               latitude=slice(-60, -18), longitude=slice(-82, -6)))
-   sel["pressure_level"].attrs["units"] = "hPa"
-   sel.load().to_netcdf("case_arco.nc")
+.. code-block:: bash
 
-**Advantages.** No job queue; its values were bit-identical to NCAR GDEX on the common levels (see
-:ref:`rda-precision`).
+   python lorenzcycletoolkit.py case.nc -t -r --arco --trackfile inputs/track_case --time-resolution 6
 
-**Limitations.** Only 13 levels and a 6-hourly step; much more is transferred than used (2.71 GB for 0.36 GB of
-values in the case assessed); the client matters (a new HTTPS connection per chunk was about three times slower
-than one persistent connection); reading the local Zarr copy took 40–45 s against 0.16–0.25 s for the converted
-NetCDF.
+``--time-resolution`` must be a multiple of 6 (6, 12, ...); anything else, including the default 3, is refused
+before any read.
+
+**What we observed.**
+
+- *Benchmark* (13 levels, 5° area): median 6.8 min per case (2.6 to 20 min), 2.5 GB received, 30 of 30.
+- *Full test* (2026-11-24, one case, 15° area, 34 times): 4,420 chunks; **4.60 GiB** received (the upper bound
+  checked before reading was 12.16 GiB), 3.9 × the values kept; **13 min 46 s** in all, after a correction of the
+  client (the first run took 50 min). No retry.
+
+**Limitations.**
+
+- 13 levels and a 6-hourly step (see the warning above).
+- The transfer is several times the values kept (whole chunks): 3.9 to about 10 × in our tests, depending on the
+  area.
+- The ECMWF guide declares no usage limits, and warns that formats may change.
+- The bytes counted are those of the response bodies; HTTP and TLS overheads are not counted.
+
+**Best uses.** No queue; recent cases (updated daily); 6-hourly analyses where 13 levels are acceptable, such as the
+time evolution of the conversions.
 
 .. _rda-destine:
 
-2.6 DestinE ERA5 Zarr — not yet tested
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2.7 DestinE Earth Data Hub (``--destine``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Status:** not a toolkit route and **not measured**: no DestinE token was available for the assessment.
-*Update (2026-11-24): the route* ``--destine`` *now exists (see the note at the top of this page); it reads the
-Zarr v2 store, whose chunks hold 120 hours × 256 × 256 points of one level. The chunk shape given below is that of
-the Zarr v3 stores, which the route does not use. This section will be rewritten.*
+**Status:** integrated (since 2026-11-24); tested on one real case.
 
-**Mechanism and data.** The Destination Earth Data Hub distributes ERA5 as Zarr with 19 pressure levels
-(1–1000 hPa) and an hourly step, from 1940; on 2026-11-02 its catalogue covered up to 2026-10-15, with monthly
-updates (see :ref:`rda-temporal`). Its chunks hold 60 days × 15° × 15° for one level and one variable.
+.. warning::
 
-**Requirements.** A DestinE personal token.
+   ``--destine`` delivers the product's own **19 pressure levels** (1000 to 1 hPa, not interpolated; 17 are used,
+   down to 10 hPa) and **values stored with reduced precision**. In the 2026-11 comparison, 18 of 240 terms of the
+   cycle differed from the CDS by 1 % to 2.7 % (see :ref:`the DestinE warning <rda-destine-warning>`). The store used is **frozen since
+   2026-07-06**. The program repeats these warnings at the start of the run, in the file and in the provenance record.
 
-**What is known (estimated, not measured).** For the case assessed, about 1400–2300 chunks (≈ 29–47 GB uncompressed)
-would be read for less than 1 GB of values. Effective levels: 17 (1000–10 hPa). The effect of the 17-level grid on
-the energetics was measured by subsampling a 37-level file (see :ref:`rda-science`), not with DestinE data.
+**How it works.** The toolkit reads the ERA5 Zarr store of the Destination Earth (DestinE) Earth Data Hub over
+HTTPS, without a queue. It uses the Zarr v2 store ``reanalysis-era5-pressure-levels-v0.zarr`` (the one of the
+2026-11 benchmark), whose chunks hold **120 hours × 1 level × 256 × 256 points**. In July 2026 the Earth Data Hub
+moved ERA5 to Zarr v3 stores, which this version of the toolkit does not read. Every chunk read is **one HTTP
+request** against the account's monthly quota.
 
-**Preparing a file.** The same contract applies (:ref:`rda-requirements`); no tested example is offered.
+**Credential and package, step by step.**
 
-.. _rda-comparison:
+1. Create a DestinE platform account and generate a personal API key on the
+   `Earth Data Hub key page <https://earthdatahub.destine.eu/quota-api-keys>`_.
+2. Install the optional packages: ``pip install -e ".[destine]"`` (the same as ``[arco]``).
+3. Put the key in ``~/.netrc`` (owner-only), as the Earth Data Hub recommends, or in the environment variable
+   ``DESTINE_EDH_TOKEN`` (a variable of the toolkit):
 
-3. Comparison of acquisition methods
-------------------------------------
+   .. code-block:: text
 
-.. _rda-temporal:
+      machine data.earthdatahub.destine.eu
+        password <your-api-key>
 
-3.1 Which dates and time steps can each method provide?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+**Usage.** Before reading any chunk, the run shows how many requests and how many bytes it may need, and stops if
+they pass the limits:
 
-Four things are easily confused:
+.. code-block:: bash
 
-- the **coverage of ERA5** itself (1940 to a few days ago);
-- the **period a given service publishes**, which can end months earlier than ERA5;
-- the **time step of the fields** the service stores (hourly or 6-hourly);
-- the **time step you request** for an analysis (``--time-resolution``, or your own selection), which can only pick
-  times the service stores.
+   python lorenzcycletoolkit.py case.nc -t -r --destine --trackfile inputs/track_case --time-resolution 6
+   python lorenzcycletoolkit.py case.nc -t -r --destine --trackfile inputs/track_case --max-requests 2000 --max-gib 46
 
-.. note::
+**What we observed.**
 
-   All the products listed cover ERA5 from **1940** onwards, subject to the availability of each service; they differ
-   in how recent their data are, in their time step and in their pressure levels.
+- *Benchmark* (13 levels, 5° area): median 7.8 min per case (2.6 to 19 min), 3.1 GB received, 27 of 30 (two network
+  failures and one passing data defect in the first repetition).
+- *Full test* (2026-11-24, one case, 19 levels, 15° area, 34 times): **1,528 requests** (0.3 % of the monthly quota),
+  all HTTP 200, no retry; **8.79 GiB** received (the upper bound checked before reading was 45.23 GiB), 5.4 × the
+  values kept; **17 min 46 s** in all.
 
-.. list-table:: Levels, recent availability and time step of each method (official pages checked on 2026-11-02)
-   :header-rows: 1
-   :widths: 16 13 21 12 18 20
+**Limitations.**
 
-   * - Method
-     - Pressure levels (available / used by LECTK)
-     - Latest data / update cycle
-     - Stored step
-     - Step you can request
-     - Access
-   * - :ref:`CDS API <rda-cdsapi>`
-     - 37 / 32
-     - about 5 days behind real time; updated daily
-     - 1 h
-     - ``--time-resolution`` (hours; default 3)
-     - CDS account and key
-   * - :ref:`NCAR NCSS <rda-ncss>`
-     - 37 / 32
-     - 2026-07-31 23 UTC; GDEX updates monthly, months behind the CDS
-     - 1 h
-     - ``--time-resolution``
-     - none
-   * - :ref:`NCAR Get a Subset <rda-subset>`
-     - 37 / 32
-     - as NCSS (same GDEX archive)
-     - 1 h
-     - every hour of the date range is delivered; hours picked locally
-     - UCAR/GDEX account and token
-   * - :ref:`NCAR kerchunk <rda-kerchunk>`
-     - 37 / 32
-     - as NCSS, if reference files exist for the period
-     - 1 h
-     - any stored hour (one chunk per field and hour)
-     - none
-   * - :ref:`CDS ARCO Zarr <rda-arco>`
-     - 13 / 13
-     - updated daily, about 5 days behind real time; delivery times may vary
-     - 6 h (00, 06, 12, 18 UTC)
-     - 6 h or multiples
-     - CDS API key (bearer token)
-   * - :ref:`DestinE Zarr <rda-destine>`
-     - 19 / 17
-     - 2026-10-15; updated monthly
-     - 1 h
-     - any stored hour
-     - DestinE token
+- **Frozen store:** no data after its freeze on 2026-07-06, and it may be withdrawn without notice. Later dates are
+  refused before any read.
+- **Quota:** 500,000 requests per month per account, renewed on the 1st; beyond it the service answers HTTP 429 and
+  the run stops. The toolkit limits each run (``--max-requests``), not the month: check the usage on your account
+  page.
+- **Reduced precision** and **19 levels** (see the warning above).
+- Large chunks: the transfer is many times the values kept, and the limit is checked on an upper bound. For the
+  8-day test case that bound was 45 GiB, so ``--max-gib 46`` was needed although 8.79 GiB arrived.
 
-Sources: `CDS ERA5 pressure levels <https://cds.climate.copernicus.eu/datasets/reanalysis-era5-pressure-levels>`_,
-`ECMWF ERA5 ARCO documentation <https://confluence.ecmwf.int/pages/viewpage.action?pageId=639215289>`_,
-`NCAR GDEX d633000 <https://gdex.k8s.ucar.edu/datasets/d633000/>`_,
-`DestinE ERA5 pressure levels <https://earthdatahub.destine.eu/collections/era5/datasets/era5-pressure-levels>`_.
-End dates move with each update: check the source before choosing a method for a recent case. The three NCAR
-methods read the same archive, but whether a period is reachable also depends on the service and, for kerchunk, on
-the reference files.
-
-**Consequences for an analysis.**
-
-- A case from the last months is available only from the CDS (API or ARCO) and, up to its monthly update, from
-  DestinE.
-- With ARCO a 3-hourly track is used at 6-hourly times (see :ref:`ts-track-alignment`); hourly or 3-hourly analyses
-  need an hourly product.
-- "Available" is the number of levels the product publishes; "used by LECTK" is the number that enters the
-  calculations by default, since levels above 10 hPa are discarded (see :ref:`rda-levels`). The effect of fewer
-  levels is discussed in :ref:`rda-vertical`.
-
-.. _rda-performance:
-
-3.2 How fast is each method, and how much does it transfer?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Why these tests were made.** Before integrating more acquisition methods into the toolkit, the time to obtain a
-usable file, the volume transferred, the memory used and the behaviour under failures were measured for the NCAR
-methods (the project's acquisition benchmark, D-Bench: ten historical South Atlantic cyclone trajectories of 1979–1980, 2026-10-31). The ARCO store was examined
-later on one case (2026-11-02). The CDS API was measured in an earlier, separate test (2026-10-30).
-
-**What they can and cannot tell you.** The tests show how the mechanisms differ — where the area is cut, how much is
-transferred, how failures are handled. Each case was run **once per method**, from one server in Brazil, on one day;
-service load, network and queues change from day to day. The numbers are observations, not a ranking.
-
-**Practical results.**
-
-.. list-table::
-   :header-rows: 1
-   :widths: 18 26 28 28
-
-   * - Method
-     - Time to a usable file (observed)
-     - Data transferred
-     - Notes
-   * - Get a Subset
-     - median 16 min (6–38 min, 9 cases)
-     - 1.2–1.3 × the values needed
-     - faster than kerchunk in all 9 shared cases and than NCSS in all 3 shared cases
-   * - kerchunk
-     - median 41 min (14–74 min, 10 cases)
-     - 3–11 × the values needed (whole globe per field and hour)
-     - most of its time (74–82 %) is spent transferring whole-globe chunks
-   * - NCSS (``--ncar --ncar-method ncss``, experimental)
-     - median 25 min (11–93 min, 4 cases)
-     - 1.0 × the values needed
-     - median of different cases from the others; see 3.3
-   * - CDS API (``--cdsapi``)
-     - 54 min for one case (separate test, 2026-10-30)
-     - about the values needed (estimated)
-     - mostly queue time, which varies from minutes to hours
-   * - ARCO Zarr
-     - 6 min with 4 parallel requests; 21–22 min with one request at a time (one case)
-     - 7.5 × the values needed (whole latitude bands)
-     - strongly dependent on the client configuration
-   * - DestinE Zarr
-     - not measured
-     - estimated ≈ 29–47 GB for < 1 GB of values in one case
-     - —
-
-"Values needed" is the float32 size of the five fields over the area and times of the case (0.5 to 6.7 GiB for the
-37-level cases tested). Times include the checks of the resulting file.
-
-.. figure:: _static/remote_data_acquisition/stageB_time.png
-   :alt: Minutes to a validated NetCDF file for each case (ordered by data size) and method.
-   :width: 100%
-
-   Time to a validated NetCDF file, one run per case and NCAR method (2026-10-31). Cases are ordered by size.
-   × marks a failed run, – a case not run, "inc" a Get a Subset case not submitted (see 3.3).
-
-.. figure:: _static/remote_data_acquisition/stageB_transfer.png
-   :alt: Bytes received divided by the float32 content V for each case and method.
-   :width: 100%
-
-   Bytes received (failed attempts included) divided by the values needed, for each case.
-
-**Memory.** Peak memory was 0.4–0.6 GiB for Get a Subset, about 0.7 GiB for kerchunk (both writing piece by piece)
-and 0.5–3.2 GiB for NCSS, whose process also ran the energetics.
-
-**About Zarr.** No general speed advantage of Zarr was shown: ARCO was faster than NCSS on the case examined only
-with four parallel requests, and NCSS was not tried in parallel. Chunked stores read whole chunks, so a regional case
-transfers much more than it uses.
-
-**Reading the file afterwards.** The file layout also affects the toolkit run. On the case examined on 2026-11-02
-(27 six-hourly times), the run took about 11 s from an uncompressed six-hourly NetCDF file and 128 s from the
-original CDS file (3-hourly, compressed in blocks of 19 times) with the same values; block decompression is the
-likely cause, not tested in isolation.
-
-.. _rda-reliability:
-
-3.3 How do the methods fail, and what limits them?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Outcome of the NCAR tests (ten cases, one attempt per case and method):
-
-- **Get a Subset:** 9 of 9 eligible cases completed. The tenth was not submitted, because an identical request from
-  an earlier test was still on the account and GDEX would have returned it instead of a fresh run.
-- **kerchunk:** 10 of 10 completed, without a single retried range in 2,190 requests.
-- **NCSS:** 4 completed and 2 failed (no response within 300 s, or HTTP 504, four times in a row). As fixed before
-  the test, a method was stopped after two consecutive failures, so the remaining 4 cases were not run; they are
-  untested, not failures.
-
-With 6 to 10 attempts per method, these counts describe this test; they are not failure rates of the services.
-
-.. list-table:: Limits and recovery
-   :header-rows: 1
-   :widths: 18 41 41
-
-   * - Method
-     - Limits and failure modes
-     - After an interruption
-   * - CDS API
-     - per-account queue and cost limits; a stopped client leaves the job alive
-     - check the account for pending jobs before submitting again
-   * - NCAR NCSS
-     - toolkit limits (20 GiB, 4 attempts, 300 s); timeouts and 503/504 seen on some domains
-     - run the same command: verified responses in ``<file>.parts/`` are reused
-   * - Get a Subset
-     - 8 open requests; identical requests deduplicated; 7-day purge; slow submissions
-     - download again from the file list; never resubmit with altered parameters
-   * - kerchunk
-     - none seen on the service; certificate issue on one host (2026-10-30)
-     - each chunk is independent; resume from the chunks written
-   * - ARCO Zarr
-     - access conditions not established
-     - depends on the client used
-   * - DestinE Zarr
-     - not tested
-     - not tested
-
-.. _rda-test-interpretation:
-
-3.4 How to interpret these results
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-- **Mechanism matters more than format.** Methods that cut the area on the server (CDS, NCSS, Get a Subset) transfer
-  close to what is used; methods that read stored chunks (kerchunk, ARCO, DestinE) transfer whole globes or bands.
-- **Times are not comparable across tests.** The CDS, NCAR and ARCO measurements come from different days, machines
-  or conditions; only the NCAR methods were compared on the same cases and day.
-- **Medians cover different cases.** NCSS succeeded on three small domains and the largest one; compare methods on
-  the shared cases (the ratios quoted above).
-- **The standalone implementations of Get a Subset and kerchunk were not timed**: their measurements come from the
-  separate test clients.
-- **Your conditions decide.** Network, service load, period and domain size can reverse an observed difference.
-
-**Details and provenance.** The test design (random case order, limits fixed before the first request, sealed
-protocol), quartiles, request counts and per-case results are kept in the permanent records of the project
-(``docs/evolution/``) and in the public run table
-``_static/remote_data_acquisition/stageB_runs.csv``, produced by ``benchmarks/d_bench/stageb_report.py``. The
-cases are identified there by track labels (see :doc:`remote_data_acquisition_case_details`).
+**Best uses.** Hourly fields up to mid-2026 without a queue, when boundary, generation and residual terms are not
+central to the study; comparison with the other products.
 
 .. _rda-science:
 
-4. Scientific differences and implications
-------------------------------------------
-
-All six methods deliver the same reanalysis, ERA5. This section explains why files obtained by different routes can
-still differ numerically, how far those differences propagate into the Lorenz energy cycle computed by the toolkit,
-and how the number of pressure levels affects the conversion terms Ca (zonal to eddy available potential energy),
-Ce (eddy available potential to eddy kinetic energy) and Ck (eddy to zonal kinetic energy).
-
-The results come from historical South Atlantic cyclone cases of 1979–1980. Each case is a cyclone trajectory
-(track) identified by an internal label such as ``19791150``; these labels are used only for traceability in the
-evidence files and are not dates or parameters you give to the program. The per-case tables are in
-:doc:`remote_data_acquisition_case_details`.
+3. Differences in the data
+--------------------------
 
 .. _rda-precision:
 
-4.1 Do different acquisition methods produce the same meteorological data?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+3.1 Three groups of products
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Almost, but not always bit for bit. The meteorological content is the same; what can differ is how the values were
-packed, converted and written by each service (for example, GRIB decoding, scaling and compression in the NetCDF
-delivered by the CDS). The differences found are in the last digits of single-precision (float32) numbers:
+In the 2026-11 benchmark, the same ten cases were downloaded by six routes (NCSS had no success) and the toolkit was
+run on every file with the same code and configuration (fixed box, 13 levels, 1000–50 hPa). Each route was compared
+with the CDS. The files formed **three groups**, identical within each group:
 
-- **NCAR methods among themselves:** the five fields (t, z, w, u, v) were identical value by value in every case
-  where two or three NCAR methods succeeded.
-- **NCAR and CDS (37 levels, nine cases):** all files passed field tolerances fixed before the comparison
-  (t 0.005 K; z 2.0 m\ :sup:`2` s\ :sup:`-2`; w 0.001 Pa s\ :sup:`-1`; u, v 0.01 m s\ :sup:`-1`). The largest
-  differences were 2.4 × 10\ :sup:`-4` K in temperature and 0.06 m\ :sup:`2` s\ :sup:`-2` in geopotential; w, u and
-  v were identical.
-- **ARCO and NCAR (13 common levels, one case):** identical bit for bit.
-- **ARCO and CDS (13 levels, one case):** winds and vertical velocity identical; temperature offset by 1 to 8 units
-  in the last place of float32 (up to 2.4 × 10\ :sup:`-4` K), only at 700–1000 hPa; geopotential by up to
-  0.06 m\ :sup:`2` s\ :sup:`-2` in a few slices. The CDS NetCDF is the one that differs from the other two.
+.. list-table::
+   :header-rows: 1
+   :widths: 24 38 38
 
-**Which representation reproduces the original GRIB most faithfully has not been determined**: that requires a GRIB
-request for the same case, which was not made. Equal values on shared fields, levels and times also do not make two
-products identical as a whole (they differ in levels and time step; see :ref:`rda-temporal`).
+   * - Group
+     - Input fields against the CDS
+     - Lorenz energy cycle against the CDS
+   * - **CDS, WEkEO**
+     - identical
+     - identical (240 of 240 terms)
+   * - **ARCO, kerchunk, Get a Subset**
+     - rounding only: at most 2.4 × 10\ :sup:`-4` K in temperature and 0.0625 m\ :sup:`2` s\ :sup:`-2` in
+       geopotential; winds and omega identical
+     - small differences, at most 0.043 % of the scale of a term; no sign change
+   * - **DestinE**
+     - steps of reduced precision: up to 0.125 K in temperature and 64 m\ :sup:`2` s\ :sup:`-2` in geopotential (at
+       the top); small differences in winds and omega; mean bias negligible
+     - **18 of 240** terms differ by 1.04 % to 2.67 % (see below); the others are small; no sign change
 
-4.2 How do differences in the input data affect the energy cycle?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"Small" and "relevant" refer to thresholds fixed before the comparison (1 % of the scale of each term for the cycle);
+a relevant difference does not by itself change a meteorological conclusion. The comparison shows the differences;
+it does not establish which group reproduces the original ERA5 GRIB most faithfully.
 
-Four levels of agreement are worth keeping apart:
+**WEkEO equals the CDS only for identical requests.** In the full test of ``--wekeo`` (15° area, 37 levels), its
+winds and omega were identical to the CDS benchmark data, but temperature and geopotential differed by rounding (at
+most 1.2 × 10\ :sup:`-4` K and 0.003 m\ :sup:`2` s\ :sup:`-2`), and the cycle by at most 0.007 %. A likely
+explanation, not verified, is that the service packs the values again for each requested area.
 
-- **identical data** — the same numbers; the energetics are then identical too;
-- **equivalent within a numerical tolerance** — every energy term agrees within a criterion set in advance;
-- **a numerical difference** — at least one term exceeds that criterion;
-- **a physically relevant difference** — one that would change how the cyclone's energetics are interpreted.
+.. _rda-destine-warning:
 
-The toolkit was run on the NCAR and CDS files of nine cases, and every output column (energy, conversion,
-generation, boundary, tendency and residual terms) was compared. The criterion, fixed before the comparison, was a
-difference of at most 10\ :sup:`-4` of the typical size of that column (with a floor of 10\ :sup:`-9`).
+.. warning::
 
-- **Result:** in **four of the nine** paired comparisons all terms were equivalent; in **five**, at least one term
-  exceeded the criterion. The terms that exceeded it were mostly the zonal available potential energy (Az), its
-  time tendency and the residuals; Ca exceeded it in one case.
-- **Size:** the largest departure was about 0.07 % (6.7 × 10\ :sup:`-4`) of the column scale — a numerical
-  difference far below the size of the energy terms discussed in cyclone studies. Exceeding the criterion is **not**
-  in itself a change in the meteorological interpretation.
-- **Mechanism (one case diagnosed):** replacing the NCAR temperature with the CDS temperature made the energetics
-  equivalent; replacing the geopotential did not. Small temperature differences are amplified through the static
-  stability into Az and its tendency. For the other four cases this is a plausible hypothesis, not tested.
-- **Fewer levels, smaller amplification:** with 13 levels (ARCO vs CDS) the same kind of offsets kept every term
-  within the criterion, whereas with 32 levels they did not — consistent with a static-stability amplification that
-  grows as levels get closer.
+   **DestinE: reduced precision.** Over the ten cases, the 18 terms that differed from the CDS by more than 1 % were
+   **boundary terms** (BΦE six times, BΦZ four times, BAe once), **generation terms** (Gz and Ge, twice each) and
+   **residuals** (RGz three times). The energy contents, conversions and tendencies changed by less than 1 %. The
+   affected terms depend on the geopotential at the walls of the box or close the budget by difference. In the full
+   test of ``--destine`` (one case), only BΦE passed 1 % (1.21 %; 1.24 % in the benchmark for the same case). The
+   cause of the steps (values stored with fewer bits) is consistent with the data but **not verified**.
 
-In practice: do not expect results from NCAR and CDS files to agree to 10\ :sup:`-4` of every term, especially in
-tendency and residual terms.
+**Full tests with the main command against the CDS** (one case, 34 times, computed on the benchmark grid):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Route
+     - Largest difference in the cycle
+   * - WEkEO
+     - 0.007 % (RGz); no sign change
+   * - ARCO
+     - 0.007 % (RGz); identical to the ARCO and kerchunk benchmark data
+   * - DestinE
+     - BΦE 1.21 %; all the others below 1 %; energy contents and conversions ≤ 0.03 %; identical to the DestinE
+       benchmark data
 
 .. _rda-vertical:
 
-4.3 How does vertical resolution affect Ca, Ce and Ck?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+3.2 Vertical levels: how Ca, Ce and Ck change
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**The experiment.** One cyclone case (29 December 1979 – 4 January 1980, 27 six-hourly times) was computed several
-times from the **same** 37-level CDS file, keeping different subsets of its pressure levels. The values on the kept
-levels are bit-identical, so only the vertical grid changes:
+The comparisons above use the same 13 levels for every route. The level set of each product is a separate effect,
+measured so far on **one case only**.
 
-- **number and spacing of levels** in the same layer: 32 → 17 levels over 1000–10 hPa (the DestinE grid), and
-  29 → 13 levels over 1000–50 hPa (the ARCO grid);
-- **top of the column**: 32 levels up to 10 hPa → 29 levels up to 50 hPa.
+**The experiment** (2026-11-02). One cyclone case (29 December 1979 – 4 January 1980, 27 six-hourly times) was
+computed several times from the **same** 37-level CDS file, keeping different subsets of its levels. The values on
+the kept levels are bit-identical, so only the vertical grid changes:
+
+- number and spacing of levels in the same layer: 32 → 17 levels over 1000–10 hPa (the DestinE grid), and 29 → 13
+  levels over 1000–50 hPa (the ARCO grid);
+- top of the column: 32 levels up to 10 hPa → 29 levels up to 50 hPa.
 
 **Why levels matter.** The energy terms are vertical integrals, and Ca and Ce depend on the static stability, a
-vertical derivative of temperature. Wider spacing changes both the integral and that derivative, most where the
-spacing changes most: near the surface the 37-level products have a level every 25 hPa, the 13- and 19-level grids
-every 75 hPa.
+vertical derivative of temperature. Near the surface the 37-level products have a level every 25 hPa, the 13- and
+19-level grids every 75 hPa.
 
 .. list-table:: Change in the column values, time mean over 27 times (reference grid first)
    :header-rows: 1
@@ -846,133 +964,237 @@ every 75 hPa.
    :alt: Time series of Ca, Ce and Ck with 32, 17 and 13 levels, and their differences.
    :width: 100%
 
-   Column values of Ca, Ce and Ck over the cyclone's life (left) and differences between level sets (right). Left:
-   32 levels to 10 hPa (reference), 17 levels to 10 hPa (DestinE grid) and 13 levels to 50 hPa (ARCO grid). Right:
-   17 − 32 and 13 − 29 levels (spacing in the same layer) and 29 − 32 levels (top at 50 instead of 10 hPa).
+   Column values of Ca, Ce and Ck over the cyclone's life (left) and differences between level sets (right), one
+   case, 2026-11-02. Left: 32 levels to 10 hPa (reference), 17 levels to 10 hPa (DestinE grid) and 13 levels to
+   50 hPa (ARCO grid). Right: 17 − 32 and 13 − 29 levels (spacing in the same layer) and 29 − 32 levels (top at 50
+   instead of 10 hPa).
 
 .. figure:: _static/era5_products_vertical_levels/era5_levels_profiles.png
    :alt: Time-mean contribution of each pressure level to Ca, Ce and Ck with 32, 17 and 13 levels.
    :width: 100%
 
    Time-mean contribution of each level to the column value (W m\ :sup:`-2` per 100 hPa; markers are the levels
-   used). The integral of each profile equals the time mean of the column value of the same run.
+   used), same case. The integral of each profile equals the time mean of the column value of the same run.
 
 What the figures show:
 
-- **Magnitudes:** Ca is the most affected (time mean about 5 % lower, up to about 20 % at single times); Ce changes by
-  about 2 %; the column value of Ck barely moves, although its layer contributions change by up to
+- **Magnitudes:** Ca is the most affected (time mean about 5 % lower, up to about 20 % at single times); Ce changes
+  by about 2 %; the column value of Ck barely moves, although its layer contributions change by up to
   ±0.11 W m\ :sup:`-2` and cancel.
 - **Near-surface layer:** almost all of the change in mean Ca (−0.396 of −0.399 W m\ :sup:`-2`) comes from
   1000–925 hPa, where the static stability at the lowest level is computed differently with 25- or 75-hPa spacing.
-  Part of the domain may lie below the ground at 1000 hPa, where ERA5 values are extrapolated; surface pressure was
-  not in the files, so this layer deserves a check before interpreting it physically.
-- **Top of the column:** moving it from 10 to 50 hPa changed the three conversions very little in this case.
+  Part of the domain may lie below the ground at 1000 hPa, where ERA5 values are extrapolated; this layer deserves a
+  check before interpreting it physically.
 - **Evolution:** the time evolution, the signs and the timing of the strongest values of Ca, Ce and Ck are the same
-  with 32, 17 and 13 levels (left panels of the first figure).
+  with 32, 17 and 13 levels.
 
-**Interpretation.** In this case, the differences caused by fewer vertical levels did not substantively change the
-physical interpretation of the energetic evolution of the cyclone. A reduced level set is therefore not necessarily
-inadequate, but it is not numerically equivalent to the 37-level products. This is one case, in one season and one
-region; it does not establish the behaviour of other cyclones or applications.
+**Interpretation.** In this case, fewer vertical levels did not substantively change the physical interpretation of
+the energetic evolution of the cyclone. A reduced level set is therefore not necessarily inadequate, but it is not
+numerically equivalent to the 37-level products. This is one case, in one season and one region. In the full test of
+``--destine``, using its levels up to 10 hPa instead of 50 hPa changed the mean Ck by 12.5 % in that case
+(preliminary; an effect of the upper levels, not of 19 against 37 levels).
 
-4.4 What do these results mean for users?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _rda-ncar-cds-37:
 
-- When a study needs strict numerical equivalence (for example, reproducing published values), use the same source
-  and level set, and report both; differences between sources are real, if small.
-- Choose the vertical resolution from the scientific goal, not only from download convenience.
-- Fewer levels can be adequate for following the time evolution of the conversions, as in the case examined.
-- Studies focused on absolute magnitudes, contributions of individual layers or closure of the energy budget need an
-  additional check of vertical resolution — for example, repeating one case with the full 37-level product.
+3.3 Earlier comparison: NCAR and CDS with 37 levels
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Limitations of this evidence.** One case for the level sensitivity and ten cases of 1979–1980 for the acquisition
-tests; the 13- and 17-level results are subsets of a CDS file, not runs on ARCO or DestinE data (except the ARCO
-precision comparison in 4.1); the files were compared with each other, never with the original GRIB; the 10\ :sup:`-4`
-criterion is numerical, not a physical threshold.
+In the earlier acquisition tests (D-Bench, 2026-10), the toolkit was run on NCAR and CDS files of nine cases with
+**37 levels**, and every output column was compared with a strict numerical criterion (10\ :sup:`-4` of the typical
+size of the column). All terms were within it in four cases; in five, at least one term exceeded it, mostly the zonal
+available potential energy (Az), its tendency and the residuals. The largest departure was about 0.07 % of the column
+scale. In one case diagnosed, small temperature differences, amplified through the static stability, explained it;
+with 13 levels the same kind of differences stayed within the criterion. Per-case results are in
+:doc:`remote_data_acquisition_case_details`.
 
-.. _rda-conclusions:
+**In practice:** files from different routes are not interchangeable at the 10\ :sup:`-4` level, especially for
+tendency and residual terms. Use one route for all the cases of a study.
 
-5. Conclusions and recommendations
-----------------------------------
+.. _rda-comparison:
 
-**Operational.** Methods that cut the area on the server (CDS, NCSS, Get a Subset) transfer close to what is used;
-methods that read stored chunks (kerchunk, ARCO, DestinE) transfer whole globes or bands and depend heavily on the
-client. In the D-Bench tests, Get a Subset was faster than kerchunk in 9 of 9 cases and than NCSS in 3 of 3; NCSS failed on two
-domains after repeated timeouts or 503/504 errors; kerchunk never failed a range. The CDS queue and the GDEX
-publication delay are the main constraints of the two integrated routes. None of these observations is a general
-ranking.
+4. About the measurements
+-------------------------
 
-**Scientific.** The NCAR, ARCO and CDS representations agree within tight field tolerances but are not always
-bit-identical; small temperature differences can move tendency and residual terms beyond 10\ :sup:`-4` of each
-column with 32 levels. Reducing the levels changes magnitudes, mainly Ca, but in the case assessed did not change the
-physical interpretation of the energetic evolution.
+.. _rda-test-interpretation:
 
-.. list-table:: Summary of methods
-   :header-rows: 1
-   :widths: 18 28 32 22
+4.1 What the numbers can and cannot tell you
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   * - Method
-     - Main advantage
-     - Main limitation
-     - Integration status
-   * - CDS API
-     - most recent dates; area and hours cut on the server
-     - queue waits and per-account limits; account required
-     - supported (``--cdsapi``)
-   * - NCAR NCSS
-     - no account, no queue; verified resume
-     - months behind the CDS; long synchronous responses that failed on some domains
-     - experimental (``--ncar``)
-   * - NCAR Get a Subset
-     - fastest in the D-Bench tests; server-side cut
-     - account and token; deduplication and 8-request limit
-     - standalone experimental method only
-   * - NCAR kerchunk
-     - no account; independent, retryable chunks
-     - whole globe per field and hour (3–11 × V)
-     - standalone experimental method only
-   * - CDS ARCO Zarr
-     - no job queue; values identical to NCAR on common levels
-     - 13 levels, 6-hourly; transfers whole latitude bands
-     - external preparation
-   * - DestinE Zarr
-     - 19 levels, hourly
-     - token required; large chunks; not measured
-     - not tested
+- **Few measurements.** The benchmark ran each route on ten cases, three times. The full tests with the main command
+  ran **once per route, on one case**.
+- **Different dates.** ARCO, WEkEO and DestinE were measured on 2026-11-10 to 12; the CDS, kerchunk, Get a Subset
+  and NCSS on 2026-11-14 to 18; the full tests on 2026-11-23 and 24. Service load changes; comparisons between
+  routes are indicative.
+- **Caches.** Identical requests repeated in the benchmark may have been served from results kept by the services.
+  WEkEO: about 1 min per case in the benchmark, against 24 min (17 min of queue) for a new order in the full test.
+  CDS: 30 s for a repeated request against a median of 2.7 h for a new one.
+- **Request size.** The benchmark requests (5° area, 13 levels) are smaller than those of the main command (15°
+  area, all levels of the product); expect larger volumes, and longer times for the routes that transfer what they
+  receive.
+- **One place.** One server and one network in Brazil.
 
-Recommendations by purpose
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _rda-performance:
 
-These are criteria, not a ranking.
+4.2 Benchmark of 2026-11 (seven routes)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Time per case is the whole request, queue and checks included; for Get a Subset it excludes the wait for a free
+request slot.
 
 .. list-table::
    :header-rows: 1
-   :widths: 36 64
+   :widths: 20 18 14 16 16 16
 
-   * - If ...
-     - consider ...
-   * - the case is recent (later than the GDEX copy)
-     - CDS API (or ARCO, 6-hourly and 13 levels; DestinE up to its monthly update). See :ref:`rda-temporal`.
-   * - the analysis needs hourly or 3-hourly fields
-     - an hourly product (CDS API, an NCAR GDEX method, DestinE); ARCO stores only 00, 06, 12 and 18 UTC.
-   * - you need the 37 levels (vertical structure, per-level files, comparison with published magnitudes)
-     - CDS API or an NCAR GDEX method; avoid the 13-level ARCO grid. Use the same level set as the values you
-       compare with.
-   * - you have no account, or cannot keep a personal token
-     - NCAR GDEX kerchunk (``--ncar``, the default method).
-   * - transfer volume or time is limited
-     - methods that cut the area on the server (CDS, NCSS, Get a Subset); kerchunk and Zarr stores transfer much more
-       than they use.
-   * - the domain is large or failures must be tolerated
-     - methods that do not depend on one long synchronous response: Get a Subset completed all nine cases it ran;
-       kerchunk retries chunk by chunk; NCSS resumes from verified responses. One run per case does not establish
-       an effect of size.
-   * - the study concerns the qualitative time evolution of the conversions
-     - 13 or 17 levels reproduced it in the case assessed; state the levels used and check one case of your own if
-       the conclusions depend on it.
-   * - the study depends on magnitudes, budgets, residuals or vertical structure
-     - one source, one level set and one numeric precision for all terms and cases; tendencies and residuals amplify
-       small input differences.
-   * - results must reproduce an earlier analysis
-     - the same source, level set, time step and precision as the original run; files from different sources are not
-       interchangeable at the 10\ :sup:`-4` level.
+   * - Route
+     - Dates
+     - Successes
+     - Median per case
+     - Range
+     - Received per case (median)
+   * - CDS ARCO Zarr
+     - 2026-11-10 to 12
+     - 30 / 30
+     - 6.8 min
+     - 2.6–20 min
+     - 2.5 GB
+   * - WEkEO
+     - 2026-11-10 to 12
+     - 30 / 30
+     - 1.2 min
+     - 0.4–7.3 min
+     - 0.11 GB
+   * - DestinE
+     - 2026-11-10 to 12
+     - 27 / 30
+     - 7.8 min
+     - 2.6–19 min
+     - 3.1 GB
+   * - NCAR kerchunk
+     - 2026-11-14 to 18
+     - 30 / 30
+     - 16 min
+     - 6.9–33 min
+     - 7.5 GB
+   * - CDS API, new requests
+     - 2026-11-16 to 17
+     - 10 / 10
+     - 2.7 h
+     - 6.5 min–4.4 h
+     - 0.09 GB
+   * - CDS API, repeated requests
+     - 2026-11-18
+     - 10 / 10
+     - 30 s
+     - 15–73 s
+     - 0.09 GB
+   * - NCAR Get a Subset
+     - 2026-11-14 to 18
+     - 13 / 20 run
+     - 6.6 min
+     - 2.6–12.6 min
+     - 1.1 GB
+   * - NCAR NCSS
+     - 2026-11-14 to 18
+     - 0 / 16
+     - —
+     - —
+     - —
+
+.. _rda-reliability:
+
+**Failures.** kerchunk: none in 30 runs. CDS: one empty download blocked the guarded mode for the rest of a
+repetition (this no longer blocks; see :ref:`rda-cdsapi`). Get a Subset: seven failures in three cases, most from the
+toolkit's size check (corrected). NCSS: timeouts, HTTP 504 and incomplete responses in every attempt. DestinE: two
+network failures and one passing data defect in the first repetition.
+
+4.3 Full tests with the main command (2026-11-23 and 24)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+One case (``19790205``), area = track + 15° (225 × 633 points), 34 six-hourly times, one run per route.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 16 22 22 20 20
+
+   * - Route
+     - Levels
+     - Acquisition
+     - Received
+     - Estimate checked before
+   * - kerchunk
+     - 37
+     - 31 min
+     - 9.85 GiB, 170 requests
+     - 9.86 GiB (dry run)
+   * - WEkEO
+     - 37
+     - ≈ 24 min (17 min queue)
+     - 1.60 GiB, 1 order
+     - 3.54 GiB (upper bound)
+   * - ARCO
+     - 13
+     - 13 min 13 s
+     - 4.60 GiB, 4,431 reads
+     - 12.16 GiB (upper bound)
+   * - DestinE
+     - 19
+     - 16 min 50 s
+     - 8.79 GiB, 1,528 requests
+     - 45.23 GiB (upper bound)
+
+The CDS API, Get a Subset and NCSS were not run with the main command in these tests.
+
+.. _rda-dbench-history:
+
+4.4 Earlier tests of the NCAR methods (D-Bench, 2026-10-31)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Before the routes were integrated, the three NCAR methods were timed on ten cases with **37 levels** and separate
+test clients (not the toolkit's), one run per case and method, on one day. Kept as history; the clients have changed
+since.
+
+.. figure:: _static/remote_data_acquisition/stageB_time.png
+   :alt: Minutes to a validated NetCDF file for each case (ordered by data size) and NCAR method, D-Bench 2026-10-31.
+   :width: 100%
+
+   D-Bench, 2026-10-31 (history): time to a validated NetCDF file, one run per case and NCAR method, with the test
+   clients of that date. Cases are ordered by size. × marks a failed run, – a case not run, "inc" a Get a Subset case
+   not submitted.
+
+.. figure:: _static/remote_data_acquisition/stageB_transfer.png
+   :alt: Bytes received divided by the float32 content V for each case and NCAR method, D-Bench 2026-10-31.
+   :width: 100%
+
+   D-Bench, 2026-10-31 (history): bytes received (failed attempts included) divided by the values needed, for each
+   case.
+
+In those tests Get a Subset took a median of 16 min (6–38 min, 9 cases), kerchunk 41 min (14–74 min, 10 cases) and
+NCSS 25 min (11–93 min, 4 cases). The run table is ``_static/remote_data_acquisition/stageB_runs.csv``; the cases are
+described in :doc:`remote_data_acquisition_case_details`.
+
+**Details and provenance.** The protocols, sealed requests and per-case results of all these tests are kept in the
+permanent records of the project (``docs/evolution/``).
+
+.. _rda-limitations:
+
+5. Known limitations
+--------------------
+
+- **ARCO has 13 levels.** Their effect on the cycle was measured on **one case only** (Ca −5 % on average; Ce −1.8 %,
+  Ck −0.2 %), by subsampling a CDS file (see :ref:`rda-vertical`).
+- **DestinE: Zarr v3 stores are not read.** ``--destine`` uses the v2 store, frozen since 2026-07-06; the current
+  Earth Data Hub stores (Zarr v3) would need zarr 3 and a newer xarray. The reduced precision and its cause are
+  described in :ref:`the DestinE warning <rda-destine-warning>`.
+- **NCSS is unreliable:** 0 of 16 in the 2026-11 benchmark; it stays experimental.
+- **GDEX publishes months after the CDS:** recent cases need the CDS, WEkEO or ARCO.
+- **Get a Subset depends on free request slots:** waits of hours are possible.
+- **No route cancels remote work** when the client is stopped: CDS jobs and WEkEO orders stay on the account.
+- **Each route was tested with the main command on one case.** Times and volumes for other areas and periods are
+  not established.
+- **Greenwich:** with the CDS and WEkEO routes, a track given in 0–360° that crosses 0° gives a west edge larger
+  than the east edge; give such tracks in −180–180°.
+- **Concurrency:** two runs writing the same file at the same time are prevented only for ``--ncar``.
+- **Byte counts** include the response bodies, not the HTTP, TLS and TCP/IP overheads; the network traffic is
+  slightly larger.
+- **Products change:** the ARCO and Earth Data Hub services warn that formats may change; check this page against
+  the date of your run.

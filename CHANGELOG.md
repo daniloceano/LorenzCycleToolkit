@@ -4,7 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### Added
+### Stage 4 of the modernisation project: ERA5 download routes (2026-11)
+
+Seven ERA5 routes are now available from `lorenzcycletoolkit.py`: `--cdsapi`, `--wekeo`,
+`--ncar` (methods kerchunk, the default, subset and the experimental ncss), `--arco` and
+`--destine`. They are described, with their requirements, observed times and volumes,
+data differences and limitations, in `docs/source/remote_data_acquisition.rst`.
+
+#### Added
 
 - **`--destine`: ERA5 from the DestinE Earth Data Hub Zarr store in `lorenzcycletoolkit.py`.**
   Alternative to `--cdsapi`, `--wekeo`, `--ncar` and `--arco` (mutually exclusive) that
@@ -63,19 +70,7 @@ All notable changes to this project will be documented in this file.
   module `src/utils/wekeo_hda.py`. No change to the other routes or to the
   computation.
 
-### Fixed
-
-- **`--cdsapi` and `--wekeo`: the LEC now reads the namelist with which the data were
-  prepared.** The data were prepared with `inputs/namelist_ERA5-cdsapi`, but the LEC
-  read `inputs/namelist` again; when the two differed the run failed after the
-  download (`KeyError: 'time'`). The namelist is now chosen once
-  (`preprocessing.namelist_for_run`) and passed to both steps, and
-  `run_lec_analysis` accepts it as `namelist`. A missing preset is still reported
-  before any request. `--ncar` and local files were not affected (both steps read
-  `inputs/namelist`). No output value of the LEC changes. `docs/source/configuration.rst`
-  no longer asks to copy the namelist for these routes.
-
-### Changed
+#### Changed
 
 - **`--ncar`: default volume limit raised from 8 GiB to 20 GiB, and new `--max-gib`
   in `lorenzcycletoolkit.py`.** The limit (any `--ncar-method`) was fixed at 8 GiB in
@@ -87,7 +82,6 @@ All notable changes to this project will be documented in this file.
   the `--max-gib` needed (with kerchunk the estimate needs the reference files, so
   any that are missing, 14 to 28 MB each, are downloaded once before the check).
   No change in the computation or in any value of the data.
-- Get a Subset: files sent chunked (without Content-Length) are no longer refused when the chunk framing exceeds 64 KiB (cases 19790205 and 19790585 of stage 2b). A file may now arrive up to twice its listed size; a larger-than-listed file is kept with a warning, a smaller one is downloaded again, and a body that is not NetCDF is refused.
 - **`--ncar` uses kerchunk by default; new `--ncar-method {kerchunk,subset,ncss}`.**
   The access method of the NCAR GDEX route is chosen with `--ncar-method`
   (valid only with `--ncar`); NCSS stays available as an experimental method.
@@ -103,6 +97,40 @@ All notable changes to this project will be documented in this file.
   block until `resolve`.
 - **Get a Subset: requests "Set for Purge" no longer count** in the limit of
   7 listed requests (they still block an identical request).
+
+#### Fixed
+
+- **`--cdsapi` and `--wekeo`: the LEC now reads the namelist with which the data were
+  prepared.** The data were prepared with `inputs/namelist_ERA5-cdsapi`, but the LEC
+  read `inputs/namelist` again; when the two differed the run failed after the
+  download (`KeyError: 'time'`). The namelist is now chosen once
+  (`preprocessing.namelist_for_run`) and passed to both steps, and
+  `run_lec_analysis` accepts it as `namelist`. A missing preset is still reported
+  before any request. `--ncar` and local files were not affected (both steps read
+  `inputs/namelist`). No output value of the LEC changes. `docs/source/configuration.rst`
+  no longer asks to copy the namelist for these routes.
+- Get a Subset: files sent chunked (without Content-Length) are no longer refused when the chunk framing exceeds 64 KiB (cases 19790205 and 19790585 of stage 2b). A file may now arrive up to twice its listed size; a larger-than-listed file is kept with a warning, a smaller one is downloaded again, and a body that is not NetCDF is refused.
+
+#### Documentation
+
+- **User documentation of the seven ERA5 routes rewritten (stage 4c).**
+  `remote_data_acquisition.rst` now has a quick choice (routes, accounts, packages,
+  levels and time step, observed times and volumes, difference from the CDS data,
+  status, dates covered, choice by purpose), one section per route (how to enable it,
+  credential step by step, observed times, limitations, best uses), the differences in
+  the data (the three groups of the 2026-11 product comparison, the DestinE
+  reduced-precision warning, the effect of vertical levels), the caveats of the
+  measurements and the known limitations. The provisional "under revision" notes of
+  stage 4 were removed. Linked pages updated: `usage.rst` (download routes and their
+  flags), `troubleshooting.rst` (volume and request refusals, missing package,
+  credential, DestinE HTTP 429 and frozen store, ARCO time step, WEkEO order of unknown
+  state), `installation.rst` (extras `[wekeo]`, `[arco]`, `[destine]`),
+  `configuration.rst` (namelist with `--ncar`), `results.rst` (providers),
+  `examples_and_tutorials.rst` and the moved pages `ncar_gdex_example.rst`,
+  `cdsapi_example.rst`, `era5_products_vertical_levels.rst` and
+  `remote_data_acquisition_case_details.rst`. No code changes.
+
+### Changed (earlier, before stage 4)
 
 - **Input NetCDF files are no longer deleted after a run.** The moving
   framework deleted the `--cdsapi` input file at the end of every `--track`
