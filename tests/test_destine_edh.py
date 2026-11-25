@@ -2,13 +2,14 @@
 Offline tests of the DestinE Earth Data Hub route (src/utils/destine_edh.py, --destine).
 
 No network is used. The remote store is a local zarr store (a dict of keys to
-bytes) holding a synthetic ERA5 shaped like the Zarr v2 store of the 2b
-benchmark (19 levels in a dimension ``isobaricInhPa``, hourly ``valid_time``,
-0.25-degree grid, latitudes north to south, longitudes 0..360, chunks of 120
-hours x 1 level x a tile), whose values depend only on variable, time, level,
-latitude and longitude. The tests that write or read zarr need zarr 2
-(``pip install "lorenzcycletoolkit[destine]"``) and are skipped without it; the
-others (resolution, credential, counting, retries, command line) do not.
+bytes) holding a synthetic ERA5 shaped like the Earth Data Hub stores (19 levels
+in a dimension ``isobaricInhPa``, hourly ``valid_time``, 0.25-degree grid,
+latitudes north to south, longitudes 0..360, chunks of time x 1 level x a tile),
+in Zarr format 3 as the default store (v3) or 2 as the store of the 2b benchmark
+(v2), whose values depend only on variable, time, level, latitude and longitude.
+The tests that write or read zarr need zarr 3 (``pip install
+"lorenzcycletoolkit[destine]"``) and are skipped without it; the others
+(resolution, credential, counting, retries, command line) do not.
 """
 
 import argparse
@@ -28,14 +29,18 @@ from src.utils import destine_edh as d
 from src.utils.ncar_gdex import area_from_track
 from src.utils.track_alignment import planned_request_times
 
+pytestmark = pytest.mark.filterwarnings("ignore:Consolidated metadata is currently not part:UserWarning")  # test stores (v3)
 LOGGER = logging.getLogger("test_destine")
 LEVELS = d.EXPECTED_LEVELS  # 1000 ... 1 hPa, as the store
 UNITS = {"u": "m s**-1", "v": "m s**-1", "t": "K", "w": "Pa s**-1", "z": "m**2 s**-2"}
 
 
-def args_for(path, time_resolution=6, max_gib=None, max_requests=None):
+def args_for(path, time_resolution=6, max_gib=None, max_requests=None, destine_store=None):
     return argparse.Namespace(infile=str(path), time_resolution=time_resolution, max_gib=max_gib,
-                              max_requests=max_requests)
+                              max_requests=max_requests, destine_store=destine_store)
+
+
+FORMATS = {"v3": 3, "v2": 2}
 
 
 def make_track(start, end, lat=(-30, -28), lon=(-50, -48), freq="6h"):
@@ -57,9 +62,24 @@ def field(short, times, levels, lat, lon):
                  + np.asarray(lat)[None, None, :, None] * 1e-1 + lon[None, None, None, :] * 1e-3)).astype("float32")
 
 
+def memory_store(mapping):
+    """A zarr 3 MemoryStore holding the keys and bytes of ``mapping``."""
+    import zarr
+    from zarr.core.buffer import default_buffer_prototype
+    return zarr.storage.MemoryStore(
+        {key: default_buffer_prototype().buffer.from_bytes(value) for key, value in mapping.items()})
+
+
+def key_bytes(memory):
+    return {key: value.to_bytes() for key, value in memory._store_dict.items()}
+
+
 def build_store(lat, lon_signed, times, convention="360", levels=LEVELS, chunk_time=120, chunk_lat=32, chunk_lon=32,
-                level_name="isobaricInhPa"):
-    """Synthetic DestinE store as a zarr-2 dict: consolidated metadata, chunks of time x 1 level x a tile."""
+                level_name="isobaricInhPa", version="v3", shards=None):
+    """
+    Synthetic DestinE store as a dict of keys to bytes: consolidated metadata, chunks of time x 1 level x a tile,
+    Zarr format 3 (``version`` "v3", the default store) or 2 ("v2"); ``shards``: shard shape (v3 only).
+    """
     pytest.importorskip("zarr")
     lon_signed = np.asarray(lon_signed, float)
     lon_store = lon_signed % 360.0 if convention == "360" else lon_signed
@@ -70,11 +90,14 @@ def build_store(lat, lon_signed, times, convention="360", levels=LEVELS, chunk_t
     for short in d.SHORT_NAMES:
         data[short] = (dims, field(short, times, levels, lat, lon_signed), {"units": UNITS[short]})
         encoding[short] = {"chunks": (chunk_time, 1, chunk_lat, chunk_lon)}
+        if shards:
+            encoding[short]["shards"] = shards
     ds = xr.Dataset(data, coords={"valid_time": pd.DatetimeIndex(times), level_name: np.asarray(levels, float),
                                   "latitude": np.asarray(lat, float), "longitude": lon_store})
-    store = {}
-    ds.to_zarr(store, mode="w", consolidated=True, encoding=encoding)
-    return store
+    import zarr
+    memory = zarr.storage.MemoryStore()
+    ds.to_zarr(memory, mode="w", consolidated=True, encoding=encoding, zarr_format=FORMATS[version])
+    return key_bytes(memory)
 
 
 def lengthen_time_axis(store, periods):
@@ -83,16 +106,17 @@ def lengthen_time_axis(store, periods):
     in their metadata only (the chunks beyond the first time chunk are never written nor read).
     """
     import zarr
-    group = zarr.open_group(store, mode="r+")
+    memory = memory_store(store)
+    group = zarr.open_group(memory, mode="r+", use_consolidated=False)
     time = group["valid_time"]
     values = time[:]
     step = values[1] - values[0]
-    time.resize(periods)
+    time.resize((periods,))
     time[:] = values[0] + step * np.arange(periods)
     for short in d.SHORT_NAMES:
         group[short].resize((periods,) + group[short].shape[1:])
-    zarr.consolidate_metadata(store)
-    return store
+    zarr.consolidate_metadata(memory)
+    return key_bytes(memory)
 
 
 class Recorder(dict):
@@ -108,7 +132,7 @@ class Recorder(dict):
 
 
 def chunk_reads(reads):
-    return [k for k in reads if k.split("/")[0] in d.SHORT_NAMES and not os.path.basename(k).startswith(".z")]
+    return [k for k in reads if k.split("/")[0] in d.SHORT_NAMES and not d._is_metadata(k)]
 
 
 LAT = np.arange(-12.0, -46.0 - 1e-9, -0.25)  # covers the area -13..-45, north to south (kept small: memory)
@@ -156,10 +180,12 @@ def test_hourly_product_serves_any_whole_hour_step(step, store, tmp_path):
 
 
 # ------------------------------------------------------------------ output contract, values, levels
+@pytest.mark.parametrize("version", ["v3", "v2"])
 @pytest.mark.parametrize("convention", ["360", "signed"])
-def test_file_follows_the_cds_contract_with_the_values_of_the_store(convention, track, tmp_path):
-    mapping = build_store(LAT, LON, HOURS, convention=convention)
-    out = d.get_destine_data(args_for(tmp_path / "destine.nc"), track, LOGGER, mapping=mapping)
+def test_file_follows_the_cds_contract_with_the_values_of_the_store(convention, version, track, tmp_path):
+    mapping = build_store(LAT, LON, HOURS, convention=convention, version=version)
+    out = d.get_destine_data(args_for(tmp_path / "destine.nc", destine_store=version), track, LOGGER,
+                             mapping=mapping)
     plan = d.plan_request(track, 6)
     with xr.open_dataset(out) as ds:
         assert set(ds.data_vars) == set("uvtwz")
@@ -217,10 +243,11 @@ def test_warnings_in_the_log_and_in_the_provenance(store, track, tmp_path, caplo
     warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
     assert any("19, 1000 to 1 hPa" in w and "37 levels" in w for w in warnings)  # (a) number of levels
     assert any("18 of 240 terms" in w and "between 1 % and 2.7 %" in w and "conversions did not change" in w
-               for w in warnings)  # (b) reduced precision
+               for w in warnings)  # (b) reduced precision (the same values in v3 and v2)
     text = (tmp_path / "p.nc.provenance.json").read_text()
     prov = json.loads(text)
     assert prov["route"] == "destine" and len(prov["levels_hpa"]) == 19
+    assert prov["store_version"] == "v3" and prov["zarr_format"] == 3
     assert prov["warnings"][0] == d.levels_warning(LEVELS) and prov["warnings"][1] == d.PRECISION_WARNING
     assert prov["area_nwse"] == [-13, -65, -45, -33] and len(prov["times"]) == 3
     assert prov["lectk_commit"] is None or len(prov["lectk_commit"]) == 40
@@ -232,15 +259,17 @@ def test_warnings_in_the_log_and_in_the_provenance(store, track, tmp_path, caplo
 
 
 # ------------------------------------------------------------------ chunks read once (the graph does not grow)
-def test_each_chunk_is_read_once_whatever_the_length_of_the_store(track, tmp_path):
+@pytest.mark.parametrize("version, chunk_time", [("v3", 1440), ("v2", 120)])
+def test_each_chunk_is_read_once_whatever_the_length_of_the_store(version, chunk_time, track, tmp_path):
     """No dask graph over the store: the chunks touched are read once each, for a short and a long store."""
     counts = []
     for periods in (13, 24 * 400):  # 4 days and 400 days of hours
-        mapping = build_store(LAT, LON, HOURS)
+        mapping = build_store(LAT, LON, HOURS, version=version, chunk_time=chunk_time)
         if periods > 13:
             mapping = lengthen_time_axis(mapping, periods)  # metadata only: no data held in memory
         mapping = Recorder(mapping)
-        out = d.get_destine_data(args_for(tmp_path / f"once{periods}.nc"), track, LOGGER, mapping=mapping)
+        out = d.get_destine_data(args_for(tmp_path / f"once{periods}.nc", destine_store=version), track, LOGGER,
+                                 mapping=mapping)
         reads = chunk_reads(mapping.reads)
         prov = json.loads((tmp_path / f"once{periods}.nc.provenance.json").read_text())
         assert len(reads) == len(set(reads)) == prov["estimate_chunks"]  # each chunk once, all foreseen
@@ -252,7 +281,7 @@ def test_each_chunk_is_read_once_whatever_the_length_of_the_store(track, tmp_pat
 
 def test_no_dask_array_is_built(store, track):
     pytest.importorskip("zarr")
-    ds = xr.open_zarr(d.CountingStore(store, d.Budget(10 ** 12, 10 ** 6)), consolidated=True, chunks=None)
+    ds = d.arco_zarr.open_store_dataset(d.CountingStore(store, d.Budget(10 ** 12, 10 ** 6)), 3)
     assert all(v.chunks is None for v in ds.data_vars.values())
     selection = d.select(ds, d.plan_request(track, 6))
     block = d.read_level(ds, selection, "t", 0)
@@ -366,18 +395,61 @@ def test_refused_token_and_quota_are_not_retried(status, error, match):
 
 
 def test_missing_chunk_is_not_filled_with_nan(store, track, tmp_path):
-    key = next(k for k in sorted(store) if k.startswith("t/") and not k.endswith(".zarray") and k != "t/.zattrs")
+    key = next(k for k in sorted(store) if k.startswith("t/") and not d._is_metadata(k))
     del store[key]
     with pytest.raises(d.DestineContentError, match="absent from the store"):
         d.get_destine_data(args_for(tmp_path / "m.nc"), track, LOGGER, mapping=store)
     assert not (tmp_path / "m.nc").exists() and not (tmp_path / "m.nc.destine-tmp.nc").exists()
 
 
-def test_time_outside_the_frozen_store_is_refused_before_any_chunk(track, tmp_path):
-    mapping = Recorder(build_store(LAT, LON, pd.date_range("2019-01-01", periods=2, freq="1h")))
-    with pytest.raises(d.DestineRequestError, match="no longer updated"):
-        d.get_destine_data(args_for(tmp_path / "t.nc"), track, LOGGER, mapping=mapping)
+@pytest.mark.parametrize("version, message", [("v3", "updated monthly"), ("v2", "no longer updated")])
+def test_time_outside_the_store_is_refused_before_any_chunk(version, message, track, tmp_path):
+    mapping = Recorder(build_store(LAT, LON, pd.date_range("2019-01-01", periods=2, freq="1h"), version=version))
+    with pytest.raises(d.DestineRequestError, match=message):
+        d.get_destine_data(args_for(tmp_path / "t.nc", destine_store=version), track, LOGGER, mapping=mapping)
     assert chunk_reads(mapping.reads) == []
+
+
+def test_sharded_store_is_refused_before_any_chunk(track, tmp_path):
+    """The estimate counts whole chunks, one request each: a sharded store (partial reads) is refused."""
+    mapping = Recorder(build_store(LAT, LON, HOURS, chunk_time=12, chunk_lat=16, chunk_lon=16, shards=(24, 1, 32, 32)))
+    with pytest.raises(d.DestineContentError, match="sharded"):
+        d.get_destine_data(args_for(tmp_path / "s.nc"), track, LOGGER, mapping=mapping)
+    assert chunk_reads(mapping.reads) == [] and not (tmp_path / "s.nc").exists()
+
+
+def test_v2_store_option_and_unknown_store(store, track, tmp_path):
+    mapping = build_store(LAT, LON, HOURS, version="v2")
+    out = d.get_destine_data(args_for(tmp_path / "v2.nc", destine_store="v2"), track, LOGGER, mapping=mapping)
+    prov = json.loads((tmp_path / "v2.nc.provenance.json").read_text())
+    assert prov["store_version"] == "v2" and prov["zarr_format"] == 2 and prov["warnings"][1] == d.PRECISION_WARNING
+    assert os.path.exists(out)
+    assert d.STORES["v3"]["url"].endswith("/era5/era5-pressure-levels-v0.zarr") and d.STORE_URL == d.STORES["v3"]["url"]
+    assert d.STORES["v2"]["url"].endswith("/era5/reanalysis-era5-pressure-levels-v0.zarr")
+    with pytest.raises(d.DestineRequestError, match="unknown Earth Data Hub store"):
+        d.get_destine_data(args_for(tmp_path / "x.nc", destine_store="v9"), track, LOGGER, mapping=store)
+
+
+def test_at_most_four_reads_at_a_time(track, tmp_path):
+    """zarr 3 reads chunks concurrently: with 4 worker threads the counted store still lets at most 4 run."""
+    import threading
+    import time as clock
+    lock, state = threading.Lock(), {"now": 0, "peak": 0}
+
+    class Slow(dict):
+        def __getitem__(self, key):
+            with lock:
+                state["now"] += 1
+                state["peak"] = max(state["peak"], state["now"])
+            clock.sleep(0.005)
+            with lock:
+                state["now"] -= 1
+            return super().__getitem__(key)
+
+    mapping = Slow(build_store(LAT, LON, HOURS, chunk_lat=16, chunk_lon=16))
+    d.get_destine_data(args_for(tmp_path / "par.nc"), track, LOGGER, mapping=mapping)
+    prov = json.loads((tmp_path / "par.nc.provenance.json").read_text())
+    assert 1 < state["peak"] <= d.WORKERS and prov["max_parallel_reads"] == state["peak"]
 
 
 # ------------------------------------------------------------------ credential and packages
@@ -422,12 +494,12 @@ def test_missing_package(monkeypatch):
         d.load_packages()
 
 
-def test_zarr_3_is_refused(monkeypatch):
-    fakes = {"zarr": types.SimpleNamespace(__version__="3.0.1"), "fsspec": types.SimpleNamespace(),
+def test_zarr_2_is_refused(monkeypatch):
+    fakes = {"zarr": types.SimpleNamespace(__version__="2.18.4"), "fsspec": types.SimpleNamespace(),
              "aiohttp": types.SimpleNamespace()}
     real = d.importlib.import_module
     monkeypatch.setattr(d.importlib, "import_module", lambda name, *x: fakes[name] if name in fakes else real(name, *x))
-    with pytest.raises(d.DestineSetupError, match="zarr 2"):
+    with pytest.raises(d.DestineSetupError, match="needs zarr 3"):
         d.load_packages()
 
 
@@ -490,6 +562,8 @@ SCRIPT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))
     (["--destine", "--ncar"], "alternative data sources"),
     (["--destine", "--arco"], "alternative data sources"),
     (["--max-requests", "10"], "--max-requests needs --destine"),
+    (["--destine-store", "v2"], "--destine-store needs --destine"),
+    (["--destine", "--destine-store", "v1"], "invalid choice"),
     (["--destine", "--max-requests", "0"], "--max-requests must be greater than 0"),
     (["--delete-downloaded-input"], "--delete-downloaded-input needs --cdsapi, --ncar, --wekeo or --arco (or --destine)"),
 ])
@@ -504,8 +578,9 @@ def test_cli_accepts_destine_with_its_options():
     import lorenzcycletoolkit
     args = lorenzcycletoolkit.create_arg_parser().parse_args(
         ["x.nc", "-t", "--destine", "--time-resolution", "3", "--max-gib", "5", "--max-requests", "4000",
-         "--delete-downloaded-input", "--trackfile", "inputs/track"])
+         "--delete-downloaded-input", "--trackfile", "inputs/track", "--destine-store", "v2"])
     assert args.destine and args.max_gib == 5 and args.max_requests == 4000 and args.delete_downloaded_input
+    assert args.destine_store == "v2"
     assert not (args.cdsapi or args.arco)
 
 
@@ -514,3 +589,5 @@ def test_cli_help_states_the_limitations():
     text = " ".join(lorenzcycletoolkit.create_arg_parser().format_help().split())
     assert "--destine" in text and "18 of 240 terms" in text and "19 pressure levels" in text
     assert "--max-requests" in text and "500 000" in text
+    assert "--destine-store" in text and "10 bits of mantissa" in text and "no longer updated" in text
+    assert "13 bits" not in text  # the v3 metadata declare 13 bits, but its values have 10 (stage 4d)

@@ -365,12 +365,12 @@ write elsewhere.
 Optional package missing (``--wekeo``, ``--arco``, ``--destine``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Message** (example): "--wekeo needs the optional hda package: ...", or "--arco was tested with zarr 2 and found
-zarr 3 ...".
+**Message** (example): "--wekeo needs the optional hda package: ...", or "--arco needs zarr 3 and found zarr
+2.18.4 ...".
 
 **Solution**: install the extra of the route in the active environment, for example ``pip install -e ".[wekeo]"``,
-``".[arco]"`` or ``".[destine]"`` (see :doc:`installation`). ARCO and DestinE need zarr 2: if zarr 3 is installed,
-install the extra in a separate environment.
+``".[arco]"`` or ``".[destine]"`` (see :doc:`installation`). ARCO and DestinE need zarr 3 (and xarray 2026.9 or
+later): upgrade an environment that still has zarr 2.
 
 Credential not found or refused (``--wekeo``, ``--arco``, ``--destine``, Get a Subset)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -391,8 +391,9 @@ Keep these files private (``chmod 600``). See :ref:`rda-methods` for each route.
 
 - **HTTP 429 (too many requests):** the monthly request quota of the account may be exhausted. The run stopped
   without retrying. Check the usage on your Earth Data Hub account page; the quota renews on the 1st of the month.
-- **"The Earth Data Hub Zarr v2 store used by --destine is no longer updated":** the track has dates after the
-  freeze of the store (2026-07-06). Nothing was read. Use another route for those dates.
+- **"... requested time(s) are not in the store":** the track has dates after the end of the store. Nothing was
+  read. The v3 store (default) is updated monthly; the v2 store (``--destine-store v2``) ends on 2026-07-06. Use the
+  v3 store or another route for those dates.
 
 ``--arco``: "--time-resolution ... is not a multiple of 6 h"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

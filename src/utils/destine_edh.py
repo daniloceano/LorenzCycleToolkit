@@ -12,17 +12,22 @@ What the product is, and what that means for the cycle (read before using it):
   used as they are, without interpolation; the toolkit itself drops the levels
   above 10 hPa, as for every source. Terms of the Lorenz Energy Cycle can differ
   from routes with 37 levels.
-- **values stored with reduced precision** ("steps": T in steps of 0.0625 K or
-  0.125 K, z in steps of up to 64 m2 s-2). In the 2b benchmark (phase 2), 18 of
-  240 terms of the cycle differed between 1 % and 2.7 % from the CDS (boundary,
-  generation and residual terms); energy contents and conversions did not change.
+- **values stored with reduced precision** (bit rounding of the float32
+  mantissa to 10 bits: T within 0.0625 K or 0.125 K, z within 64 m2 s-2 of the
+  CDS below 10 hPa). In the 2b benchmark (phase 2), 18 of 240 terms of the cycle
+  differed between 1 % and 2.7 % from the CDS (boundary, generation and residual
+  terms); energy contents and conversions did not change. The metadata of the v3
+  store declare 13 bits, but its values are those of the v2 store, 10 bits
+  (stage 4d: identical bit for bit in case 19790205).
 - **hourly**: any ``--time-resolution`` of whole hours is served.
 - **requests:** every chunk is one HTTP request, and the account has a monthly
   request quota; the number of requests is estimated and limited before any
   chunk is read (``--max-requests``) and counted.
-- **volume:** a chunk holds 120 hours of one level over a 256 x 256 tile; what is
-  transferred is many times what the file keeps (14 to 20 times in the 2b
-  benchmark). The transfer is counted and limited by ``--max-gib``.
+- **volume:** a chunk of the v3 store holds 1440 hours (60 days) of one level over
+  a 60 x 60 tile (15 x 15 degrees); one of the v2 store, 120 hours over 256 x 256.
+  What is transferred is many times what the file keeps (14 to 20 times with the
+  v2 store in the 2b benchmark). The transfer is counted and limited by
+  ``--max-gib``.
 
 The request is the one of the CDS route for the same track and
 ``--time-resolution``: the five fields, the track extent with a 15-degree buffer
@@ -35,14 +40,20 @@ CDS route: variables ``u v t w z`` (float32), dimensions ``valid_time``,
 ``longitude``, CDS units, the values unchanged; ``inputs/namelist_ERA5-cdsapi`` is
 used.
 
-The store is the Zarr v2 store of the 2b benchmark
-(``reanalysis-era5-pressure-levels-v0.zarr``). On 2026-07-06 the Earth Data Hub
-moved ERA5 to Zarr v3 stores (same data, other chunks, zarr-python 3 needed) and
-the v2 store is no longer updated: it ends in mid-2026, and a time beyond it is
-refused before any chunk is read. It may be withdrawn without notice
-(decision of the owner, 2026-11-24, stage 4b.3).
+Two stores (``--destine-store``, decision D-043 of 2026-11-25, stage 4d):
 
-Optional dependencies: ``pip install "lorenzcycletoolkit[destine]"`` (zarr 2,
+- ``v3`` (default): the Zarr v3 store ``era5-pressure-levels-v0.zarr``, to which
+  the Earth Data Hub moved ERA5 on 2026-07-06 and which it updates monthly;
+- ``v2``: the Zarr v2 store of the 2b benchmark
+  (``reanalysis-era5-pressure-levels-v0.zarr``), no longer updated since
+  2026-07-06 (it ends in mid-2026) and possibly withdrawn without notice; kept
+  while it is served, because its smaller chunks need fewer requests and bytes
+  for short cases. The values of the two stores were identical bit for bit in
+  the stage 4d test (same data, other chunks).
+
+A time beyond the end of the store is refused before any chunk is read.
+
+Optional dependencies: ``pip install "lorenzcycletoolkit[destine]"`` (zarr 3,
 numcodecs, fsspec, aiohttp; the same as ``[arco]``). Credential: the personal
 Earth Data Hub API key ("token"), read from the ``~/.netrc`` entry of
 ``data.earthdatahub.destine.eu`` (its ``password``, as the Earth Data Hub
@@ -65,7 +76,7 @@ Protections:
   the run stops saying the value needed. Every attempt is counted against the
   limit, and the HTTP requests really made are recorded;
 - **limited tries:** a chunk is requested at most 3 times (authorisation and
-  quota errors are not retried), with 4 reads in parallel;
+  quota errors are not retried), with at most 4 reads in parallel;
 - **no orphan order:** there is no remote queue, so no request outlives the run.
 
 An existing destination file is reused without a check, as with ``--cdsapi``.
@@ -104,7 +115,14 @@ from .ncar_gdex import DEFAULT_MAX_TOTAL_BYTES, GRID_STEP, _lectk_commit, area_f
 from .track_alignment import planned_request_times
 
 STORE_HOST = "data.earthdatahub.destine.eu"
-STORE_URL = f"https://{STORE_HOST}/era5/reanalysis-era5-pressure-levels-v0.zarr"
+# Stores of the Earth Data Hub (zarr format, URL); v3 is the default (D-043, 2026-11-25)
+STORES = {
+    "v3": {"url": f"https://{STORE_HOST}/era5/era5-pressure-levels-v0.zarr", "zarr_format": 3, "updated": True},
+    "v2": {"url": f"https://{STORE_HOST}/era5/reanalysis-era5-pressure-levels-v0.zarr", "zarr_format": 2,
+           "updated": False},
+}
+DEFAULT_STORE = "v3"
+STORE_URL = STORES[DEFAULT_STORE]["url"]
 PROVENANCE_SCHEMA = "lectk-era5-destine/1"
 SHORT_NAMES = arco_zarr.SHORT_NAMES
 UNITS = arco_zarr.UNITS
@@ -117,9 +135,12 @@ LEVELS_WARNING = ("product with its own pressure levels ({n}, {top:g} to {bottom
 PRECISION_WARNING = ("values stored with reduced precision: in the comparison of Front 2b, 18 of 240 terms of the "
                      "cycle differed between 1 % and 2.7 % from the CDS (boundary, generation and residual terms); "
                      "energy contents and conversions did not change")
+# Both stores: values rounded to 10 bits of mantissa (the v3 metadata declare 13 bits, but in stage 4d its values were
+# identical bit for bit to those of the v2 store, case 19790205)
+PRECISION_WARNINGS = {"v3": PRECISION_WARNING, "v2": PRECISION_WARNING}
 QUOTA_NOTE = ("every chunk is one HTTP request and counts against the monthly request quota of the Earth Data Hub "
               "account")
-ACCESS_HINT = 'pip install "lorenzcycletoolkit[destine]" (zarr<3, numcodecs<0.16, fsspec, aiohttp)'
+ACCESS_HINT = 'pip install "lorenzcycletoolkit[destine]" (zarr>=3, numcodecs, fsspec, aiohttp)'
 TOKEN_ENV = "DESTINE_EDH_TOKEN"
 TOKEN_URL = "https://earthdatahub.destine.eu/quota-api-keys"
 DEFAULT_MAX_REQUESTS = 10000
@@ -245,9 +266,8 @@ def load_packages():
         except ImportError:
             raise DestineSetupError(f"--destine needs the optional package {name}: {ACCESS_HINT}") from None
     major = int(str(modules["zarr"].__version__).split(".")[0])
-    if major >= 3:
-        raise DestineSetupError(
-            f"--destine was tested with zarr 2 and found zarr {modules['zarr'].__version__}: {ACCESS_HINT}")
+    if major < 3:
+        raise DestineSetupError(f"--destine needs zarr 3 and found zarr {modules['zarr'].__version__}: {ACCESS_HINT}")
     return modules
 
 
@@ -309,22 +329,23 @@ class HttpCounter:
             return {"requests": self.requests, "status": dict(self.status), "exceptions": self.exceptions}
 
 
-def _is_metadata(key):
-    return os.path.basename(key).startswith(".z")
+_is_metadata = arco_zarr._is_metadata  # Zarr v2 (.zarray, .zattrs, .zgroup, .zmetadata) and v3 (zarr.json)
 
 
 class CountingStore(collections.abc.MutableMapping):
     """
-    Read-only zarr store that counts every request and byte, retries a few times and stops at the limits.
+    Read-only mapping of zarr keys that counts every request and byte, retries a few times and stops at the limits.
 
-    It wraps any mapping of keys to bytes (an fsspec mapper in production, a dict in tests). Each key read
-    is one request of the remote store. A missing chunk is recorded in ``missing`` and refused
-    (DestineContentError): zarr would fill it with NaN.
+    It wraps any mapping of keys to bytes (an fsspec mapper in production, a dict in tests), and zarr reads it
+    through :func:`src.utils.arco_zarr.open_store_dataset`. Each key read is one request of the remote store. A
+    missing chunk is recorded in ``missing`` and refused (DestineContentError): zarr would fill it with NaN. At
+    most ``parallel`` keys are read at a time.
     """
 
-    def __init__(self, inner, budget, attempts=ATTEMPTS, backoff=BACKOFF, sleep=time.sleep):
+    def __init__(self, inner, budget, attempts=ATTEMPTS, backoff=BACKOFF, sleep=time.sleep, parallel=WORKERS):
         self.inner, self.budget = inner, budget
         self.attempts, self.backoff, self.sleep = attempts, backoff, sleep
+        self.in_flight = arco_zarr.InFlight(parallel)
         self.missing = []
         self.errors = []
         self.keys_read = collections.Counter()
@@ -334,7 +355,8 @@ class CountingStore(collections.abc.MutableMapping):
         for attempt in range(1, self.attempts + 1):
             self.budget.start(key)
             try:
-                value = self.inner[key]
+                with self.in_flight:
+                    value = self.inner[key]
             except KeyError:
                 if _is_metadata(key):
                     raise
@@ -414,7 +436,7 @@ def store_levels(ds):
     return np.sort(hpa)[::-1], name, values.max() > 2000.0
 
 
-def select(ds, plan):
+def select(ds, plan, store_name=DEFAULT_STORE):
     """Positions in the store of the planned times, the store levels, latitudes and longitudes."""
     levels, name, in_pa = store_levels(ds)
     plan["levels"] = levels
@@ -423,9 +445,14 @@ def select(ds, plan):
         return arco_zarr.select(ds, plan_for_store)
     except arco_zarr.ArcoError as error:
         if "time(s) are not in the store" in str(error):
+            if STORES[store_name]["updated"]:
+                raise DestineRequestError(
+                    f"{error}. The Earth Data Hub store is updated monthly; use another data source for the "
+                    f"latest dates. No chunk was read.") from None
             raise DestineRequestError(
-                f"{error}. The Earth Data Hub Zarr v2 store used by --destine is no longer updated (since "
-                f"2026-07-06); use another data source for later dates. No chunk was read.") from None
+                f"{error}. The Earth Data Hub Zarr v2 store (--destine-store v2) is no longer updated (since "
+                f"2026-07-06); use --destine-store v3 or another data source for later dates. No chunk was "
+                f"read.") from None
         raise _as_destine(error) from None
 
 
@@ -438,6 +465,8 @@ def chunks_touched(ds, selection):
         chunks = variable.encoding.get("chunks")
         if not chunks:
             raise DestineContentError(f"{name}: the store does not say its chunk shape")
+        if variable.encoding.get("shards"):
+            raise DestineContentError(f"{name}: the store is sharded, which this route does not support")
         count = 1
         for dim, chunk in zip(variable.dims, chunks):
             count *= len(np.unique(positions[dim] // chunk)) if dim in positions else math.ceil(variable.sizes[dim] / chunk)
@@ -522,7 +551,7 @@ def read_level(ds, selection, store_name, level_position):
     return np.asarray(values, dtype="float32")
 
 
-def write_output(ds, plan, selection, path, notes, workers=WORKERS):
+def write_output(ds, plan, selection, path, notes, workers=WORKERS, store_name=DEFAULT_STORE):
     """
     Read the selection and write the NetCDF file through a temporary name.
 
@@ -538,8 +567,9 @@ def write_output(ds, plan, selection, path, notes, workers=WORKERS):
     attrs = {
         "Conventions": "CF-1.7",
         "title": "ERA5 pressure-level fields for the Lorenz Energy Cycle Toolkit",
-        "source": ("ERA5 reanalysis (ECMWF, Copernicus Climate Change Service), DestinE Earth Data Hub Zarr store "
-                   f"({len(plan['levels'])} pressure levels, hourly, values stored with reduced precision)"),
+        "source": ("ERA5 reanalysis (ECMWF, Copernicus Climate Change Service), DestinE Earth Data Hub Zarr "
+                   f"{store_name} store ({len(plan['levels'])} pressure levels, hourly, values stored with reduced "
+                   f"precision)"),
         "history": (f"{datetime.datetime.now(datetime.timezone.utc):%Y-%m-%dT%H:%M:%SZ}: selected from the store "
                     f"by LorenzCycleToolkit src/utils/destine_edh.py, values unchanged"),
         "lectk_provenance_note": " | ".join(notes),
@@ -615,8 +645,8 @@ def get_destine_data(args, track, app_logger, mapping=None, sleep=time.sleep):
     Retrieve the ERA5 file of a track from the DestinE Earth Data Hub Zarr store into ``args.infile``.
 
     Args:
-        args (argparse.Namespace): ``infile``, ``time_resolution``, ``max_gib`` (None: 20 GiB) and
-            ``max_requests`` (None: 10000).
+        args (argparse.Namespace): ``infile``, ``time_resolution``, ``max_gib`` (None: 20 GiB),
+            ``max_requests`` (None: 10000) and ``destine_store`` (None: v3).
         track (pd.DataFrame): Track with 'Lat', 'Lon' and a datetime index.
         app_logger (logging.Logger): Logger.
         mapping: Mapping of zarr keys to bytes standing for the remote store (tests pass a local one);
@@ -631,20 +661,24 @@ def get_destine_data(args, track, app_logger, mapping=None, sleep=time.sleep):
     limit = DEFAULT_MAX_TOTAL_BYTES if max_gib is None else int(max_gib * 1024 ** 3)
     max_requests = getattr(args, "max_requests", None)
     max_requests = DEFAULT_MAX_REQUESTS if max_requests is None else int(max_requests)
+    store_name = getattr(args, "destine_store", None) or DEFAULT_STORE
+    if store_name not in STORES:
+        raise DestineRequestError(f"unknown Earth Data Hub store {store_name!r}: use one of {sorted(STORES)}")
+    store_url, precision_warning = STORES[store_name]["url"], PRECISION_WARNINGS[store_name]
     plan = plan_request(track, args.time_resolution)
     north, west, south, east = plan["area"]
     app_logger.warning(f"⚠️ DestinE: {levels_warning(EXPECTED_LEVELS)} (levels confirmed from the store below)")
-    app_logger.warning(f"⚠️ DestinE: {PRECISION_WARNING}")
+    app_logger.warning(f"⚠️ DestinE: {precision_warning}")
     app_logger.warning(f"⚠️ DestinE: {QUOTA_NOTE}")
-    app_logger.info(f"🌐 DestinE: area N{north} W{west} S{south} E{east}, {len(plan['times'])} times "
-                    f"(limits {limit / 1024 ** 3:.2f} GiB and {max_requests} requests)")
+    app_logger.info(f"🌐 DestinE: store {store_name}, area N{north} W{west} S{south} E{east}, {len(plan['times'])} "
+                    f"times (limits {limit / 1024 ** 3:.2f} GiB and {max_requests} requests)")
     directory = os.path.dirname(os.path.abspath(path))
     started = datetime.datetime.now(datetime.timezone.utc)
     remote = mapping is None
     counter = HttpCounter()
     if remote:
         packages = load_packages()
-        mapping = open_remote_mapping(read_token(), counter, packages=packages)
+        mapping = open_remote_mapping(read_token(), counter, url=store_url, packages=packages)
     else:
         load_packages()
     budget = Budget(limit, max_requests)
@@ -652,8 +686,8 @@ def get_destine_data(args, track, app_logger, mapping=None, sleep=time.sleep):
 
     t0 = time.monotonic()
     try:
-        ds = xr.open_zarr(store, consolidated=True, chunks=None)  # no dask: see read_level
-        selection = select(ds, plan)
+        ds = arco_zarr.open_store_dataset(store, STORES[store_name]["zarr_format"])  # no dask: see read_level
+        selection = select(ds, plan, store_name)
         warning_levels = levels_warning(plan["levels"])
         app_logger.warning(f"⚠️ DestinE: {warning_levels}")
         est = estimate(ds, selection, budget)
@@ -662,7 +696,8 @@ def get_destine_data(args, track, app_logger, mapping=None, sleep=time.sleep):
                         f"values)")
         check_limits(est, plan, limit, max_requests, directory)
         metadata = {"bytes": budget.used, "requests": budget.attempts}
-        write_output(ds, plan, selection, path, [warning_levels, PRECISION_WARNING], workers=WORKERS)
+        write_output(ds, plan, selection, path, [warning_levels, precision_warning], workers=WORKERS,
+                     store_name=store_name)
     except DestineError:
         _discard(path)
         raise
@@ -691,8 +726,10 @@ def get_destine_data(args, track, app_logger, mapping=None, sleep=time.sleep):
     provenance = {
         "schema": PROVENANCE_SCHEMA,
         "route": "destine",
-        "store": STORE_URL if remote else "local store (test)",
-        "warnings": [warning_levels, PRECISION_WARNING, QUOTA_NOTE],
+        "store": store_url if remote else "local store (test)",
+        "store_version": store_name,
+        "zarr_format": STORES[store_name]["zarr_format"],
+        "warnings": [warning_levels, precision_warning, QUOTA_NOTE],
         "packages": package_versions(),
         "lectk_commit": _lectk_commit(),
         "python": platform.python_version(),
@@ -718,6 +755,7 @@ def get_destine_data(args, track, app_logger, mapping=None, sleep=time.sleep):
         "retries": budget.retries,
         "chunks_read_more_than_once": repeated,
         "workers": WORKERS,
+        "max_parallel_reads": store.in_flight.peak,
         "transfer_seconds": round(transfer_seconds, 3),
         "started_utc": started.isoformat(),
         "finished_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),

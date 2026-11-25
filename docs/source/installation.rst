@@ -81,12 +81,14 @@ need optional packages, installed as extras of the toolkit (from the cloned repo
      - ``hda`` (2.40 or later) and ``requests``
    * - ``--arco``
      - ``pip install -e ".[arco]"``
-     - ``zarr`` 2 (zarr 3 is not supported), ``numcodecs`` < 0.16, ``fsspec`` and ``aiohttp``
+     - ``zarr`` 3, ``numcodecs``, ``fsspec`` and ``aiohttp`` (tested: zarr 3.4.2, numcodecs 0.17.1, fsspec 2026.9.0,
+       aiohttp 3.14.5, with xarray 2026.9.0)
    * - ``--destine``
      - ``pip install -e ".[destine]"``
      - the same packages as ``[arco]``
 
-Without them, the route stops at once and prints the installation command. Accounts and credentials are described in
+``requirements.txt`` (the development environment, also used by the tests) already includes them. Without them, the
+route stops at once and prints the installation command. Accounts and credentials are described in
 :doc:`remote_data_acquisition`.
 
 Troubleshooting

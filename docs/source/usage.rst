@@ -344,10 +344,11 @@ Flags
 - `--ncar-method`: With ``--ncar``, the access method: ``kerchunk`` (default, no account), ``subset`` (GDEX token) or ``ncss`` (experimental).
 - `--kerchunk-refs`: With ``--ncar`` and kerchunk, directory of the reference files (default ``inputs/kerchunk_refs``; missing files are downloaded once).
 - `--arco`: Read the ERA5 fields from the CDS ARCO Zarr store: 13 levels, 6-hourly (see :ref:`rda-arco`). Needs the extra ``[arco]`` and the CDS key.
-- `--destine`: Read the ERA5 fields from the DestinE Earth Data Hub: 19 levels, reduced precision, store frozen since 2026-07-06 (see :ref:`rda-destine`). Needs the extra ``[destine]`` and an Earth Data Hub key.
+- `--destine`: Read the ERA5 fields from the DestinE Earth Data Hub: 19 levels, reduced precision, store updated monthly (see :ref:`rda-destine`). Needs the extra ``[destine]`` and an Earth Data Hub key.
+- `--destine-store`: With ``--destine``, the Earth Data Hub store: ``v3`` (default, Zarr v3, updated monthly) or ``v2`` (the Zarr v2 store of the 2026-11 benchmark, no longer updated since 2026-07-06).
 - `--max-gib`: With ``--ncar``, ``--wekeo``, ``--arco`` or ``--destine``, largest volume accepted, in GiB (default 20). Checked on an estimate before anything is downloaded.
 - `--max-requests`: With ``--destine``, largest number of HTTP requests accepted (default 10 000). Checked before any chunk is read.
-- `--time-resolution`: Hours between the times requested by any download route (default: 3). With ``--cdsapi``, 3, 6 or 12 hours avoid most CDS cost limits; ``--arco`` needs a multiple of 6.
+- `--time-resolution`: Hours between the times requested, for every download route (default: 3). ``--arco`` accepts only multiples of 6 (6-hourly product); ``--cdsapi``, ``--ncar``, ``--wekeo`` and ``--destine`` accept any whole number of hours (with ``--cdsapi``, 3, 6 or 12 hours avoid most CDS cost limits).
 - `--delete-downloaded-input`: With any download route, delete the input NetCDF file after the run, only if this run downloaded it, the run succeeded and the file is unchanged. Without it no input file is ever deleted.
 - `--cds-max-seconds`, `--cds-ledger`, `--cds-retries`, `--cds-timeout`, `--cds-case-id`, `--cds-delete-on-stop`: guarded CDS mode for controlled runs (see *Guarded CDS mode* above).
 - `--trackfile`: Specify a custom track file path (default: ``inputs/track``).

@@ -1,3 +1,6 @@
+aiohappyeyeballs==2.7.1
+aiohttp==3.14.5
+aiosignal==1.4.0
 alabaster==0.7.16
 appdirs==1.4.4
 attrs==23.2.0
@@ -18,15 +21,18 @@ cmocean==4.0.3
 contourpy==1.2.1
 cycler==0.12.1
 cyclophaser==1.7.3
-dask==2024.7.0
+dask==2026.8.0
 docutils==0.20.1
+donfig==0.8.1.post1
 eccodes==1.7.1
 findlibs==0.0.5
 flake8==7.1.0
 flexcache==0.3
 flexparser==0.3.1
 fonttools==4.53.1
-fsspec==2024.6.1
+frozenlist==1.8.0
+fsspec==2026.9.0
+google-crc32c==1.9.0
 h5netcdf==1.3.0
 h5py==3.11.0
 idna==3.7
@@ -42,10 +48,13 @@ MarkupSafe==2.1.5
 matplotlib==3.9.1
 mccabe==0.7.0
 MetPy==1.6.2
+msgspec==0.22.0
+multidict==7.2.1
 multiurl>=0.3.1
 netCDF4==1.7.1.post1
+numcodecs==0.17.1
 numpy==2.0.0
-packaging==24.1
+packaging==26.3
 pandas==2.2.2
 partd==1.4.2
 pillow==10.4.0
@@ -53,6 +62,7 @@ Pint==0.24.3
 platformdirs==4.2.2
 pluggy==1.5.0
 pooch==1.8.2
+propcache==0.5.4
 pycodestyle==2.12.0
 pycparser==2.22
 pyflakes==3.2.0
@@ -81,15 +91,16 @@ sphinxcontrib-serializinghtml==1.1.10
 toolz==0.12.1
 tqdm==4.66.4
 traitlets==5.14.3
-typing_extensions==4.12.2
+typing_extensions==4.16.0
 tzdata==2024.1
 urllib3==2.2.2
 wheel==0.43.0
-xarray==2024.2.0
+xarray==2026.9.0
+yarl==1.25.1
+zarr==3.4.2
 zipp==3.19.2
+# zarr, numcodecs and aiohttp are installed here so that the Zarr tests run in CI;
+# for users they are optional, only for --arco and --destine:
+#   pip install "lorenzcycletoolkit[arco]"   or   pip install "lorenzcycletoolkit[destine]"
 # Optional, only for --wekeo (not installed by default): hda==2.40
 #   pip install "lorenzcycletoolkit[wekeo]"  or  pip install hda==2.40
-# Optional, only for --arco (not installed by default): zarr==2.18.4, numcodecs==0.15.1, aiohttp
-#   pip install "lorenzcycletoolkit[arco]"
-# Optional, only for --destine (not installed by default): the same packages as --arco
-#   pip install "lorenzcycletoolkit[destine]"

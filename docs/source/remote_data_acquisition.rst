@@ -211,8 +211,8 @@ data differences in :ref:`rda-science` and the numbers with their caveats in :re
       .. container:: rda-cons
 
          - **reduced precision:** 18 of 240 cycle terms differed from the CDS by 1 % to 2.7 %
-         - **frozen store:** no data after 2026-07-06
-         - many small requests (1,528 in the full test) against a monthly quota of 500,000 per account
+         - large chunks (60 days × 15° × 15°): a short case transfers many times the values it keeps
+         - one request per chunk (about 5,700 for the test case) against a monthly quota of 500,000 per account
          - needs a DestinE account, API key and the extra ``[destine]``
 
       .. container:: rda-card-more
@@ -351,7 +351,8 @@ All products start in 1940. They differ in how recent their data are and in thei
      - 6 h (00, 06, 12, 18 UTC)
      - 6, 12, 18 or 24 only; anything else is refused before any read
    * - DestinE
-     - **frozen**: the store used is no longer updated since 2026-07-06; later dates are refused before any read
+     - v3 store (default): updated monthly, 2026-11-15 23 UTC when read on 2026-11-25; the older v2 store
+       (``--destine-store v2``) is no longer updated since 2026-07-06. Later dates are refused before any read
      - 1 h
      - any whole number of hours
 
@@ -377,7 +378,8 @@ These are criteria, not a ranking.
    * - you have no account, or cannot keep a personal token
      - ``--ncar`` (kerchunk, the default method): no account; it transfers much more than it keeps.
    * - the case is recent (after the GDEX copy)
-     - ``--cdsapi`` or ``--wekeo``; ``--arco`` if 13 levels and 6 h are acceptable. Not ``--destine`` (frozen store).
+     - ``--cdsapi`` or ``--wekeo``; ``--arco`` if 13 levels and 6 h are acceptable; ``--destine`` up to its last
+       monthly update.
    * - you want the data that most ERA5 analyses cite, or must reproduce an earlier CDS run
      - ``--cdsapi``; ``--wekeo`` delivered identical files for identical requests.
    * - the CDS queue is too long for you
@@ -754,8 +756,8 @@ same file contents as ``--cdsapi``.
 
 1. Use the CDS account and API key of ``--cdsapi`` (see :ref:`rda-cdsapi`); the key is sent as a bearer token. In
    our tests no other licence was asked.
-2. Install the optional packages: ``pip install -e ".[arco]"`` (zarr 2, numcodecs < 0.16, fsspec, aiohttp; zarr 3
-   is not supported).
+2. Install the optional packages: ``pip install -e ".[arco]"`` (zarr 3, numcodecs, fsspec, aiohttp; the store is in
+   Zarr format 2, which zarr 3 reads).
 3. The key is read from ``CDSAPI_KEY``, or from the file named by ``CDSAPI_RC``, or from ``~/.cdsapirc``.
 
 **Usage.**
@@ -795,21 +797,44 @@ time evolution of the conversions.
 .. warning::
 
    ``--destine`` delivers the product's own **19 pressure levels** (1000 to 1 hPa, not interpolated; 17 are used,
-   down to 10 hPa) and **values stored with reduced precision**. In the 2026-11 comparison, 18 of 240 terms of the
-   cycle differed from the CDS by 1 % to 2.7 % (see :ref:`the DestinE warning <rda-destine-warning>`). The store used is **frozen since
-   2026-07-06**. The program repeats these warnings at the start of the run, in the file and in the provenance record.
+   down to 10 hPa) and **values stored with reduced precision** (10 bits of mantissa). In the 2026-11 comparison, 18 of
+   240 terms of the cycle differed from the CDS by 1 % to 2.7 % (see :ref:`the DestinE warning <rda-destine-warning>`).
+   The program repeats these warnings at the start of the run, in the file and in the provenance record.
 
 **How it works.** The toolkit reads the ERA5 Zarr store of the Destination Earth (DestinE) Earth Data Hub over
-HTTPS, without a queue. It uses the Zarr v2 store ``reanalysis-era5-pressure-levels-v0.zarr`` (the one of the
-2026-11 benchmark), whose chunks hold **120 hours × 1 level × 256 × 256 points**. In July 2026 the Earth Data Hub
-moved ERA5 to Zarr v3 stores, which this version of the toolkit does not read. Every chunk read is **one HTTP
-request** against the account's monthly quota.
+HTTPS, without a queue. Every chunk read is **one HTTP request** against the account's monthly quota. Two stores can
+be chosen with ``--destine-store``:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 14 43 43
+
+   * -
+     - ``v3`` (default)
+     - ``v2``
+   * - Store
+     - ``era5-pressure-levels-v0.zarr`` (Zarr format 3)
+     - ``reanalysis-era5-pressure-levels-v0.zarr`` (Zarr format 2), used in the 2026-11 benchmark
+   * - Updates
+     - monthly
+     - none since 2026-07-06; may be withdrawn without notice
+   * - Chunk
+     - 1440 hours (60 days) × 1 level × 60 × 60 points (15° × 15°)
+     - 120 hours × 1 level × 256 × 256 points (64° × 64°)
+   * - Values
+     - 10 bits of mantissa (its metadata declare 13 bits, but in our test its values were those of the v2 store)
+     - 10 bits
+
+In the full test (2026-11-25, one case), the files of the two stores held **identical values, bit for bit**: the same
+data in other chunks. For a short case the v2 store needs fewer requests and bytes (its chunks are shorter in time);
+the v3 store is the one that is kept up to date.
 
 **Credential and package, step by step.**
 
 1. Create a DestinE platform account and generate a personal API key on the
    `Earth Data Hub key page <https://earthdatahub.destine.eu/quota-api-keys>`_.
-2. Install the optional packages: ``pip install -e ".[destine]"`` (the same as ``[arco]``).
+2. Install the optional packages: ``pip install -e ".[destine]"`` (the same as ``[arco]``: zarr 3, numcodecs,
+   fsspec, aiohttp).
 3. Put the key in ``~/.netrc`` (owner-only), as the Earth Data Hub recommends, or in the environment variable
    ``DESTINE_EDH_TOKEN`` (a variable of the toolkit):
 
@@ -823,30 +848,38 @@ they pass the limits:
 
 .. code-block:: bash
 
-   python lorenzcycletoolkit.py case.nc -t -r --destine --trackfile inputs/track_case --time-resolution 6
-   python lorenzcycletoolkit.py case.nc -t -r --destine --trackfile inputs/track_case --max-requests 2000 --max-gib 46
+   python lorenzcycletoolkit.py case.nc -t -r --destine --trackfile inputs/track_case --time-resolution 6 --max-gib 112
+   python lorenzcycletoolkit.py case.nc -t -r --destine --destine-store v2 --trackfile inputs/track_case --max-requests 2000 --max-gib 46
+
+With the v3 store, the default ``--max-gib`` (20 GiB) is usually too small, because the limit is checked on whole
+uncompressed chunks of 60 days: the refusal says the value needed. For the 8-day test case below the v3 store needs
+about 5,700 requests and an upper bound of 112 GiB; the v2 store needed 1,528 requests and 46 GiB.
 
 **What we observed.**
 
 - *Benchmark* (13 levels, 5° area): median 7.8 min per case (2.6 to 19 min), 3.1 GB received, 27 of 30 (two network
   failures and one passing data defect in the first repetition).
-- *Full test* (2026-11-24, one case, 19 levels, 15° area, 34 times): **1,528 requests** (0.3 % of the monthly quota),
-  all HTTP 200, no retry; **8.79 GiB** received (the upper bound checked before reading was 45.23 GiB), 5.4 × the
-  values kept; **17 min 46 s** in all.
+- *Full test, v2 store* (2026-11-24, one case, 19 levels, 15° area, 34 times): **1,528 requests** (0.3 % of the
+  monthly quota), all HTTP 200, no retry; **8.79 GiB** received (the upper bound checked before reading was
+  45.23 GiB), 5.4 × the values kept; **17 min 46 s** in all.
+- *Full test, v3 store* (2026-11-25, the same case): **5,707 requests** (1.1 % of the monthly quota), all HTTP 200,
+  no retry; **24.67 GiB** received (upper bound 111.82 GiB), 14 × the values kept; **51 min 36 s** in all. Values
+  and cycle identical, bit for bit, to those of the v2 store.
 
 **Limitations.**
 
-- **Frozen store:** no data after its freeze on 2026-07-06, and it may be withdrawn without notice. Later dates are
-  refused before any read.
+- **Store dates:** the v3 store ends at its last monthly update; the v2 store has no data after 2026-07-06 and may
+  be withdrawn without notice. Later dates are refused before any read.
 - **Quota:** 500,000 requests per month per account, renewed on the 1st; beyond it the service answers HTTP 429 and
   the run stops. The toolkit limits each run (``--max-requests``), not the month: check the usage on your account
   page.
 - **Reduced precision** and **19 levels** (see the warning above).
 - Large chunks: the transfer is many times the values kept, and the limit is checked on an upper bound. For the
-  8-day test case that bound was 45 GiB, so ``--max-gib 46`` was needed although 8.79 GiB arrived.
+  8-day test case that bound was 45 GiB with the v2 store, so ``--max-gib 46`` was needed although 8.79 GiB
+  arrived; with the v3 store it is about 112 GiB.
 
-**Best uses.** Hourly fields up to mid-2026 without a queue, when boundary, generation and residual terms are not
-central to the study; comparison with the other products.
+**Best uses.** Hourly fields without a queue, up to the last monthly update, when the transfer of whole chunks is
+acceptable; comparison with the other products.
 
 .. _rda-science:
 
@@ -898,8 +931,10 @@ explanation, not verified, is that the service packs the values again for each r
    **boundary terms** (BΦE six times, BΦZ four times, BAe once), **generation terms** (Gz and Ge, twice each) and
    **residuals** (RGz three times). The energy contents, conversions and tendencies changed by less than 1 %. The
    affected terms depend on the geopotential at the walls of the box or close the budget by difference. In the full
-   test of ``--destine`` (one case), only BΦE passed 1 % (1.21 %; 1.24 % in the benchmark for the same case). The
-   cause of the steps (values stored with fewer bits) is consistent with the data but **not verified**.
+   test of ``--destine`` (one case), only BΦE passed 1 % (1.21 %; 1.24 % in the benchmark for the same case). These
+   results are for the v2 store; the v3 store gave the same values. The cause of the steps was confirmed on
+   2026-11-25: the values are rounded to 10 bits of mantissa (bit rounding declared in the v2 store metadata; in the
+   files of both stores the last 13 bits of every value are zero).
 
 **Full tests with the main command against the CDS** (one case, 34 times, computed on the benchmark grid):
 
@@ -1182,9 +1217,10 @@ permanent records of the project (``docs/evolution/``).
 
 - **ARCO has 13 levels.** Their effect on the cycle was measured on **one case only** (Ca −5 % on average; Ce −1.8 %,
   Ck −0.2 %), by subsampling a CDS file (see :ref:`rda-vertical`).
-- **DestinE: Zarr v3 stores are not read.** ``--destine`` uses the v2 store, frozen since 2026-07-06; the current
-  Earth Data Hub stores (Zarr v3) would need zarr 3 and a newer xarray. The reduced precision and its cause are
-  described in :ref:`the DestinE warning <rda-destine-warning>`.
+- **DestinE: reduced precision and large chunks.** Values rounded to 10 bits of mantissa in both stores (see
+  :ref:`the DestinE warning <rda-destine-warning>`); the v3 store, the default, was tested on one case, where it gave
+  the values of the v2 store. Data added to the v3 store after 2026-07 were not checked. Its chunks of 60 days make
+  short cases transfer much more than they keep.
 - **NCSS is unreliable:** 0 of 16 in the 2026-11 benchmark; it stays experimental.
 - **GDEX publishes months after the CDS:** recent cases need the CDS, WEkEO or ARCO.
 - **Get a Subset depends on free request slots:** waits of hours are possible.

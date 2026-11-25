@@ -33,10 +33,11 @@ variables ``u v t w z`` (float32), dimensions ``valid_time``, ``pressure_level``
 ``latitude`` (north to south) and ``longitude``, CDS units, the values unchanged;
 ``inputs/namelist_ERA5-cdsapi`` is used.
 
-Optional dependencies: ``pip install "lorenzcycletoolkit[arco]"`` (zarr 2,
-numcodecs, fsspec, aiohttp). Credential: the CDS API key, sent as a bearer token,
-read from ``CDSAPI_KEY`` or from the file named by ``CDSAPI_RC`` (default
-``~/.cdsapirc``, line ``key: ...``). It is never logged or recorded. The store
+Optional dependencies: ``pip install "lorenzcycletoolkit[arco]"`` (zarr 3,
+numcodecs, fsspec, aiohttp; the store is in Zarr format 2, which zarr 3 reads).
+Credential: the CDS API key, sent as a bearer token, read from ``CDSAPI_KEY``
+or from the file named by ``CDSAPI_RC`` (default ``~/.cdsapirc``, line
+``key: ...``). It is never logged or recorded. The store
 URL is that of the ECMWF documentation (ERA5 ARCO user guide) and of the 2b
 benchmark; the CDS terms of use of ERA5 apply.
 
@@ -49,7 +50,7 @@ Protections:
   every byte received is counted (headers and TLS excluded) and no chunk is
   requested once the limit is reached;
 - **limited tries:** a chunk is requested at most 3 times (authorisation errors
-  are not retried), with 4 reads in parallel;
+  are not retried), with at most 4 reads in parallel;
 - **no orphan order:** there is no remote queue, so no request outlives the run.
 
 An existing destination file is reused without a check, as with ``--cdsapi``.
@@ -66,6 +67,7 @@ Contact:
     danilo.oceano@gmail.com
 """
 
+import asyncio
 import collections.abc
 import datetime
 import hashlib
@@ -88,6 +90,7 @@ from .track_alignment import planned_request_times
 
 STORE_URL = ("https://arco.datastores.ecmwf.int/cadl-arco-time-048/arco/"
              "reanalysis_era5_pressure_levels/pl/timeChunked.zarr")
+STORE_ZARR_FORMAT = 2  # the ARCO store is Zarr v2 (``.zmetadata``); zarr-python 3 reads it
 PROVENANCE_SCHEMA = "lectk-era5-arco/1"
 # Output short name -> names the store may give the variable (same fields as src/utils/tools.py:
 # get_cdsapi_data). The real store (observed 2026-11-24) uses the short names; the user guide lists the long ones.
@@ -113,7 +116,7 @@ DIMENSION_CANDIDATES = {
 OUTPUT_DIMENSIONS = ("valid_time", "pressure_level", "latitude", "longitude")
 LEVELS_WARNING = ("product with 13 levels (1000 to 50 hPa) every 6 h; terms of the cycle may differ from routes "
                   "with 37 levels (in the LZV case, Ca -5 % on average)")
-ACCESS_HINT = 'pip install "lorenzcycletoolkit[arco]" (zarr<3, numcodecs<0.16, fsspec, aiohttp)'
+ACCESS_HINT = 'pip install "lorenzcycletoolkit[arco]" (zarr>=3, numcodecs, fsspec, aiohttp)'
 CDS_PROFILE_URL = "https://cds.climate.copernicus.eu/"
 WORKERS = 4
 ATTEMPTS = 3
@@ -228,8 +231,8 @@ def load_packages():
         except ImportError:
             raise ArcoSetupError(f"--arco needs the optional package {name}: {ACCESS_HINT}") from None
     major = int(str(modules["zarr"].__version__).split(".")[0])
-    if major >= 3:
-        raise ArcoSetupError(f"--arco was tested with zarr 2 and found zarr {modules['zarr'].__version__}: {ACCESS_HINT}")
+    if major < 3:
+        raise ArcoSetupError(f"--arco needs zarr 3 and found zarr {modules['zarr'].__version__}: {ACCESS_HINT}")
     return modules
 
 
@@ -263,20 +266,44 @@ class Budget:
 
 
 def _is_metadata(key):
-    return os.path.basename(key).startswith(".z")
+    """Metadata keys of Zarr v2 (``.zarray``, ``.zattrs``, ``.zgroup``, ``.zmetadata``) and v3 (``zarr.json``)."""
+    name = os.path.basename(key)
+    return name.startswith(".z") or name == "zarr.json"
+
+
+class InFlight:
+    """At most ``limit`` reads of the remote store at a time, whoever asks (zarr 3 reads chunks concurrently)."""
+
+    def __init__(self, limit=WORKERS):
+        self.limit, self.now, self.peak = int(limit), 0, 0
+        self._slots = threading.BoundedSemaphore(self.limit)
+        self._lock = threading.Lock()
+
+    def __enter__(self):
+        self._slots.acquire()
+        with self._lock:
+            self.now += 1
+            self.peak = max(self.peak, self.now)
+
+    def __exit__(self, *exc):
+        with self._lock:
+            self.now -= 1
+        self._slots.release()
 
 
 class CountingStore(collections.abc.MutableMapping):
     """
-    Read-only zarr store that counts every byte it returns, retries a few times and stops at the limit.
+    Read-only mapping of zarr keys that counts every byte it returns, retries a few times and stops at the limit.
 
-    It wraps any mapping of keys to bytes (an fsspec mapper in production, a dict in tests). A missing
-    chunk is recorded in ``missing`` and refused (ArcoContentError): zarr would fill it with NaN.
+    It wraps any mapping of keys to bytes (an fsspec mapper in production, a dict in tests), and zarr reads it
+    through :func:`open_store_dataset`. A missing chunk is recorded in ``missing`` and refused
+    (ArcoContentError): zarr would fill it with NaN. At most ``parallel`` keys are read at a time.
     """
 
-    def __init__(self, inner, budget, attempts=ATTEMPTS, backoff=BACKOFF, sleep=time.sleep):
+    def __init__(self, inner, budget, attempts=ATTEMPTS, backoff=BACKOFF, sleep=time.sleep, parallel=WORKERS):
         self.inner, self.budget = inner, budget
         self.attempts, self.backoff, self.sleep = attempts, backoff, sleep
+        self.in_flight = InFlight(parallel)
         self.missing = []
         self.errors = []
 
@@ -287,7 +314,8 @@ class CountingStore(collections.abc.MutableMapping):
                 raise ArcoVolumeError(
                     f"the byte limit ({self.budget.limit}) was reached; {key} not requested.")
             try:
-                value = self.inner[key]
+                with self.in_flight:
+                    value = self.inner[key]
             except KeyError:
                 if _is_metadata(key):
                     raise
@@ -330,6 +358,82 @@ class CountingStore(collections.abc.MutableMapping):
 
     def __delitem__(self, key):
         raise ArcoError("the ARCO store is read-only")
+
+
+_STORE_CLASS = None
+
+
+def _store_class():
+    """
+    zarr 3 store class that reads a counted mapping (built once, on first use: zarr is an optional package).
+
+    zarr 3 asks for keys asynchronously; each key is read from the mapping in a worker thread, so the counting,
+    the limits, the retries and the cap on parallel reads of :class:`CountingStore` apply unchanged.
+    """
+    global _STORE_CLASS
+    if _STORE_CLASS is None:
+        from zarr.abc.store import Store
+
+        class MappingStore(Store):
+            supports_writes = False
+            supports_deletes = False
+            supports_partial_writes = False
+            supports_listing = False
+
+            def __init__(self, mapping):
+                super().__init__(read_only=True)
+                self.mapping = mapping
+
+            def __eq__(self, other):
+                return self is other
+
+            async def get(self, key, prototype, byte_range=None):
+                if byte_range is not None:  # only sharded stores read parts of a key; they are refused
+                    raise ArcoContentError(f"partial read of {key} requested: sharded stores are not supported")
+                value = await asyncio.to_thread(self.mapping.get, key)
+                return None if value is None else prototype.buffer.from_bytes(value)
+
+            async def get_partial_values(self, prototype, key_ranges):
+                return [await self.get(key, prototype, byte_range) for key, byte_range in key_ranges]
+
+            async def exists(self, key):
+                return await asyncio.to_thread(self.mapping.__contains__, key)
+
+            async def set(self, key, value):
+                raise ArcoError("the store is read-only")
+
+            async def delete(self, key):
+                raise ArcoError("the store is read-only")
+
+            async def list(self):
+                return
+                yield
+
+            async def list_prefix(self, prefix):
+                return
+                yield
+
+            async def list_dir(self, prefix):
+                return
+                yield
+
+        _STORE_CLASS = MappingStore
+    return _STORE_CLASS
+
+
+def open_store_dataset(store, zarr_format):
+    """
+    The store as a lazy xarray Dataset, from its consolidated metadata, with no dask array (``chunks=None``).
+
+    Args:
+        store (CountingStore): counted mapping of the store keys.
+        zarr_format (int): 2 or 3 (given, so that no key of the other format is requested).
+    """
+    import warnings
+
+    with warnings.catch_warnings():  # zarr 3 notes that consolidated metadata is not yet in the v3 specification
+        warnings.filterwarnings("ignore", message=".*[Cc]onsolidated metadata.*")
+        return xr.open_zarr(_store_class()(store), consolidated=True, chunks=None, zarr_format=zarr_format)
 
 
 def open_remote_mapping(token, url=STORE_URL, packages=None):
@@ -414,6 +518,8 @@ def estimate_bytes(ds, selection):
         chunks = variable.encoding.get("chunks")
         if not chunks:
             raise ArcoContentError(f"{name}: the store does not say its chunk shape")
+        if variable.encoding.get("shards"):
+            raise ArcoContentError(f"{name}: the store is sharded, which this route does not support")
         item = np.dtype(variable.encoding.get("dtype", variable.dtype)).itemsize
         count, volume = 1, 1
         for dim, chunk in zip(variable.dims, chunks):
@@ -595,7 +701,7 @@ def get_arco_data(args, track, app_logger, mapping=None, sleep=time.sleep):
 
     t0 = time.monotonic()
     try:
-        ds = xr.open_zarr(store, consolidated=True, chunks=None)  # no dask yet: see build_output
+        ds = open_store_dataset(store, STORE_ZARR_FORMAT)  # no dask yet: see build_output
         selection = select(ds, plan)
         estimate, by_variable = estimate_bytes(ds, selection)
         app_logger.info(f"📦 ARCO: the chunks touched weigh up to {estimate / 1024 ** 3:.2f} GiB "
@@ -646,6 +752,7 @@ def get_arco_data(args, track, app_logger, mapping=None, sleep=time.sleep):
         "reads": budget.reads,
         "retries": budget.retries,
         "workers": WORKERS,
+        "max_parallel_reads": store.in_flight.peak,
         "transfer_seconds": round(transfer_seconds, 3),
         "started_utc": started.isoformat(),
         "finished_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
