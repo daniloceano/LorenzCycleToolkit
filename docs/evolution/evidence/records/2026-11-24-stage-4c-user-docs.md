@@ -97,6 +97,18 @@ presente na página e na tabela de fatos acima; nenhum número novo.
 - A data mais recente servida pela WEkEO e a última data do store v2 da DestinE não foram conferidas; a página o diz.
 - A revisão visual do responsável é sobre a prévia local; a publicação no Read the Docs não faz parte desta etapa.
 
-## Fora deste registro
+## 8. Nota de fechamento (25/11/2026): aprovação, PR, CI, merge e releitura
 
-Aprovação, commit, PR, CI, merge e releitura entram depois, por nota.
+- **Aprovação:** o responsável revisou a prévia renderizada e o diff, pediu um ajuste (cartões de prós e contras na
+  escolha rápida, §4) e autorizou o commit em 25/11/2026.
+- **Commit e PR:** commit `b37420d` na branch da etapa (`docs/stage-4c-user-docs`); PR único para a `develop`:
+  [#86](https://github.com/daniloceano/LorenzCycleToolkit/pull/86).
+- **CI:** verde: os dois `build` do workflow "Python application" e `ci/circleci: build_test`.
+- **Merge:** feito pelo responsável em 25/11/2026, merge `30e6c2b` (`30e6c2bcfc7e136d2ed277d96672d3aac4844145`).
+- **Releitura no SHA do merge:**
+  - a árvore do merge é idêntica à do commit `b37420d` (diff vazio);
+  - o build do Sphinx (`-n`, o mesmo ambiente isolado) a partir de um `git archive` de `30e6c2b` terminou com 0 avisos;
+  - a página renderizada tem os 7 cartões de prós e contras;
+  - em `docs/source` não há caminho da Swell nem credencial, só modelos como `<your-api-key>`.
+- **Pendências da etapa 4 (sem mudança):** decisão sobre ler os stores Zarr v3 da DestinE, retenção dos dados na Swell
+  (D-028) e resumo de transferência. Os dois achados do `--help` (§6) continuam abertos para decisão.
