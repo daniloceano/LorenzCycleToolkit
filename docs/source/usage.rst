@@ -98,13 +98,14 @@ The memory and time a run needs are not fixed: they depend on the case and the m
 - **File layout**: compressed files with large blocks can be read much more slowly than an uncompressed, already
   subset file with the same values.
 - **Figures**: ``-p`` adds maps and plots after the computation; maps may also need Natural Earth data.
-- **Downloads**: with ``--cdsapi`` or ``--ncar`` the acquisition usually takes much longer than the computation.
+- **Downloads**: with ``--cdsapi``, ``--wekeo``, ``--ncar``, ``--arco`` or ``--destine`` the acquisition usually
+  takes much longer than the computation (see :ref:`rda-quick-choice`).
 
 **Measured examples** (observations, not guarantees):
 
 - Track 19791150, 27 six-hourly times, 32 effective levels, area of about 42° × 76° at 0.25°, ``-t -r`` without
   figures, from an uncompressed local NetCDF file on a shared Linux server (2026-11-02): about 11 s; the same values
-  from the CDS NetCDF (3-hourly, compressed in blocks of 19 times) took 128 s. See :ref:`rda-comparison`.
+  from the CDS NetCDF (3-hourly, compressed in blocks of 19 times) took 128 s.
 - D-Bench acquisition tests, ``--ncar`` with the energetics in the same process, ten 1979–1980 cases of 0.5 to 6.7 GiB
   (2026-10-31): peak memory 0.48 to 3.21 GiB.
 
@@ -290,19 +291,24 @@ energetics on them:
 
 .. code-block:: bash
 
-   python lorenzcycletoolkit.py case.nc -t -r -p --cdsapi --trackfile inputs/track_case   # Copernicus CDS
-   python lorenzcycletoolkit.py case.nc -t -r -p --ncar --trackfile inputs/track_case     # NCAR GDEX (experimental)
+   python lorenzcycletoolkit.py case.nc -t -r -p --cdsapi --trackfile inputs/track_case    # Copernicus CDS
+   python lorenzcycletoolkit.py case.nc -t -r -p --wekeo --trackfile inputs/track_case     # WEkEO
+   python lorenzcycletoolkit.py case.nc -t -r -p --ncar --trackfile inputs/track_case      # NCAR GDEX (kerchunk)
+   python lorenzcycletoolkit.py case.nc -t -r -p --arco --time-resolution 6 --trackfile inputs/track_case     # CDS ARCO Zarr
+   python lorenzcycletoolkit.py case.nc -t -r -p --destine --time-resolution 6 --trackfile inputs/track_case  # DestinE
 
-The first argument is the file the download writes. The area (track extent plus a 15° buffer) and the hours
-(``--time-resolution``, default 3) are derived from the track file. Accounts, data coverage, limits, the other ERA5
-services and how they compare are described in :doc:`remote_data_acquisition`.
+The first argument is the file the download writes; if it already exists, it is used and nothing is downloaded. The
+area (track extent plus a 15° buffer) and the hours (``--time-resolution``, default 3) are derived from the track
+file. Only one route can be chosen per run. ``--arco`` (13 levels, 6-hourly) and ``--destine`` (19 levels, reduced
+precision) deliver products that differ from the others. Accounts, optional packages, times, volumes, limits and how
+the data of the routes compare are described in :doc:`remote_data_acquisition`.
 
 **Input files are kept.** No input NetCDF file is deleted after a run, whether it was given by you, reused or
 downloaded by the run (earlier versions deleted the ``--cdsapi`` file at the end of every ``--track`` run, even a
 reused one). To delete a file that the run itself downloaded, add ``--delete-downloaded-input``: the file is deleted
 only if it did not exist before the run, the run ended with status ``success`` and the file is unchanged since the
-download. ``run_status.json`` records the decision under ``input_cleanup``. The same applies to ``--ncar`` (its
-provenance record is kept).
+download. ``run_status.json`` records the decision under ``input_cleanup``. The same applies to the other routes
+(their provenance records are kept).
 
 **Guarded CDS mode (controlled runs)**
 
@@ -333,9 +339,16 @@ Flags
 - `--offline-maps`: Draw maps from local Natural Earth data only (``CARTOPY_DATA_DIR`` or Cartopy's data directory) and never download them. A map whose data are missing is reported as failed (partial output); the computation is unaffected. Without this option Cartopy downloads missing Natural Earth files as usual.
 - `-v`, `--verbosity`: Enable debug logging for detailed output.
 - `--cdsapi`: Download the ERA5 fields of the track from the Copernicus CDS before the run (see :ref:`rda-cdsapi`).
-- `--ncar`: Download the ERA5 fields of the track from NCAR GDEX before the run; experimental (see :ref:`rda-ncss`). Cannot be combined with ``--cdsapi``.
-- `--time-resolution`: Hours between the times requested by ``--cdsapi`` or ``--ncar`` (default: 3). With ``--cdsapi``, 3, 6 or 12 hours avoid most CDS cost limits.
-- `--delete-downloaded-input`: With ``--cdsapi`` or ``--ncar``, delete the input NetCDF file after the run, only if this run downloaded it, the run succeeded and the file is unchanged. Without it no input file is ever deleted.
+- `--wekeo`: Download the ERA5 fields of the track from WEkEO, with the same request as ``--cdsapi`` (see :ref:`rda-wekeo`). Needs the extra ``[wekeo]``.
+- `--ncar`: Download the ERA5 fields of the track from NCAR GDEX before the run (see :ref:`rda-ncar`).
+- `--ncar-method`: With ``--ncar``, the access method: ``kerchunk`` (default, no account), ``subset`` (GDEX token) or ``ncss`` (experimental).
+- `--kerchunk-refs`: With ``--ncar`` and kerchunk, directory of the reference files (default ``inputs/kerchunk_refs``; missing files are downloaded once).
+- `--arco`: Read the ERA5 fields from the CDS ARCO Zarr store: 13 levels, 6-hourly (see :ref:`rda-arco`). Needs the extra ``[arco]`` and the CDS key.
+- `--destine`: Read the ERA5 fields from the DestinE Earth Data Hub: 19 levels, reduced precision, store frozen since 2026-07-06 (see :ref:`rda-destine`). Needs the extra ``[destine]`` and an Earth Data Hub key.
+- `--max-gib`: With ``--ncar``, ``--wekeo``, ``--arco`` or ``--destine``, largest volume accepted, in GiB (default 20). Checked on an estimate before anything is downloaded.
+- `--max-requests`: With ``--destine``, largest number of HTTP requests accepted (default 10 000). Checked before any chunk is read.
+- `--time-resolution`: Hours between the times requested by any download route (default: 3). With ``--cdsapi``, 3, 6 or 12 hours avoid most CDS cost limits; ``--arco`` needs a multiple of 6.
+- `--delete-downloaded-input`: With any download route, delete the input NetCDF file after the run, only if this run downloaded it, the run succeeded and the file is unchanged. Without it no input file is ever deleted.
 - `--cds-max-seconds`, `--cds-ledger`, `--cds-retries`, `--cds-timeout`, `--cds-case-id`, `--cds-delete-on-stop`: guarded CDS mode for controlled runs (see *Guarded CDS mode* above).
 - `--trackfile`: Specify a custom track file path (default: ``inputs/track``).
 - `--box_limits`: Specify a custom box limits file path (default: ``inputs/box_limits``).

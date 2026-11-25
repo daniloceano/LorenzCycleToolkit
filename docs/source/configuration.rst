@@ -88,7 +88,9 @@ The ``inputs/namelist_ERA5-cdsapi`` preset contains:
     Time;;valid_time
     Vertical Level;;pressure_level
 
-If you have ERA5 data from other sources (not downloaded via ``--cdsapi``, ``--wekeo``, ``--arco`` or ``--destine``), you should manually create your namelist:
+With ``--ncar`` the toolkit writes the file with the names of ``inputs/namelist`` and reads it again with the same namelist; when ``inputs/namelist`` does not exist, ``inputs/namelist.default`` (identical to the ERA5 preset) is used.
+
+If you have ERA5 data from other sources (not downloaded by one of these routes), you should manually create your namelist:
 
 .. code-block:: bash
 

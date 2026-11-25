@@ -8,3 +8,4 @@ This page has moved. The CDS API route (``--cdsapi``) is now described in
 
 - A complete worked example is :doc:`Tutorial 3 <examples_and_tutorials>` in Examples and Tutorials.
 - Problems with credentials, cost limits or slow downloads: :ref:`ts-remote-acquisition`.
+- Other ERA5 routes and how they compare: :ref:`rda-quick-choice`.

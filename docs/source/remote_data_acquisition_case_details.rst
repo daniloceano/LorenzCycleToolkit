@@ -5,7 +5,8 @@
 Acquisition tests: case details
 ===============================
 
-Supplementary evidence for :doc:`remote_data_acquisition`, sections 3 and 4.
+Supplementary evidence for :doc:`remote_data_acquisition` (:ref:`rda-ncar-cds-37` and :ref:`rda-dbench-history`).
+These are the earlier acquisition tests of October 2026, kept as history.
 
 **Case labels.** The acquisition tests (D-Bench, the project's acquisition benchmark) used ten historical South
 Atlantic cyclone trajectories of 1979–1980. Each trajectory is identified by an internal track label (for example
@@ -17,7 +18,7 @@ the permanent records under ``docs/evolution/``.
 Energetics of NCAR files against the CDS
 ----------------------------------------
 
-Summarised in :ref:`section 4.2 <rda-science>`. Tolerance per column: max(10\ :sup:`-4` × column scale,
+Summarised in :ref:`rda-ncar-cds-37`. Tolerance per column: max(10\ :sup:`-4` × column scale,
 10\ :sup:`-9`), fixed before the comparison. The same verdict applies to every NCAR method in a case, because the
 fields are identical.
 
