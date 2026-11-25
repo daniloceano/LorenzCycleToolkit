@@ -5,8 +5,8 @@
 
 **Base:** `develop` em `91dfbed` (PR #87); `main` em `48fe8e2`. Branch única da etapa: `feat/stage-4d-zarr3` (D-042).
 
-**Estado deste registro:** Partes 1 e 2 concluídas; **Parte 3 (Swell) pendente** — as seções 6 e 7 serão
-preenchidas depois da regressão e dos testes reais, com o commit usado (D-040).
+**Estado deste registro:** Partes 1 a 3 concluídas (regressão sem download e testes reais com o commit `f923d80`,
+D-040). PR, CI e merge: a preencher no encerramento.
 
 ## Resumo em linguagem simples
 
@@ -14,8 +14,9 @@ O ambiente do LECTK passa a usar zarr 3 com um xarray novo, porque o store da De
 (Zarr v3) só é lido com zarr 3, e a operacionalização futura do LEC precisará desse ambiente de qualquer modo. Só a
 camada de leitura de dados foi atualizada; o núcleo numérico (numpy, pandas, scipy, netCDF4) ficou igual, para que o
 LEC dê resultados idênticos bit a bit sobre os mesmos arquivos. `--destine` passa a ler o store v3 por padrão; o
-store v2 da 2b continua disponível com `--destine-store v2` enquanto for servido. Os dois stores **não** guardam os
-mesmos valores: o v2 arredonda a mantissa para 10 bits, o v3 para 13 (confirmado nos metadados).
+store v2 da 2b continua disponível com `--destine-store v2` enquanto for servido. No teste real, os dois stores
+deram **valores idênticos bit a bit** e o mesmo LEC: os dados não mudaram, só os blocos. Os metadados do v3
+declaram arredondamento para 13 bits de mantissa, mas os valores têm os mesmos 10 bits do v2 (§3, §7).
 
 ## 1. Decisão D-043 (responsável, 25/11/2026)
 
@@ -64,11 +65,13 @@ mudaram: instalam `requirements.txt`, que agora inclui o zarr.
 | Codecs | `numcodecs.bitround` keepbits **13**, bytes, blosc zstd 5 shuffle | bitround keepbits **10**, blosc zstd 5 shuffle |
 | Tempo | 761 544 horas (1940-01-01 a 2026-11-15 23 UTC), um bloco (≈ 0,8 MB comprimido) | congelado em meados de 2026 |
 
-**Consequência:** a causa dos degraus da DestinE na 2b ("não verificada" na 4c) está confirmada: arredondamento para
-10 bits de mantissa no v2 (T: meio degrau 0,0625 K abaixo de 256 K e 0,125 K acima; z: 64 m² s⁻² até 262 144). No
-v3, com 13 bits, os erros máximos caem 8 ×: T ≤ 0,0156 K, z ≤ 16 m² s⁻². Portanto o critério "dados iguais ao v2 na
-região comum" não pode valer bit a bit; a diferença esperada v3 − v2 está limitada pela soma dos meios degraus
-(§7).
+**Leitura na Parte 2 e correção na Parte 3:** os metadados do v2 confirmam a causa dos degraus da DestinE na 2b
+("não verificada" na 4c): arredondamento para 10 bits de mantissa (T: meio degrau 0,0625 K abaixo de 256 K e 0,125 K
+acima; z: 64 m² s⁻² até 262 144). Na Parte 2 li o `keepbits 13` do v3 como precisão 8 × maior e escrevi isso no
+aviso, na ajuda e nas docs. **O teste real (§7) desmentiu essa leitura:** os valores do v3 são idênticos aos do v2 e
+os 13 bits menos significativos da mantissa são zero em 100 % dos valores, ou seja, os dados foram copiados do v2 já
+arredondados para 10 bits e o codec de 13 bits não os altera. Os textos foram corrigidos depois do commit `f923d80`
+(§7.3). Dados acrescentados ao v3 depois de 07/2026 não foram verificados.
 
 ## 4. Implementação
 
@@ -114,13 +117,110 @@ flake8 com os erros que bloqueiam o CI (E9, F63, F7, F82): 0.
 
 ## 6. Regressão sem download (Parte 3.1)
 
-*(pendente: commit, plano aprovado, tabela por sha256.)*
+**Código:** `git archive` do commit `f923d80` da branch (D-040), em `lectk_stage4d_zarr3_20261125/code_f923d80`;
+ambiente `lorenz-4d`. **Execução:** `regress_4d.py` (na pasta da etapa), 8 rodadas em paralelo; cada uma numa pasta
+nova `regress_f923d80/<id>/` com cópia de `inputs/` e da entrada (sha256 da cópia = da origem), os mesmos argumentos
+da referência, `OMP/OPENBLAS/MKL/NUMEXPR_NUM_THREADS=2`, `PYTHONHASHSEED=0` (como o harness da fase 2), credenciais
+removidas do ambiente e lançador `tests/run_cli_offline.py` (rede bloqueada). Nenhuma pasta de referência foi
+alterada; as cópias das entradas foram apagadas depois de cada rodada (sobram 105 MB de saídas).
+
+**Resultado: 78 de 78 CSVs idênticos bit a bit às referências; código de saída 0 em todas; nenhuma tentativa de
+rede; entradas inalteradas; 68 de 68 entradas da fase 2 iguais ao sha256 selado.**
+
+| Referência (caso 19790205) | Entrada | CSV referência = novo |
+|---|---|---|
+| 4a.1, comando principal `--ncar` | `6881a228` | `ffad993f` |
+| 4a, grade comum kerchunk | `567ccdce` | `ac5c7eec` |
+| 4b·1, comando principal `--wekeo` | `cf2ea3a2` | `8c919a68` |
+| 4b·1, grade comum WEkEO nova | `5e497c48` | `0fe175d2` |
+| 4b·1, grade comum CDS 2b (34 h) | `7d124089` | `d46d82ba` |
+| 4b·2, comando principal `--arco` (execução 1) | `99aebc35` | `810d45e4` |
+| 4b·2, comando principal `--arco` (execução 2) | `7c0fe5b8` | `810d45e4` |
+| 4b·2, grade comum ARCO nova | `6fc9c51c` | `810d45e4` |
+| 4b·3, comando principal `--destine` | `ee5e8463` | `7ba757d2` |
+| 4b·3, grade comum DestinE nova | `dd7d837f` | `ced56f3e` |
+
+Fase 2 da 2b: 68 rodadas (10 `ref`, 10 `c1`, 1 piloto, 47 por rota: ARCO, DestinE, kerchunk e WEkEO 10 cada, Get a
+Subset 7), todas idênticas ao `outputs_sha256` dos manifestos. Tabela completa: `regress_f923d80/regression.tsv`.
+Tempo somado 1 816 s.
+
+**Observação:** o xarray 2026.9 emite `FutureWarning` em `src/utils/preprocessing.py:428` e `:430` (`drop` →
+`drop_vars`). Sem efeito nos resultados; fica como pendência para uma etapa futura (não é ajuste necessário agora).
 
 ## 7. Testes reais (Parte 3.2 e 3.3)
 
-*(pendente: estimativa aprovada, DestinE v3 no caso 19790205, comparação com v2 e com o LEC da 4b·3; ARCO curto com
-os limites da 4b·2.)*
+Limites aprovados pelo responsável em 25/11/2026. Código: export de `f923d80` (sem `.git`, por isso
+`lectk_commit` é nulo na proveniência; o commit está em `code_f923d80/COMMIT` e nos scripts `run_destine_v3.sh` e
+`run_arco.sh`), ambiente `lorenz-4d`, mesmo track e caixa da 4b·2/4b·3 (`inputs/` copiados), pastas novas
+`real_destine_v3/` e `real_arco/`. As duas corridas foram seguidas, sem sobreposição.
+
+### 7.1 DestinE, store v3 (padrão)
+
+**Estimativa antes de ler blocos** (`--max-gib 0.01`): 5 700 blocos, ≈ 5 707 requisições, teto 111,82 GiB
+(120 067 829 703 B), 1 754,9 MiB de valores úteis; recusada sem ler nenhum bloco. Uma primeira tentativa com
+`--max-gib 0.001` parou já nos metadados (a coordenada `valid_time` do v3 tem ≈ 0,8 MB), também sem ler bloco.
+
+**Comando** (`run_destine_v3.sh`): `lorenzcycletoolkit.py case_19790205.nc -f -r --destine --trackfile inputs/track
+--time-resolution 6 --max-requests 6000 --max-gib 112 -o destine_v3_19790205_main`.
+
+| Item | v3 (4d) | v2 (4b·3) |
+|---|---|---|
+| Requisições | 5 707 (7 de metadados + 5 700 blocos), todas HTTP 200, 0 exceções, 0 novas tentativas | 1 528 |
+| Recebido | 26 485 904 273 B = 24,67 GiB (2,48 MB de metadados) | 8,79 GiB |
+| Teto conferido antes | 111,82 GiB | 45,23 GiB |
+| Leituras em paralelo (pico) | 4 | — |
+| Blocos lidos mais de uma vez | 0 | 0 |
+| Transferência / total | 3 050 s / 51,6 min (18:15:25–19:07:00 UTC) | 1 010 s / 17,8 min |
+| Arquivo | 1 840 155 497 B, sha256 `4310c8e4…` | `ee5e8463…` |
+| LEC | rodou até o fim; CSV `7ba757d2…` | `7ba757d2…` |
+
+**Dados v3 × v2 (arquivo inteiro: 34 horários × 19 níveis × 225 × 633, 92 006 550 valores por campo):**
+coordenadas iguais e **valores idênticos bit a bit em t, z, u, v e w**. O sha256 do arquivo difere só porque o atributo
+`history` traz a hora e `source` diz "v3". Em 100 % dos valores os 13 bits menos significativos da mantissa são zero:
+os valores têm 10 bits, embora os metadados do v3 declarem `keepbits 13` (dados copiados do v2 já arredondados).
+
+**Grade comum da 2b** (`to_common_grid` do harness da rodada 2, 34 horários × 13 níveis): arquivo idêntico ao da 4b·3
+(sha256 `dd7d837f…`); LEC com o código `f923d80` (rede bloqueada): CSV `ced56f3e…`, **idêntico** ao da 4b·3. Contra o
+CDS da 2b: diferença máxima 0,125 K em T e 64 m² s⁻² em z, a mesma da 2b, ou seja, o mesmo meio-degrau de 10 bits.
+Comparação com o CDS de 34 horários portanto igual à da 4b·3 (só BΦE acima de 1 %, 1,21 %).
+
+**Conclusão:** "os dados não mudam, os blocos sim" confirmado para este caso, inclusive no LEC. O v3 custa 3,7 ×
+mais requisições e 2,8 × mais bytes neste caso curto e é o único atualizado. Dados acrescentados ao v3 depois de
+07/2026 não foram verificados (podem ter de fato 13 bits).
+
+### 7.2 ARCO
+
+**Comando** (`run_arco.sh`, limites da 4b·2): `lorenzcycletoolkit.py case_19790205.nc -f -r --arco --trackfile
+inputs/track --time-resolution 6 --max-gib 20 -o arco_19790205`.
+
+| Item | 4d (zarr 3) | 4b·2 execução 2 (zarr 2) |
+|---|---|---|
+| Teto conferido antes | 13 053 214 720 B (12,16 GiB) | igual |
+| Recebido | 4 944 004 372 B (metadados 59 535 B) | 4 944 004 336 B |
+| Leituras | 4 433, 0 novas tentativas, pico de 4 em paralelo | 4 431 |
+| Transferência / total | 978 s / 16,9 min | 793 s / 13,8 min |
+| Valores do arquivo | **idênticos** (u, v, t, w, z e coordenadas; só `history` difere) | — |
+| CSV do LEC | `810d45e4…` | `810d45e4…` (**idêntico**) |
+
+As 2 leituras e 36 bytes a mais são metadados lidos pelo zarr 3 ao abrir o store v2; os blocos são os mesmos.
+
+### 7.3 Correção depois do commit `f923d80`
+
+O aviso de precisão do v3, a ajuda de `--destine`/`--destine-store`, as docs (§2.7, §3.1, limitações), o CHANGELOG, a
+D-043 e este registro diziam que o v3 guarda 13 bits e é 8 × mais preciso. Corrigidos para o que foi medido (10 bits nos
+dois stores, mesmos valores). O aviso de precisão passou a ser o mesmo para v3 e v2 (`PRECISION_WARNING`, o texto da
+4b·3). Testes afetados (DestinE, ajuda, ARCO, empacotamento): 104 passaram na Swell.
 
 ## 8. Pendências para a retenção
 
-*(preencher no fim.)*
+Nada foi apagado na Swell. Pasta da etapa `/p1-swell/danilocs/lectk_stage4d_zarr3_20261125` (4,6 GB):
+
+- `real_destine_v3/` (arquivo v3 1,84 GB, proveniência, LEC), `real_arco/` (arquivo 1,26 GB, proveniência, LEC),
+  `cmp/` (grade comum v3, LEC, `cmp_v3.out`), `regress_f923d80/` (78 rodadas, 105 MB), `code_f923d80/`, `dev/`,
+  `dev2/`, `base/` (cópias de trabalho para as suítes), `env/` (freeze e sondagem), `logs/`, `logs_real/`, scripts;
+- ambiente conda `lorenz-4d` (clone de `lorenz` + pins da 4d);
+- as pastas das etapas 4a–4b·3 e da 2b só foram lidas.
+
+Para a retenção (D-028): os arquivos v3 e v2 do caso são idênticos em valores, então o v3 não é evidência nova além da
+proveniência e do LEC; `dev/`, `dev2/`, `base/` e os `.tgz` são descartáveis; decidir o destino de `lorenz` × `lorenz-4d`
+depois do merge.

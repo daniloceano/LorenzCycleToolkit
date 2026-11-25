@@ -13,12 +13,12 @@ What the product is, and what that means for the cycle (read before using it):
   above 10 hPa, as for every source. Terms of the Lorenz Energy Cycle can differ
   from routes with 37 levels.
 - **values stored with reduced precision** (bit rounding of the float32
-  mantissa). The v3 store keeps 13 bits (T within 0.008 K to 0.016 K, z within
-  16 m2 s-2 of the original); the v2 store keeps 10 bits (T within 0.0625 K or
-  0.125 K, z within 64 m2 s-2), and with it, in the 2b benchmark (phase 2), 18
-  of 240 terms of the cycle differed between 1 % and 2.7 % from the CDS
-  (boundary, generation and residual terms); energy contents and conversions
-  did not change.
+  mantissa to 10 bits: T within 0.0625 K or 0.125 K, z within 64 m2 s-2 of the
+  CDS below 10 hPa). In the 2b benchmark (phase 2), 18 of 240 terms of the cycle
+  differed between 1 % and 2.7 % from the CDS (boundary, generation and residual
+  terms); energy contents and conversions did not change. The metadata of the v3
+  store declare 13 bits, but its values are those of the v2 store, 10 bits
+  (stage 4d: identical bit for bit in case 19790205).
 - **hourly**: any ``--time-resolution`` of whole hours is served.
 - **requests:** every chunk is one HTTP request, and the account has a monthly
   request quota; the number of requests is estimated and limited before any
@@ -48,8 +48,8 @@ Two stores (``--destine-store``, decision D-043 of 2026-11-25, stage 4d):
   (``reanalysis-era5-pressure-levels-v0.zarr``), no longer updated since
   2026-07-06 (it ends in mid-2026) and possibly withdrawn without notice; kept
   while it is served, because its smaller chunks need fewer requests and bytes
-  for short cases. Its values are rounded more coarsely (10 bits, not 13): the
-  two stores do not hold the same values.
+  for short cases. The values of the two stores were identical bit for bit in
+  the stage 4d test (same data, other chunks).
 
 A time beyond the end of the store is refused before any chunk is read.
 
@@ -134,12 +134,10 @@ LEVELS_WARNING = ("product with its own pressure levels ({n}, {top:g} to {bottom
                   "differ), used without interpolation")
 PRECISION_WARNING = ("values stored with reduced precision: in the comparison of Front 2b, 18 of 240 terms of the "
                      "cycle differed between 1 % and 2.7 % from the CDS (boundary, generation and residual terms); "
-                     "energy contents and conversions did not change")  # the v2 store (10 bits of mantissa)
-PRECISION_WARNING_V3 = ("values stored with reduced precision (13 bits of mantissa: T within 0.016 K, z within "
-                        "16 m2 s-2); with the coarser v2 store (10 bits), 18 of 240 terms of the cycle differed "
-                        "between 1 % and 2.7 % from the CDS in the comparison of Front 2b (boundary, generation and "
-                        "residual terms), energy contents and conversions did not change")
-PRECISION_WARNINGS = {"v3": PRECISION_WARNING_V3, "v2": PRECISION_WARNING}
+                     "energy contents and conversions did not change")
+# Both stores: values rounded to 10 bits of mantissa (the v3 metadata declare 13 bits, but in stage 4d its values were
+# identical bit for bit to those of the v2 store, case 19790205)
+PRECISION_WARNINGS = {"v3": PRECISION_WARNING, "v2": PRECISION_WARNING}
 QUOTA_NOTE = ("every chunk is one HTTP request and counts against the monthly request quota of the Earth Data Hub "
               "account")
 ACCESS_HINT = 'pip install "lorenzcycletoolkit[destine]" (zarr>=3, numcodecs, fsspec, aiohttp)'

@@ -192,10 +192,9 @@ def create_arg_parser():
             "Read the ERA5 data from the DestinE Earth Data Hub Zarr store (the Zarr v3 store, updated monthly; "
             "see --destine-store) instead of the CDS API when the input file does not exist: same area, hours "
             "and file contents as --cdsapi, BUT the product's own 19 pressure levels (1000 to 1 hPa, not "
-            "interpolated) and values stored with reduced precision (13 bits of mantissa in the v3 store; with "
-            "the 10 bits of the v2 store, 18 of 240 terms of the cycle differed between 1 %% and 2.7 %% from the "
-            "CDS in the 2b comparison: boundary, generation and residual terms; energy contents and conversions "
-            "did not change). Every chunk is one HTTP request against the monthly quota of the account "
+            "interpolated) and values stored with reduced precision (10 bits of mantissa): in the 2b comparison, "
+            "18 of 240 terms of the cycle differed between 1 %% and 2.7 %% from the CDS (boundary, generation and "
+            "residual terms); energy contents and conversions did not change. Every chunk is one HTTP request against the monthly quota of the account "
             "(500 000): the requests are estimated and limited before any read (--max-requests, default 10000), "
             "and the transfer is many times the data kept, whole chunks of 60 days x 15 x 15 degrees in the v3 "
             "store (--max-gib, default 20 GiB, is usually too small: the refusal says the value needed). Needs "
@@ -209,10 +208,10 @@ def create_arg_parser():
         choices=("v3", "v2"),
         default=None,
         help=("With --destine: Earth Data Hub store (default: v3). v3: Zarr v3 store, updated monthly, chunks of "
-              "60 days x 1 level x 15 x 15 degrees, 13 bits of mantissa. v2: Zarr v2 store of the 2026-11 "
+              "60 days x 1 level x 15 x 15 degrees. v2: Zarr v2 store of the 2026-11 "
               "benchmark, no longer updated since 2026-07-06 and possibly withdrawn without notice, chunks of "
-              "5 days x 1 level x 64 x 64 degrees, 10 bits of mantissa; fewer requests and bytes for short "
-              "cases, other values (coarser rounding)."),
+              "5 days x 1 level x 64 x 64 degrees; fewer requests and bytes for short cases. Same values in both "
+              "(identical bit for bit in the 2026-11 test)."),
     )
     parser.add_argument(
         "--max-requests",

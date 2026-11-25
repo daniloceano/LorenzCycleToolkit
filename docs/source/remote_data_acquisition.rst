@@ -210,8 +210,7 @@ data differences in :ref:`rda-science` and the numbers with their caveats in :re
 
       .. container:: rda-cons
 
-         - **reduced precision:** with the older v2 store, 18 of 240 cycle terms differed from the CDS by 1 % to
-           2.7 %; the current v3 store keeps more bits
+         - **reduced precision:** 18 of 240 cycle terms differed from the CDS by 1 % to 2.7 %
          - large chunks (60 days × 15° × 15°): a short case transfers many times the values it keeps
          - one request per chunk (about 5,700 for the test case) against a monthly quota of 500,000 per account
          - needs a DestinE account, API key and the extra ``[destine]``
@@ -798,10 +797,9 @@ time evolution of the conversions.
 .. warning::
 
    ``--destine`` delivers the product's own **19 pressure levels** (1000 to 1 hPa, not interpolated; 17 are used,
-   down to 10 hPa) and **values stored with reduced precision** (bit rounding). The default v3 store keeps 13 bits of
-   the mantissa; the older v2 store keeps 10, and with it 18 of 240 terms of the cycle differed from the CDS by 1 % to
-   2.7 % in the 2026-11 comparison (see :ref:`the DestinE warning <rda-destine-warning>`). The program repeats these
-   warnings at the start of the run, in the file and in the provenance record.
+   down to 10 hPa) and **values stored with reduced precision** (10 bits of mantissa). In the 2026-11 comparison, 18 of
+   240 terms of the cycle differed from the CDS by 1 % to 2.7 % (see :ref:`the DestinE warning <rda-destine-warning>`).
+   The program repeats these warnings at the start of the run, in the file and in the provenance record.
 
 **How it works.** The toolkit reads the ERA5 Zarr store of the Destination Earth (DestinE) Earth Data Hub over
 HTTPS, without a queue. Every chunk read is **one HTTP request** against the account's monthly quota. Two stores can
@@ -823,12 +821,13 @@ be chosen with ``--destine-store``:
    * - Chunk
      - 1440 hours (60 days) × 1 level × 60 × 60 points (15° × 15°)
      - 120 hours × 1 level × 256 × 256 points (64° × 64°)
-   * - Precision
-     - 13 bits of the mantissa kept: T within 0.016 K, z within 16 m\ :sup:`2` s\ :sup:`-2`
-     - 10 bits: T within 0.125 K, z within 128 m\ :sup:`2` s\ :sup:`-2`
+   * - Values
+     - 10 bits of mantissa (its metadata declare 13 bits, but in our test its values were those of the v2 store)
+     - 10 bits
 
-The two stores hold the same ERA5 fields rounded differently, so their files differ. For a short case the v2 store
-needs fewer requests and bytes (its chunks are shorter in time); the v3 store is the one that is kept up to date.
+In the full test (2026-11-25, one case), the files of the two stores held **identical values, bit for bit**: the same
+data in other chunks. For a short case the v2 store needs fewer requests and bytes (its chunks are shorter in time);
+the v3 store is the one that is kept up to date.
 
 **Credential and package, step by step.**
 
@@ -863,6 +862,9 @@ about 5,700 requests and an upper bound of 112 GiB; the v2 store needed 1,528 re
 - *Full test, v2 store* (2026-11-24, one case, 19 levels, 15° area, 34 times): **1,528 requests** (0.3 % of the
   monthly quota), all HTTP 200, no retry; **8.79 GiB** received (the upper bound checked before reading was
   45.23 GiB), 5.4 × the values kept; **17 min 46 s** in all.
+- *Full test, v3 store* (2026-11-25, the same case): **5,707 requests** (1.1 % of the monthly quota), all HTTP 200,
+  no retry; **24.67 GiB** received (upper bound 111.82 GiB), 14 × the values kept; **51 min 36 s** in all. Values
+  and cycle identical, bit for bit, to those of the v2 store.
 
 **Limitations.**
 
@@ -930,8 +932,9 @@ explanation, not verified, is that the service packs the values again for each r
    **residuals** (RGz three times). The energy contents, conversions and tendencies changed by less than 1 %. The
    affected terms depend on the geopotential at the walls of the box or close the budget by difference. In the full
    test of ``--destine`` (one case), only BΦE passed 1 % (1.21 %; 1.24 % in the benchmark for the same case). These
-   results are for the v2 store. The cause of the steps was confirmed on 2026-11-25 in the store metadata: bit
-   rounding that keeps 10 bits of the mantissa (v2 store); the current v3 store keeps 13 bits.
+   results are for the v2 store; the v3 store gave the same values. The cause of the steps was confirmed on
+   2026-11-25: the values are rounded to 10 bits of mantissa (bit rounding declared in the v2 store metadata; in the
+   files of both stores the last 13 bits of every value are zero).
 
 **Full tests with the main command against the CDS** (one case, 34 times, computed on the benchmark grid):
 
@@ -1214,9 +1217,10 @@ permanent records of the project (``docs/evolution/``).
 
 - **ARCO has 13 levels.** Their effect on the cycle was measured on **one case only** (Ca −5 % on average; Ce −1.8 %,
   Ck −0.2 %), by subsampling a CDS file (see :ref:`rda-vertical`).
-- **DestinE: reduced precision and large chunks.** The comparison with the CDS was made with the v2 store (10 bits);
-  the v3 store (13 bits, the default) was tested on one case. Its chunks of 60 days make short cases transfer much
-  more than they keep. See :ref:`the DestinE warning <rda-destine-warning>`.
+- **DestinE: reduced precision and large chunks.** Values rounded to 10 bits of mantissa in both stores (see
+  :ref:`the DestinE warning <rda-destine-warning>`); the v3 store, the default, was tested on one case, where it gave
+  the values of the v2 store. Data added to the v3 store after 2026-07 were not checked. Its chunks of 60 days make
+  short cases transfer much more than they keep.
 - **NCSS is unreliable:** 0 of 16 in the 2026-11 benchmark; it stays experimental.
 - **GDEX publishes months after the CDS:** recent cases need the CDS, WEkEO or ARCO.
 - **Get a Subset depends on free request slots:** waits of hours are possible.

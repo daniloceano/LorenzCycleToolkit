@@ -86,9 +86,10 @@ data differences and limitations, in `docs/source/remote_data_acquisition.rst`.
   retries and refusal of missing chunks are unchanged, at most 4 reads run at a time
   (recorded as `max_parallel_reads` in the provenance), and a sharded store is refused.
   `--destine` now reads the Zarr v3 store `era5-pressure-levels-v0.zarr` (updated
-  monthly; chunks of 60 days × 1 level × 15° × 15°; 13 bits of mantissa kept) and the new
-  `--destine-store v2` keeps the v2 store of the benchmark (10 bits; no longer updated
-  since 2026-07-06) while it is served; the two stores do not hold the same values. The
+  monthly; chunks of 60 days × 1 level × 15° × 15°) and the new `--destine-store v2`
+  keeps the v2 store of the benchmark (no longer updated since 2026-07-06) while it is
+  served. In the test case the two stores gave identical values, bit for bit (10 bits
+  of mantissa, although the v3 metadata declare 13), and the same cycle. The
   provenance records the store version and its Zarr format.
 - **`--help`: `--cdsapi` is no longer marked as experimental, and `--time-resolution`
   says that it applies to every data source,** with the restriction of each one

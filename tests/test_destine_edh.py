@@ -242,13 +242,13 @@ def test_warnings_in_the_log_and_in_the_provenance(store, track, tmp_path, caplo
         out = d.get_destine_data(args_for(tmp_path / "p.nc"), track, LOGGER, mapping=store)
     warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
     assert any("19, 1000 to 1 hPa" in w and "37 levels" in w for w in warnings)  # (a) number of levels
-    assert any("13 bits" in w and "18 of 240 terms" in w and "between 1 % and 2.7 %" in w
-               and "conversions did not change" in w for w in warnings)  # (b) reduced precision
+    assert any("18 of 240 terms" in w and "between 1 % and 2.7 %" in w and "conversions did not change" in w
+               for w in warnings)  # (b) reduced precision (the same values in v3 and v2)
     text = (tmp_path / "p.nc.provenance.json").read_text()
     prov = json.loads(text)
     assert prov["route"] == "destine" and len(prov["levels_hpa"]) == 19
     assert prov["store_version"] == "v3" and prov["zarr_format"] == 3
-    assert prov["warnings"][0] == d.levels_warning(LEVELS) and prov["warnings"][1] == d.PRECISION_WARNING_V3
+    assert prov["warnings"][0] == d.levels_warning(LEVELS) and prov["warnings"][1] == d.PRECISION_WARNING
     assert prov["area_nwse"] == [-13, -65, -45, -33] and len(prov["times"]) == 3
     assert prov["lectk_commit"] is None or len(prov["lectk_commit"]) == 40
     assert set(prov["packages"]) == {"zarr", "numcodecs", "fsspec", "aiohttp"}
@@ -589,4 +589,5 @@ def test_cli_help_states_the_limitations():
     text = " ".join(lorenzcycletoolkit.create_arg_parser().format_help().split())
     assert "--destine" in text and "18 of 240 terms" in text and "19 pressure levels" in text
     assert "--max-requests" in text and "500 000" in text
-    assert "--destine-store" in text and "13 bits" in text and "10 bits" in text and "no longer updated" in text
+    assert "--destine-store" in text and "10 bits of mantissa" in text and "no longer updated" in text
+    assert "13 bits" not in text  # the v3 metadata declare 13 bits, but its values have 10 (stage 4d)
