@@ -1,6 +1,6 @@
 # Visão geral e limites
 
-**Corte: 07/11/2026.** O objetivo atual do Projeto Evolução é incluir novas fontes de download de ERA5 no LECTK e documentar cada uma, com validação científica externa, entregando tudo numa única nova versão oficial ao fim (decisões do responsável de 07/11).
+**Corte: 26/11/2026** (antes, 07/11/2026). O objetivo atual do Projeto Evolução é incluir novas fontes de download de ERA5 no LECTK e documentar cada uma, com validação científica externa, entregando tudo numa única nova versão oficial ao fim (decisões do responsável de 07/11).
 
 O LorenzCycleToolkit (LECTK) realiza diagnósticos energéticos do ciclo de Lorenz. O Projeto Evolução organiza melhorias científicas, computacionais e de obtenção de dados sob decisões explícitas, mantendo o arquivo local `infile` como fluxo principal (D-001) e a CDS API como integração opcional (D-002).
 
@@ -16,5 +16,14 @@ Decisões assentadas: preservar equações e convenções por padrão (D-003); d
 | 24/10/2026 | Reconciliação documental | 33/33 arquivos indexados conferidos por SHA-256 |
 | 25/10–06/11/2026 | Frentes C, D, E, D-Bench e LZV | Ver [fila](queue.md) e [decisões](decisions.md) |
 | 07/11/2026 | Replanejamento (corte desta atualização) | Entregável de fontes ERA5 documentadas, versão única ao fim, validação externa Dias Pinto & da Rocha; [registro](evidence/records/2026-11-07-replanning-decisions.md) |
+| 08/11/2026 | Etapa 2a encerrada | FAIL pré-registrado (53/89); D-021 |
+| 09/11/2026 | Subfrente 2a.1 | Termos de fronteira conferidos, sem erro de fórmula; D-022 |
+| 09–19/11/2026 | Etapa 2b (benchmark de fontes) | Concluída em 19/11 (PRs #61–#74, D-023 a D-028); comparação, não eleição de fonte "mais correta" |
+| 19/11/2026 | Decisões de rotas e início da etapa 4 | D-029 a D-034; Frente O aberta fora da fila (descontinuada em 26/11, D-046) |
+| 23–25/11/2026 | Etapa 4 (4a–4d) | Correções NCAR/CDS, kerchunk padrão, `--wekeo`, `--arco`, `--destine`, documentação, zarr 3; D-035 a D-044 |
+| 25/11/2026 | Encerramento da etapa 4 | Retenção validada (PR #90) |
+| 26/11/2026 | Atualização de estado (Frente S) | D-045 a D-047; [registro](evidence/records/2026-11-26-frente-s-state-update.md) |
+
+**Estado em 26/11/2026:** 1, 2a, 2a.1, 2b e 4 concluídas; 3 (níveis verticais) e 5 (arrumação) não abertas; 6 (versão única) exige autorização específica.
 
 **Quatro conceitos distintos:** aprovação de uma formulação, reprodução de referência numérica, CI verde e validação física independente. Os três primeiros não provam o quarto. O código posterior ao PyPI 2.0.0 pode continuar registrando o mesmo texto de versão; citar o commit exato nos resultados.

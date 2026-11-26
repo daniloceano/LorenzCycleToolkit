@@ -4,6 +4,8 @@
 
 **Atualização de 07/11/2026:** replanejamento do projeto de modernização por decisão do responsável — entregável, versão única ao fim, validação externa, nova ordem de trabalho. Ver [fila vigente](queue.md) e [registro](evidence/records/2026-11-07-replanning-decisions.md).
 
+**Atualização de 26/11/2026 (Frente S):** corte de estado em 26/11. Etapas 1, 2a, 2a.1, 2b e 4 concluídas; 3 e 5 não abertas; 6 bloqueada. Ver [panorama](overview.md), [fila](queue.md) e [registro](evidence/records/2026-11-26-frente-s-state-update.md).
+
 ## Navegação
 
 - [Panorama](overview.md)

@@ -17,3 +17,5 @@ Após conclusão técnica de cada frente, aplicar [GOV-RET-01 Revisão 2](../ret
 Frentes futuras devem preservar escopo, SHA de base, decisões e autores, limites de validação, resultados negativos, diff de integração e desfecho formal.
 
 **Comunicação de cada frente:** aplicar [GOV-10](../coordination-protocol.md) em toda resposta da conversa-filha (contexto + checklist curto), e [GOV-09](../coordination-protocol.md) no encerramento (prompt colável, entregue automaticamente para a conversa-mãe).
+
+**Etapas do replanejamento de 07/11/2026 (nota de 26/11/2026, Frente S):** as etapas 2a, 2a.1, 2b e 4 não têm documento próprio nesta pasta; seus registros estão em `evidence/records/` e o estado está na [fila](../queue.md). Resumo: 2a encerrada em 08/11 com FAIL pré-registrado (D-021); 2a.1 concluída em 09/11 (D-022); 2b concluída em 19/11 (D-023 a D-028); 4 encerrada com retenção validada em 25/11 (D-029 a D-044). A frase acima sobre a Frente F foi superada por D-018: F foi absorvida pela etapa 4. A Frente O foi descontinuada (D-046).
