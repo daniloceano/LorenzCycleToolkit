@@ -146,4 +146,17 @@ As medianas não se somam (são medianas de |Δ| sobre casos diferentes e os efe
 
 ## 5. Fechamento (D-044)
 
-_(preenchido no commit de encerramento: aprovado pelo responsável, PR #N)_
+Aprovado pelo responsável, PR #93.
+
+## 6. Nota de correção (27/11/2026)
+
+O texto acima fica como foi aprovado; esta nota corrige duas frases do resumo e acrescenta uma ressalva, à luz da tabela do §3.1:
+
+- "Nenhum reservatório ou conversão inverte de sinal": vale para Az, Ae, Kz, Ke, Ca, Ce, Ck e Cz. **C_overturning**,
+  listado com as conversões na tabela, inverte o sinal da média em **1** dos 10 casos.
+- "Todos têm correlação temporal ≥ 0,99" (reservatórios e conversões): o r mínimo de **Ae** é **0,988** (e o de Ck, 0,991, arredonda para 0,99).
+  O correto é "r ≥ 0,988".
+- A faixa "0,2 % a 5,7 %" da mediana **exclui o termo M** (mediana de 14,9 %, classe d); a mesma ressalva vale para a
+  linha de 27/11/2026 em [overview.md](../../overview.md).
+
+Encerramento e retenção: [registro de retenção da etapa 3](2026-11-27-stage-3-retention.md).
