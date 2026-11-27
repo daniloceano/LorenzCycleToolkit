@@ -23,7 +23,7 @@ Decisões assentadas: preservar equações e convenções por padrão (D-003); d
 | 23–25/11/2026 | Etapa 4 (4a–4d) | Correções NCAR/CDS, kerchunk padrão, `--wekeo`, `--arco`, `--destine`, documentação, zarr 3; D-035 a D-044 |
 | 25/11/2026 | Encerramento da etapa 4 | Retenção validada (PR #90) |
 | 26/11/2026 | Atualização de estado (Frente S) | D-045 a D-047; [registro](evidence/records/2026-11-26-frente-s-state-update.md) |
-| 27/11/2026 | Etapa 3 (níveis verticais) | Medição simples em 10 casos; 32 → 13 níveis muda os termos em 0,2–5,7 % na mediana; [registro](evidence/records/2026-11-27-stage-3-vertical-levels-results.md) |
+| 27/11/2026 | Etapa 3 (níveis verticais) | Medição simples em 10 casos; 32 → 13 níveis muda os termos em 0,2–5,7 % na mediana; [registro](evidence/records/2026-11-27-stage-3-vertical-levels-results.md). Nota de 27/11/2026: a faixa exclui o termo M (mediana de 14,9 %, classe d); encerrada com retenção validada ([registro](evidence/records/2026-11-27-stage-3-retention.md)) |
 
 **Estado em 27/11/2026:** 1, 2a, 2a.1, 2b, 3 e 4 concluídas; 5 (arrumação) não aberta; 6 (versão única) exige autorização específica.
 
